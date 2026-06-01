@@ -357,8 +357,10 @@ bash scripts/bright/run_robotics.sh
 </table>
 
 <a name="acknowledgements"></a>
-## 🙏 Acknowledgements
 
+## 🙏  Awesome work powered or inspired by Search-R1
+- [GrepSeek](https://github.com/alirezasalemi7/grepseek): Scaling Deep Research via Reinforcement Learning in Real-world Environments. [![[code]](https://img.shields.io/github/stars/alirezasalemi7/grepseek)](https://github.com/alirezasalemi7/grepseek)
+  
 <!-- TODO: fill in acknowledgements -->
 
 ---
