@@ -17,3 +17,4 @@
 - 06:05 handoff 边界完成；无残留进程，临时计划清理，恢复入口同步。
 - 07:29 已安装跨 Codex/Claude checkpoint 策略；canonical skill 与事件提醒验证通过。
 - 07:34 漏交接恢复改为 recovery checkpoint；非 GSD 仓库跳过 GSD 启动 hook。
+- 07:54 自动 checkpoint 工作流完成；正式 handoff 开始同步 Git、状态与协作记忆。
