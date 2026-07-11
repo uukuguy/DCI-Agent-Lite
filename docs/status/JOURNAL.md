@@ -10,3 +10,8 @@
 - 05:30 project-state 核心文件已纳入版本管理。
 - 05:57 RPC 加固通过 20 项单测及 runtime-example，DeepSeek judge 判定正确。
 - 06:02 固化快速 handoff 协议与分级 MEMORY 索引；resume 可按统一入口恢复。
+- 06:05 judge 环境配置与 DeepSeek 兼容修复已提交。[ac78808, 9844dc8]
+- 06:05 RPC 生命周期加固及 20 项回归测试已提交。[cd33679]
+- 06:05 快速 handoff 协议与分级 MEMORY 已提交。[829787e]
+- 06:05 当前判断：保留 Python+RPC；TS sidecar 仅在触发条件出现时复议。
+- 06:05 handoff 边界完成；无残留进程，临时计划清理，恢复入口同步。

@@ -32,8 +32,9 @@
 
 - `docs/status/INDEX.md` — status-file discovery hub.
 - `docs/status/JOURNAL.md` — append-only event log.
-- `docs/status/RESUME-NEXT-SESSION.md` — current session handoff; created by `project-state handoff` and not present yet.
+- `docs/status/RESUME-NEXT-SESSION.md` — current session handoff baton.
 - `docs/status/CURRENT-STATE.md` — this structural snapshot.
+- `docs/status/DECISIONS.md` — architecture decisions, confidence, rationale, and revalidation triggers.
 
 ### Implementation entry points
 
