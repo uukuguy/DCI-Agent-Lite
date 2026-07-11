@@ -33,6 +33,13 @@ When adding a new file to `docs/status/`, **also add its row here** — otherwis
 
 > When adding new archive buckets, append a row here pointing to `_archive/<label>/`. Do not list individual files.
 
+## External anchors
+
+| Path | Purpose |
+|---|---|
+| `AGENTS.md` / `CLAUDE.md` | Local cross-agent operating rules, including the fast `handoff` protocol. |
+| `~/.claude/projects/-Users-sujiangwen-sandbox-agentic-2026-DCI-Agent-Lite/memory/MEMORY.md` | Collaboration-memory index; linked detail files carry confidence and supersession metadata. |
+
 ## Don't add new files unless they fit one of the categories above
 
 If you want to record a **finding/lesson** that's a long-lived project fact, write it to `CLAUDE.md` under structural facts. If it's a collaboration lesson, write it to `MEMORY.md`. If it's a complete audit or experiment report, write `docs/status/<topic>.md` here and add its INDEX row simultaneously.

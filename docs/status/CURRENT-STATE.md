@@ -26,7 +26,7 @@
 
 - `CLAUDE.md` — symlink to the canonical local `AGENTS.md` project instructions.
 - `AGENTS.md` — shared Codex/Claude repository working instructions.
-- `MEMORY.md` — not present.
+- `~/.claude/projects/-Users-sujiangwen-sandbox-agentic-2026-DCI-Agent-Lite/memory/MEMORY.md` — concise collaboration-memory index with confidence labels and Cold/Audit pointers.
 
 ### State / handoff
 
@@ -52,4 +52,4 @@
 1. Read this file for structure, theme, and open problems.
 2. Read `RESUME-NEXT-SESSION.md` for in-flight intent and the next concrete action, if it exists.
 3. Run `git status --short` and `git log --oneline -5`.
-4. Load `CLAUDE.md`/`AGENTS.md` and check whether project-level `MEMORY.md` has been introduced since this snapshot.
+4. Load `CLAUDE.md`/`AGENTS.md`, then the project MEMORY index and only directly relevant linked memory entries.
