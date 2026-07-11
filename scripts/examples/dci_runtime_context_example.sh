@@ -28,6 +28,7 @@ cd "$REPO_ROOT"
 uv run dci-agent-lite \
   --cwd "$REPO_ROOT/corpus/bc_plus_docs" \
   --tools read,bash \
+  --show-tools \
   --max-turns 6 \
   --eval-answer "Adaku" \
   --extra-arg="--thinking $level" \
