@@ -8,7 +8,7 @@ Main entry point:
 uv run dci-agent-lite
 ```
 
-The runner assumes your built Pi checkout is at `./pi-mono` unless you override `--package-dir` and `--agent-dir`.
+The runner reads `DCI_PI_DIR` from the repository-root `.env`. Without an explicit value it prefers an existing `./pi` checkout and falls back to the legacy `./pi-mono` path. `--package-dir` and `--agent-dir` remain available as one-off overrides.
 
 `dci-run-pi-rpc` remains available as a legacy alias.
 
@@ -24,8 +24,6 @@ By default:
 uv run dci-agent-lite \
   --provider openai \
   --model gpt-5.4-nano \
-  --package-dir "$PWD/pi-mono/packages/coding-agent" \
-  --agent-dir "$PWD/pi-mono/.pi/agent" \
   --cwd "$PWD/corpus/bc_plus_docs/thefourwallmag.wordpress.com" \
   --tools read,bash \
   --max-turns 6 \
@@ -95,7 +93,7 @@ uv run dci-agent-lite \
 
 ## Runtime Context-Management Levels
 
-The forked `pi-mono` checkout supports runtime context-management profiles that change what Pi sends back into the model during long tool-heavy runs. This is the layer that matters for model behavior and ablations.
+The configured Pi checkout supports runtime context-management profiles that change what Pi sends back into the model during long tool-heavy runs. This is the layer that matters for model behavior and ablations.
 
 Quick decision rule:
 
@@ -185,8 +183,8 @@ If you want the raw CLI instead of the Python RPC wrapper:
 REPO_ROOT=$(git rev-parse --show-toplevel)
 cd "$REPO_ROOT/corpus/bc_plus_docs/thefourwallmag.wordpress.com"
 
-PI_CODING_AGENT_DIR="$REPO_ROOT/pi-mono/.pi/agent" \
-node "$REPO_ROOT/pi-mono/packages/coding-agent/dist/cli.js" \
+PI_CODING_AGENT_DIR="$REPO_ROOT/pi/.pi/agent" \
+node "$REPO_ROOT/pi/packages/coding-agent/dist/cli.js" \
   --model claude-sonnet-4-20250514 \
   --thinking off \
   --tools read,bash \

@@ -32,13 +32,11 @@ from dci.benchmark.judge import (  # noqa: E402
     JudgeConfig,
     judge_answer_sync,
 )
-from dci.config import load_project_env  # noqa: E402
+from dci.config import load_project_env, resolve_pi_paths  # noqa: E402
 
 DEFAULT_DATASET_PATH = REPO_ROOT / "data" / "bcplus_qa.jsonl"
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / "outputs" / "bcplus_eval"
 DEFAULT_CORPUS_DIR = REPO_ROOT / "corpus" / "bc_plus_docs"
-DEFAULT_PACKAGE_DIR = REPO_ROOT / "pi-mono" / "packages" / "coding-agent"
-DEFAULT_AGENT_DIR = REPO_ROOT / "pi-mono" / ".pi" / "agent"
 DEFAULT_PROVIDER = "anthropic"
 DEFAULT_MODEL = "claude-sonnet-4-20250514"
 DEFAULT_TOOLS = "read,bash"
@@ -69,6 +67,7 @@ def utc_now() -> str:
 
 
 def parse_args() -> argparse.Namespace:
+    pi_paths = resolve_pi_paths(REPO_ROOT)
     parser = argparse.ArgumentParser(
         description=(
             "Run the BrowseComp-Plus eval set with dci-agent-lite, "
@@ -97,14 +96,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--package-dir",
         type=Path,
-        default=DEFAULT_PACKAGE_DIR,
-        help=f"Path to pi-mono/packages/coding-agent. Default: {DEFAULT_PACKAGE_DIR}",
+        default=pi_paths.package_dir,
+        help=f"Path to Pi's coding-agent package. Default from DCI_PI_DIR: {pi_paths.package_dir}",
     )
     parser.add_argument(
         "--agent-dir",
         type=Path,
-        default=DEFAULT_AGENT_DIR,
-        help=f"Path to pi-mono/.pi/agent. Default: {DEFAULT_AGENT_DIR}",
+        default=pi_paths.agent_dir,
+        help=f"Pi agent config directory. Default from DCI_PI_DIR: {pi_paths.agent_dir}",
     )
     default_provider = os.environ.get("DCI_PROVIDER", DEFAULT_PROVIDER)
     default_model = os.environ.get("DCI_MODEL", DEFAULT_MODEL)
@@ -555,12 +554,17 @@ def judge_result_succeeded(
     if judge_result.get("error"):
         return False
     if judge_config is not None:
-        if judge_result.get("judge_model") != judge_config.model:
-            return False
-        if judge_result.get("judge_base_url") != judge_config.base_url:
-            return False
-        if judge_result.get("judge_api") != judge_config.api:
-            return False
+        current_config = judge_config.public_dict()
+        for key in (
+            "judge_model",
+            "judge_base_url",
+            "judge_api",
+            "judge_max_output_tokens",
+            "judge_json_mode",
+            "judge_thinking",
+        ):
+            if judge_result.get(key) != current_config.get(key):
+                return False
     return isinstance(judge_result.get("is_correct"), bool)
 
 
@@ -581,9 +585,7 @@ def existing_result_succeeded(
 
 def build_failed_judge_result(*, config: JudgeConfig, error: str, attempts: int) -> Dict[str, Any]:
     return {
-        "judge_model": config.model,
-        "judge_base_url": config.base_url,
-        "judge_api": config.api,
+        **config.public_dict(),
         "judged_at": utc_now(),
         "judge_status": "failed",
         "is_correct": None,

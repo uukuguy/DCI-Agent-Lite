@@ -33,14 +33,11 @@ from dci.benchmark.judge import (
     JudgeConfig,
     judge_answer_sync,
 )
-from dci.config import load_project_env
+from dci.config import load_project_env, resolve_pi_paths
 
 
 SCRIPT_PATH = Path(__file__).resolve()
 REPO_ROOT = SCRIPT_PATH.parents[3]
-DEFAULT_PI_REPO = REPO_ROOT / "pi-mono"
-DEFAULT_PACKAGE_DIR = DEFAULT_PI_REPO / "packages" / "coding-agent"
-DEFAULT_AGENT_DIR = DEFAULT_PI_REPO / ".pi" / "agent"
 DEFAULT_RUNS_DIR = REPO_ROOT / "outputs" / "runs"
 DEFAULT_EVAL_JUDGE_MODEL = DEFAULT_JUDGE_MODEL
 DEFAULT_EVAL_INPUT_PRICE_PER_1M = DEFAULT_JUDGE_INPUT_PRICE_PER_1M
@@ -245,12 +242,17 @@ def maybe_reuse_existing_eval(
     existing = read_json_if_exists(eval_result_path)
     if not existing:
         return None
-    if existing.get("judge_model") != judge_config.model:
-        return None
-    if existing.get("judge_base_url") != judge_config.base_url:
-        return None
-    if existing.get("judge_api") != judge_config.api:
-        return None
+    current_config = judge_config.public_dict()
+    for key in (
+        "judge_model",
+        "judge_base_url",
+        "judge_api",
+        "judge_max_output_tokens",
+        "judge_json_mode",
+        "judge_thinking",
+    ):
+        if existing.get(key) != current_config.get(key):
+            return None
     if existing.get("question") != question:
         return None
     if existing.get("gold_answer") != gold_answer:
@@ -1199,6 +1201,7 @@ class PiRpcClient:
 
 
 def parse_args() -> argparse.Namespace:
+    pi_paths = resolve_pi_paths(REPO_ROOT)
     parser = argparse.ArgumentParser(
         description=(
             "Run one benchmark-style question against pi-coding-agent via RPC. "
@@ -1228,8 +1231,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--package-dir",
         type=Path,
-        default=DEFAULT_PACKAGE_DIR,
-        help="Path to the built `packages/coding-agent` directory inside a pi checkout.",
+        default=pi_paths.package_dir,
+        help=(
+            "Path to Pi's built `packages/coding-agent` directory. Defaults to the path "
+            "derived from DCI_PI_DIR (preferring ./pi, then legacy ./pi-mono)."
+        ),
     )
     parser.add_argument(
         "--cwd",
@@ -1240,8 +1246,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--agent-dir",
         type=Path,
-        default=DEFAULT_AGENT_DIR,
-        help="Agent config dir. Defaults to this repo's .pi/agent directory.",
+        default=pi_paths.agent_dir,
+        help="Pi agent config directory. Defaults to DCI_PI_AGENT_DIR or <DCI_PI_DIR>/.pi/agent.",
     )
     parser.add_argument(
         "--tools",

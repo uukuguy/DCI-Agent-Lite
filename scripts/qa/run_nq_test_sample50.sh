@@ -23,8 +23,6 @@ uv run python "$REPO_ROOT/scripts/bcplus_eval/run_bcplus_eval.py" \
   --dataset "$REPO_ROOT/data/dci-bench/data/nq/test.jsonl" \
   --output-root "$REPO_ROOT/outputs/qa/openai_nq_test_sample50" \
   --corpus-dir "$REPO_ROOT/corpus/wiki_corpus" \
-  --package-dir "$REPO_ROOT/pi-mono/packages/coding-agent" \
-  --agent-dir "$REPO_ROOT/pi-mono/.pi/agent" \
   --provider openai \
   --model gpt-5.4-nano \
   --tools read,bash \

@@ -96,9 +96,9 @@ Quick manual path:
 # 1. Install uv + ripgrep, then sync Python deps
 uv sync
 
-# 2. Clone and build Pi
-git clone https://github.com/jdf-prog/pi-mono.git pi-mono
-cd pi-mono && git checkout codex/context-management-ablation && npm install && npm run build && cd ..
+# 2. Clone and build Pi (the path is configured by DCI_PI_DIR in .env.template)
+git clone https://github.com/earendil-works/pi.git pi
+cd pi && npm install && npm run build && cd ..
 
 # 3. Configure API keys (copy template, edit .env, auto-loaded by setup.sh)
 cp .env.template .env

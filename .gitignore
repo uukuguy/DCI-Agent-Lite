@@ -215,9 +215,12 @@ __marimo__/
 /corpus
 /outputs
 /data
+/pi/
 /pi-mono
 /logs*
 .claude/
 .claudeignore
 .codex/
 .codexignore
+
+tests/

@@ -23,8 +23,6 @@ uv run python "$REPO_ROOT/scripts/bcplus_eval/run_bcplus_eval.py" \
   --dataset "$REPO_ROOT/data/bcplus_qa.jsonl" \
   --output-root "$REPO_ROOT/outputs/bcplus_eval/openai_L3" \
   --corpus-dir "$REPO_ROOT/corpus/bc_plus_docs" \
-  --package-dir "$REPO_ROOT/pi-mono/packages/coding-agent" \
-  --agent-dir "$REPO_ROOT/pi-mono/.pi/agent" \
   --provider openai \
   --model gpt-5.4-nano \
   --tools read,bash \

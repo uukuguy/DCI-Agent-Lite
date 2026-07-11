@@ -12,11 +12,11 @@ import sys
 from pathlib import Path
 from typing import List
 
+from dci.config import load_project_env, resolve_pi_paths
+
 
 SCRIPT_PATH = Path(__file__).resolve()
 REPO_ROOT = SCRIPT_PATH.parents[3]
-DEFAULT_PI_REPO = REPO_ROOT / "pi-mono"
-DEFAULT_PACKAGE_DIR = DEFAULT_PI_REPO / "packages" / "coding-agent"
 
 
 def ensure_built_package(package_dir: Path) -> None:
@@ -54,14 +54,15 @@ def resolve_repo_relative_path(path: Path | None) -> Path | None:
 
 
 def parse_args() -> argparse.Namespace:
+    pi_paths = resolve_pi_paths(REPO_ROOT)
     parser = argparse.ArgumentParser(
         description="Print pi's default dynamically generated system prompt for a given tool set."
     )
     parser.add_argument(
         "--package-dir",
         type=Path,
-        default=DEFAULT_PACKAGE_DIR,
-        help="Path to the built `packages/coding-agent` directory inside a pi checkout.",
+        default=pi_paths.package_dir,
+        help="Path to Pi's built coding-agent package, derived from DCI_PI_DIR by default.",
     )
     parser.add_argument(
         "--cwd",
@@ -85,6 +86,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> int:
+    load_project_env(REPO_ROOT)
     args = parse_args()
     package_dir = args.package_dir.resolve()
     cwd = args.cwd.resolve()

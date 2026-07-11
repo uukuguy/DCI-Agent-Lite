@@ -16,6 +16,7 @@ DEFAULT_JUDGE_BASE_URL = "https://api.openai.com/v1"
 DEFAULT_JUDGE_API = "responses"
 DEFAULT_JUDGE_MODEL = "gpt-5.4-nano"
 DEFAULT_JUDGE_TIMEOUT_SECONDS = 120
+DEFAULT_JUDGE_MAX_OUTPUT_TOKENS = 1024
 DEFAULT_JUDGE_INPUT_PRICE_PER_1M = 0.20
 DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M = 0.02
 DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M = 1.25
@@ -46,6 +47,18 @@ def _env_float(name: str, default: float) -> float:
         raise ValueError(f"{name} must be a number, got {raw_value!r}") from exc
 
 
+def _env_bool(name: str, default: bool) -> bool:
+    raw_value = os.environ.get(name)
+    if raw_value is None or not raw_value.strip():
+        return default
+    normalized = raw_value.strip().lower()
+    if normalized in {"1", "true", "yes", "on"}:
+        return True
+    if normalized in {"0", "false", "no", "off"}:
+        return False
+    raise ValueError(f"{name} must be a boolean, got {raw_value!r}")
+
+
 def normalize_judge_api(value: str) -> str:
     normalized = value.strip().lower().replace("_", "-")
     aliases = {
@@ -70,6 +83,9 @@ class JudgeConfig:
     api: str = DEFAULT_JUDGE_API
     model: str = DEFAULT_JUDGE_MODEL
     timeout_seconds: int = DEFAULT_JUDGE_TIMEOUT_SECONDS
+    max_output_tokens: int = DEFAULT_JUDGE_MAX_OUTPUT_TOKENS
+    json_mode: bool = True
+    thinking: str = "auto"
     input_price_per_1m: float = DEFAULT_JUDGE_INPUT_PRICE_PER_1M
     cached_input_price_per_1m: float = DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M
     output_price_per_1m: float = DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M
@@ -80,12 +96,19 @@ class JudgeConfig:
         base_url = self.base_url.strip().rstrip("/")
         model = self.model.strip()
         api_key_env = self.api_key_env.strip()
+        thinking = self.thinking.strip().lower()
         if not base_url:
             raise ValueError("Judge base URL must not be empty")
         if not model:
             raise ValueError("Judge model must not be empty")
         if self.timeout_seconds <= 0:
             raise ValueError("Judge timeout must be greater than zero")
+        if self.max_output_tokens <= 0:
+            raise ValueError("Judge max output tokens must be greater than zero")
+        if thinking not in {"auto", "enabled", "disabled", "omit"}:
+            raise ValueError(
+                "Judge thinking must be 'auto', 'enabled', 'disabled', or 'omit'"
+            )
         if (
             min(
                 self.input_price_per_1m,
@@ -99,6 +122,7 @@ class JudgeConfig:
         object.__setattr__(self, "api", normalize_judge_api(self.api))
         object.__setattr__(self, "model", model)
         object.__setattr__(self, "api_key_env", api_key_env)
+        object.__setattr__(self, "thinking", thinking)
 
     @classmethod
     def from_env(
@@ -108,6 +132,7 @@ class JudgeConfig:
         api: Optional[str] = None,
         model: Optional[str] = None,
         timeout_seconds: Optional[int] = None,
+        max_output_tokens: Optional[int] = None,
         input_price_per_1m: Optional[float] = None,
         cached_input_price_per_1m: Optional[float] = None,
         output_price_per_1m: Optional[float] = None,
@@ -150,6 +175,14 @@ class JudgeConfig:
             else _env_int(
                 f"{JUDGE_ENV_PREFIX}TIMEOUT_SECONDS", DEFAULT_JUDGE_TIMEOUT_SECONDS
             ),
+            max_output_tokens=max_output_tokens
+            if max_output_tokens is not None
+            else _env_int(
+                f"{JUDGE_ENV_PREFIX}MAX_OUTPUT_TOKENS",
+                DEFAULT_JUDGE_MAX_OUTPUT_TOKENS,
+            ),
+            json_mode=_env_bool(f"{JUDGE_ENV_PREFIX}JSON_MODE", True),
+            thinking=os.environ.get(f"{JUDGE_ENV_PREFIX}THINKING", "auto"),
             input_price_per_1m=input_price_per_1m
             if input_price_per_1m is not None
             else _env_float(
@@ -177,6 +210,18 @@ class JudgeConfig:
         suffix = "responses" if self.api == "responses" else "chat/completions"
         return f"{self.base_url}/{suffix}"
 
+    @property
+    def effective_thinking(self) -> Optional[str]:
+        """Return a thinking mode only when the selected backend supports it."""
+
+        if self.thinking == "omit":
+            return None
+        if self.thinking != "auto":
+            return self.thinking
+        if "deepseek" in self.model.lower() or "deepseek.com" in self.base_url.lower():
+            return "disabled"
+        return None
+
     def public_dict(self) -> Dict[str, Any]:
         """Return safe-to-persist configuration without the API key."""
 
@@ -186,6 +231,9 @@ class JudgeConfig:
             "judge_model": self.model,
             "judge_api_key_env": self.api_key_env,
             "judge_timeout_seconds": self.timeout_seconds,
+            "judge_max_output_tokens": self.max_output_tokens,
+            "judge_json_mode": self.json_mode,
+            "judge_thinking": self.effective_thinking,
             "judge_input_price_per_1m": self.input_price_per_1m,
             "judge_cached_input_price_per_1m": self.cached_input_price_per_1m,
             "judge_output_price_per_1m": self.output_price_per_1m,
@@ -312,7 +360,9 @@ def _judge_prompts(
         "You are grading a question-answer benchmark. "
         "Mark the prediction correct only if it identifies the same final answer as the gold answer. "
         "Ignore case, surrounding punctuation, whitespace, and extra explanation or supporting file paths. "
-        "Do not give partial credit. Return exactly one compact JSON object."
+        "Do not give partial credit. Return exactly one compact JSON object. "
+        'Example JSON: {"is_correct":true,"normalized_prediction":"example",'
+        '"reason":"same answer"}.'
     )
     user_prompt = (
         f"Question:\n{question}\n\n"
@@ -334,14 +384,19 @@ def build_judge_request(
     if config.api == "responses":
         return {
             "model": config.model,
-            "max_output_tokens": 180,
+            "max_output_tokens": config.max_output_tokens,
             "input": messages,
         }
-    return {
+    payload: Dict[str, Any] = {
         "model": config.model,
-        "max_tokens": 180,
+        "max_tokens": config.max_output_tokens,
         "messages": messages,
     }
+    if config.json_mode:
+        payload["response_format"] = {"type": "json_object"}
+    if config.effective_thinking is not None:
+        payload["thinking"] = {"type": config.effective_thinking}
+    return payload
 
 
 def judge_answer_sync(
@@ -367,37 +422,64 @@ def judge_answer_sync(
         method="POST",
     )
 
-    try:
-        with urllib.request.urlopen(
-            request, timeout=config.timeout_seconds
-        ) as response:
-            response_payload = json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        error_body = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(
-            f"Judge request to {config.endpoint} failed with HTTP {exc.code}: {error_body}"
-        ) from exc
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"Judge request to {config.endpoint} failed: {exc}") from exc
+    response_payload: Dict[str, Any] = {}
+    response_text = ""
+    parsed: Dict[str, Any] = {}
+    is_correct: Any = None
+    last_parse_error: Optional[ValueError] = None
+    attempts = 0
+    for attempts in range(1, 3):
+        try:
+            with urllib.request.urlopen(
+                request, timeout=config.timeout_seconds
+            ) as response:
+                response_payload = json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            error_body = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(
+                f"Judge request to {config.endpoint} failed with HTTP {exc.code}: {error_body}"
+            ) from exc
+        except urllib.error.URLError as exc:
+            raise RuntimeError(
+                f"Judge request to {config.endpoint} failed: {exc}"
+            ) from exc
 
-    response_text = (
-        extract_responses_text(response_payload)
-        if config.api == "responses"
-        else extract_chat_completions_text(response_payload)
-    )
-    if not response_text:
-        raise ValueError(f"Judge {config.api} response did not contain text")
-    parsed = extract_json_object(response_text)
-    is_correct = parsed.get("is_correct")
-    if not isinstance(is_correct, bool):
-        raise ValueError('Judge response field "is_correct" was not a boolean')
+        response_text = (
+            extract_responses_text(response_payload)
+            if config.api == "responses"
+            else extract_chat_completions_text(response_payload)
+        )
+        try:
+            if not response_text:
+                raise ValueError(f"Judge {config.api} response did not contain text")
+            parsed = extract_json_object(response_text)
+            is_correct = parsed.get("is_correct")
+            if not isinstance(is_correct, bool):
+                raise ValueError('Judge response field "is_correct" was not a boolean')
+        except ValueError as exc:
+            last_parse_error = exc
+            continue
+        break
+    else:
+        choices = response_payload.get("choices")
+        first_choice = choices[0] if isinstance(choices, list) and choices else {}
+        finish_reason = (
+            first_choice.get("finish_reason")
+            if isinstance(first_choice, dict)
+            else None
+        )
+        excerpt = response_text[:240].replace("\n", "\\n")
+        raise ValueError(
+            f"{last_parse_error}; judge returned invalid structured output twice "
+            f"(finish_reason={finish_reason!r}, response_excerpt={excerpt!r})"
+        ) from last_parse_error
+
     usage = normalize_usage(response_payload.get("usage"))
 
     return {
-        "judge_model": config.model,
-        "judge_base_url": config.base_url,
-        "judge_api": config.api,
+        **config.public_dict(),
         "judged_at": _utc_now(),
+        "attempts": attempts,
         "question": question,
         "gold_answer": gold_answer,
         "predicted_answer": predicted_answer,

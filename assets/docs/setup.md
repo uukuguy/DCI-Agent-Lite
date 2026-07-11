@@ -37,12 +37,12 @@ uv sync
 
 ### 3. Get and build customized Pi locally
 
-This repo does not vendor the full npm workspace. Keep a local Pi checkout at `./pi-mono`.
+This repo does not vendor the full npm workspace. The default `.env.template` places the external Pi checkout at `./pi` through `DCI_PI_DIR`.
 
 ```bash
-git clone https://github.com/jdf-prog/pi-mono.git pi-mono
-cd pi-mono
-git checkout codex/context-management-ablation
+git clone https://github.com/earendil-works/pi.git pi
+cd pi
+git checkout main
 npm install
 npm run build
 cd ..
@@ -51,7 +51,7 @@ cd ..
 Verify the CLI exists:
 
 ```bash
-node pi-mono/packages/coding-agent/dist/cli.js --version
+node pi/packages/coding-agent/dist/cli.js --version
 ```
 
 ### 4. Configure model access
@@ -87,12 +87,12 @@ Anthropic or custom agent to be graded by `deepseek-v4-flash` without an OpenAI 
 or use an existing local Pi auth directory:
 
 ```bash
-export PI_CODING_AGENT_DIR=$PWD/pi-mono/.pi/agent
+export PI_CODING_AGENT_DIR=$PWD/pi/.pi/agent
 ```
 
 ### 5. Optional: configure a local vLLM provider
 
-`vLLM` is not a built-in provider slug. In `pi-mono`, add it as a custom OpenAI-compatible provider through `~/.pi/agent/models.json`:
+`vLLM` is not a built-in provider slug. In Pi, add it as a custom OpenAI-compatible provider through `~/.pi/agent/models.json`:
 
 ```json
 {

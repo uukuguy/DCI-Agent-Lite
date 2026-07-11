@@ -68,8 +68,8 @@ uv run dci-agent-lite \
 
 | Option | Description |
 |--------|-------------|
-| `--package-dir <dir>` | Path to the built `packages/coding-agent` directory inside a Pi checkout. Defaults to `pi-mono/packages/coding-agent`. |
-| `--agent-dir <dir>` | Pi agent config directory. Defaults to `pi-mono/.pi/agent`. |
+| `--package-dir <dir>` | Path to the built `packages/coding-agent` directory. Defaults from `DCI_PI_DIR`, preferring `pi/` and falling back to legacy `pi-mono/`. |
+| `--agent-dir <dir>` | Pi agent config directory. Defaults to `DCI_PI_AGENT_DIR` or `<DCI_PI_DIR>/.pi/agent`. |
 
 Most users can leave these at their defaults after running setup.
 
@@ -131,7 +131,7 @@ If the resume directory does not exist or is empty, DCI-Agent-Lite prints a warn
 | `--eval-judge-cached-input-price-per-1m <price>` | Override `DCI_EVAL_JUDGE_CACHED_INPUT_PRICE_PER_1M`. |
 | `--eval-judge-output-price-per-1m <price>` | Override `DCI_EVAL_JUDGE_OUTPUT_PRICE_PER_1M`. |
 
-The normal configuration surface is the repository-root `.env`; judge CLI options are intended for one-off overrides. The default template uses `DEEPSEEK_API_KEY` with `deepseek-v4-flash` over Chat Completions and includes commented OpenAI and local-backend alternatives.
+The normal configuration surface is the repository-root `.env`; judge CLI options are intended for one-off overrides. The default template uses `DEEPSEEK_API_KEY` with `deepseek-v4-flash` over Chat Completions and includes commented OpenAI and local-backend alternatives. Structured-output behavior is controlled by `DCI_EVAL_JUDGE_MAX_OUTPUT_TOKENS`, `DCI_EVAL_JUDGE_JSON_MODE`, and `DCI_EVAL_JUDGE_THINKING`.
 
 ## Help
 

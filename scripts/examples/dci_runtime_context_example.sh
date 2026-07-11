@@ -26,8 +26,6 @@ QUESTION="Read the files in the current directory. Do not use web search. Use rg
 
 cd "$REPO_ROOT"
 uv run dci-agent-lite \
-  --package-dir "$REPO_ROOT/pi-mono/packages/coding-agent" \
-  --agent-dir "$REPO_ROOT/pi-mono/.pi/agent" \
   --cwd "$REPO_ROOT/corpus/bc_plus_docs" \
   --tools read,bash \
   --max-turns 6 \

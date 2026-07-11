@@ -24,8 +24,6 @@ uv run python "$REPO_ROOT/scripts/bcplus_eval/run_bcplus_eval.py" \
   --dataset "$REPO_ROOT/data/dci-bench/data/bright_economics/economics_full.jsonl" \
   --output-root "$REPO_ROOT/outputs/bright/economics" \
   --corpus-dir "$REPO_ROOT/corpus/bright_corpus/economics" \
-  --package-dir "$REPO_ROOT/pi-mono/packages/coding-agent" \
-  --agent-dir "$REPO_ROOT/pi-mono/.pi/agent" \
   --provider openai \
   --model gpt-5.4-nano \
   --tools read,bash \

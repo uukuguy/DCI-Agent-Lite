@@ -39,7 +39,7 @@ fi
 echo "==> Syncing Python dependencies..."
 uv sync
 
-# 3b. Ensure Node >= 20 (pi-mono requires node >=20.0.0)
+# 3b. Ensure Node >= 20 (Pi requires node >=20.0.0)
 _node_major() { node --version 2>/dev/null | sed 's/v\([0-9]*\).*/\1/'; }
 if [ "$(_node_major)" -lt 20 ] 2>/dev/null; then
     echo "==> Node $(_node_major) < 20 detected. Installing Node 20 via nvm..."
@@ -67,22 +67,26 @@ if [ "$(_node_major)" -lt 20 ] 2>/dev/null; then
 fi
 
 # 4. Clone and build Pi monorepo if CLI is not present
-PI_CLI="pi-mono/packages/coding-agent/dist/cli.js"
+PI_DIR="${DCI_PI_DIR:-pi}"
+PI_REPO_URL="${DCI_PI_REPO_URL:-https://github.com/earendil-works/pi.git}"
+PI_REVISION="${DCI_PI_REVISION:-main}"
+PI_CLI="$PI_DIR/packages/coding-agent/dist/cli.js"
 if [ ! -f "$PI_CLI" ]; then
-    if [ ! -d "pi-mono" ]; then
-        echo "==> Cloning pi-mono..."
-        git clone https://github.com/jdf-prog/pi-mono.git pi-mono
+    if [ ! -d "$PI_DIR" ]; then
+        echo "==> Cloning Pi into $PI_DIR..."
+        git clone "$PI_REPO_URL" "$PI_DIR"
     fi
-    cd pi-mono
-    git checkout codex/context-management-ablation
-    echo "==> Installing Pi dependencies (npm install)..."
-    npm install
-    echo "==> Building Pi (coding-agent and its deps only)..."
-    (cd packages/tui && npm run build)
-    (cd packages/ai && npm run build)
-    (cd packages/agent && npm run build)
-    (cd packages/coding-agent && npm run build)
-    cd ..
+    (
+        cd "$PI_DIR"
+        git checkout "$PI_REVISION"
+        echo "==> Installing Pi dependencies (npm install)..."
+        npm install
+        echo "==> Building Pi (coding-agent and its deps only)..."
+        (cd packages/tui && npm run build)
+        (cd packages/ai && npm run build)
+        (cd packages/agent && npm run build)
+        (cd packages/coding-agent && npm run build)
+    )
 else
     echo "==> Pi CLI already built, skipping."
 fi
