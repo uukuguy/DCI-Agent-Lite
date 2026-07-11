@@ -21,11 +21,19 @@ import shlex
 import subprocess
 import sys
 import threading
-import urllib.error
-import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+from dci.benchmark.judge import (
+    DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M,
+    DEFAULT_JUDGE_INPUT_PRICE_PER_1M,
+    DEFAULT_JUDGE_MODEL,
+    DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M,
+    JudgeConfig,
+    judge_answer_sync,
+)
+from dci.config import load_project_env
 
 
 SCRIPT_PATH = Path(__file__).resolve()
@@ -34,10 +42,10 @@ DEFAULT_PI_REPO = REPO_ROOT / "pi-mono"
 DEFAULT_PACKAGE_DIR = DEFAULT_PI_REPO / "packages" / "coding-agent"
 DEFAULT_AGENT_DIR = DEFAULT_PI_REPO / ".pi" / "agent"
 DEFAULT_RUNS_DIR = REPO_ROOT / "outputs" / "runs"
-DEFAULT_EVAL_JUDGE_MODEL = "gpt-5.4-nano"
-DEFAULT_EVAL_INPUT_PRICE_PER_1M = 0.20
-DEFAULT_EVAL_CACHED_INPUT_PRICE_PER_1M = 0.02
-DEFAULT_EVAL_OUTPUT_PRICE_PER_1M = 1.25
+DEFAULT_EVAL_JUDGE_MODEL = DEFAULT_JUDGE_MODEL
+DEFAULT_EVAL_INPUT_PRICE_PER_1M = DEFAULT_JUDGE_INPUT_PRICE_PER_1M
+DEFAULT_EVAL_CACHED_INPUT_PRICE_PER_1M = DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M
+DEFAULT_EVAL_OUTPUT_PRICE_PER_1M = DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M
 
 
 def _node_bin() -> str:
@@ -226,151 +234,10 @@ def load_eval_answer(
     return None
 
 
-def estimate_judge_cost(
-    usage: Dict[str, Any],
-    *,
-    input_price_per_1m: float,
-    cached_input_price_per_1m: float,
-    output_price_per_1m: float,
-) -> Dict[str, float]:
-    input_tokens = float(usage.get("input_tokens", 0) or 0)
-    output_tokens = float(usage.get("output_tokens", 0) or 0)
-    input_details = usage.get("input_tokens_details") or {}
-    cached_input_tokens = float(input_details.get("cached_tokens", 0) or 0)
-    non_cached_input_tokens = max(0.0, input_tokens - cached_input_tokens)
-    input_cost = (non_cached_input_tokens / 1_000_000.0) * input_price_per_1m
-    cached_input_cost = (cached_input_tokens / 1_000_000.0) * cached_input_price_per_1m
-    output_cost = (output_tokens / 1_000_000.0) * output_price_per_1m
-    return {
-        "input_cost": input_cost,
-        "cached_input_cost": cached_input_cost,
-        "output_cost": output_cost,
-        "total_cost": input_cost + cached_input_cost + output_cost,
-    }
-
-
-def extract_openai_response_text(response_payload: Dict[str, Any]) -> str:
-    output_text = response_payload.get("output_text")
-    if isinstance(output_text, str) and output_text.strip():
-        return output_text.strip()
-
-    texts: List[str] = []
-    for item in response_payload.get("output", []):
-        content = item.get("content", [])
-        if not isinstance(content, list):
-            continue
-        for block in content:
-            if not isinstance(block, dict):
-                continue
-            text_value = block.get("text")
-            if isinstance(text_value, str):
-                texts.append(text_value)
-            elif isinstance(text_value, dict) and isinstance(text_value.get("value"), str):
-                texts.append(text_value["value"])
-    return "\n".join(part.strip() for part in texts if part and part.strip()).strip()
-
-
-def extract_json_object(text: str) -> Dict[str, Any]:
-    try:
-        payload = json.loads(text)
-        if isinstance(payload, dict):
-            return payload
-    except json.JSONDecodeError:
-        pass
-
-    match = re.search(r"\{.*\}", text, flags=re.DOTALL)
-    if not match:
-        raise ValueError("Judge response did not contain a JSON object")
-    payload = json.loads(match.group(0))
-    if not isinstance(payload, dict):
-        raise ValueError("Judge response JSON was not an object")
-    return payload
-
-
-def judge_answer_sync(
-    *,
-    api_key: str,
-    model: str,
-    timeout_seconds: int,
-    question: str,
-    gold_answer: str,
-    predicted_answer: str,
-    input_price_per_1m: float,
-    cached_input_price_per_1m: float,
-    output_price_per_1m: float,
-) -> Dict[str, Any]:
-    system_prompt = (
-        "You are grading a question-answer benchmark. "
-        "Mark the prediction correct only if it identifies the same final answer as the gold answer. "
-        "Ignore case, surrounding punctuation, whitespace, and extra explanation or supporting file paths. "
-        "Do not give partial credit. Return exactly one compact JSON object."
-    )
-    user_prompt = (
-        f"Question:\n{question}\n\n"
-        f"Gold answer:\n{gold_answer}\n\n"
-        f"Predicted answer:\n{predicted_answer or '[empty]'}\n\n"
-        'Return JSON with keys "is_correct" (boolean), "normalized_prediction" (string), and "reason" (string).'
-    )
-    request_payload = {
-        "model": model,
-        "reasoning": {"effort": "low"},
-        "text": {"verbosity": "low"},
-        "max_output_tokens": 180,
-        "input": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-    }
-    request_body = json.dumps(request_payload).encode("utf-8")
-    request = urllib.request.Request(
-        "https://api.openai.com/v1/responses",
-        data=request_body,
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
-
-    try:
-        with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
-            response_payload = json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        error_body = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"OpenAI judge request failed with HTTP {exc.code}: {error_body}") from exc
-    except urllib.error.URLError as exc:
-        raise RuntimeError(f"OpenAI judge request failed: {exc}") from exc
-
-    response_text = extract_openai_response_text(response_payload)
-    parsed = extract_json_object(response_text)
-    usage = response_payload.get("usage") or {}
-    cost_estimate = estimate_judge_cost(
-        usage,
-        input_price_per_1m=input_price_per_1m,
-        cached_input_price_per_1m=cached_input_price_per_1m,
-        output_price_per_1m=output_price_per_1m,
-    )
-
-    return {
-        "judge_model": model,
-        "judged_at": utc_now(),
-        "question": question,
-        "gold_answer": gold_answer,
-        "predicted_answer": predicted_answer,
-        "is_correct": bool(parsed.get("is_correct")),
-        "normalized_prediction": str(parsed.get("normalized_prediction", "")),
-        "reason": str(parsed.get("reason", "")),
-        "usage": usage,
-        "cost_estimate_usd": cost_estimate,
-        "raw_response_text": response_text,
-        "raw_response": response_payload,
-    }
-
-
 def maybe_reuse_existing_eval(
     *,
     eval_result_path: Path,
-    judge_model: str,
+    judge_config: JudgeConfig,
     question: str,
     gold_answer: str,
     predicted_answer: str,
@@ -378,7 +245,11 @@ def maybe_reuse_existing_eval(
     existing = read_json_if_exists(eval_result_path)
     if not existing:
         return None
-    if existing.get("judge_model") != judge_model:
+    if existing.get("judge_model") != judge_config.model:
+        return None
+    if existing.get("judge_base_url") != judge_config.base_url:
+        return None
+    if existing.get("judge_api") != judge_config.api:
         return None
     if existing.get("question") != question:
         return None
@@ -395,12 +266,7 @@ def evaluate_run_output(
     question: str,
     gold_answer: str,
     predicted_answer: str,
-    judge_model: str,
-    judge_api_key_env: str,
-    judge_timeout_seconds: int,
-    judge_input_price_per_1m: float,
-    judge_cached_input_price_per_1m: float,
-    judge_output_price_per_1m: float,
+    judge_config: JudgeConfig,
 ) -> Dict[str, Any]:
     eval_result_path = output_dir / "eval_result.json"
 
@@ -411,6 +277,8 @@ def evaluate_run_output(
             return
         state["evaluation"] = {
             "judge_model": eval_result.get("judge_model"),
+            "judge_base_url": eval_result.get("judge_base_url"),
+            "judge_api": eval_result.get("judge_api"),
             "judged_at": eval_result.get("judged_at"),
             "is_correct": eval_result.get("is_correct"),
             "normalized_prediction": eval_result.get("normalized_prediction"),
@@ -421,7 +289,7 @@ def evaluate_run_output(
 
     reusable = maybe_reuse_existing_eval(
         eval_result_path=eval_result_path,
-        judge_model=judge_model,
+        judge_config=judge_config,
         question=question,
         gold_answer=gold_answer,
         predicted_answer=predicted_answer,
@@ -430,20 +298,11 @@ def evaluate_run_output(
         persist_eval_summary(reusable)
         return reusable
 
-    api_key = os.environ.get(judge_api_key_env, "").strip()
-    if not api_key:
-        raise RuntimeError(f"Missing OpenAI API key in environment variable {judge_api_key_env}")
-
     eval_result = judge_answer_sync(
-        api_key=api_key,
-        model=judge_model,
-        timeout_seconds=judge_timeout_seconds,
+        config=judge_config,
         question=question,
         gold_answer=gold_answer,
         predicted_answer=predicted_answer,
-        input_price_per_1m=judge_input_price_per_1m,
-        cached_input_price_per_1m=judge_cached_input_price_per_1m,
-        output_price_per_1m=judge_output_price_per_1m,
     )
     write_json(eval_result_path, eval_result)
     persist_eval_summary(eval_result)
@@ -1356,8 +1215,16 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument("--question-file", type=Path, help="Read the question from a UTF-8 text file.")
-    parser.add_argument("--provider", help="Provider passed to pi, e.g. anthropic or openai.")
-    parser.add_argument("--model", help="Model id or pattern passed to pi.")
+    parser.add_argument(
+        "--provider",
+        default=os.environ.get("DCI_PROVIDER"),
+        help="Provider passed to pi. Defaults to DCI_PROVIDER from .env when set.",
+    )
+    parser.add_argument(
+        "--model",
+        default=os.environ.get("DCI_MODEL"),
+        help="Model id or pattern passed to pi. Defaults to DCI_MODEL from .env when set.",
+    )
     parser.add_argument(
         "--package-dir",
         type=Path,
@@ -1472,7 +1339,10 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--eval-answer",
-        help="Optional gold answer. If provided, the runner grades final.txt with OpenAI and writes eval_result.json.",
+        help=(
+            "Optional gold answer. If provided, the runner grades final.txt with the configured "
+            "OpenAI-compatible judge and writes eval_result.json."
+        ),
     )
     parser.add_argument(
         "--eval-answer-file",
@@ -1480,40 +1350,77 @@ def parse_args() -> argparse.Namespace:
         help="Optional UTF-8 text file containing the gold answer for evaluation.",
     )
     parser.add_argument(
+        "--eval-judge-base-url",
+        help=(
+            "OpenAI-compatible judge API base URL. "
+            "Overrides DCI_EVAL_JUDGE_BASE_URL from .env."
+        ),
+    )
+    parser.add_argument(
+        "--eval-judge-api",
+        help=(
+            "Judge protocol: responses or chat-completions. "
+            "Overrides DCI_EVAL_JUDGE_API from .env."
+        ),
+    )
+    parser.add_argument(
         "--eval-judge-model",
-        default=DEFAULT_EVAL_JUDGE_MODEL,
-        help=f"OpenAI judge model. Default: {DEFAULT_EVAL_JUDGE_MODEL}",
+        help=(
+            "Judge model. Overrides DCI_EVAL_JUDGE_MODEL from .env. "
+            f"Built-in default: {DEFAULT_EVAL_JUDGE_MODEL}"
+        ),
     )
     parser.add_argument(
         "--eval-judge-api-key-env",
-        default="OPENAI_API_KEY",
-        help="Environment variable containing the OpenAI API key for evaluation. Default: OPENAI_API_KEY",
+        help=(
+            "Environment variable containing the judge API key. Overrides "
+            "DCI_EVAL_JUDGE_API_KEY_ENV; direct DCI_EVAL_JUDGE_API_KEY takes precedence."
+        ),
     )
     parser.add_argument(
         "--eval-judge-timeout-seconds",
         type=int,
-        default=120,
-        help="HTTP timeout for the OpenAI judge call. Default: 120",
+        help="Judge HTTP timeout. Overrides DCI_EVAL_JUDGE_TIMEOUT_SECONDS; built-in default: 120",
     )
     parser.add_argument(
         "--eval-judge-input-price-per-1m",
         type=float,
-        default=DEFAULT_EVAL_INPUT_PRICE_PER_1M,
-        help=f"Judge input token price per 1M tokens. Default: {DEFAULT_EVAL_INPUT_PRICE_PER_1M}",
+        help=(
+            "Judge input token price per 1M tokens. Overrides "
+            f"DCI_EVAL_JUDGE_INPUT_PRICE_PER_1M; built-in default: {DEFAULT_EVAL_INPUT_PRICE_PER_1M}"
+        ),
     )
     parser.add_argument(
         "--eval-judge-cached-input-price-per-1m",
         type=float,
-        default=DEFAULT_EVAL_CACHED_INPUT_PRICE_PER_1M,
-        help=f"Judge cached-input token price per 1M tokens. Default: {DEFAULT_EVAL_CACHED_INPUT_PRICE_PER_1M}",
+        help=(
+            "Judge cached-input token price per 1M tokens. Overrides "
+            "DCI_EVAL_JUDGE_CACHED_INPUT_PRICE_PER_1M; built-in default: "
+            f"{DEFAULT_EVAL_CACHED_INPUT_PRICE_PER_1M}"
+        ),
     )
     parser.add_argument(
         "--eval-judge-output-price-per-1m",
         type=float,
-        default=DEFAULT_EVAL_OUTPUT_PRICE_PER_1M,
-        help=f"Judge output token price per 1M tokens. Default: {DEFAULT_EVAL_OUTPUT_PRICE_PER_1M}",
+        help=(
+            "Judge output token price per 1M tokens. Overrides "
+            f"DCI_EVAL_JUDGE_OUTPUT_PRICE_PER_1M; built-in default: {DEFAULT_EVAL_OUTPUT_PRICE_PER_1M}"
+        ),
     )
     return parser.parse_args()
+
+
+def load_judge_config_from_args(args: argparse.Namespace) -> JudgeConfig:
+    return JudgeConfig.from_env(
+        base_url=args.eval_judge_base_url,
+        api=args.eval_judge_api,
+        model=args.eval_judge_model,
+        api_key_env=args.eval_judge_api_key_env,
+        timeout_seconds=args.eval_judge_timeout_seconds,
+        input_price_per_1m=args.eval_judge_input_price_per_1m,
+        cached_input_price_per_1m=args.eval_judge_cached_input_price_per_1m,
+        output_price_per_1m=args.eval_judge_output_price_per_1m,
+    )
 
 
 def load_question(args: argparse.Namespace, *, resume_dir: Optional[Path]) -> str:
@@ -1639,6 +1546,7 @@ def run_terminal_mode(args: argparse.Namespace) -> int:
 
 
 def main() -> int:
+    load_project_env(REPO_ROOT)
     args = parse_args()
     if args.terminal:
         try:
@@ -1654,6 +1562,13 @@ def main() -> int:
         eval_answer=args.eval_answer,
         eval_answer_file=args.eval_answer_file.resolve() if args.eval_answer_file else None,
     )
+    judge_config: Optional[JudgeConfig] = None
+    if eval_answer is not None:
+        try:
+            judge_config = load_judge_config_from_args(args)
+        except ValueError as exc:
+            print(f"Invalid judge configuration: {exc}", file=sys.stderr)
+            return 2
     try:
         conversation_features = ConversationFeatures.from_args(args)
     except RuntimeError as exc:
@@ -1698,12 +1613,7 @@ def main() -> int:
                 question=question,
                 gold_answer=eval_answer,
                 predicted_answer=predicted_answer,
-                judge_model=args.eval_judge_model,
-                judge_api_key_env=args.eval_judge_api_key_env,
-                judge_timeout_seconds=args.eval_judge_timeout_seconds,
-                judge_input_price_per_1m=args.eval_judge_input_price_per_1m,
-                judge_cached_input_price_per_1m=args.eval_judge_cached_input_price_per_1m,
-                judge_output_price_per_1m=args.eval_judge_output_price_per_1m,
+                judge_config=judge_config,
             )
         except Exception as exc:
             print(f"Evaluation failed: {exc}", file=sys.stderr)
@@ -1775,12 +1685,7 @@ def main() -> int:
                 question=question,
                 gold_answer=eval_answer,
                 predicted_answer=final_text.strip(),
-                judge_model=args.eval_judge_model,
-                judge_api_key_env=args.eval_judge_api_key_env,
-                judge_timeout_seconds=args.eval_judge_timeout_seconds,
-                judge_input_price_per_1m=args.eval_judge_input_price_per_1m,
-                judge_cached_input_price_per_1m=args.eval_judge_cached_input_price_per_1m,
-                judge_output_price_per_1m=args.eval_judge_output_price_per_1m,
+                judge_config=judge_config,
             )
             print(
                 json.dumps(

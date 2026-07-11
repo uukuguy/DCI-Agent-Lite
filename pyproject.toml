@@ -16,6 +16,7 @@ dependencies = [
     "matplotlib",
     "numpy",
     "pyarrow",
+    "python-dotenv>=1.0.0",
     "scipy",
     "tqdm",
 ]

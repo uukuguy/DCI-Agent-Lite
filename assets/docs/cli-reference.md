@@ -120,18 +120,21 @@ If the resume directory does not exist or is empty, DCI-Agent-Lite prints a warn
 
 | Option | Description |
 |--------|-------------|
-| `--eval-answer <text>` | Gold answer used to grade `final.txt` with an OpenAI judge. Writes `eval_result.json`. |
+| `--eval-answer <text>` | Gold answer used to grade `final.txt` with the configured OpenAI-compatible judge. Writes `eval_result.json`. |
 | `--eval-answer-file <path>` | UTF-8 file containing the gold answer. |
-| `--eval-judge-model <id>` | OpenAI judge model. Default: `gpt-5.4-nano`. |
-| `--eval-judge-api-key-env <name>` | Environment variable containing the OpenAI API key for judging. Default: `OPENAI_API_KEY`. |
-| `--eval-judge-timeout-seconds <n>` | HTTP timeout for the judge call. Default: `120`. |
-| `--eval-judge-input-price-per-1m <price>` | Judge input token price per 1M tokens. Default: `0.20`. |
-| `--eval-judge-cached-input-price-per-1m <price>` | Judge cached-input token price per 1M tokens. Default: `0.02`. |
-| `--eval-judge-output-price-per-1m <price>` | Judge output token price per 1M tokens. Default: `1.25`. |
+| `--eval-judge-base-url <url>` | Override `.env` variable `DCI_EVAL_JUDGE_BASE_URL`. |
+| `--eval-judge-api <name>` | Override `DCI_EVAL_JUDGE_API`; supported values are `responses` and `chat-completions`. |
+| `--eval-judge-model <id>` | Override `DCI_EVAL_JUDGE_MODEL`. |
+| `--eval-judge-api-key-env <name>` | Override `DCI_EVAL_JUDGE_API_KEY_ENV`. Direct `DCI_EVAL_JUDGE_API_KEY` takes precedence. |
+| `--eval-judge-timeout-seconds <n>` | Override `DCI_EVAL_JUDGE_TIMEOUT_SECONDS`. |
+| `--eval-judge-input-price-per-1m <price>` | Override `DCI_EVAL_JUDGE_INPUT_PRICE_PER_1M`. |
+| `--eval-judge-cached-input-price-per-1m <price>` | Override `DCI_EVAL_JUDGE_CACHED_INPUT_PRICE_PER_1M`. |
+| `--eval-judge-output-price-per-1m <price>` | Override `DCI_EVAL_JUDGE_OUTPUT_PRICE_PER_1M`. |
+
+The normal configuration surface is the repository-root `.env`; judge CLI options are intended for one-off overrides. The default template uses `DEEPSEEK_API_KEY` with `deepseek-v4-flash` over Chat Completions and includes commented OpenAI and local-backend alternatives.
 
 ## Help
 
 | Option | Description |
 |--------|-------------|
 | `-h`, `--help` | Show CLI help generated from the current implementation. |
-

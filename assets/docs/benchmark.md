@@ -43,6 +43,10 @@ Common parameters used in the eval scripts:
 | `--node-max-old-space-size-mb` | `8192` | Node heap size |
 | `--limit` | `10` | Limit to first N questions (optional) |
 
+The judge is configured from the repository-root `.env` using `DCI_EVAL_JUDGE_*`. The
+template uses `DEEPSEEK_API_KEY` and `deepseek-v4-flash` as the primary example; CLI
+judge options remain available only as one-off overrides.
+
 ## Benchmark Prompts
 
 Sample BrowseComp-Plus prompts are in [`assets/docs/pi_agent_benchmark.md`](pi_agent_benchmark.md).

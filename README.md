@@ -116,7 +116,7 @@ uv run python scripts/download_dci_bench.py
 
 ### Configuration
 
-Copy the template to `.env`, then fill in the variables you need. To get DCI running, set at least one of `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`:
+Copy the template to `.env`, then fill in the variables you need. `dci-agent-lite` automatically loads this file from the repository root:
 
 ```bash
 cp .env.template .env
@@ -124,13 +124,18 @@ cp .env.template .env
 
 Common variables:
 
-- `OPENAI_API_KEY` for OpenAI model runs and benchmark judging by default.
 - `ANTHROPIC_API_KEY` for Anthropic model runs.
+- `OPENAI_API_KEY` for OpenAI model runs or the optional official OpenAI judge configuration.
+- `DEEPSEEK_API_KEY` for the primary DeepSeek judge example.
+- `DCI_PROVIDER` and `DCI_MODEL` select the agent used by environment-driven example scripts.
+- `DCI_EVAL_JUDGE_BASE_URL`, `DCI_EVAL_JUDGE_API`, `DCI_EVAL_JUDGE_MODEL`, and
+  `DCI_EVAL_JUDGE_API_KEY_ENV` select the eval judge backend. See `.env.template` for DeepSeek,
+  OpenAI, and local-compatible examples.
 
 <a name="quick-start"></a>
 ## ⚡ Quick Start
 
-**Prerequisites**: Install dependencies and configure an OpenAI API key (see [Setup](#setup)).
+**Prerequisites**: Install dependencies and configure the agent and judge credentials you plan to use (see [Setup](#setup)).
 
 The example below illustrates DCI-Agent-Lite in action: the deep research agent searches the corpus, inspects relevant documents, and produces evidence-grounded answers entirely within the given wikipedia corpus.
 

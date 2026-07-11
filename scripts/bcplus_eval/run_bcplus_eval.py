@@ -24,7 +24,15 @@ SCRIPT_PATH = Path(__file__).resolve()
 REPO_ROOT = SCRIPT_PATH.parents[2]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
-from dci.benchmark.pi_rpc_runner import judge_answer_sync
+from dci.benchmark.judge import (  # noqa: E402
+    DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M,
+    DEFAULT_JUDGE_INPUT_PRICE_PER_1M,
+    DEFAULT_JUDGE_MODEL,
+    DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M,
+    JudgeConfig,
+    judge_answer_sync,
+)
+from dci.config import load_project_env  # noqa: E402
 
 DEFAULT_DATASET_PATH = REPO_ROOT / "data" / "bcplus_qa.jsonl"
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / "outputs" / "bcplus_eval"
@@ -34,12 +42,7 @@ DEFAULT_AGENT_DIR = REPO_ROOT / "pi-mono" / ".pi" / "agent"
 DEFAULT_PROVIDER = "anthropic"
 DEFAULT_MODEL = "claude-sonnet-4-20250514"
 DEFAULT_TOOLS = "read,bash"
-DEFAULT_JUDGE_MODEL = "gpt-5.4-nano"
-
 # OpenAI API pricing verified on April 5, 2026 from official OpenAI pricing/model pages.
-DEFAULT_JUDGE_INPUT_PRICE_PER_1M = 0.20
-DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M = 0.02
-DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M = 1.25
 
 COLOR_CORRECT = "#2E8B57"
 COLOR_INCORRECT = "#C0392B"
@@ -69,7 +72,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Run the BrowseComp-Plus eval set with dci-agent-lite, "
-            "grade each final answer with OpenAI, and write per-question plus aggregate metrics."
+            "grade each final answer with the configured OpenAI-compatible judge, "
+            "and write per-question plus aggregate metrics."
         )
     )
     parser.add_argument(
@@ -102,8 +106,18 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_AGENT_DIR,
         help=f"Path to pi-mono/.pi/agent. Default: {DEFAULT_AGENT_DIR}",
     )
-    parser.add_argument("--provider", default=DEFAULT_PROVIDER, help=f"Pi provider. Default: {DEFAULT_PROVIDER}")
-    parser.add_argument("--model", default=DEFAULT_MODEL, help=f"Pi model. Default: {DEFAULT_MODEL}")
+    default_provider = os.environ.get("DCI_PROVIDER", DEFAULT_PROVIDER)
+    default_model = os.environ.get("DCI_MODEL", DEFAULT_MODEL)
+    parser.add_argument(
+        "--provider",
+        default=default_provider,
+        help=f"Pi provider. Defaults to DCI_PROVIDER from .env, otherwise {DEFAULT_PROVIDER}.",
+    )
+    parser.add_argument(
+        "--model",
+        default=default_model,
+        help=f"Pi model. Defaults to DCI_MODEL from .env, otherwise {DEFAULT_MODEL}.",
+    )
     parser.add_argument("--tools", default=DEFAULT_TOOLS, help=f"Pi tool list. Default: {DEFAULT_TOOLS}")
     parser.add_argument("--max-turns", type=int, default=100, help="Pi max turns. Default: 100")
     parser.add_argument(
@@ -155,38 +169,56 @@ def parse_args() -> argparse.Namespace:
         help="Only run the first N questions from the fixed set. Useful for debugging.",
     )
     parser.add_argument(
+        "--judge-base-url",
+        help="Judge API base URL. Overrides DCI_EVAL_JUDGE_BASE_URL from .env.",
+    )
+    parser.add_argument(
+        "--judge-api",
+        help="Judge protocol: responses or chat-completions. Overrides DCI_EVAL_JUDGE_API from .env.",
+    )
+    parser.add_argument(
         "--judge-model",
-        default=DEFAULT_JUDGE_MODEL,
-        help=f"OpenAI judge model. Default: {DEFAULT_JUDGE_MODEL}",
+        help=(
+            "Judge model. Overrides DCI_EVAL_JUDGE_MODEL from .env. "
+            f"Built-in default: {DEFAULT_JUDGE_MODEL}"
+        ),
     )
     parser.add_argument(
         "--judge-api-key-env",
-        default="OPENAI_API_KEY",
-        help="Environment variable containing the OpenAI API key. Default: OPENAI_API_KEY",
+        help=(
+            "Environment variable containing the judge API key. Overrides "
+            "DCI_EVAL_JUDGE_API_KEY_ENV; direct DCI_EVAL_JUDGE_API_KEY takes precedence."
+        ),
     )
     parser.add_argument(
         "--judge-timeout-seconds",
         type=int,
-        default=120,
-        help="HTTP timeout for each judge request. Default: 120",
+        help="Judge timeout. Overrides DCI_EVAL_JUDGE_TIMEOUT_SECONDS; built-in default: 120",
     )
     parser.add_argument(
         "--judge-input-price-per-1m",
         type=float,
-        default=DEFAULT_JUDGE_INPUT_PRICE_PER_1M,
-        help=f"Judge input token price per 1M tokens. Default: {DEFAULT_JUDGE_INPUT_PRICE_PER_1M}",
+        help=(
+            "Judge input token price per 1M tokens. Overrides "
+            f"DCI_EVAL_JUDGE_INPUT_PRICE_PER_1M; built-in default: {DEFAULT_JUDGE_INPUT_PRICE_PER_1M}"
+        ),
     )
     parser.add_argument(
         "--judge-cached-input-price-per-1m",
         type=float,
-        default=DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M,
-        help=f"Judge cached-input token price per 1M tokens. Default: {DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M}",
+        help=(
+            "Judge cached-input token price per 1M tokens. Overrides "
+            "DCI_EVAL_JUDGE_CACHED_INPUT_PRICE_PER_1M; built-in default: "
+            f"{DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M}"
+        ),
     )
     parser.add_argument(
         "--judge-output-price-per-1m",
         type=float,
-        default=DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M,
-        help=f"Judge output token price per 1M tokens. Default: {DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M}",
+        help=(
+            "Judge output token price per 1M tokens. Overrides "
+            f"DCI_EVAL_JUDGE_OUTPUT_PRICE_PER_1M; built-in default: {DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M}"
+        ),
     )
     parser.add_argument(
         "--node-max-old-space-size-mb",
@@ -200,6 +232,19 @@ def parse_args() -> argparse.Namespace:
         help="Optional hint about corpus structure, inserted into the IR prompt to guide search strategy.",
     )
     return parser.parse_args()
+
+
+def load_judge_config_from_args(args: argparse.Namespace) -> JudgeConfig:
+    return JudgeConfig.from_env(
+        base_url=args.judge_base_url,
+        api=args.judge_api,
+        model=args.judge_model,
+        api_key_env=args.judge_api_key_env,
+        timeout_seconds=args.judge_timeout_seconds,
+        input_price_per_1m=args.judge_input_price_per_1m,
+        cached_input_price_per_1m=args.judge_cached_input_price_per_1m,
+        output_price_per_1m=args.judge_output_price_per_1m,
+    )
 
 
 def read_jsonl(path: Path) -> List[Dict[str, Any]]:
@@ -501,27 +546,44 @@ def extract_tool_metrics(state: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def judge_result_succeeded(judge_result: Optional[Dict[str, Any]]) -> bool:
+def judge_result_succeeded(
+    judge_result: Optional[Dict[str, Any]],
+    judge_config: Optional[JudgeConfig] = None,
+) -> bool:
     if not isinstance(judge_result, dict):
         return False
     if judge_result.get("error"):
         return False
+    if judge_config is not None:
+        if judge_result.get("judge_model") != judge_config.model:
+            return False
+        if judge_result.get("judge_base_url") != judge_config.base_url:
+            return False
+        if judge_result.get("judge_api") != judge_config.api:
+            return False
     return isinstance(judge_result.get("is_correct"), bool)
 
 
-def existing_result_succeeded(existing_result: Optional[Dict[str, Any]]) -> bool:
+def existing_result_succeeded(
+    existing_result: Optional[Dict[str, Any]],
+    judge_config: Optional[JudgeConfig] = None,
+) -> bool:
     if not isinstance(existing_result, dict):
         return False
     if existing_result.get("run_error"):
         return False
-    if judge_result_succeeded(existing_result.get("judge_result")):
+    if judge_result_succeeded(existing_result.get("judge_result"), judge_config):
         return True
+    if judge_config is not None:
+        return False
     return isinstance(existing_result.get("is_correct"), bool)
 
 
-def build_failed_judge_result(*, model: str, error: str, attempts: int) -> Dict[str, Any]:
+def build_failed_judge_result(*, config: JudgeConfig, error: str, attempts: int) -> Dict[str, Any]:
     return {
-        "judge_model": model,
+        "judge_model": config.model,
+        "judge_base_url": config.base_url,
+        "judge_api": config.api,
         "judged_at": utc_now(),
         "judge_status": "failed",
         "is_correct": None,
@@ -542,7 +604,9 @@ def build_failed_judge_result(*, model: str, error: str, attempts: int) -> Dict[
 async def judge_answer_async(**kwargs: Any) -> Dict[str, Any]:
     max_attempts = 3
     last_error: Optional[str] = None
-    model = str(kwargs.get("model") or "")
+    config = kwargs.get("config")
+    if not isinstance(config, JudgeConfig):
+        raise TypeError("judge_answer_async requires a JudgeConfig")
 
     for attempt in range(1, max_attempts + 1):
         try:
@@ -557,7 +621,7 @@ async def judge_answer_async(**kwargs: Any) -> Dict[str, Any]:
             await asyncio.sleep(float(attempt))
 
     return build_failed_judge_result(
-        model=model,
+        config=config,
         error=last_error or "unknown judge error",
         attempts=max_attempts,
     )
@@ -834,16 +898,24 @@ def aggregate_results(results: List[Dict[str, Any]]) -> Dict[str, Any]:
     }
 
 
-def query_needs_execution_or_judging(query_dir: Path) -> bool:
+def query_needs_execution_or_judging(
+    query_dir: Path,
+    *,
+    judge_config: Optional[JudgeConfig],
+) -> bool:
     existing_result = load_existing_query_result(query_dir)
     existing_state = read_json_if_exists(query_dir / "state.json") or {}
     has_error = existing_run_has_error(query_dir, existing_result=existing_result, existing_state=existing_state)
 
-    if existing_result_succeeded(existing_result) and not has_error:
+    if existing_result_succeeded(existing_result, judge_config) and not has_error:
         return False
 
     existing_judge_result = read_json_if_exists(query_dir / "eval_result.json")
-    if existing_state.get("status") == "completed" and judge_result_succeeded(existing_judge_result) and not has_error:
+    if (
+        existing_state.get("status") == "completed"
+        and judge_result_succeeded(existing_judge_result, judge_config)
+        and not has_error
+    ):
         return False
 
     return True
@@ -1458,7 +1530,7 @@ async def run_single_query(
     args: argparse.Namespace,
     row: Dict[str, Any],
     query_dir: Path,
-    api_key: str,
+    judge_config: Optional[JudgeConfig],
 ) -> Dict[str, Any]:
     corpus_dir_resolved = args.corpus_dir.resolve()
     if args.enable_ir:
@@ -1470,7 +1542,7 @@ async def run_single_query(
     existing_state = read_json_if_exists(query_dir / "state.json") or {}
     has_error = existing_run_has_error(query_dir, existing_result=existing_result, existing_state=existing_state)
 
-    if existing_result_succeeded(existing_result) and not has_error:
+    if existing_result_succeeded(existing_result, judge_config) and not has_error:
         return existing_result
 
     resume_run = query_dir.exists() and bool(existing_state)
@@ -1490,7 +1562,7 @@ async def run_single_query(
             )
             write_json(query_dir / "result.json", result)
             return result
-        elif judge_result_succeeded(existing_judge_result):
+        elif judge_result_succeeded(existing_judge_result, judge_config):
             result = gather_query_metrics(
                 row=row,
                 query_dir=query_dir,
@@ -1498,6 +1570,31 @@ async def run_single_query(
                 launcher_started_at=None,
                 launcher_finished_at=None,
                 judge_result=existing_judge_result,
+            )
+            write_json(query_dir / "result.json", result)
+            return result
+        else:
+            if judge_config is None:
+                raise RuntimeError("Judge configuration is required when IR evaluation is disabled")
+            existing_final_text = (
+                read_text_if_exists(query_dir / "final.txt")
+                or existing_state.get("assistant_text")
+                or ""
+            ).strip()
+            judge_result = await judge_answer_async(
+                config=judge_config,
+                question=str(row["query"]),
+                gold_answer=str(row["answer"]),
+                predicted_answer=existing_final_text,
+            )
+            write_json(query_dir / "eval_result.json", judge_result)
+            result = gather_query_metrics(
+                row=row,
+                query_dir=query_dir,
+                launcher_returncode=None,
+                launcher_started_at=None,
+                launcher_finished_at=None,
+                judge_result=judge_result,
             )
             write_json(query_dir / "result.json", result)
             return result
@@ -1544,16 +1641,13 @@ async def run_single_query(
             ndcg_at_10=ndcg_score,
         )
     else:
+        if judge_config is None:
+            raise RuntimeError("Judge configuration is required when IR evaluation is disabled")
         judge_result = await judge_answer_async(
-            api_key=api_key,
-            model=args.judge_model,
-            timeout_seconds=args.judge_timeout_seconds,
+            config=judge_config,
             question=str(row["query"]),
             gold_answer=str(row["answer"]),
             predicted_answer=final_text,
-            input_price_per_1m=args.judge_input_price_per_1m,
-            cached_input_price_per_1m=args.judge_cached_input_price_per_1m,
-            output_price_per_1m=args.judge_output_price_per_1m,
         )
         write_json(query_dir / "eval_result.json", judge_result)
         result = gather_query_metrics(
@@ -1569,6 +1663,7 @@ async def run_single_query(
 
 
 async def main_async() -> int:
+    load_project_env(REPO_ROOT)
     args = parse_args()
     if args.max_concurrency <= 0:
         print("--max-concurrency must be >= 1", file=sys.stderr)
@@ -1583,6 +1678,14 @@ async def main_async() -> int:
         print(f"Corpus directory does not exist: {args.corpus_dir}", file=sys.stderr)
         return 2
 
+    judge_config: Optional[JudgeConfig] = None
+    if not args.enable_ir:
+        try:
+            judge_config = load_judge_config_from_args(args)
+        except ValueError as exc:
+            print(f"Invalid judge configuration: {exc}", file=sys.stderr)
+            return 2
+
     rows = read_jsonl(args.dataset)
     if args.limit is not None:
         rows = rows[: args.limit]
@@ -1590,16 +1693,12 @@ async def main_async() -> int:
     query_dirs_requiring_work = [
         args.output_root / str(row["query_id"])
         for row in rows
-        if query_needs_execution_or_judging(args.output_root / str(row["query_id"]))
+        if query_needs_execution_or_judging(
+            args.output_root / str(row["query_id"]),
+            judge_config=judge_config,
+        )
     ]
     has_pending_work = bool(query_dirs_requiring_work)
-    api_key = os.environ.get(args.judge_api_key_env, "").strip()
-    if query_dirs_requiring_work and not api_key:
-        print(
-            f"Missing OpenAI API key in environment variable {args.judge_api_key_env}",
-            file=sys.stderr,
-        )
-        return 2
 
     args.output_root.mkdir(parents=True, exist_ok=True)
     system_prompt_file = resolve_repo_relative_path(args.system_prompt_file)
@@ -1625,15 +1724,11 @@ async def main_async() -> int:
         "pi_thinking_level": args.pi_thinking_level,
         "max_concurrency": args.max_concurrency,
         "limit": args.limit,
-        "judge_model": args.judge_model,
-        "judge_api_key_env": args.judge_api_key_env,
-        "judge_timeout_seconds": args.judge_timeout_seconds,
-        "judge_input_price_per_1m": args.judge_input_price_per_1m,
-        "judge_cached_input_price_per_1m": args.judge_cached_input_price_per_1m,
-        "judge_output_price_per_1m": args.judge_output_price_per_1m,
         "node_max_old_space_size_mb": args.node_max_old_space_size_mb,
         "question_count": len(rows),
     }
+    if judge_config is not None:
+        run_config.update(judge_config.public_dict())
     write_json(args.output_root / "config.json", run_config)
 
     semaphore = asyncio.Semaphore(args.max_concurrency)
@@ -1657,7 +1752,7 @@ async def main_async() -> int:
                 args=args,
                 row=row,
                 query_dir=query_dir,
-                api_key=api_key,
+                judge_config=judge_config,
             )
         async with results_lock:
             results_by_query_id[query_id] = result

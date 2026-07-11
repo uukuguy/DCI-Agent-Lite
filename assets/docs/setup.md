@@ -63,7 +63,7 @@ cp .env.template .env
 # edit .env with your favorite editor
 ```
 
-`setup.sh` automatically loads `.env` if it exists. For manual runs, source it first:
+`dci-agent-lite`, the benchmark evaluator, and `setup.sh` automatically load the repository-root `.env` if it exists. Shell examples also source it because variables such as `DCI_PROVIDER` and `DCI_MODEL` are expanded by the shell itself. Manual sourcing is therefore only needed for other commands:
 
 ```bash
 # Unix / macOS
@@ -76,7 +76,13 @@ You can also set keys inline:
 export ANTHROPIC_API_KEY=your_key_here
 # or
 export OPENAI_API_KEY=your_key_here
+# or, for the primary eval-judge example
+export DEEPSEEK_API_KEY=your_key_here
 ```
+
+The default `.env.template` example keeps the agent selection in `DCI_PROVIDER`/`DCI_MODEL`
+and configures the eval judge independently through `DCI_EVAL_JUDGE_*`. This allows an
+Anthropic or custom agent to be graded by `deepseek-v4-flash` without an OpenAI account.
 
 or use an existing local Pi auth directory:
 
