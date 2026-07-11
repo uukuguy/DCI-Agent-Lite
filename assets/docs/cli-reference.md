@@ -61,6 +61,7 @@ uv run dci-agent-lite \
 | `--cwd <dir>` | Working directory for the agent subprocess. Defaults to the DCI repo root. |
 | `--tools <list>` | Comma-separated built-in tools to enable. Default: `read,bash`. |
 | `--max-turns <n>` | Client-side cap on agent turns. The runner aborts before turn `n + 1` starts. |
+| `--rpc-timeout-seconds <n>` | Wall-clock deadline for one RPC prompt, including tools and automatic retries. Defaults to `DCI_RPC_TIMEOUT_SECONDS` or 3600 seconds; set to `0` to disable. |
 | `--keep-session` | Persist Pi session history. By default, programmatic runs use ephemeral `--no-session` behavior. |
 | `--show-tools` | Print tool start/end events to stderr while the agent runs. |
 

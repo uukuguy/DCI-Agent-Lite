@@ -4,11 +4,11 @@
 
 - Project: DCI-Agent-Lite — minimal Pi-based implementation of direct raw-corpus interaction for agentic search.
 - Current branch: `main`
-- Theme-level focus: Configuration-driven Pi runtime and OpenAI-compatible benchmark evaluation.
+- Theme-level focus: Configuration-driven, failure-bounded Pi runtime and OpenAI-compatible benchmark evaluation.
 
 ## Current Architecture
 
-- Python CLI/orchestration: `dci-agent-lite` launches the external Pi coding agent in RPC or terminal mode and records run artifacts.
+- Python CLI/orchestration: `dci-agent-lite` launches the external Pi coding agent in RPC or terminal mode, waits for session-level `agent_settled`, applies a configurable wall-clock deadline, and records run artifacts.
 - External runtime: Pi is resolved through `DCI_PI_DIR`, preferring `./pi` with a legacy `./pi-mono` fallback.
 - Corpus interaction: the agent searches local raw corpora directly with terminal tools; there is no required embedding index or retrieval service.
 - Evaluation: a shared judge transport supports OpenAI Responses and compatible Chat Completions backends; batch evaluators reuse the same `.env` configuration.
@@ -17,7 +17,7 @@
 ## Open Problems (theme-level)
 
 - Reproducible version pinning and distribution of the external Pi checkout.
-- Durable first-party regression coverage while `tests/` remains ignored and untracked.
+- Protocol compatibility as the external Pi checkout evolves independently.
 - Structured-output variability across nominally OpenAI-compatible judge backends.
 
 ## Key Files
@@ -43,6 +43,7 @@
 - `src/dci/benchmark/judge.py` — OpenAI-compatible judge configuration, request shaping, parsing, and cost metadata.
 - `scripts/bcplus_eval/run_bcplus_eval.py` — concurrent BrowseComp-Plus execution and aggregation.
 - `scripts/examples/dci_runtime_context_example.sh` — representative agent-plus-judge end-to-end example.
+- `tests/` — first-party configuration, judge transport, and Pi RPC lifecycle regressions.
 - `.env.template` — primary runtime, Pi, and judge configuration examples.
 - `setup.sh` — dependency, external Pi, corpus, and benchmark setup.
 

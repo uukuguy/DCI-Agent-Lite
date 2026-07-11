@@ -17,6 +17,7 @@ By default:
 - Pi uses its own dynamically generated system prompt
 - Run artifacts go under `outputs/runs/<timestamp>/`
 - Non-empty `--output-dir` values are rejected unless you pass `--resume`
+- Each RPC prompt has a 3600-second wall-clock deadline, configurable through `DCI_RPC_TIMEOUT_SECONDS` in `.env` or `--rpc-timeout-seconds`; `0` disables it
 
 ### Basic example
 

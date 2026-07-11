@@ -1,0 +1,307 @@
+from __future__ import annotations
+
+import json
+import os
+import tempfile
+import unittest
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+from dci.benchmark.judge import (
+    JudgeConfig,
+    build_judge_request,
+    extract_responses_text,
+    judge_answer_sync,
+)
+from dci.benchmark.pi_rpc_runner import maybe_reuse_existing_eval, parse_args
+from dci.config import load_project_env
+
+
+class JudgeConfigTests(unittest.TestCase):
+    def test_deepseek_config_is_loaded_from_environment(self) -> None:
+        environment = {
+            "DEEPSEEK_API_KEY": "secret-key",
+            "DCI_EVAL_JUDGE_BASE_URL": "https://api.deepseek.com/v1/",
+            "DCI_EVAL_JUDGE_API": "chat_completions",
+            "DCI_EVAL_JUDGE_MODEL": "deepseek-v4-flash",
+            "DCI_EVAL_JUDGE_API_KEY_ENV": "DEEPSEEK_API_KEY",
+            "DCI_EVAL_JUDGE_TIMEOUT_SECONDS": "45",
+            "DCI_EVAL_JUDGE_MAX_OUTPUT_TOKENS": "2048",
+            "DCI_EVAL_JUDGE_JSON_MODE": "true",
+            "DCI_EVAL_JUDGE_THINKING": "disabled",
+            "DCI_EVAL_JUDGE_INPUT_PRICE_PER_1M": "0",
+            "DCI_EVAL_JUDGE_CACHED_INPUT_PRICE_PER_1M": "0",
+            "DCI_EVAL_JUDGE_OUTPUT_PRICE_PER_1M": "0",
+        }
+        with patch.dict(os.environ, environment, clear=True):
+            config = JudgeConfig.from_env()
+
+        self.assertEqual(config.base_url, "https://api.deepseek.com/v1")
+        self.assertEqual(config.api, "chat-completions")
+        self.assertEqual(config.model, "deepseek-v4-flash")
+        self.assertEqual(config.api_key, "secret-key")
+        self.assertEqual(
+            config.endpoint, "https://api.deepseek.com/v1/chat/completions"
+        )
+        self.assertEqual(config.input_price_per_1m, 0)
+        self.assertEqual(config.output_price_per_1m, 0)
+        self.assertEqual(config.max_output_tokens, 2048)
+        self.assertTrue(config.json_mode)
+        self.assertEqual(config.effective_thinking, "disabled")
+        self.assertNotIn("api_key", config.public_dict())
+
+    def test_cli_style_overrides_take_precedence_over_environment(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "DCI_EVAL_JUDGE_BASE_URL": "https://from-env.example/v1",
+                "DCI_EVAL_JUDGE_MODEL": "from-env",
+            },
+            clear=True,
+        ):
+            config = JudgeConfig.from_env(
+                base_url="https://override.example/v1",
+                api="responses",
+                model="override-model",
+            )
+
+        self.assertEqual(config.base_url, "https://override.example/v1")
+        self.assertEqual(config.model, "override-model")
+
+    def test_project_env_does_not_override_process_environment(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            (root / ".env").write_text(
+                "DCI_TEST_EXISTING=from-file\nDCI_TEST_NEW=loaded\n",
+                encoding="utf-8",
+            )
+            with patch.dict(
+                os.environ, {"DCI_TEST_EXISTING": "from-process"}, clear=True
+            ):
+                load_project_env(root)
+                self.assertEqual(os.environ["DCI_TEST_EXISTING"], "from-process")
+                self.assertEqual(os.environ["DCI_TEST_NEW"], "loaded")
+
+    def test_main_entry_uses_agent_provider_and_model_from_environment(self) -> None:
+        with (
+            patch.dict(
+                os.environ,
+                {"DCI_PROVIDER": "custom-provider", "DCI_MODEL": "custom-model"},
+                clear=True,
+            ),
+            patch("sys.argv", ["dci-agent-lite"]),
+        ):
+            args = parse_args()
+
+        self.assertEqual(args.provider, "custom-provider")
+        self.assertEqual(args.model, "custom-model")
+
+
+class JudgeTransportTests(unittest.TestCase):
+    def test_chat_completions_request_and_response_are_normalized(self) -> None:
+        config = JudgeConfig(
+            base_url="https://api.deepseek.com/v1",
+            api="chat-completions",
+            model="deepseek-v4-flash",
+            api_key_env="DEEPSEEK_API_KEY",
+            api_key="secret-key",
+            input_price_per_1m=1.0,
+            cached_input_price_per_1m=0.5,
+            output_price_per_1m=2.0,
+        )
+        response_payload = {
+            "choices": [
+                {
+                    "message": {
+                        "content": json.dumps(
+                            {
+                                "is_correct": True,
+                                "normalized_prediction": "Adaku",
+                                "reason": "Matches the gold answer.",
+                            }
+                        )
+                    }
+                }
+            ],
+            "usage": {
+                "prompt_tokens": 10,
+                "completion_tokens": 5,
+                "total_tokens": 15,
+                "prompt_tokens_details": {"cached_tokens": 4},
+            },
+        }
+        response = MagicMock()
+        response.__enter__.return_value = response
+        response.read.return_value = json.dumps(response_payload).encode("utf-8")
+
+        with patch(
+            "dci.benchmark.judge.urllib.request.urlopen", return_value=response
+        ) as urlopen:
+            result = judge_answer_sync(
+                config=config,
+                question="Who?",
+                gold_answer="Adaku",
+                predicted_answer="Adaku /path/to/file",
+            )
+
+        request = urlopen.call_args.args[0]
+        request_payload = json.loads(request.data.decode("utf-8"))
+        self.assertEqual(
+            request.full_url, "https://api.deepseek.com/v1/chat/completions"
+        )
+        self.assertEqual(request.get_header("Authorization"), "Bearer secret-key")
+        self.assertEqual(request_payload["model"], "deepseek-v4-flash")
+        self.assertIn("messages", request_payload)
+        self.assertEqual(request_payload["max_tokens"], 1024)
+        self.assertEqual(request_payload["response_format"], {"type": "json_object"})
+        self.assertEqual(request_payload["thinking"], {"type": "disabled"})
+        self.assertIn("Example JSON", request_payload["messages"][0]["content"])
+        self.assertNotIn("reasoning", request_payload)
+        self.assertTrue(result["is_correct"])
+        self.assertEqual(result["usage"]["input_tokens"], 10)
+        self.assertEqual(result["usage"]["output_tokens"], 5)
+        self.assertEqual(result["judge_api"], "chat-completions")
+        self.assertAlmostEqual(result["cost_estimate_usd"]["total_cost"], 0.000018)
+
+    def test_responses_request_keeps_the_common_compatible_subset(self) -> None:
+        config = JudgeConfig(api="responses", api_key="key")
+        payload = build_judge_request(
+            config,
+            question="Question",
+            gold_answer="Gold",
+            predicted_answer="Prediction",
+        )
+        self.assertIn("input", payload)
+        self.assertIn("max_output_tokens", payload)
+        self.assertNotIn("reasoning", payload)
+        self.assertNotIn("text", payload)
+
+        text = extract_responses_text(
+            {
+                "output": [
+                    {
+                        "content": [
+                            {
+                                "type": "output_text",
+                                "text": '{"is_correct": false}',
+                            }
+                        ]
+                    }
+                ]
+            }
+        )
+        self.assertEqual(text, '{"is_correct": false}')
+
+    def test_generic_chat_backend_can_omit_optional_compatibility_fields(self) -> None:
+        config = JudgeConfig(
+            base_url="http://localhost:8000/v1",
+            api="chat-completions",
+            model="local-model",
+            json_mode=False,
+            thinking="omit",
+        )
+        payload = build_judge_request(
+            config,
+            question="Question",
+            gold_answer="Gold",
+            predicted_answer="Prediction",
+        )
+
+        self.assertEqual(payload["max_tokens"], 1024)
+        self.assertNotIn("response_format", payload)
+        self.assertNotIn("thinking", payload)
+
+    def test_invalid_structured_output_is_retried_once(self) -> None:
+        config = JudgeConfig(
+            base_url="https://api.deepseek.com/v1",
+            api="chat-completions",
+            model="deepseek-v4-flash",
+        )
+        invalid_payload = {
+            "choices": [
+                {
+                    "finish_reason": "length",
+                    "message": {"content": "The prediction appears to match"},
+                }
+            ]
+        }
+        valid_payload = {
+            "choices": [
+                {
+                    "finish_reason": "stop",
+                    "message": {
+                        "content": json.dumps(
+                            {
+                                "is_correct": True,
+                                "normalized_prediction": "Adaku",
+                                "reason": "Matches the gold answer.",
+                            }
+                        )
+                    },
+                }
+            ]
+        }
+        responses = []
+        for payload in (invalid_payload, valid_payload):
+            response = MagicMock()
+            response.__enter__.return_value = response
+            response.read.return_value = json.dumps(payload).encode("utf-8")
+            responses.append(response)
+
+        with patch(
+            "dci.benchmark.judge.urllib.request.urlopen", side_effect=responses
+        ) as urlopen:
+            result = judge_answer_sync(
+                config=config,
+                question="Who?",
+                gold_answer="Adaku",
+                predicted_answer="Adaku /path/to/file",
+            )
+
+        self.assertEqual(urlopen.call_count, 2)
+        self.assertEqual(result["attempts"], 2)
+        self.assertTrue(result["is_correct"])
+
+
+class JudgeResultReuseTests(unittest.TestCase):
+    def test_backend_identity_is_part_of_result_reuse(self) -> None:
+        config = JudgeConfig(
+            base_url="https://api.deepseek.com/v1",
+            api="chat-completions",
+            model="deepseek-v4-flash",
+        )
+        existing = {
+            **config.public_dict(),
+            "question": "Question",
+            "gold_answer": "Gold",
+            "predicted_answer": "Prediction",
+            "is_correct": True,
+        }
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            result_path = Path(temporary_directory) / "eval_result.json"
+            result_path.write_text(json.dumps(existing), encoding="utf-8")
+            reused = maybe_reuse_existing_eval(
+                eval_result_path=result_path,
+                judge_config=config,
+                question="Question",
+                gold_answer="Gold",
+                predicted_answer="Prediction",
+            )
+            changed_backend = maybe_reuse_existing_eval(
+                eval_result_path=result_path,
+                judge_config=JudgeConfig(
+                    base_url="http://localhost:8000/v1",
+                    api="chat-completions",
+                    model=config.model,
+                ),
+                question="Question",
+                gold_answer="Gold",
+                predicted_answer="Prediction",
+            )
+
+        self.assertEqual(reused, existing)
+        self.assertIsNone(changed_backend)
+
+
+if __name__ == "__main__":
+    unittest.main()

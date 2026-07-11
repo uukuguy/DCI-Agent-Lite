@@ -16,11 +16,13 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import queue
 import re
 import shlex
 import subprocess
 import sys
 import threading
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -43,6 +45,15 @@ DEFAULT_EVAL_JUDGE_MODEL = DEFAULT_JUDGE_MODEL
 DEFAULT_EVAL_INPUT_PRICE_PER_1M = DEFAULT_JUDGE_INPUT_PRICE_PER_1M
 DEFAULT_EVAL_CACHED_INPUT_PRICE_PER_1M = DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M
 DEFAULT_EVAL_OUTPUT_PRICE_PER_1M = DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M
+DEFAULT_RPC_TIMEOUT_SECONDS = 3600.0
+_RPC_STDOUT_EOF = object()
+
+
+def non_negative_float(value: str) -> float:
+    parsed = float(value)
+    if parsed < 0:
+        raise argparse.ArgumentTypeError("must be >= 0")
+    return parsed
 
 
 def _node_bin() -> str:
@@ -386,6 +397,7 @@ class RunRecorder:
         model: Optional[str],
         tools: Optional[str],
         max_turns: Optional[int],
+        rpc_timeout_seconds: Optional[float],
         system_prompt_file: Optional[Path],
         append_system_prompt_file: Optional[Path],
         conversation_features: ConversationFeatures,
@@ -432,18 +444,21 @@ class RunRecorder:
             self.state["finished_at"] = None
             self.state["error"] = None
             self.state["keep_session"] = keep_session
+            self.state["rpc_timeout_seconds"] = rpc_timeout_seconds
             self.state["conversation_features"] = self.conversation_features.to_dict()
             self.state["resume_count"] = int(self.state.get("resume_count", 0)) + 1
             self.conversation_full["status"] = "running"
             self.conversation_full["finished_at"] = None
             self.conversation_full["error"] = None
             self.conversation_full["keep_session"] = keep_session
+            self.conversation_full["rpc_timeout_seconds"] = rpc_timeout_seconds
             self.conversation_full["conversation_features"] = self.conversation_features.to_dict()
             self.conversation_full["pending_message"] = None
             self.conversation_full["final_text"] = None
             self.latest_model_context["status"] = "running"
             self.latest_model_context["finished_at"] = None
             self.latest_model_context["error"] = None
+            self.latest_model_context["rpc_timeout_seconds"] = rpc_timeout_seconds
             self.latest_model_context["runtime_context_management"] = self.latest_model_context.get(
                 "runtime_context_management"
             )
@@ -466,6 +481,7 @@ class RunRecorder:
                 "model": model,
                 "tools": tools,
                 "max_turns": max_turns,
+                "rpc_timeout_seconds": rpc_timeout_seconds,
                 "system_prompt_file": str(system_prompt_file) if system_prompt_file else None,
                 "append_system_prompt_file": str(append_system_prompt_file) if append_system_prompt_file else None,
                 "conversation_features": self.conversation_features.to_dict(),
@@ -502,6 +518,7 @@ class RunRecorder:
                 "model": model,
                 "tools": tools,
                 "max_turns": max_turns,
+                "rpc_timeout_seconds": rpc_timeout_seconds,
                 "system_prompt_file": str(system_prompt_file) if system_prompt_file else None,
                 "append_system_prompt_file": str(append_system_prompt_file) if append_system_prompt_file else None,
                 "conversation_features": self.conversation_features.to_dict(),
@@ -524,6 +541,7 @@ class RunRecorder:
                 "model": model,
                 "tools": tools,
                 "max_turns": max_turns,
+                "rpc_timeout_seconds": rpc_timeout_seconds,
                 "conversation_features": self.conversation_features.to_dict(),
                 "runtime_context_management": None,
                 "request_count": 0,
@@ -636,6 +654,7 @@ class RunRecorder:
                 "model": self.state.get("model"),
                 "tools": self.state.get("tools"),
                 "max_turns": self.state.get("max_turns"),
+                "rpc_timeout_seconds": self.state.get("rpc_timeout_seconds"),
                 "conversation_features": self.conversation_features.to_dict(),
                 "runtime_context_management": None,
                 "request_count": 0,
@@ -1037,6 +1056,8 @@ class PiRpcClient:
         self.command: Optional[List[str]] = None
         self.stderr_chunks: List[str] = []
         self._stderr_thread: Optional[threading.Thread] = None
+        self._stdout_thread: Optional[threading.Thread] = None
+        self._stdout_queue: queue.Queue[object] = queue.Queue()
         self._request_id = 0
 
     def _ensure_built_cli(self) -> Path:
@@ -1072,9 +1093,34 @@ class PiRpcClient:
             stderr=subprocess.PIPE,
         )
 
+        self._stdout_queue = queue.Queue()
+        self._stdout_thread = threading.Thread(target=self._drain_stdout, daemon=True)
+        self._stdout_thread.start()
         assert self.proc.stderr is not None
         self._stderr_thread = threading.Thread(target=self._drain_stderr, daemon=True)
         self._stderr_thread.start()
+
+    def _drain_stdout(self) -> None:
+        assert self.proc is not None
+        assert self.proc.stdout is not None
+        try:
+            for raw in self.proc.stdout:
+                if raw.endswith(b"\n"):
+                    raw = raw[:-1]
+                if raw.endswith(b"\r"):
+                    raw = raw[:-1]
+                try:
+                    payload = json.loads(raw.decode("utf-8"))
+                except (UnicodeDecodeError, json.JSONDecodeError):
+                    excerpt = raw[:240].decode("utf-8", errors="replace")
+                    self._stdout_queue.put(RuntimeError(f"Invalid JSONL from RPC process: {excerpt!r}"))
+                    return
+                if not isinstance(payload, dict):
+                    self._stdout_queue.put(RuntimeError(f"RPC process emitted a non-object JSON value: {payload!r}"))
+                    return
+                self._stdout_queue.put(payload)
+        finally:
+            self._stdout_queue.put(_RPC_STDOUT_EOF)
 
     def _drain_stderr(self) -> None:
         assert self.proc is not None
@@ -1085,14 +1131,21 @@ class PiRpcClient:
     def stop(self) -> None:
         if self.proc is None:
             return
+        proc = self.proc
         try:
-            if self.proc.poll() is None:
-                self.proc.terminate()
-                self.proc.wait(timeout=2)
+            if proc.poll() is None:
+                proc.terminate()
+                proc.wait(timeout=2)
         except subprocess.TimeoutExpired:
-            self.proc.kill()
-            self.proc.wait(timeout=2)
+            proc.kill()
+            proc.wait(timeout=2)
         finally:
+            if self._stdout_thread is not None:
+                self._stdout_thread.join(timeout=1)
+            if self._stderr_thread is not None:
+                self._stderr_thread.join(timeout=1)
+            self._stdout_thread = None
+            self._stderr_thread = None
             self.proc = None
 
     def _next_id(self) -> str:
@@ -1106,20 +1159,26 @@ class PiRpcClient:
         self.proc.stdin.write(line.encode("utf-8"))
         self.proc.stdin.flush()
 
-    def _read_json_line(self) -> Dict[str, Any]:
-        if self.proc is None or self.proc.stdout is None:
+    def _read_json_line(self, *, timeout_seconds: Optional[float] = None) -> Dict[str, Any]:
+        if self.proc is None:
             raise RuntimeError("RPC client is not running")
+        try:
+            if timeout_seconds is None:
+                item = self._stdout_queue.get()
+            else:
+                item = self._stdout_queue.get(timeout=max(0.0, timeout_seconds))
+        except queue.Empty as exc:
+            raise TimeoutError("Timed out waiting for an RPC event") from exc
 
-        raw = self.proc.stdout.readline()
-        if not raw:
+        if item is _RPC_STDOUT_EOF:
             stderr_text = self.get_stderr().strip()
-            raise RuntimeError(f"RPC process exited unexpectedly. stderr:\n{stderr_text}")
-
-        if raw.endswith(b"\n"):
-            raw = raw[:-1]
-        if raw.endswith(b"\r"):
-            raw = raw[:-1]
-        return json.loads(raw.decode("utf-8"))
+            returncode = self.proc.poll()
+            raise RuntimeError(f"RPC process exited unexpectedly (returncode={returncode}). stderr:\n{stderr_text}")
+        if isinstance(item, BaseException):
+            raise item
+        if not isinstance(item, dict):
+            raise RuntimeError(f"Unexpected RPC queue item: {item!r}")
+        return item
 
     def prompt_and_wait(
         self,
@@ -1127,6 +1186,7 @@ class PiRpcClient:
         *,
         recorder: Optional[RunRecorder] = None,
         max_turns: Optional[int] = None,
+        timeout_seconds: Optional[float] = None,
     ) -> str:
         request_id = self._next_id()
         self._send({"id": request_id, "type": "prompt", "message": message})
@@ -1136,9 +1196,19 @@ class PiRpcClient:
         prompt_ack = False
         seen_turns = 0
         sent_turn_limit_abort = False
+        deadline = time.monotonic() + timeout_seconds if timeout_seconds is not None and timeout_seconds > 0 else None
 
         while True:
-            event = self._read_json_line()
+            remaining = None if deadline is None else deadline - time.monotonic()
+            try:
+                event = self._read_json_line(timeout_seconds=remaining)
+            except TimeoutError as exc:
+                abort_id = self._next_id()
+                try:
+                    self._send({"id": abort_id, "type": "abort"})
+                except (BrokenPipeError, RuntimeError):
+                    pass
+                raise RuntimeError(f"RPC prompt timed out after {timeout_seconds:g} seconds") from exc
             if recorder:
                 recorder.record_event(event)
 
@@ -1152,6 +1222,10 @@ class PiRpcClient:
                     prompt_ack = True
                 elif response_id in auxiliary_ids:
                     pass
+                continue
+
+            if event_type == "agent_start":
+                text_parts = []
                 continue
 
             if event_type == "turn_start":
@@ -1192,6 +1266,13 @@ class PiRpcClient:
             if event_type == "agent_end":
                 if not prompt_ack:
                     raise RuntimeError("Received agent_end before prompt acknowledgement")
+                if "willRetry" not in event:
+                    break
+                continue
+
+            if event_type == "agent_settled":
+                if not prompt_ack:
+                    raise RuntimeError("Received agent_settled before prompt acknowledgement")
                 break
 
         return "".join(text_parts)
@@ -1258,6 +1339,15 @@ def parse_args() -> argparse.Namespace:
         "--max-turns",
         type=int,
         help="Client-side cap on agent turns. The runner sends an RPC abort before turn N+1 starts.",
+    )
+    parser.add_argument(
+        "--rpc-timeout-seconds",
+        type=non_negative_float,
+        default=os.environ.get("DCI_RPC_TIMEOUT_SECONDS", str(DEFAULT_RPC_TIMEOUT_SECONDS)),
+        help=(
+            "Wall-clock deadline for one RPC prompt. Defaults to DCI_RPC_TIMEOUT_SECONDS "
+            f"or {DEFAULT_RPC_TIMEOUT_SECONDS:g}; set to 0 to disable."
+        ),
     )
     parser.add_argument(
         "--system-prompt-file",
@@ -1650,6 +1740,7 @@ def main() -> int:
             model=args.model,
             tools=args.tools,
             max_turns=args.max_turns,
+            rpc_timeout_seconds=args.rpc_timeout_seconds,
             system_prompt_file=system_prompt_file,
             append_system_prompt_file=append_system_prompt_file,
             conversation_features=conversation_features,
@@ -1681,7 +1772,12 @@ def main() -> int:
         sys.stderr.write(f"[runner] saving run artifacts under {output_dir}\n")
         sys.stderr.flush()
 
-        final_text = client.prompt_and_wait(question, recorder=recorder, max_turns=args.max_turns)
+        final_text = client.prompt_and_wait(
+            question,
+            recorder=recorder,
+            max_turns=args.max_turns,
+            timeout_seconds=args.rpc_timeout_seconds,
+        )
         if not final_text.endswith("\n"):
             sys.stdout.write("\n")
         recorder.finalize(status="completed", final_text=final_text, stderr_text=client.get_stderr())
