@@ -15,3 +15,5 @@
 - 06:05 快速 handoff 协议与分级 MEMORY 已提交。[829787e]
 - 06:05 当前判断：保留 Python+RPC；TS sidecar 仅在触发条件出现时复议。
 - 06:05 handoff 边界完成；无残留进程，临时计划清理，恢复入口同步。
+- 07:29 已安装跨 Codex/Claude checkpoint 策略；canonical skill 与事件提醒验证通过。
+- 07:34 漏交接恢复改为 recovery checkpoint；非 GSD 仓库跳过 GSD 启动 hook。
