@@ -160,3 +160,6 @@
 - 22:14 Rust bounded output/deadline 边界已提交，service 可复用 kill/reap 与双流 drain。[92f9335]
 - 22:18 AF-050-H-004 confirmed 4/4; executor acceptance recorded.
 - 22:20 AF-050-H-004 通过 18 Rust、50 Python tests、fmt、Clippy、Ruff、shell 与范围门。
+- 22:21 concurrent executor JSONL 已提交，取消与乱序结果保持 exactly-one terminal。[49c0488]
+- 22:23 AF-050-H-005 confirmed 4/4; executor acceptance recorded.
+- 22:25 AF-050 closure 通过 21 Rust、141 Python、TypeScript、fmt、Clippy、Ruff、shell、scope 与 diff。

@@ -144,6 +144,10 @@ impl ExecutorService {
             code: Some(code),
         });
     }
+
+    async fn has_in_flight(&self) -> bool {
+        !self.in_flight.lock().await.is_empty()
+    }
 }
 
 pub async fn serve_jsonl<R, W>(policy: TrustedPolicy, reader: R, mut writer: W) -> io::Result<()>
@@ -153,20 +157,34 @@ where
 {
     let (service, mut responses) = ExecutorService::new(policy);
     let mut lines = reader.lines();
+    let mut input_open = true;
     loop {
+        if !input_open && !service.has_in_flight().await {
+            while let Ok(response) = responses.try_recv() {
+                write_response(&mut writer, response).await?;
+            }
+            break;
+        }
         tokio::select! {
-            line = lines.next_line() => match line? {
+            line = lines.next_line(), if input_open => match line? {
                 Some(line) => service.submit_line(&line).await,
-                None => break,
+                None => input_open = false,
             },
             response = responses.recv() => {
                 let Some(response) = response else { break };
-                let line = serde_json::to_vec(&response).map_err(io::Error::other)?;
-                writer.write_all(&line).await?;
-                writer.write_all(b"\n").await?;
-                writer.flush().await?;
+                write_response(&mut writer, response).await?;
             }
         }
     }
     Ok(())
+}
+
+async fn write_response<W>(writer: &mut W, response: ExecutorResponse) -> io::Result<()>
+where
+    W: AsyncWrite + Unpin,
+{
+    let line = serde_json::to_vec(&response).map_err(io::Error::other)?;
+    writer.write_all(&line).await?;
+    writer.write_all(b"\n").await?;
+    writer.flush().await
 }

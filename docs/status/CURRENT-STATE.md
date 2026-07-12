@@ -18,7 +18,7 @@
 - Maintenance history: Pi/Judge reliability H-001 through H-019 is completed and remains available as reference-maintenance evidence; it is not an active roadmap stream.
 - Claude Code provider access: the adapter supports stored login and inherited environment-configured backends; provider-backed UAT is deferred while the local account is unavailable and does not block host-language work.
 - Host contracts: Python and TypeScript expose the same schema-backed runtime manifest, request, event, and asynchronous client boundary without adapter-private types.
-- Controlled execution: `dci.executor/v1` now has a concurrent Rust JSONL service with trusted authorization, direct execution, bounded dual-stream draining, deadline/cancel kill-and-reap, duplicate-ID denial, out-of-order correlation, and safe parse errors. Operator packaging/documentation remains pending.
+- Controlled execution: `dci.executor/v1` has a runnable concurrent Rust JSONL sidecar with trusted startup policy, direct execution, bounded dual-stream draining, deadline/cancel kill-and-reap, duplicate-ID denial, out-of-order correlation, safe parse errors, EOF draining, operator documentation, and root verification targets.
 
 ## Open Problems (theme-level)
 
@@ -51,7 +51,7 @@
 - `src/dci/framework/host.py` — public Python Agent Runtime Protocol host contract.
 - `packages/typescript/agent-runtime/` — public TypeScript host package and shared-fixture validator.
 - `src/dci/framework/executor_protocol.py` — Python reference validator for `dci.executor/v1`.
-- `packages/rust/executor/` — active Rust controlled-executor package; policy, process, resource, cancellation, and concurrent JSONL library boundaries exist; operator entry point/docs and closure verification are pending.
+- `packages/rust/executor/` — runnable Rust controlled-executor sidecar and library with complete AF-050 policy/process/resource/service acceptance.
 - `scripts/bcplus_eval/run_bcplus_eval.py` — DCI reference benchmark harness.
 - `tools/climb/` — autonomous-work adapter; future cycles require a work-package parent.
 

@@ -42,6 +42,34 @@ run_rust_dimension() {
     fi
 }
 
+run_closure_dimension() {
+    name="$1"
+    check="$2"
+    case "$check" in
+        operator_binary)
+            command=(cargo test --manifest-path packages/rust/executor/Cargo.toml --test operator)
+            ;;
+        operator_docs)
+            command=(uv run python -m unittest tests.test_climb_tools.ClimbToolTests.test_af050_operator_docs_and_root_verification_targets_exist -v)
+            ;;
+        root_test_target)
+            command=(make test-rust-executor)
+            ;;
+        root_check_target)
+            command=(make check-rust-executor)
+            ;;
+        *)
+            echo "ERROR: unknown closure check $check" >&2
+            return 2
+            ;;
+    esac
+    if "${command[@]}" >"$RUN_DIR/$name.log" 2>&1; then
+        printf '1'
+    else
+        printf '0'
+    fi
+}
+
 dimension_runner="run_dimension"
 rust_suite="authorization"
 case "$HYPOTHESIS_ID" in
@@ -91,6 +119,17 @@ case "$HYPOTHESIS_ID" in
         repeat_test="duplicate_in_flight_request_id_is_denied"
         dirty_test="accepted_cancel_emits_ack_and_exactly_one_cancelled_terminal_result"
         override_test="malformed_json_returns_safe_error_without_echoing_input"
+        ;;
+    AF-050-H-005)
+        dimension_runner="run_closure_dimension"
+        first_dimension="operator_binary"
+        second_dimension="operator_docs"
+        third_dimension="root_test_target"
+        fourth_dimension="root_check_target"
+        immutable_test="operator_binary"
+        repeat_test="operator_docs"
+        dirty_test="root_test_target"
+        override_test="root_check_target"
         ;;
     H-001)
         first_dimension="immutable_resolution"

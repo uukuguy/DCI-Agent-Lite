@@ -180,9 +180,9 @@
 
 ## D-021 — Treat the Rust local executor as policy enforcement, not a sandbox
 
-- Status: ✅ accepted and partially implemented decision
+- Status: ✅ accepted and implemented decision
 - Decided: 2026-07-12
 - Decision: the first Rust backend enforces a trusted canonical workspace, absolute executable allowlist, direct argument-vector spawning, cleared child environment, deadlines, bounded output, and cancellation; it must not be described as OS-level isolation.
 - Rationale: a local child process can still use the network, open absolute paths, spawn descendants, and call platform syscalls unless a real platform/container boundary is installed. Honest capability naming prevents enterprise callers from relying on protections that do not exist.
-- Implemented evidence: `dci.executor/v1` schemas/reference validation plus Rust trusted policy, no-shell execution, capped stream draining, deadline/cancel kill-and-reap, duplicate-ID enforcement, and responsive JSONL correlation are implemented; operator packaging/docs remain AF-050 work.
+- Implemented evidence: `dci.executor/v1` schemas/reference validation plus the runnable Rust sidecar prove trusted policy, no-shell execution, capped stream draining, deadline/cancel kill-and-reap, duplicate-ID enforcement, responsive JSONL correlation, EOF completion, and documented operator boundaries.
 - Extension boundary: containers, remote workers, Linux namespace/seccomp/cgroup isolation, macOS sandbox profiles, or Windows job objects must be replaceable executor backends behind the same versioned contract.

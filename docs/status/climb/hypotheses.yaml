@@ -522,6 +522,18 @@ hypotheses:
   expected_lift: +1 AF-050 closure confidence
   cost_h: 0.5
   ranking: 0.6
-  status: pending
+  status: confirmed
   created_at: '2026-07-12T21:57:42+08:00'
-  results: []
+  results:
+  - session: 2026-07-12-af-050-rust-executor
+    cycle: 25
+    run: 20260712-222325-dci-climb-af050h005
+    local: 4
+    local_per_task:
+      operator_binary: 1
+      operator_docs: 1
+      root_test_target: 1
+      root_check_target: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local executor acceptance

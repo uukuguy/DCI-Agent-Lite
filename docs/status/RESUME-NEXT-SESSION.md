@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-12 22:20 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-12 22:25 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-050
 
@@ -12,17 +12,18 @@ Active work package: AF-050
 - `AF-050-H-002` is confirmed: direct Tokio execution preserves literal argv, clears environment, closes stdin, and uses canonical cwd.
 - `AF-050-H-003` is confirmed: stdout/stderr drain concurrently under independent caps and deadline paths kill/reap before return.
 - `AF-050-H-004` is confirmed: concurrent JSONL dispatch supports out-of-order results, duplicate denial, cancel ack plus one terminal result, and non-echoing parse errors.
-- `AF-050-H-005` operator entry point, documentation, and framework closure verification is the only pending hypothesis.
+- `AF-050-H-005` is confirmed: the binary loads trusted policy, drains in-flight results after stdin EOF, and has explicit non-sandbox operator docs/root gates.
+- Full AF-050 closure gate passes; the next durable action is the governed transition to AF-060.
 
 ## Durable boundary
 
-- Branch: `main`; H-003 resources are committed at `92f9335`, while verified H-004 concurrent service work is the current uncommitted recovery boundary.
+- Branch: `main`; H-004 service is committed at `49c0488`, while verified H-005 operator/closure work is the current uncommitted recovery boundary.
 - Parent repository functional files were clean before the live checkpoint; external `pi/` remains intentionally untouched and dirty.
 - No long-running child process is active.
 
 ## Immediate next action
 
-Write failing acceptance tests for the operator policy/config entry point, graceful stdin EOF with in-flight completion, explicit non-sandbox documentation, and root verification commands.
+Commit H-005, then close AF-050 and activate AF-060 only after its design/plan make the scope gate pass.
 
 ## Guardrails
 

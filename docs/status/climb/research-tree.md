@@ -1,19 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (24 runs).
+> Deterministic summary generated from tracked state (25 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 24
-- Next hypothesis: AF-050-H-005
+- Last cycle: 25
+- Next hypothesis: None
 - In flight: none
-- Next action: Start AF-050-H-005.
+- Next action: Trigger Knowledge Layer.
 
 ## Active hypotheses
 
-- **AF-050-H-005** (pending, rank 0.60): Document and verify the complete non-sandbox executor boundary across framework gates.
 
 ## Run ladder
 
@@ -43,6 +42,7 @@
 | 20260712-220744-dci-climb-af050h002 | AF-050-H-002 | 4 | confirmed 4/4 |
 | 20260712-221215-dci-climb-af050h003 | AF-050-H-003 | 4 | confirmed 4/4 |
 | 20260712-221841-dci-climb-af050h004 | AF-050-H-004 | 4 | confirmed 4/4 |
+| 20260712-222325-dci-climb-af050h005 | AF-050-H-005 | 4 | confirmed 4/4 |
 
 ## Negative cache
 
