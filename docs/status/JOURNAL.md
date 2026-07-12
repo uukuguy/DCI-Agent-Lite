@@ -294,3 +294,4 @@
 - 03:53 AF-110 治理切换已提交，scope preflight 确认唯一 active package。[b401140]
 - 03:56 AssemblyPlan 保留确定顺序的深度不可变 manifests，为 package executor 提供声明边界。[fc5ab82]
 - 04:00 exact implementation binding、不可变 invocation/result 与声明输出校验已提交。[a679e0f]
+- 04:04 composed runner 完成全量 preflight、顺序执行、artifact 路由及失败/取消短路。[3b44940]

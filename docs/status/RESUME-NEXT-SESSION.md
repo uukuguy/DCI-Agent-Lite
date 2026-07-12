@@ -1,10 +1,10 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13 03:53 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-13 04:04 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-110
 
-Package state: governance activated; implementation begins with immutable selected package declarations.
+Package state: Tasks 1–3 complete; independent DCI research capability implementation is next.
 
 ## TL;DR
 
@@ -13,6 +13,7 @@ Package state: governance activated; implementation begins with immutable select
 - The approved AF-110 architecture is committed through `1ae793c`: capability packages are reusable executable units, applications are executable composition boundaries, and the original DCI benchmark stays an independent baseline.
 - AF-110 package execution and AF-120 application distribution/binding are deliberately split to keep Asterion core independent of capability implementations.
 - The implementation plan is committed at `c60f0b4`; inline test-first execution was selected and AF-110 is now active.
+- `fc5ab82`, `a679e0f`, and `3b44940` complete immutable plan declarations, exact implementation contracts, and deterministic composed execution.
 
 ## Where things stand
 
@@ -34,9 +35,9 @@ Package state: governance activated; implementation begins with immutable select
 
 ## Next steps (immediate)
 
-1. Run the AF-110 scope preflight.
-2. Write the failing Task 1 test for immutable selected package declarations in `AssemblyPlan`.
-3. Implement only enough assembly storage to make that test pass.
+1. Write the failing Task 4 tests for an independently packaged DCI local-research implementation.
+2. Implement the runtime-neutral capability without importing `dci.benchmark`.
+3. Verify Pi/Claude fixture parity, redaction, packaging, and Asterion dependency direction.
 
 ## Open questions
 
