@@ -61,3 +61,5 @@
 - 17:29 H-007 confirmed 4/4; setup-policy acceptance recorded.
 - 17:30 Knowledge Layer added H-008: no-request judge configuration provenance before preflight spend.
 - 17:32 H-008 local contract 4/4; 69 tests, Ruff, compile, Bash syntax, and Pi RPC probe passed before cycle.
+- 17:33 H-008 confirmed 4/4; setup-policy acceptance recorded.
+- 17:34 Knowledge Layer added H-009: opt-in strict JSON Schema for Responses judge verdicts.

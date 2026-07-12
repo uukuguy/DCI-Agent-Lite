@@ -1,6 +1,6 @@
 # Recovered Session Checkpoint
 
-> Updated: 2026-07-12 17:32 +0800. **Active H-008 cycle-evidence checkpoint — session remains active, not a final handoff.**
+> Updated: 2026-07-12 17:34 +0800. **Active H-009 strict-schema checkpoint — session remains active, not a final handoff.**
 
 ## TL;DR
 
@@ -9,6 +9,7 @@
 - H-006 is confirmed 4/4 against the real configured DeepSeek backend after using the new `.env` key without the stale inherited process value. The pool is empty, so Knowledge Layer is active.
 - H-007 confirmed 4/4 and now reports safe dotenv/process/shadow provenance on successful preflight output.
 - Knowledge Layer added H-008: an offline configuration check will expose the same source information before a credentialed preflight request.
+- H-008 confirmed 4/4; Knowledge Layer added H-009 for default-off strict JSON Schema on supporting Responses backends.
 - H-008 is locally verified: its config-only path makes no request and emits safe dotenv/process/shadow metadata through a four-dimension climb adapter.
 - H-006 scope and a test-first inline plan are committed; work proceeds in the clean shared checkout without touching the independent `pi/` repository.
 - The safe standalone preflight, Make target, documentation, and four-dimension climb adapter are fully verified and H-006 is recorded as cycle 6.
@@ -33,7 +34,7 @@
 
 ## Next action
 
-1. Run `env -u DEEPSEEK_API_KEY bash tools/climb/cycle.sh H-008` to record no-request configuration evidence.
+1. Execute H-009 in RED: add opt-in Responses strict-schema request shaping and cache identity without altering compatible defaults.
 2. Prefer reusing `JudgeConfig`/`judge_answer_sync`; do not introduce a second request-shaping path.
 3. Keep credentials out of artifacts/output, add a Make target and docs, then run the climb cycle and full verification.
 4. If the pool empties after H-006, trigger Knowledge Layer again rather than stopping.

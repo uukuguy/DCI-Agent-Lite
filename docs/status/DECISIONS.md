@@ -73,4 +73,4 @@
 - Decision: judge preflight reports whether its effective key originated in the process environment, `.env`, or neither, and flags a differing `.env` value shadowed by the process environment.
 - Rationale: `load_project_env(..., override=False)` deliberately preserves explicit caller configuration, but that behavior can otherwise disguise a rotated `.env` key as a provider authentication failure.
 - Privacy boundary: report only a source label and boolean shadowing status—never a key, hash, length, or provider error body.
-- Follow-up: H-008 adds a no-request configuration check so source metadata is available before the credentialed preflight spends a request.
+- Implemented follow-up: H-008 adds `make check-judge-config`, a no-request configuration check that exposes source metadata before the credentialed preflight spends a request.

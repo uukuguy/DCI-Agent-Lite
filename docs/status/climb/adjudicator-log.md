@@ -27,3 +27,10 @@ Append-only decision-gate record.
 - Local evidence: H-007 provenance is emitted only after the credentialed request succeeds, so a shadowed invalid process key still hides its source on the failing path.
 - Ranked pool: H-008 no-request judge configuration check (rank 0.65).
 - Decision: provide an offline `check-judge-config` target that reuses the normal resolver and reports only safe public configuration/provenance.
+
+## 2026-07-12 Knowledge Layer after H-008
+
+- External reference: OpenAI documents `json_schema` as the preferred structured-output mode for supporting APIs, while JSON object mode remains the compatibility fallback.
+- Local evidence: the current generic Responses request relies on prompt-directed JSON and parser retries; no strict schema request shape exists.
+- Ranked pool: H-009 opt-in Responses strict schema (rank 0.60).
+- Decision: add an explicit default-off flag restricted to Responses and include it in cached evaluation identity.
