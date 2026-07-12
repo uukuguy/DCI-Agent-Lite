@@ -131,3 +131,5 @@
 - 21:25 AF-040 成为唯一活跃包，使 Python/TypeScript 主机工作受范围门控制。[88b03ab]
 - 21:25 AF-040 公共主机契约与跨语言一致性计划已固化。[4444a79]
 - 21:25 runtime manifest 正反 fixtures 与 Python validator 已通过聚焦测试。
+- 21:26 可移植 runtime manifest 已提交，成为两个主机共享的发现契约。[0a0668d]
+- 21:27 Python 公共异步 client 与不可变协议值对象已通过共享 fixture 测试。
