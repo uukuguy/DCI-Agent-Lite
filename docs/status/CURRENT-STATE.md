@@ -11,14 +11,14 @@
 - Python CLI/orchestration: `dci-agent-lite` launches the external Pi coding agent in RPC or terminal mode, waits for session-level `agent_settled`, applies a configurable wall-clock deadline, and records run artifacts; a model-free `get_state` preflight detects basic RPC drift.
 - External runtime: Pi is resolved through `DCI_PI_DIR`, preferring `./pi` with a legacy `./pi-mono` fallback.
 - Corpus interaction: the agent searches local raw corpora directly with terminal tools; there is no required embedding index or retrieval service.
-- Evaluation: a shared judge transport supports OpenAI Responses and compatible Chat Completions backends; `make check-judge` sends one trivial request through that same path before a costly batch.
+- Evaluation: a shared judge transport supports OpenAI Responses and compatible Chat Completions backends; `make check-judge` sends one trivial request through that same path, while `make check-judge-config` will expose its effective safe configuration without a request.
 - Configuration/artifacts: repository-root `.env` controls agent, Pi, and judge settings; run outputs under `outputs/` record the actual Pi commit, dirty state, and lock match.
 - Autonomous research: tracked climb state under `docs/status/climb/` ranks dependency/runtime hypotheses; `research-tree.md` is the resume-load summary and `tools/climb/` provides deterministic synchronization.
 
 ## Open Problems (theme-level)
 
 - Protocol compatibility as the external Pi checkout evolves independently.
-- Structured-output variability and credential-source drift across nominally OpenAI-compatible judge backends.
+- Structured-output variability across nominally OpenAI-compatible judge backends.
 
 ## Key Files
 

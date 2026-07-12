@@ -1,19 +1,19 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (6 runs).
+> Deterministic summary generated from tracked state (7 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: knowledge-layer
-- Last cycle: 6
-- Next hypothesis: H-007
+- Last cycle: 7
+- Next hypothesis: H-008
 - In flight: none
-- Next action: Implement H-007 safe judge credential provenance preflight.
+- Next action: Implement H-008 no-request judge configuration check.
 
 ## Active hypotheses
 
-- **H-007** (pending, rank 0.70): Report safe judge credential provenance and warn when process environment shadows rotated .env values.
+- **H-008** (pending, rank 0.65): Add a no-request judge configuration check that reports safe provenance before preflight spend.
 
 ## Run ladder
 
@@ -25,6 +25,7 @@
 | 20260712-160332-dci-climb-h004 | H-004 | 4 | confirmed 4/4 |
 | 20260712-161133-dci-climb-h005 | H-005 | 4 | confirmed 4/4 |
 | 20260712-171944-dci-climb-h006 | H-006 | 4 | confirmed 4/4 |
+| 20260712-172903-dci-climb-h007 | H-007 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

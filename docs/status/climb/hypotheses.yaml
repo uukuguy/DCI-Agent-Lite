@@ -126,11 +126,33 @@ hypotheses:
     verdict: confirmed 4/4
     decision_reason: deterministic local setup-policy acceptance
 - id: H-007
-  description: Report safe judge credential provenance and warn when process environment shadows rotated .env values.
+  description: Report safe judge credential provenance and warn when process environment
+    shadows rotated .env values.
   parent_paradigm: judge-config-provenance
   expected_lift: +1 configuration-drift-prevention dimension
   cost_h: 0.3
   ranking: 0.7
-  status: pending
+  status: confirmed
   created_at: '2026-07-12T17:24:00+08:00'
+  results:
+  - session: 2026-07-12-pi-revision
+    cycle: 7
+    run: 20260712-172903-dci-climb-h007
+    local: 4
+    local_per_task:
+      dotenv_source: 1
+      process_source: 1
+      shadow_warning: 1
+      safe_output: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local setup-policy acceptance
+- id: H-008
+  description: Add a no-request judge configuration check that reports safe provenance before preflight spend.
+  parent_paradigm: judge-config-provenance
+  expected_lift: +1 pre-spend configuration-drift-prevention dimension
+  cost_h: 0.1
+  ranking: 0.65
+  status: pending
+  created_at: '2026-07-12T17:30:00+08:00'
   results: []

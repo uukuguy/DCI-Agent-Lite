@@ -65,3 +65,12 @@
 - Rationale: a model-free Pi probe cannot detect judge credential, endpoint, request-shaping, or structured-output failures. Reusing the production transport prevents a second, misleading compatibility path.
 - Boundary: the preflight is opt-in and does not run automatically before batches. It prints safe configuration, verdict, usage, and cost only; shared HTTP errors retain endpoint/status but never provider response bodies.
 - Configuration note: normal project loading intentionally preserves already-exported process variables over `.env`; a user who rotates only `.env` must start without a stale exported judge key until provenance reporting is added.
+
+## D-008 — Preserve judge-key precedence and report it safely
+
+- Status: ✅ accepted and implemented decision
+- Decided: 2026-07-12
+- Decision: judge preflight reports whether its effective key originated in the process environment, `.env`, or neither, and flags a differing `.env` value shadowed by the process environment.
+- Rationale: `load_project_env(..., override=False)` deliberately preserves explicit caller configuration, but that behavior can otherwise disguise a rotated `.env` key as a provider authentication failure.
+- Privacy boundary: report only a source label and boolean shadowing status—never a key, hash, length, or provider error body.
+- Follow-up: H-008 adds a no-request configuration check so source metadata is available before the credentialed preflight spends a request.

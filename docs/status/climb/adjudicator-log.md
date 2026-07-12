@@ -21,3 +21,9 @@ Append-only decision-gate record.
 - Local evidence: a stale exported `DEEPSEEK_API_KEY` differed from the newly rotated `.env` value and caused the first preflight retries to return 401; unsetting only the inherited variable made the same preflight pass.
 - Ranked pool: H-007 judge credential provenance (rank 0.70).
 - Decision: expose safe effective-source and shadowing metadata in the explicit preflight, preserving the intentional precedence contract.
+
+## 2026-07-12 Knowledge Layer after H-007
+
+- Local evidence: H-007 provenance is emitted only after the credentialed request succeeds, so a shadowed invalid process key still hides its source on the failing path.
+- Ranked pool: H-008 no-request judge configuration check (rank 0.65).
+- Decision: provide an offline `check-judge-config` target that reuses the normal resolver and reports only safe public configuration/provenance.
