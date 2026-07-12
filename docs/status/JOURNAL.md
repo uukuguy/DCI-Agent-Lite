@@ -311,3 +311,4 @@
 - 07:20 provider discovery 仅列 metadata、仅加载显式选择项，避免隐式执行相邻 provider。[88f6480]
 - 07:35 通用 `asterion list/run` 已提交，runtime 构造严格晚于 provider 与 binding preflight。[444efc3]
 - 07:54 AF-120 收敛为唯一 Asterion wheel；`src/dci` 仅保留仓库内可运行 baseline。[a0f0a7f]
+- 07:55 单 wheel 设计恢复 checkpoint 已提交，下一步为书面 spec review。[df21975]
