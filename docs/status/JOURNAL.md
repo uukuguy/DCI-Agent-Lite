@@ -112,3 +112,8 @@
 - 20:43 Agent Runtime Protocol v1 schema、JSONL fixtures 与 Python validator 已测试提交。[f03f081]
 - 20:45 AF-010 通过 109 tests、编译、Ruff 与范围审计；协议契约完成并转入 AF-020。
 - 20:45 Pi 协议适配器设计与测试计划已固化，原始 RPC 行为保持不变。
+- 20:46 AF-020 已成为唯一活跃包，Pi 适配设计、计划与恢复入口一致。[38ad134]
+- 20:49 Pi 稳定 RPC 事件 translator 已测试提交，思考与 provider payload 明确排除。[edcf385]
+- 20:52 Pi RunRecorder 已生成隔离协议 attempts，成功/失败/resume 均通过 conformance。[b7926bb]
+- 20:53 AF-020 通过 116 tests 与真实 runtime-example；45 events、7 对 tools、judge verdict=true。
+- 20:53 Claude Code 2.1.199 被选为 AF-030 独立 runtime；设计与计划已固化。

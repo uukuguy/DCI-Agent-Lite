@@ -24,7 +24,7 @@
 
 ## AF-020 — Pi reference adapter
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Agent Application Framework
 - Scope: migrate the existing Pi JSONL RPC path behind the Agent Runtime Protocol.
 - Dependencies: AF-010
@@ -34,13 +34,13 @@
 
 ## AF-030 — Independent runtime vertical slice
 
-- Status: pending
+- Status: in_progress
 - Parent objective: Agent Application Framework
 - Scope: add one non-Pi adapter and run the same DCI research capability across both adapters.
 - Dependencies: AF-010
 - Acceptance: cross-runtime DCI acceptance proves shared events and artifacts.
-- Design: `docs/architecture/agent-framework.md`
-- Plan: not yet planned
+- Design: `docs/superpowers/specs/2026-07-12-claude-code-protocol-adapter-design.md`
+- Plan: `docs/superpowers/plans/2026-07-12-claude-code-protocol-adapter.md`
 
 ## AF-040 — Python and TypeScript host boundaries
 

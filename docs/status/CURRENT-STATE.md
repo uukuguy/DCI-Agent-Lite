@@ -6,7 +6,7 @@
 - Current branch: `main`
 - Theme-level focus: Agent Runtime Protocol foundation and governed multi-runtime framework delivery.
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: `AF-020` — Pi reference adapter.
+- Active work package: `AF-030` — Claude Code independent runtime vertical slice.
 
 ## Current Architecture
 
