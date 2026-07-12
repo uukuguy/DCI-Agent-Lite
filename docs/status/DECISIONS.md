@@ -218,3 +218,12 @@
 - Revalidation trigger: add an assembly manifest only after catalog selections need a portable binding to runtime and host-service identities; add distribution only when a real remote source is required.
 - Implemented evidence: AF-080-H-001 confirms root/file permutation stability, canonical manifest validation, direct-child filtering, and non-recursive discovery; H-002 confirms fail-closed root/document/symlink/identity boundaries and content-free public errors; H-003 confirms deterministic exact selection, deep-fresh manifests, both graph integrations, and duplicate/unknown rejection.
 - Closure evidence: H-004 documents the catalog trust/language boundaries and passes 213 Python, 7 Node, and 21 Rust tests plus every clean-install, compile, lint, format, shell, scope, and diff gate.
+
+## D-025 — Assemble statically before running applications
+
+- Status: ✅ accepted decision
+- Decided: 2026-07-13
+- Decision: AF-090 defines `dci.assembly/v1` and a pure plan resolver over one runtime manifest, exact catalog refs, and explicit host-service edges.
+- Rationale: the catalog now supplies stable identities; a portable static binding is required before any runner can safely consume runtime/package/service choices.
+- Boundary: resolution performs no runtime, executor, tool, or workflow execution and carries no prompts, credentials, provider/model settings, commands, transports, or mutable state.
+- Revalidation trigger: propose a runner only after static plans for both reference applications are portable, safe, and insufficient for a concrete execution use case.

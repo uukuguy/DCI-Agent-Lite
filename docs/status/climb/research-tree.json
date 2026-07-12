@@ -1,13 +1,13 @@
 {
   "run_count": 38,
   "session": {
-    "session": "2026-07-13-af-080-local-package-catalog",
-    "phase": "knowledge",
-    "work_package_id": "AF-080",
+    "session": "2026-07-13-af-090-static-assembly",
+    "phase": "implementation",
+    "work_package_id": "AF-090",
     "last_cycle": 38,
-    "next_hypothesis": null,
+    "next_hypothesis": "AF-090-H-001",
     "in_flight": null,
-    "next_action": "Select and govern the next framework package after local catalog closure.",
+    "next_action": "Start AF-090-H-001.",
     "falsified_routes": [
       "duplicate the authoritative Pi commit across setup.sh and .env.template",
       "convert the independent Pi checkout to vendored or submodule ownership",
@@ -17,7 +17,56 @@
       "build an enterprise control plane before a reference package graph"
     ]
   },
-  "active": [],
+  "active": [
+    {
+      "id": "AF-090-H-001",
+      "work_package_id": "AF-090",
+      "description": "Define the closed canonical dci.assembly/v1 schema fixtures and Python validator.",
+      "parent_paradigm": "assembly-manifest-contract",
+      "expected_lift": "+1 portable assembly boundary",
+      "cost_h": 0.7,
+      "ranking": 0.9,
+      "status": "pending",
+      "created_at": "2026-07-13T01:35:00+08:00",
+      "results": []
+    },
+    {
+      "id": "AF-090-H-002",
+      "work_package_id": "AF-090",
+      "description": "Resolve runtime identity exact catalog refs and host-service edges into immutable plans.",
+      "parent_paradigm": "static-assembly-resolver",
+      "expected_lift": "+1 static planning boundary",
+      "cost_h": 0.8,
+      "ranking": 0.8,
+      "status": "pending",
+      "created_at": "2026-07-13T01:35:00+08:00",
+      "results": []
+    },
+    {
+      "id": "AF-090-H-003",
+      "work_package_id": "AF-090",
+      "description": "Resolve DCI and controlled-code reference applications with runtime parity and service separation.",
+      "parent_paradigm": "reference-assembly-plans",
+      "expected_lift": "+1 application-level evidence",
+      "cost_h": 0.7,
+      "ranking": 0.7,
+      "status": "pending",
+      "created_at": "2026-07-13T01:35:00+08:00",
+      "results": []
+    },
+    {
+      "id": "AF-090-H-004",
+      "work_package_id": "AF-090",
+      "description": "Add TypeScript parity documentation and full static-assembly closure gates.",
+      "parent_paradigm": "static-assembly-acceptance",
+      "expected_lift": "+1 AF-090 closure confidence",
+      "cost_h": 0.5,
+      "ranking": 0.6,
+      "status": "pending",
+      "created_at": "2026-07-13T01:35:00+08:00",
+      "results": []
+    }
+  ],
   "confirmed": [
     {
       "id": "H-001",

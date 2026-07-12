@@ -224,3 +224,5 @@
 - 01:27 AF-080 closure 通过 213 Python、7 Node、21 Rust、clean install、lint、scope 与 diff。
 - 01:28 local catalog acceptance 已提交；exact selections 具备进入静态 application assembly 的基础。[760c9a5]
 - 01:31 static application assembly 方向获批：绑定 runtime/catalog/host edges，但不执行。
+- 01:33 static assembly 设计已提交，`dci.assembly/v1` 进入详细计划。[8accea1]
+- 01:35 AF-080 完成；AF-090 assembly 设计、计划与四个 hypotheses 接管主线。

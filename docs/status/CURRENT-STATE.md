@@ -4,9 +4,9 @@
 
 - Project: DCI-Agent-Lite — evolving from a Pi-based DCI benchmark harness into an agent-application framework.
 - Current branch: `main`
-- Theme-level focus: Deterministic fail-closed discovery and exact selection of local framework packages.
+- Theme-level focus: Static portable application assembly across runtime, catalog, and host-service boundaries.
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: `AF-080` — local package catalog.
+- Active work package: `AF-090` — static application assembly.
 
 ## Current Architecture
 
@@ -30,8 +30,8 @@
 ## Open Problems (theme-level)
 
 - Provider-backed acceptance of the first non-Pi runtime when credentials or a compatible gateway become available.
-- Discover checked-in and operator-supplied manifests without hidden global state, recursion, symlink ambiguity, or executable loading.
-- Select exact package identities and feed both verified graphs to the existing composer without adding version solving or execution.
+- Define a closed assembly contract that distinguishes runtime-native capabilities from host-service edges.
+- Resolve exact catalog selections and one runtime manifest into an immutable auditable plan without execution.
 
 ## Key Files
 

@@ -85,10 +85,20 @@
 
 ## AF-080 — Local package catalog
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Agent Application Framework
 - Scope: deterministically discover, validate, and exact-select portable manifests from explicit local directories without loading or executing packages.
 - Dependencies: AF-060, AF-070
 - Acceptance: explicit roots produce a deterministic fail-closed catalog whose exact selections compose both reference graphs without network, installation, or implicit version policy.
 - Design: `docs/superpowers/specs/2026-07-13-local-package-catalog-design.md`
 - Plan: `docs/superpowers/plans/2026-07-13-local-package-catalog.md`
+
+## AF-090 — Static application assembly
+
+- Status: in_progress
+- Parent objective: Agent Application Framework
+- Scope: bind one runtime identity, exact catalog package refs, and explicit host-service edges into a deterministic auditable composition plan without execution.
+- Dependencies: AF-040, AF-080
+- Acceptance: both reference applications resolve through the shared runtime/catalog/composer contracts with cross-language validation and no execution side effects.
+- Design: `docs/superpowers/specs/2026-07-13-static-application-assembly-design.md`
+- Plan: `docs/superpowers/plans/2026-07-13-static-application-assembly.md`

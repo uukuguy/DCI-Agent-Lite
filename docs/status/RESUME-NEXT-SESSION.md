@@ -1,8 +1,8 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13 01:28 +0800. **Session remains active — strategic design gate.**
+> Updated: 2026-07-13 01:35 +0800. **Session remains active — autonomous climb continues.**
 
-Active work package: AF-080
+Active work package: AF-090
 
 ## TL;DR
 
@@ -26,6 +26,7 @@ Active work package: AF-080
 - `AF-080-H-003` is confirmed: exact selections are deterministic/fresh, compose both graphs, and reject duplicate/unknown refs.
 - `AF-080-H-004` is confirmed: catalog documentation and independent full framework closure pass.
 - AF-080 remains active only until the knowledge layer records the next governed package.
+- AF-080 is complete; AF-090 is active under the approved static application assembly design and plan.
 
 ## Durable boundary
 
@@ -39,7 +40,7 @@ Active work package: AF-080
 
 ## Immediate next action
 
-Approve the recommended static application assembly contract, then design AF-090 without runtime, executor, or workflow execution.
+Start AF-090-H-001 with failing shared assembly schema and Python validation tests.
 
 ## Guardrails
 
@@ -50,7 +51,7 @@ Approve the recommended static application assembly contract, then design AF-090
 ## Ready commands
 
 ```bash
-python3 tools/project_scope_check.py
+python3 tools/project_scope_check.py --climb-hypothesis AF-090-H-001
 uv run python -m unittest tests.test_package_catalog -v
 uv run python -m unittest tests.test_package_composition -v
 ```

@@ -1,11 +1,11 @@
 {
-  "session": "2026-07-13-af-080-local-package-catalog",
-  "phase": "knowledge",
-  "work_package_id": "AF-080",
+  "session": "2026-07-13-af-090-static-assembly",
+  "phase": "implementation",
+  "work_package_id": "AF-090",
   "last_cycle": 38,
-  "next_hypothesis": null,
+  "next_hypothesis": "AF-090-H-001",
   "in_flight": null,
-  "next_action": "Select and govern the next framework package after local catalog closure.",
+  "next_action": "Start AF-090-H-001.",
   "falsified_routes": [
     "duplicate the authoritative Pi commit across setup.sh and .env.template",
     "convert the independent Pi checkout to vendored or submodule ownership",

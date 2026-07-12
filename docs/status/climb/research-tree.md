@@ -5,14 +5,18 @@
 
 ## In-flight / session state
 
-- Phase: knowledge
+- Phase: implementation
 - Last cycle: 38
-- Next hypothesis: None
+- Next hypothesis: AF-090-H-001
 - In flight: none
-- Next action: Select and govern the next framework package after local catalog closure.
+- Next action: Start AF-090-H-001.
 
 ## Active hypotheses
 
+- **AF-090-H-001** (pending, rank 0.90): Define the closed canonical dci.assembly/v1 schema fixtures and Python validator.
+- **AF-090-H-002** (pending, rank 0.80): Resolve runtime identity exact catalog refs and host-service edges into immutable plans.
+- **AF-090-H-003** (pending, rank 0.70): Resolve DCI and controlled-code reference applications with runtime parity and service separation.
+- **AF-090-H-004** (pending, rank 0.60): Add TypeScript parity documentation and full static-assembly closure gates.
 
 ## Run ladder
 
