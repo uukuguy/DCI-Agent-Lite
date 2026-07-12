@@ -1,19 +1,19 @@
-# Next-Session Handoff
+# Recovered Session Checkpoint
 
-> Updated: 2026-07-12 16:18 +0800. **This session is closed; start with `project-state resume`.**
+> Updated: 2026-07-12 16:30 +0800. **The prior baton predates the final Journal boundary record; recovered during `project-state resume`. Session remains active — not a final handoff.**
 
 ## TL;DR
 
 - Autonomous climb confirmed and committed H-001 through H-005 at 4/4 each: immutable Pi lock, read-only pin review, model-free RPC preflight, run provenance, and pre-run revision warning.
 - The exact Pi default is `8479bd84743e8889f728acb21a62794102db0529`; the independent dirty `pi/` checkout was never modified.
-- Context reached the climb hard-pause threshold. H-006 is deliberately pending and is the only next action: a cheap live structured-output preflight for the configured judge backend.
+- The final Journal entry and commit `9a046d7` were newer than the former baton, so this recovery checkpoint supersedes it. H-006 remains the only next action: a cheap live structured-output preflight for the configured judge backend.
 
 ## Committed state
 
-- Branch: `main`, 18 commits ahead of `origin/main` before this handoff-state commit; nothing has been pushed.
+- Branch: `main`; the last recorded boundary said 18 commits ahead of `origin/main` before the handoff-state commit, with nothing pushed. The working tree is clean at recovery.
 - Latest feature commit: `b5b29b8 feat: warn on Pi revision drift before RPC runs`.
 - Key earlier commits: `09d677d` run provenance, `e53822f` RPC probe, `862a51e` read-only pin check, `27a68a6` immutable setup lock.
-- `docs/status/climb/research-tree.md` contains five confirmed runs and H-006 pending; `session-state.json` has no in-flight cycle.
+- `docs/status/climb/research-tree.md` contains five confirmed runs and H-006 pending; `session-state.json` has no in-flight cycle or process.
 - The climb post-commit hook is installed and recorder replay is idempotent.
 
 ## Verification evidence
