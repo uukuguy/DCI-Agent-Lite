@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13 01:40 +0800. **Session remains active — autonomous climb continues.**
+> Updated: 2026-07-13 01:41 +0800. **Session remains active — autonomous climb continues.**
 
 Active work package: AF-090
 
@@ -28,6 +28,7 @@ Active work package: AF-090
 - AF-080 remains active only until the knowledge layer records the next governed package.
 - AF-080 is complete; AF-090 is active under the approved static application assembly design and plan.
 - `AF-090-H-001` is confirmed: the closed canonical assembly contract and shared Python fixtures pass.
+- `AF-090-H-002` is confirmed: runtime identity, exact catalog refs, host-service separation, and safe immutable resolution pass 4/4.
 
 ## Durable boundary
 
@@ -41,7 +42,7 @@ Active work package: AF-090
 
 ## Immediate next action
 
-Add AF-090-H-002 train/eval adapter tests for the now-green runtime/catalog/service resolver suite, run the cycle, then fresh focused gates.
+Implement AF-090-H-003 checked-in DCI and controlled-code assemblies, then prove Pi/Claude composition parity and host-service separation.
 
 ## Guardrails
 
@@ -52,7 +53,6 @@ Add AF-090-H-002 train/eval adapter tests for the now-green runtime/catalog/serv
 ## Ready commands
 
 ```bash
-python3 tools/project_scope_check.py --climb-hypothesis AF-090-H-002
-uv run python -m unittest tests.test_package_catalog -v
-uv run python -m unittest tests.test_package_composition -v
+python3 tools/project_scope_check.py --climb-hypothesis AF-090-H-003
+uv run python -m unittest tests.test_application_assembly -v
 ```

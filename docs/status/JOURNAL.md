@@ -231,4 +231,7 @@
 - 01:37 AF-090-H-001 通过 86 focused tests、compile、Ruff、shell、scope 与 diff。
 - 01:38 static assembly contract 已提交，pure resolver 可在稳定 schema 上继续。[0639362]
 - 01:40 pure assembly resolver 通过 7 focused tests；runtime/catalog/service 绑定保持静态且安全。
+- 01:41 static assembly resolver 已提交，H002 climb acceptance 可继续。[40a7eff]
+- 01:41 AF-090-H-002 confirmed 4/4；101 focused tests 与 compile/lint/shell/scope/diff 通过。
 - 01:36 AF-090-H-001 confirmed 4/4; package acceptance recorded.
+- 01:40 AF-090-H-002 confirmed 4/4; package acceptance recorded.

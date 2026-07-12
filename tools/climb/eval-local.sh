@@ -292,6 +292,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_application_assembly.AssemblyManifestTests.test_package_refs_must_be_sorted_unique_and_exact"
         override_test="tests.test_application_assembly.AssemblyManifestTests.test_host_edge_arrays_must_be_sorted_unique_strings"
         ;;
+    AF-090-H-002)
+        first_dimension="runtime_binding"
+        second_dimension="catalog_binding"
+        third_dimension="capability_separation"
+        fourth_dimension="safe_resolution"
+        immutable_test="tests.test_application_assembly.AssemblyResolverTests.test_runtime_and_catalog_bind_into_an_immutable_plan"
+        repeat_test="tests.test_application_assembly.AssemblyResolverTests.test_unknown_catalog_ref_is_rejected"
+        dirty_test="tests.test_application_assembly.AssemblyResolverTests.test_host_service_capability_is_separate_from_runtime_capabilities"
+        override_test="tests.test_application_assembly.AssemblyResolverTests.test_resolution_failures_are_safe"
+        ;;
     H-001)
         first_dimension="immutable_resolution"
         second_dimension="repeat_validation"

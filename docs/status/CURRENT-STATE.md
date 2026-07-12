@@ -26,13 +26,12 @@
 - Local catalog: the Python reference surface deterministically discovers and validates direct JSON children across explicit root/file permutations without recursion. Missing/file/symlink/duplicate roots, invalid/unreadable documents, symlink manifests, and duplicate exact identities fail closed with content-free public errors.
 - Catalog selection: exact `package_id@version` refs return deterministic deep-fresh manifests; all eight checked-in packages are selectable and both reference graphs compose unchanged. Duplicate or unknown selections fail closed without implicit version policy.
 - AF-080 acceptance: explicit-root discovery, filesystem/document/identity safety, exact selection, both graph integrations, Python-only ownership, and operator documentation pass full framework closure without registry, installation, or execution scope.
-- Static assembly: `dci.assembly/v1` has a closed canonical schema, shared fixtures, and Python validation. The pure resolver now binds a matching runtime manifest, exact catalog refs, and explicit host-service edges into an immutable `AssemblyPlan` without mutation or execution; climb acceptance is next.
+- Static assembly: `dci.assembly/v1` has a closed canonical schema, shared fixtures, and Python validation. The pure resolver binds a matching runtime manifest, exact catalog refs, and explicit host-service edges into an immutable `AssemblyPlan` without mutation or execution; AF-090-H-002 is confirmed 4/4.
 
 ## Open Problems (theme-level)
 
 - Provider-backed acceptance of the first non-Pi runtime when credentials or a compatible gateway become available.
-- Define a closed assembly contract that distinguishes runtime-native capabilities from host-service edges.
-- Resolve exact catalog selections and one runtime manifest into an immutable auditable plan without execution.
+- Check in DCI and controlled-code reference application assemblies and prove runtime parity plus host-service separation.
 
 ## Key Files
 

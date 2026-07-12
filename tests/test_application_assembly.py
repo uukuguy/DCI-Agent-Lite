@@ -109,6 +109,19 @@ class AssemblyResolverTests(unittest.TestCase):
         self.assertEqual(plan.composition.package_ids[0], "policy.controlled-code-check")
         self.assertNotIn("executor.controlled", runtime["capabilities"])
 
+    def test_unknown_catalog_ref_is_rejected(self) -> None:
+        assembly = {
+            **self.assembly(),
+            "packages": [{"package_id": "missing.package", "version": "1.0.0"}],
+        }
+
+        with self.assertRaises(AssemblyError):
+            resolve_assembly(
+                assembly,
+                catalog=discover_packages([MANIFESTS]),
+                runtime_manifest=self.runtime(),
+            )
+
     def test_resolution_failures_are_safe(self) -> None:
         sentinel = "SECRET-ASSEMBLY-CONTENT"
         cases = (
