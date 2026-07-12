@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import hmac
 import json
 import os
@@ -19,6 +20,18 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 PREFLIGHT_QUESTION = "What is 1 + 1?"
 PREFLIGHT_ANSWER = "2"
 DIRECT_JUDGE_API_KEY_ENV = "DCI_EVAL_JUDGE_API_KEY"
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Check configured judge provenance or structured output."
+    )
+    parser.add_argument(
+        "--config-only",
+        action="store_true",
+        help="Print safe effective judge configuration without an HTTP request.",
+    )
+    return parser.parse_args()
 
 
 def _nonempty(mapping: Mapping[str, object], name: str) -> str:
@@ -107,8 +120,26 @@ def public_preflight_result(
     }
 
 
+def public_config_result(
+    config: JudgeConfig, provenance: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Project normal judge configuration without initiating a request."""
+
+    return {
+        "ok": True,
+        "request_performed": False,
+        **config.public_dict(),
+        **provenance,
+    }
+
+
 def main() -> int:
+    args = parse_args()
     config, provenance = load_judge_config_with_provenance()
+    if args.config_only:
+        print(json.dumps(public_config_result(config, provenance), sort_keys=True))
+        return 0
+
     try:
         result = run_preflight(config)
     except (RuntimeError, ValueError) as exc:

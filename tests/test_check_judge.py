@@ -83,6 +83,7 @@ class CheckJudgeTests(unittest.TestCase):
             patch.object(check_judge, "load_project_env"),
             patch.object(config_class, "from_env", return_value=config) as from_env,
             patch.object(check_judge, "run_preflight", return_value=result),
+            patch("sys.argv", ["check_judge.py"]),
             redirect_stdout(io.StringIO()) as stdout,
         ):
             self.assertEqual(main(), 0)
@@ -159,6 +160,7 @@ class CheckJudgeTests(unittest.TestCase):
                 "run_preflight",
                 return_value={"is_correct": True},
             ),
+            patch("sys.argv", ["check_judge.py"]),
             redirect_stdout(io.StringIO()) as stdout,
         ):
             self.assertEqual(main(), 0)
@@ -168,11 +170,50 @@ class CheckJudgeTests(unittest.TestCase):
         self.assertFalse(payload["judge_api_key_shadowed_by_environment"])
         self.assertNotIn("secret-key", stdout.getvalue())
 
+    def test_config_only_skips_preflight_request(self) -> None:
+        check_judge = load_check_judge()
+        config = JudgeConfig(api="responses", api_key="secret-key")
+        provenance = {
+            "judge_api_key_source": "dotenv",
+            "judge_api_key_shadowed_by_environment": False,
+        }
+
+        with (
+            patch.object(
+                check_judge,
+                "load_judge_config_with_provenance",
+                return_value=(config, provenance),
+            ),
+            patch.object(
+                check_judge,
+                "run_preflight",
+                return_value={"is_correct": True},
+            ) as preflight,
+            patch("sys.argv", ["check_judge.py", "--config-only"]),
+            redirect_stdout(io.StringIO()) as stdout,
+        ):
+            self.assertEqual(check_judge.main(), 0)
+
+        payload = json.loads(stdout.getvalue())
+        preflight.assert_not_called()
+        self.assertTrue(payload["ok"])
+        self.assertFalse(payload["request_performed"])
+        self.assertEqual(payload["judge_api_key_source"], "dotenv")
+        self.assertNotIn("secret-key", stdout.getvalue())
+
     def test_make_target_runs_the_preflight_script(self) -> None:
         makefile = (REPO_ROOT / "Makefile").read_text()
 
         self.assertIn("check-judge:", makefile)
         self.assertIn("uv run python scripts/check_judge.py", makefile)
+
+    def test_make_target_runs_config_only_preflight(self) -> None:
+        makefile = (REPO_ROOT / "Makefile").read_text()
+
+        self.assertIn("check-judge-config:", makefile)
+        self.assertIn(
+            "uv run python scripts/check_judge.py --config-only", makefile
+        )
 
     def test_documentation_explains_the_credentialed_preflight(self) -> None:
         readme = (REPO_ROOT / "README.md").read_text()

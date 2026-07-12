@@ -142,6 +142,7 @@ An exported **process environment** key intentionally takes precedence over a va
 `make check-judge` reports `judge_api_key_source` and
 `judge_api_key_shadowed_by_environment` without exposing key material; after rotating only `.env`,
 unset any stale exported key or start a fresh shell before running the preflight.
+Run `make check-judge-config` to inspect those same safe fields without making an HTTP request.
 
 <a name="quick-start"></a>
 ## ⚡ Quick Start

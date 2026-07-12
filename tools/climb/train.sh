@@ -6,7 +6,7 @@ if [ "$#" -ne 1 ]; then
     exit 2
 fi
 case "$1" in
-    H-001|H-002|H-003|H-004|H-005|H-006|H-007) ;;
+    H-001|H-002|H-003|H-004|H-005|H-006|H-007|H-008) ;;
     *)
         echo "ERROR: train adapter has no acceptance suite for $1." >&2
         exit 2
@@ -28,6 +28,8 @@ elif [ "$1" = "H-006" ]; then
     paradigm="judge-contract-probe"
 elif [ "$1" = "H-007" ]; then
     paradigm="judge-config-provenance"
+elif [ "$1" = "H-008" ]; then
+    paradigm="judge-config-preflight"
 fi
 
 cat >"$run_dir/manifest.json" <<EOF
@@ -76,6 +78,14 @@ elif [ "$1" = "H-007" ]; then
         env -u DEEPSEEK_API_KEY make check-judge
     } >"$run_dir/train.log" 2>&1; then
         echo "ERROR: H-007 judge provenance acceptance failed; see $run_dir/train.log" >&2
+        exit 1
+    fi
+elif [ "$1" = "H-008" ]; then
+    if ! {
+        uv run python -m unittest tests.test_check_judge -v
+        env -u DEEPSEEK_API_KEY make check-judge-config
+    } >"$run_dir/train.log" 2>&1; then
+        echo "ERROR: H-008 judge config acceptance failed; see $run_dir/train.log" >&2
         exit 1
     fi
 elif ! uv run python -m unittest tests.test_setup_pi -v >"$run_dir/train.log" 2>&1; then

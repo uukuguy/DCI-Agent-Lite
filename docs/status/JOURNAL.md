@@ -60,3 +60,4 @@
 - 17:28 H-007 local contract 4/4; 65 tests, Ruff, compile, Bash syntax, and Pi RPC probe passed before live cycle.
 - 17:29 H-007 confirmed 4/4; setup-policy acceptance recorded.
 - 17:30 Knowledge Layer added H-008: no-request judge configuration provenance before preflight spend.
+- 17:32 H-008 local contract 4/4; 69 tests, Ruff, compile, Bash syntax, and Pi RPC probe passed before cycle.
