@@ -14,6 +14,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_DIR = REPO_ROOT / "tests/fixtures/packages/v1"
 MANIFEST_DIR = REPO_ROOT / "packages/manifests"
 PACKAGE_GUIDE = REPO_ROOT / "docs/architecture/composable-packages.md"
+CONTROLLED_CODE_GUIDE = (
+    REPO_ROOT / "docs/architecture/controlled-code-validation-packages.md"
+)
 
 
 class PackageManifestTests(unittest.TestCase):
@@ -418,6 +421,37 @@ class PackageDocumentationTests(unittest.TestCase):
         for forbidden in ("prompts", "credentials", "executable paths", "commands"):
             with self.subTest(forbidden=forbidden):
                 self.assertIn(forbidden, guide)
+
+
+class ControlledCodeDocumentationTests(unittest.TestCase):
+    def guide(self) -> str:
+        return CONTROLLED_CODE_GUIDE.read_text()
+
+    def test_guide_documents_the_second_graph_and_workflow_example(self) -> None:
+        guide = self.guide()
+
+        self.assertIn("Second independent graph", guide)
+        self.assertIn('"package_id": "workflow.code-quality"', guide)
+        self.assertIn("compose_packages(", guide)
+        self.assertIn('{"executor.controlled"}', guide)
+
+    def test_guide_defines_static_composition_not_code_execution(self) -> None:
+        guide = self.guide()
+
+        self.assertIn("Static composition, not code execution", guide)
+        self.assertIn("does not execute commands", guide)
+
+    def test_guide_defines_the_shared_host_service_boundary(self) -> None:
+        guide = self.guide()
+
+        self.assertIn("executor.controlled", guide)
+        self.assertIn("shared host service", guide)
+        self.assertIn("does not make Pi or Claude Code a sandbox", guide)
+
+    def test_guide_records_that_the_graph_does_not_trigger_execution(self) -> None:
+        guide = self.guide()
+
+        self.assertIn("does not trigger a workflow engine", guide)
 
 
 if __name__ == "__main__":

@@ -195,7 +195,7 @@
 - Rationale: a workflow engine or enterprise control plane built first would invent package, policy, event, and artifact semantics implicitly and couple them to one host.
 - Boundary: AF-060 does not implement scheduling, persistent memory storage, multi-tenant administration, or adapter-specific package variants.
 - Revalidation trigger: add an execution engine only after two independently useful package graphs cannot be expressed or validated by the static contract.
-- Implemented evidence: the manifest contract (H-001), deterministic composer (H-002), one identical Pi/Claude DCI reference graph (H-003), and TypeScript canonical schema/fixture parity without a second composer (H-004) are confirmed.
+- Implemented evidence: the manifest contract, deterministic composer, DCI reference graph, and cross-language parity are confirmed. AF-070 then expressed and validated a second independently useful controlled-code graph without changing the composer, so the execution-engine trigger is not met.
 
 ## D-023 — Challenge composition with controlled code validation
 
@@ -206,3 +206,4 @@
 - Boundary: `executor.controlled` comes from the shared host service, not from Pi or Claude Code natively; AF-070 does not execute commands, repair code, add persistent memory, or build a registry/control plane.
 - Revalidation trigger: consider an execution layer only if this second graph cannot be expressed through the existing package, policy, event, and artifact edges.
 - Implemented evidence: AF-070-H-001 confirms the four closed manifests, `workflow` kind, stable dependency order, and exclusion of runtime-controlled fields; H-002 confirms cross-host equality, permutation stability, portable outputs, and every missing edge rejection without a composer change; H-003 confirms canonical TypeScript validation for all eight manifests without a second composer.
+- Closure evidence: H-004 documents the shared host-service/non-sandbox boundary and passes 189 Python, 7 Node, and 21 Rust tests plus every compile, lint, format, scope, shell, and diff gate.

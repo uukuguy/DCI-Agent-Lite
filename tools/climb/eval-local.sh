@@ -232,6 +232,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="public_type_contract"
         override_test="keeps package composition outside the TypeScript host"
         ;;
+    AF-070-H-004)
+        first_dimension="second_graph_docs"
+        second_dimension="static_boundary"
+        third_dimension="host_service_boundary"
+        fourth_dimension="framework_closure"
+        immutable_test="tests.test_package_composition.ControlledCodeDocumentationTests.test_guide_documents_the_second_graph_and_workflow_example"
+        repeat_test="tests.test_package_composition.ControlledCodeDocumentationTests.test_guide_defines_static_composition_not_code_execution"
+        dirty_test="tests.test_package_composition.ControlledCodeDocumentationTests.test_guide_defines_the_shared_host_service_boundary"
+        override_test="tests.test_climb_tools.ClimbToolTests.test_af070_h004_train_runs_full_framework_closure_gate"
+        ;;
     H-001)
         first_dimension="immutable_resolution"
         second_dimension="repeat_validation"

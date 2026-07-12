@@ -195,5 +195,9 @@
 - 23:25 controlled-code graph 边界证据已提交，TypeScript 全 manifest parity 可继续。[a237d93]
 - 23:25 AF-070-H-003 confirmed 4/4; package acceptance recorded.
 - 23:26 AF-070-H-003 通过 clean install、7 Node、95 focused Python tests 与全部 static/scope gates。
+- 23:27 TypeScript 全 graph parity 已提交，AF-070 可进入文档与全框架关闭。[27e12ad]
+- 23:28 AF-070-H-004 confirmed 4/4; package acceptance recorded.
+- 23:30 AF-070 closure 通过 189 Python、7 Node、21 Rust、clean install、lint、scope 与 diff。
 - 23:22 AF-070-H-002 confirmed 4/4; package acceptance recorded.
 - 23:25 AF-070-H-003 confirmed 4/4; package acceptance recorded.
+- 23:28 AF-070-H-004 confirmed 4/4; package acceptance recorded.
