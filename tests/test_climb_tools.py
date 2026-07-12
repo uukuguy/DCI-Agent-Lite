@@ -540,6 +540,20 @@ class ClimbToolTests(unittest.TestCase):
                 for hypothesis in state["hypotheses"]
                 if hypothesis["id"] in {"AF-050-H-001", "AF-050-H-002"}
             ]
+            state["hypotheses"].append(
+                {
+                    "id": "AF-100-H-001",
+                    "work_package_id": "AF-100",
+                    "description": "future package",
+                    "parent_paradigm": "future",
+                    "expected_lift": "+1",
+                    "cost_h": 0.1,
+                    "ranking": 99.0,
+                    "status": "pending",
+                    "created_at": "2026-07-13T00:00:00+08:00",
+                    "results": [],
+                }
+            )
             for hypothesis in state["hypotheses"]:
                 hypothesis["results"] = []
                 hypothesis["status"] = (
@@ -550,6 +564,7 @@ class ClimbToolTests(unittest.TestCase):
             session_path = state_dir / "session-state.json"
             session = json.loads(session_path.read_text())
             session["session"] = "2026-07-12-af-050-rust-executor"
+            session["work_package_id"] = "AF-050"
             session_path.write_text(json.dumps(session, indent=2) + "\n")
             hypothesis_path.write_text(
                 yaml.safe_dump(state, sort_keys=False, allow_unicode=True)
@@ -1531,6 +1546,36 @@ class ClimbToolTests(unittest.TestCase):
             self.assertEqual(
                 set(evaluation["per_task"]),
                 {"typescript_parity", "assembly_docs", "non_execution", "framework_closure"},
+            )
+
+    def test_af095_h001_train_runs_asterion_structure_suite(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+        self.assertIn("AF-095-H-001", train_script)
+        self.assertIn("AsterionStructureTests", train_script)
+
+    def test_af095_h001_eval_reports_four_ownership_dimensions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            env = os.environ.copy()
+            env["DCI_CLIMB_HYPOTHESIS_ID"] = "AF-095-H-001"
+            result = subprocess.run(
+                ["bash", "tools/climb/eval-local.sh", str(run_dir)],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            evaluation = json.loads((run_dir / "local-eval.json").read_text())
+            self.assertEqual(evaluation["total"], 4)
+            self.assertEqual(
+                set(evaluation["per_task"]),
+                {
+                    "authoritative_import",
+                    "object_identity",
+                    "dependency_direction",
+                    "packaging_compatibility",
+                },
             )
 
 

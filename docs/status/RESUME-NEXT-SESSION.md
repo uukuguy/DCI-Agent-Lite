@@ -36,6 +36,7 @@ Active work package: AF-095
 - Product name Asterion and gradual top-level extraction are approved; DCI is explicitly a capability/reference application.
 - Exact PyPI and npm `asterion` probes returned 404; the product, distribution, import root, and working namespace are unified as Asterion/`asterion`.
 - Registry reservation is deliberately deferred and does not block AF-095 extraction.
+- `AF-095-H-001` is confirmed 4/4: Asterion owns runtime/host/adapters, DCI re-exports identical objects, and dependency direction is enforced.
 
 ## Durable boundary
 
@@ -49,7 +50,7 @@ Active work package: AF-095
 
 ## Immediate next action
 
-Execute AF-095-H-001: establish authoritative Asterion runtime/host/adapters with object-identity DCI compatibility re-exports.
+Execute AF-095-H-002: extract package, catalog, composition, assembly, and executor protocols into Asterion with single-implementation compatibility.
 
 ## Guardrails
 

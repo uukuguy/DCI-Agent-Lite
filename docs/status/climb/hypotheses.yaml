@@ -930,7 +930,8 @@ hypotheses:
     decision_reason: deterministic local package acceptance
 - id: AF-100-H-001
   work_package_id: AF-100
-  description: Extend immutable assembly plans with explicit runtime and host-service capability ownership.
+  description: Extend immutable assembly plans with explicit runtime and host-service
+    capability ownership.
   parent_paradigm: runner-plan-ownership
   expected_lift: +1 execution precondition boundary
   cost_h: 0.6
@@ -940,7 +941,8 @@ hypotheses:
   results: []
 - id: AF-100-H-002
   work_package_id: AF-100
-  description: Run one DCI application through an explicit runtime client into immutable normalized results.
+  description: Run one DCI application through an explicit runtime client into immutable
+    normalized results.
   parent_paradigm: plan-driven-application-runner
   expected_lift: +1 end-to-end application slice
   cost_h: 1.0
@@ -950,7 +952,8 @@ hypotheses:
   results: []
 - id: AF-100-H-003
   work_package_id: AF-100
-  description: Prove runtime parity cancellation safe failures and missing-service preflight behavior.
+  description: Prove runtime parity cancellation safe failures and missing-service
+    preflight behavior.
   parent_paradigm: runner-safety-boundaries
   expected_lift: +1 execution safety boundary
   cost_h: 0.9
@@ -960,7 +963,8 @@ hypotheses:
   results: []
 - id: AF-100-H-004
   work_package_id: AF-100
-  description: Document and close the minimal runner without scheduler registry or automatic service startup.
+  description: Document and close the minimal runner without scheduler registry or
+    automatic service startup.
   parent_paradigm: application-runner-acceptance
   expected_lift: +1 AF-100 closure confidence
   cost_h: 0.5
@@ -970,17 +974,31 @@ hypotheses:
   results: []
 - id: AF-095-H-001
   work_package_id: AF-095
-  description: Establish the Asterion Python package and one-way dependency boundary with compatibility re-exports.
+  description: Establish the Asterion Python package and one-way dependency boundary
+    with compatibility re-exports.
   parent_paradigm: asterion-authoritative-package
   expected_lift: +1 framework ownership boundary
   cost_h: 1.0
   ranking: 1.0
-  status: pending
+  status: confirmed
   created_at: '2026-07-13T02:08:00+08:00'
-  results: []
+  results:
+  - session: 2026-07-13-af-095-asterion-extraction
+    cycle: 43
+    run: 20260713-022833-dci-climb-af095h001
+    local: 4
+    local_per_task:
+      authoritative_import: 1
+      object_identity: 1
+      dependency_direction: 1
+      packaging_compatibility: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-095-H-002
   work_package_id: AF-095
-  description: Move generic package assembly and protocol modules without duplicated implementations or wire changes.
+  description: Move generic package assembly and protocol modules without duplicated
+    implementations or wire changes.
   parent_paradigm: framework-module-extraction
   expected_lift: +1 independent framework surface
   cost_h: 1.2
@@ -990,7 +1008,8 @@ hypotheses:
   results: []
 - id: AF-095-H-003
   work_package_id: AF-095
-  description: Reorganize declarative capability application schema and cross-language roots while preserving identities.
+  description: Reorganize declarative capability application schema and cross-language
+    roots while preserving identities.
   parent_paradigm: product-directory-separation
   expected_lift: +1 repository ownership clarity
   cost_h: 1.0
@@ -1000,7 +1019,8 @@ hypotheses:
   results: []
 - id: AF-095-H-004
   work_package_id: AF-095
-  description: Prove DCI CLI examples packaging compatibility and full Asterion extraction closure.
+  description: Prove DCI CLI examples packaging compatibility and full Asterion extraction
+    closure.
   parent_paradigm: asterion-extraction-acceptance
   expected_lift: +1 AF-095 closure confidence
   cost_h: 0.7

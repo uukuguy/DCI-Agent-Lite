@@ -335,6 +335,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="assembly_non_execution"
         override_test="assembly_closure"
         ;;
+    AF-095-H-001)
+        first_dimension="authoritative_import"
+        second_dimension="object_identity"
+        third_dimension="dependency_direction"
+        fourth_dimension="packaging_compatibility"
+        immutable_test="tests.test_asterion_structure.AsterionStructureTests.test_runtime_objects_are_authoritative_and_compatible"
+        repeat_test="tests.test_asterion_structure.AsterionStructureTests.test_runtime_adapters_are_authoritative_and_compatible"
+        dirty_test="tests.test_asterion_structure.AsterionStructureTests.test_asterion_never_imports_dci"
+        override_test="tests.test_asterion_structure.AsterionStructureTests.test_wheel_contains_both_transition_packages"
+        ;;
     H-001)
         first_dimension="immutable_resolution"
         second_dimension="repeat_validation"

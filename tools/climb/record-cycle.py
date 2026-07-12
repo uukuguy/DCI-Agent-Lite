@@ -130,8 +130,14 @@ def main() -> None:
     with runs_path.open("a", newline="") as handle:
         csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n").writerow(row)
 
+    active_work_package_id = session_state.get("work_package_id")
     remaining = sorted(
-        (item for item in hypotheses if item["status"] == "pending"),
+        (
+            item
+            for item in hypotheses
+            if item["status"] == "pending"
+            and item.get("work_package_id") == active_work_package_id
+        ),
         key=lambda item: -float(item["ranking"]),
     )
     next_hypothesis = remaining[0]["id"] if remaining else None

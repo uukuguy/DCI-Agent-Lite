@@ -251,7 +251,10 @@
 - 02:23 registry 抢注降为非阻塞待办，AF-095 先完成目录与权威边界。
 - 02:24 Asterion framework boundary spec 已提交，为渐进抽离锁定兼容基线。[f2f8d27]
 - 02:28 AF-095 spec 获批；实施计划锁定四个可验收的 Asterion extraction cycles。
+- 02:29 AF-095-H-001 confirmed 4/4；Asterion runtime ownership 与 DCI object-identity compatibility 成立。
+- 02:30 climb next selection 根因为全局 pending 排序；已限定 active work package 并加回归测试。
 - 01:36 AF-090-H-001 confirmed 4/4; package acceptance recorded.
 - 01:40 AF-090-H-002 confirmed 4/4; package acceptance recorded.
 - 01:47 AF-090-H-003 confirmed 4/4; package acceptance recorded.
 - 01:50 AF-090-H-004 confirmed 4/4; package acceptance recorded.
+- 02:28 AF-095-H-001 confirmed 4/4; package acceptance recorded.
