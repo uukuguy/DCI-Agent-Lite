@@ -170,6 +170,7 @@ test("validates every checked-in reference assembly", async () => {
   assert.deepEqual(names, [
     "controlled-code-validation.json",
     "dci-local-research.json",
+    "dci-research-capability.json",
   ]);
   for (const name of names) {
     const assembly = JSON.parse(

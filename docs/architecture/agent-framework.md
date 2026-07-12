@@ -10,6 +10,7 @@ Build Asterion as a multi-runtime, multi-language agent-application framework. D
 2. **Runtime adapters** — Pi first; then one independent runtime; Pydantic AI, LangGraph, Claude Code, and Hermes-agent as their supported integration contracts permit.
 3. **Capability packages** — DCI research, tool and policy, workflow, memory and observability, and evaluation.
 4. **Language hosts** — Python for research, evaluation, and orchestration; TypeScript for Node and service integration; Rust for controlled execution infrastructure.
+5. **Application execution** — exact independently owned package implementations execute through explicit application-host bindings; installed-application distribution and generic CLI binding remain separately governed.
 
 ## Delivery strategy
 

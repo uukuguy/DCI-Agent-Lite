@@ -22,6 +22,7 @@ EXECUTABLE_ASSEMBLY = (
     ROOT / "applications/dci-agent-lite/assemblies/dci-research-capability.json"
 )
 HOST_MODULE = ROOT / "applications/dci-agent-lite/python/dci_research_host.py"
+GUIDE = ROOT / "docs/architecture/capability-execution.md"
 
 
 class FixtureRuntime:
@@ -295,6 +296,29 @@ class ComposedApplicationRunnerFailureTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(evaluation.calls, [])
         self.assertEqual(observability.calls, [])
         self.assertNotIn("SECRET", str(raised.exception))
+
+
+class CapabilityExecutionDocumentationTests(unittest.TestCase):
+    def guide(self) -> str:
+        return GUIDE.read_text()
+
+    def test_guide_defines_package_and_application_ownership(self) -> None:
+        guide = self.guide()
+        self.assertIn("reusable executable unit", guide)
+        self.assertIn("executable composition boundary", guide)
+        self.assertIn("PackageRef", guide)
+        self.assertIn("run_composed_application", guide)
+
+    def test_guide_documents_security_baseline_and_af120_boundary(self) -> None:
+        guide = self.guide()
+        self.assertIn("src/dci/benchmark/", guide)
+        self.assertIn("exact implementation", guide)
+        self.assertIn("sequential", guide)
+        self.assertIn("AF-120", guide)
+        self.assertIn("asterion run", guide)
+
+
+class ComposedApplicationRunnerCancellationTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_cancellation_stops_later_packages(self) -> None:
         plan, runtime = resolve_plan()
