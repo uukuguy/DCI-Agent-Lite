@@ -288,3 +288,5 @@
 - 03:26 climb 转为无 in-flight 的 hard-pause，下一动作对齐 successor 治理。
 - 03:28 AF-100 最终 handoff 已提交，确保 resume 可恢复 successor 治理边界。[b1d5e48]
 - 03:40 可组合能力执行规格已提交，锁定 Asterion 独立于 DCI baseline。[015d881]
+- 03:47 AF-110 执行契约与 AF-120 应用绑定拆分，避免 core 隐式依赖能力实现。[1ae793c]
+- 03:50 AF-110 七阶段 TDD 计划已提交，先治理切换再实现独立能力执行。[c60f0b4]

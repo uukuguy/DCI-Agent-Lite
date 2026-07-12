@@ -1,6 +1,6 @@
-# Next-Session Handoff
+# Recovered Session Checkpoint
 
-> Updated: 2026-07-13 03:24 +0800 end of session.
+> Updated: 2026-07-13 03:27 +0800. **The prior session's final commit and journal entry landed after the handoff timestamp; this recovery checkpoint incorporates them.**
 
 Active work package: AF-100
 
@@ -10,13 +10,15 @@ Package state: implementation and acceptance complete; retained `in_progress` on
 
 - Asterion is now the independent top-level framework; DCI remains its first capability and reference application.
 - AF-100 is implemented and accepted at `bd97680`: all four hypotheses pass with 284 Python, 11 Node, and 19 Rust tests plus every repository gate.
-- Next session must select and write the successor package for real DCI entry-point integration, then atomically close AF-100 and activate that successor.
+- The approved AF-110 architecture is committed through `1ae793c`: capability packages are reusable executable units, applications are executable composition boundaries, and the original DCI benchmark stays an independent baseline.
+- AF-110 package execution and AF-120 application distribution/binding are deliberately split to keep Asterion core independent of capability implementations.
+- The implementation plan is committed at `c60f0b4`; the next action is the atomic AF-100 → AF-110 governance transition, then test-first execution.
 
 ## Where things stand
 
 - Branch: `main`; no long-running process or in-flight climb hypothesis is active.
-- Local `main` was 14 commits ahead of `origin/main` before this handoff commit; nothing was pushed during this session.
-- The only pre-handoff working-tree change was the append-only AF-100 closure entry in `docs/status/JOURNAL.md`.
+- Local `main` is 16 commits ahead of `origin/main`; nothing was pushed during the prior session.
+- The working tree is clean. Final handoff state is committed through `11b9b7f`.
 - AF-100 runner code is complete. Its `in_progress` ledger status is an intentional governance bridge, not unfinished implementation.
 - External `pi/` remains an independent checkout and was not modified.
 
@@ -32,15 +34,13 @@ Package state: implementation and acceptance complete; retained `in_progress` on
 
 ## Next steps (immediate)
 
-1. Run the scope preflight and recover the AF-100 acceptance boundary.
-2. Define the governed successor around real DCI entry-point integration through the Asterion runner. The existing `scripts/examples/dci_basic_example.sh` and `scripts/examples/dci_runtime_context_example.sh` are the reference acceptance paths.
-3. Update the design, `docs/status/WORKLIST.md`, and `docs/status/DECISIONS.md` first; then mark AF-100 completed and activate exactly one successor package in the same governance commit.
-4. Only after that transition, start successor implementation or a parented climb cycle.
+1. Choose inline or explicitly authorized subagent-driven execution for `docs/superpowers/plans/2026-07-13-composable-capability-execution.md`.
+2. Execute Task 0: update `docs/status/WORKLIST.md`, `docs/status/DECISIONS.md`, and structural state; atomically close AF-100 and activate AF-110.
+3. Run the scope preflight, then begin Task 1 test-first implementation.
 
 ## Open questions
 
-- What is the smallest successor slice that routes the existing DCI CLI/examples through Asterion without adding a workflow engine, registry, automatic service startup, or provider-selection policy?
-- Should the first real integration exercise only Pi, or preserve a fixture-backed Claude parity path while provider credentials remain unavailable?
+- Which approved plan execution mode should be used?
 
 ## Don't go down these paths again
 
