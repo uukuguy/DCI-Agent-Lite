@@ -216,6 +216,7 @@ __marimo__/
 /outputs
 /runs/climb/
 /data
+node_modules/
 /pi/
 /pi-mono
 /logs*

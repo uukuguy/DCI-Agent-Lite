@@ -1,4 +1,4 @@
-.PHONY: example runtime-example check-pi-rpc check-judge check-judge-config codex-example deepseek-example
+.PHONY: example runtime-example check-pi-rpc check-judge check-judge-config test-typescript-host codex-example deepseek-example
 
 example:
 	bash scripts/examples/dci_basic_example.sh
@@ -14,6 +14,9 @@ check-judge:
 
 check-judge-config:
 	uv run python scripts/check_judge.py --config-only
+
+test-typescript-host:
+	npm --prefix packages/typescript/agent-runtime test
 
 codex-example:
 	bash scripts/examples/dci_basic_openai_codex_example.sh

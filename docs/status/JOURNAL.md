@@ -133,3 +133,5 @@
 - 21:25 runtime manifest 正反 fixtures 与 Python validator 已通过聚焦测试。
 - 21:26 可移植 runtime manifest 已提交，成为两个主机共享的发现契约。[0a0668d]
 - 21:27 Python 公共异步 client 与不可变协议值对象已通过共享 fixture 测试。
+- 21:28 Python runtime host 公共契约已提交，应用层不再依赖 adapter 私有类型。[a730944]
+- 21:32 TypeScript host 以 Ajv 2020 校验共享 schemas/fixtures，构建与 Node tests 通过。

@@ -1,0 +1,67 @@
+export const PROTOCOL_VERSION = "dci.agent-runtime/v1" as const;
+
+export type ProtocolVersion = typeof PROTOCOL_VERSION;
+
+export interface RuntimeManifest {
+  readonly protocol: ProtocolVersion;
+  readonly runtime_id: string;
+  readonly capabilities: readonly string[];
+}
+
+export interface RunRequest {
+  readonly protocol: ProtocolVersion;
+  readonly run_id: string;
+  readonly input: { readonly text: string };
+  readonly requested_capabilities?: readonly string[];
+  readonly deadline_ms?: number;
+}
+
+interface EventBase<T extends string, P> {
+  readonly protocol: ProtocolVersion;
+  readonly run_id: string;
+  readonly sequence: number;
+  readonly type: T;
+  readonly payload: P;
+}
+
+export type RunEvent =
+  | EventBase<"run.started", { readonly capabilities: readonly string[] }>
+  | EventBase<"text.delta", { readonly text: string }>
+  | EventBase<
+      "tool.call",
+      {
+        readonly call_id: string;
+        readonly name: string;
+        readonly arguments: Readonly<Record<string, unknown>>;
+      }
+    >
+  | EventBase<
+      "tool.result",
+      { readonly call_id: string; readonly output: unknown; readonly is_error: boolean }
+    >
+  | EventBase<
+      "usage.reported",
+      { readonly input_tokens: number; readonly output_tokens: number }
+    >
+  | EventBase<
+      "artifact.created",
+      {
+        readonly artifact: {
+          readonly artifact_id: string;
+          readonly kind: string;
+          readonly media_type: string;
+          readonly uri?: string;
+          readonly sha256?: string;
+        };
+      }
+    >
+  | EventBase<"run.completed", { readonly status: "completed" | "cancelled" }>
+  | EventBase<"run.failed", { readonly code: string; readonly message: string }>;
+
+export interface AgentRuntimeClient {
+  readonly manifest: RuntimeManifest;
+  run(
+    request: RunRequest,
+    options?: { readonly signal?: AbortSignal },
+  ): AsyncIterable<RunEvent>;
+}
