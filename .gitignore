@@ -214,6 +214,7 @@ __marimo__/
 /*.log
 /corpus
 /outputs
+/runs/climb/
 /data
 /pi/
 /pi-mono

@@ -19,3 +19,4 @@
 - 07:34 漏交接恢复改为 recovery checkpoint；非 GSD 仓库跳过 GSD 启动 hook。
 - 07:54 自动 checkpoint 工作流完成；正式 handoff 开始同步 Git、状态与协作记忆。
 - 08:19 Pi 精确 revision lock 设计完成，避免 moving-main 漂移。[db62f20]
+- 08:23 测试优先实施计划完成，覆盖安全 checkout 与 climb 验证。[d6ae990]

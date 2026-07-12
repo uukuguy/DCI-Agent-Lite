@@ -18,6 +18,7 @@ When adding a new file to `docs/status/`, **also add its row here** — otherwis
 | `RESUME-NEXT-SESSION.md` | 🟢 active | Session handoff baton. |
 | `CURRENT-STATE.md` | 🟢 active | Structural snapshot. |
 | `DECISIONS.md` | 🟢 active | Current architecture decisions with confidence labels and revalidation triggers. |
+| `climb/` | 🟢 active | `research-tree.md` is the climb resume summary; sibling YAML/JSON/CSV files are storage-layer state. |
 | `INDEX.md` (this file) | 🟢 active | Discovery hub. |
 
 ## Decision history (kept for traceability — verdicts may be outdated)

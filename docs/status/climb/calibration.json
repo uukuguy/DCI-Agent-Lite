@@ -1,0 +1,21 @@
+{
+  "_schema_version": 1,
+  "paradigms": {
+    "external-git-lock": {
+      "n_samples": 0,
+      "mean_gap": null,
+      "std_gap": null,
+      "last_3_gaps": [],
+      "last_updated": null,
+      "_note": "Local deterministic acceptance is ground truth; no external leaderboard."
+    },
+    "rpc-contract-probe": {
+      "n_samples": 0,
+      "mean_gap": null,
+      "std_gap": null,
+      "last_3_gaps": [],
+      "last_updated": null,
+      "_note": "Reserved for protocol compatibility cycles."
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "session": "2026-07-12-pi-revision",
+  "phase": "implementation",
+  "last_cycle": 0,
+  "next_hypothesis": "H-001",
+  "in_flight": null,
+  "next_action": "Write failing safe-checkout integration tests for H-001.",
+  "falsified_routes": [
+    "duplicate the authoritative Pi commit across setup.sh and .env.template",
+    "convert the independent Pi checkout to vendored or submodule ownership"
+  ]
+}

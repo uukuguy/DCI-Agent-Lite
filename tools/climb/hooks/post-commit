@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -u
+
+cd "$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+[ -d docs/status/climb ] || exit 0
+[ -n "${CLIMB_HOOK_RUNNING:-}" ] && exit 0
+export CLIMB_HOOK_RUNNING=1
+
+changed=$(git diff-tree --no-commit-id --name-only -r HEAD 2>/dev/null)
+if echo "$changed" | grep -qE 'docs/status/climb/(hypotheses|runs|calibration|pending-lb|session-state)'; then
+    if ! echo "$changed" | grep -q 'docs/status/climb/research-tree'; then
+        python3 tools/climb/regen-tree.py >/dev/null 2>&1 || exit 0
+        if ! git diff --quiet docs/status/climb/research-tree.md docs/status/climb/research-tree.json; then
+            git add docs/status/climb/research-tree.md docs/status/climb/research-tree.json
+            git commit --amend --no-edit --no-verify >/dev/null 2>&1
+            echo "[post-commit] regenerated climb research tree and amended commit" >&2
+        fi
+    fi
+fi

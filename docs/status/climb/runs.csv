@@ -1,0 +1,1 @@
+run_id,cycle,session,hypothesis_id,paradigm,parent_run,pushed_at,lb_landed_at,local_score,immutable_resolution,repeat_validation,dirty_checkout_safety,override_compatibility,online_score,gap,push_decision,decision_reason,verdict,train_cost_h,manifest_path

@@ -1,0 +1,74 @@
+{
+  "run_count": 0,
+  "session": {
+    "session": "2026-07-12-pi-revision",
+    "phase": "implementation",
+    "last_cycle": 0,
+    "next_hypothesis": "H-001",
+    "in_flight": null,
+    "next_action": "Write failing safe-checkout integration tests for H-001.",
+    "falsified_routes": [
+      "duplicate the authoritative Pi commit across setup.sh and .env.template",
+      "convert the independent Pi checkout to vendored or submodule ownership"
+    ]
+  },
+  "active": [
+    {
+      "id": "H-001",
+      "description": "Pin one verified Pi commit and enforce safe checkout reconciliation.",
+      "parent_paradigm": "external-git-lock",
+      "expected_lift": "+3 policy dimensions",
+      "cost_h": 0.5,
+      "ranking": 1.0,
+      "status": "in-flight",
+      "created_at": "2026-07-12T08:24:00+08:00",
+      "results": []
+    },
+    {
+      "id": "H-002",
+      "description": "Make deliberate Pi pin upgrades independently verifiable and reviewable.",
+      "parent_paradigm": "external-git-lock",
+      "expected_lift": "+1 upgrade-safety dimension",
+      "cost_h": 0.3,
+      "ranking": 0.7,
+      "status": "pending",
+      "created_at": "2026-07-12T08:24:00+08:00",
+      "results": []
+    },
+    {
+      "id": "H-003",
+      "description": "Detect Pi RPC protocol incompatibility before benchmark execution.",
+      "parent_paradigm": "rpc-contract-probe",
+      "expected_lift": "+1 early-failure dimension",
+      "cost_h": 0.7,
+      "ranking": 0.5,
+      "status": "pending",
+      "created_at": "2026-07-12T08:24:00+08:00",
+      "results": []
+    }
+  ],
+  "confirmed": [],
+  "falsified": [],
+  "runs": [],
+  "calibration": {
+    "_schema_version": 1,
+    "paradigms": {
+      "external-git-lock": {
+        "n_samples": 0,
+        "mean_gap": null,
+        "std_gap": null,
+        "last_3_gaps": [],
+        "last_updated": null,
+        "_note": "Local deterministic acceptance is ground truth; no external leaderboard."
+      },
+      "rpc-contract-probe": {
+        "n_samples": 0,
+        "mean_gap": null,
+        "std_gap": null,
+        "last_3_gaps": [],
+        "last_updated": null,
+        "_note": "Reserved for protocol compatibility cycles."
+      }
+    }
+  }
+}
