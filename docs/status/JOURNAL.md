@@ -305,3 +305,4 @@
 - 06:26 AF-120 installed-provider 规格已提交，锁定 entry-point 选择、资源根与 runtime authority。[9c2a1d1]
 - 06:39 AF-120 规格扩展为四 distribution；`dci.framework` 冻结为独立 baseline 实现。[356c508]
 - 06:40 AF-120 七阶段 TDD 计划已提交，先拆分发布边界再实现 provider/CLI。[58a7131]
+- 06:52 Asterion core 与 enhanced DCI baseline 已拆分为独立 wheel；benchmark 未改。[550e5c6]
