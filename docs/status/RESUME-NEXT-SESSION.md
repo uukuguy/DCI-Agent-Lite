@@ -20,7 +20,7 @@
 
 ## Committed / remote state
 
-- Branch: `main`; the handoff began clean and `35` commits ahead of `origin/main`, with no local commits missing from the remote. This state handoff adds one further documentation commit; nothing has been pushed.
+- Branch: `main`; the handoff began clean and `35` commits ahead of `origin/main`, with no local commits missing from the remote. This state handoff adds two further documentation commits; nothing has been pushed.
 - Latest implementation/evidence commits before this handoff include `984957f feat: support strict Responses judge schemas` and `b8160d7 docs: record strict judge schema compatibility evidence`.
 
 ## First resume action
