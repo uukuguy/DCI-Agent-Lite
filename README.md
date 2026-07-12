@@ -143,6 +143,8 @@ An exported **process environment** key intentionally takes precedence over a va
 `judge_api_key_shadowed_by_environment` without exposing key material; after rotating only `.env`,
 unset any stale exported key or start a fresh shell before running the preflight.
 Run `make check-judge-config` to inspect those same safe fields without making an HTTP request.
+For an official Responses judge, `DCI_EVAL_JUDGE_STRICT_JSON_SCHEMA=true` opts into a fixed
+strict verdict schema; leave it false for compatible Chat Completions backends.
 
 <a name="quick-start"></a>
 ## ⚡ Quick Start

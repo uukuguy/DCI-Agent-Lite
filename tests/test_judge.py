@@ -194,6 +194,34 @@ class JudgeTransportTests(unittest.TestCase):
         )
         self.assertEqual(text, '{"is_correct": false}')
 
+    def test_responses_can_opt_into_strict_judge_schema(self) -> None:
+        config = JudgeConfig(api="responses", api_key="key")
+        self.assertTrue(
+            hasattr(config, "strict_json_schema"),
+            "JudgeConfig must expose an opt-in strict schema setting",
+        )
+        object.__setattr__(config, "strict_json_schema", True)
+        payload = build_judge_request(
+            config,
+            question="Question",
+            gold_answer="Gold",
+            predicted_answer="Prediction",
+        )
+
+        schema = payload["text"]["format"]
+        self.assertEqual(schema["type"], "json_schema")
+        self.assertTrue(schema["strict"])
+        self.assertEqual(schema["schema"]["required"], [
+            "is_correct",
+            "normalized_prediction",
+            "reason",
+        ])
+
+    def test_strict_schema_is_part_of_public_configuration(self) -> None:
+        config = JudgeConfig(api="responses")
+
+        self.assertIn("judge_strict_json_schema", config.public_dict())
+
     def test_generic_chat_backend_can_omit_optional_compatibility_fields(self) -> None:
         config = JudgeConfig(
             base_url="http://localhost:8000/v1",
@@ -325,9 +353,22 @@ class JudgeResultReuseTests(unittest.TestCase):
                 gold_answer="Gold",
                 predicted_answer="Prediction",
             )
+            strict_schema = maybe_reuse_existing_eval(
+                eval_result_path=result_path,
+                judge_config=JudgeConfig(
+                    base_url=config.base_url,
+                    api=config.api,
+                    model=config.model,
+                    strict_json_schema=True,
+                ),
+                question="Question",
+                gold_answer="Gold",
+                predicted_answer="Prediction",
+            )
 
         self.assertEqual(reused, existing)
         self.assertIsNone(changed_backend)
+        self.assertIsNone(strict_schema)
 
 
 if __name__ == "__main__":

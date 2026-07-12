@@ -21,6 +21,16 @@ DEFAULT_JUDGE_INPUT_PRICE_PER_1M = 0.20
 DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M = 0.02
 DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M = 1.25
 JUDGE_ENV_PREFIX = "DCI_EVAL_JUDGE_"
+JUDGE_VERDICT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "is_correct": {"type": "boolean"},
+        "normalized_prediction": {"type": "string"},
+        "reason": {"type": "string"},
+    },
+    "required": ["is_correct", "normalized_prediction", "reason"],
+    "additionalProperties": False,
+}
 
 
 def _utc_now() -> str:
@@ -85,6 +95,7 @@ class JudgeConfig:
     timeout_seconds: int = DEFAULT_JUDGE_TIMEOUT_SECONDS
     max_output_tokens: int = DEFAULT_JUDGE_MAX_OUTPUT_TOKENS
     json_mode: bool = True
+    strict_json_schema: bool = False
     thinking: str = "auto"
     input_price_per_1m: float = DEFAULT_JUDGE_INPUT_PRICE_PER_1M
     cached_input_price_per_1m: float = DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M
@@ -182,6 +193,9 @@ class JudgeConfig:
                 DEFAULT_JUDGE_MAX_OUTPUT_TOKENS,
             ),
             json_mode=_env_bool(f"{JUDGE_ENV_PREFIX}JSON_MODE", True),
+            strict_json_schema=_env_bool(
+                f"{JUDGE_ENV_PREFIX}STRICT_JSON_SCHEMA", False
+            ),
             thinking=os.environ.get(f"{JUDGE_ENV_PREFIX}THINKING", "auto"),
             input_price_per_1m=input_price_per_1m
             if input_price_per_1m is not None
@@ -233,6 +247,7 @@ class JudgeConfig:
             "judge_timeout_seconds": self.timeout_seconds,
             "judge_max_output_tokens": self.max_output_tokens,
             "judge_json_mode": self.json_mode,
+            "judge_strict_json_schema": self.strict_json_schema,
             "judge_thinking": self.effective_thinking,
             "judge_input_price_per_1m": self.input_price_per_1m,
             "judge_cached_input_price_per_1m": self.cached_input_price_per_1m,
@@ -382,11 +397,21 @@ def build_judge_request(
         {"role": "user", "content": user_prompt},
     ]
     if config.api == "responses":
-        return {
+        payload: Dict[str, Any] = {
             "model": config.model,
             "max_output_tokens": config.max_output_tokens,
             "input": messages,
         }
+        if config.strict_json_schema:
+            payload["text"] = {
+                "format": {
+                    "type": "json_schema",
+                    "name": "judge_verdict",
+                    "strict": True,
+                    "schema": JUDGE_VERDICT_SCHEMA,
+                }
+            }
+        return payload
     payload: Dict[str, Any] = {
         "model": config.model,
         "max_tokens": config.max_output_tokens,

@@ -451,6 +451,12 @@ class ClimbToolTests(unittest.TestCase):
             "env -u DEEPSEEK_API_KEY make check-judge-config", train_script
         )
 
+    def test_h009_train_checks_strict_schema(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+
+        self.assertIn("H-009", train_script)
+        self.assertIn("tests.test_judge", train_script)
+
 
 if __name__ == "__main__":
     unittest.main()

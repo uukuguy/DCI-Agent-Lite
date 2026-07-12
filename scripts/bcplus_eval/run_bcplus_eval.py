@@ -561,6 +561,7 @@ def judge_result_succeeded(
             "judge_api",
             "judge_max_output_tokens",
             "judge_json_mode",
+            "judge_strict_json_schema",
             "judge_thinking",
         ):
             if judge_result.get(key) != current_config.get(key):

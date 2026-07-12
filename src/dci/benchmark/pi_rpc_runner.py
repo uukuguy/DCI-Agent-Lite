@@ -260,6 +260,7 @@ def maybe_reuse_existing_eval(
         "judge_api",
         "judge_max_output_tokens",
         "judge_json_mode",
+        "judge_strict_json_schema",
         "judge_thinking",
     ):
         if existing.get(key) != current_config.get(key):
