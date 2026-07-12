@@ -24,3 +24,6 @@
 - 08:29 active climb 恢复边界已 checkpoint，H-001 测试优先继续。[e65da92]
 - 08:31 Pi lock checkout state machine 六项集成回归通过。[27a68a6]
 - 08:32 Pi lock 配置、升级文档与 D-003 决策同步完成。[2049c3b]
+- 08:40 H-001 climb train/eval/record/sync adapter 回归完成。[79e91cb]
+- 08:40 H-001 confirmed 4/4; setup-policy acceptance recorded.
+- 08:44 H-001 全量 31 tests + runtime-example 正确；外部 Pi 状态未变。

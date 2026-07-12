@@ -75,11 +75,11 @@ def main() -> None:
             "decision_reason": "cheap deterministic local acceptance",
             "verdict": verdict,
             "train_cost_h": "0.01",
-            "manifest_path": str(args.run_dir / "manifest.json"),
+            "manifest_path": f"runs/climb/{args.run_id}/manifest.json",
         }
     )
     with runs_path.open("a", newline="") as handle:
-        csv.DictWriter(handle, fieldnames=fieldnames).writerow(row)
+        csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n").writerow(row)
 
     remaining = sorted(
         (item for item in hypotheses if item["status"] == "pending"),

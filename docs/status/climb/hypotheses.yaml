@@ -1,29 +1,40 @@
-# Append-only climb hypothesis pool. Add result entries; never erase prior evidence.
 hypotheses:
-  - id: H-001
-    description: Pin one verified Pi commit and enforce safe checkout reconciliation.
-    parent_paradigm: external-git-lock
-    expected_lift: "+3 policy dimensions"
-    cost_h: 0.5
-    ranking: 1.0
-    status: in-flight
-    created_at: "2026-07-12T08:24:00+08:00"
-    results: []
-  - id: H-002
-    description: Make deliberate Pi pin upgrades independently verifiable and reviewable.
-    parent_paradigm: external-git-lock
-    expected_lift: "+1 upgrade-safety dimension"
-    cost_h: 0.3
-    ranking: 0.7
-    status: pending
-    created_at: "2026-07-12T08:24:00+08:00"
-    results: []
-  - id: H-003
-    description: Detect Pi RPC protocol incompatibility before benchmark execution.
-    parent_paradigm: rpc-contract-probe
-    expected_lift: "+1 early-failure dimension"
-    cost_h: 0.7
-    ranking: 0.5
-    status: pending
-    created_at: "2026-07-12T08:24:00+08:00"
-    results: []
+- id: H-001
+  description: Pin one verified Pi commit and enforce safe checkout reconciliation.
+  parent_paradigm: external-git-lock
+  expected_lift: +3 policy dimensions
+  cost_h: 0.5
+  ranking: 1.0
+  status: confirmed
+  created_at: '2026-07-12T08:24:00+08:00'
+  results:
+  - session: 2026-07-12-pi-revision
+    cycle: 1
+    run: 20260712-084042-dci-climb-h001
+    local: 4
+    local_per_task:
+      immutable_resolution: 1
+      repeat_validation: 1
+      dirty_checkout_safety: 1
+      override_compatibility: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local setup-policy acceptance
+- id: H-002
+  description: Make deliberate Pi pin upgrades independently verifiable and reviewable.
+  parent_paradigm: external-git-lock
+  expected_lift: +1 upgrade-safety dimension
+  cost_h: 0.3
+  ranking: 0.7
+  status: pending
+  created_at: '2026-07-12T08:24:00+08:00'
+  results: []
+- id: H-003
+  description: Detect Pi RPC protocol incompatibility before benchmark execution.
+  parent_paradigm: rpc-contract-probe
+  expected_lift: +1 early-failure dimension
+  cost_h: 0.7
+  ranking: 0.5
+  status: pending
+  created_at: '2026-07-12T08:24:00+08:00'
+  results: []

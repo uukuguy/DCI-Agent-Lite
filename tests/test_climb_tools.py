@@ -27,8 +27,21 @@ class ClimbToolTests(unittest.TestCase):
         tree = json.loads(
             (REPO_ROOT / "docs/status/climb/research-tree.json").read_text()
         )
-        self.assertEqual(tree["active"][0]["id"], "H-001")
-        self.assertEqual(len(tree["active"]), 3)
+        hypotheses = yaml.safe_load(
+            (REPO_ROOT / "docs/status/climb/hypotheses.yaml").read_text()
+        )["hypotheses"]
+        expected_active = {
+            item["id"]
+            for item in hypotheses
+            if item["status"] in {"pending", "in-flight"}
+        }
+        expected_confirmed = {
+            item["id"] for item in hypotheses if item["status"] == "confirmed"
+        }
+        self.assertEqual({item["id"] for item in tree["active"]}, expected_active)
+        self.assertEqual(
+            {item["id"] for item in tree["confirmed"]}, expected_confirmed
+        )
 
     def test_h001_local_eval_reports_all_policy_dimensions(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -103,9 +116,15 @@ class ClimbToolTests(unittest.TestCase):
             h001 = next(h for h in state["hypotheses"] if h["id"] == "H-001")
             self.assertEqual(h001["status"], "confirmed")
             self.assertEqual(h001["results"][-1]["local"], 4)
-            with (state_dir / "runs.csv").open(newline="") as handle:
+            runs_path = state_dir / "runs.csv"
+            with runs_path.open(newline="") as handle:
                 rows = list(csv.DictReader(handle))
             self.assertEqual(rows[-1]["verdict"], "confirmed 4/4")
+            self.assertEqual(
+                rows[-1]["manifest_path"],
+                "runs/climb/dci-climb-h001-test/manifest.json",
+            )
+            self.assertNotIn(b"\r", runs_path.read_bytes())
             session = json.loads((state_dir / "session-state.json").read_text())
             self.assertEqual(session["next_hypothesis"], "H-002")
             self.assertIn("H-001 confirmed 4/4", journal.read_text())
