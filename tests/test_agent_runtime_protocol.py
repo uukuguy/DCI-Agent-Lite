@@ -8,6 +8,7 @@ from dci.framework.protocol import (
     PROTOCOL_VERSION,
     ProtocolError,
     validate_event_stream,
+    validate_runtime_manifest,
     validate_run_request,
 )
 
@@ -25,6 +26,19 @@ def load_jsonl(name: str) -> list[dict[str, object]]:
 
 
 class AgentRuntimeProtocolTests(unittest.TestCase):
+    def test_valid_runtime_manifest_fixture_conforms(self) -> None:
+        manifest = json.loads((FIXTURE_DIR / "valid-runtime-manifest.json").read_text())
+
+        validate_runtime_manifest(manifest)
+
+    def test_invalid_runtime_manifest_fixture_is_rejected(self) -> None:
+        manifest = json.loads(
+            (FIXTURE_DIR / "invalid-runtime-manifest.json").read_text()
+        )
+
+        with self.assertRaises(ProtocolError):
+            validate_runtime_manifest(manifest)
+
     def test_valid_run_request_conforms(self) -> None:
         request = {
             "protocol": PROTOCOL_VERSION,

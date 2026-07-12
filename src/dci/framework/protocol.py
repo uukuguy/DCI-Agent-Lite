@@ -73,6 +73,21 @@ def _validate_string_list(value: object, label: str) -> None:
         raise ProtocolError(f"{label} entries must be unique")
 
 
+def validate_runtime_manifest(manifest: Mapping[str, object]) -> None:
+    """Validate one portable runtime capability manifest."""
+
+    manifest = _require_mapping(manifest, "runtime manifest")
+    _require_keys(
+        manifest,
+        label="runtime manifest",
+        required={"protocol", "runtime_id", "capabilities"},
+    )
+    if manifest["protocol"] != PROTOCOL_VERSION:
+        raise ProtocolError("runtime manifest protocol is not dci.agent-runtime/v1")
+    _require_non_empty_string(manifest["runtime_id"], "runtime manifest runtime_id")
+    _validate_string_list(manifest["capabilities"], "runtime manifest capabilities")
+
+
 def validate_run_request(request: Mapping[str, object]) -> None:
     """Validate one normalized run request."""
 

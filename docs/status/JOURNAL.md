@@ -129,3 +129,5 @@
 - 21:23 Claude Code 环境后端边界已提交，解除不可用帐号对框架主线的阻塞。[6d836ae]
 - 21:24 AF-030 本地协议边界完成；延期 provider UAT 保留，主线转入 AF-040 主机边界。
 - 21:25 AF-040 成为唯一活跃包，使 Python/TypeScript 主机工作受范围门控制。[88b03ab]
+- 21:25 AF-040 公共主机契约与跨语言一致性计划已固化。[4444a79]
+- 21:25 runtime manifest 正反 fixtures 与 Python validator 已通过聚焦测试。
