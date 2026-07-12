@@ -18,3 +18,4 @@
 - 07:29 已安装跨 Codex/Claude checkpoint 策略；canonical skill 与事件提醒验证通过。
 - 07:34 漏交接恢复改为 recovery checkpoint；非 GSD 仓库跳过 GSD 启动 hook。
 - 07:54 自动 checkpoint 工作流完成；正式 handoff 开始同步 Git、状态与协作记忆。
+- 08:19 Pi 精确 revision lock 设计完成，避免 moving-main 漂移。[db62f20]
