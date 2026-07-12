@@ -111,7 +111,7 @@
 - Dependencies: AF-020, AF-030, AF-090, AF-095
 - Acceptance: Pi and Claude fixture runtimes satisfy the same plan-driven runner contract; runtime/service mismatch, cancellation, malformed streams, and unsafe errors fail closed before accidental execution.
 - Design: `docs/superpowers/specs/2026-07-13-application-runner-vertical-slice-design.md`
-- Plan: pending written-spec approval
+- Plan: `docs/superpowers/plans/2026-07-13-application-runner-vertical-slice.md`
 
 ## AF-095 — Asterion framework identity and extraction
 

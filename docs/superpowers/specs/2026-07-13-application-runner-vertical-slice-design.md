@@ -54,13 +54,18 @@ async def run_application(
     run_id: str,
     input_text: str,
     host_services: Mapping[str, object],
-    signal: object | None = None,
+    signal: CancellationSignal | None = None,
 ) -> ApplicationRunResult: ...
 ```
 
 The concrete annotations may use existing protocol types, but the public API
 must not import Pi-, Claude-, or Rust-private classes. The result is an immutable
 projection of normalized events and artifacts, not raw provider output.
+
+Python adds a minimal read-only `CancellationSignal` protocol with a boolean
+`cancelled` property and extends `AgentRuntimeClient.run` with an optional
+keyword-only signal. This mirrors the existing TypeScript `AbortSignal` option
+without defining signal mutation, transport, or process ownership in Asterion.
 
 ## Preconditions and ownership
 
@@ -96,8 +101,9 @@ reference research capability for this vertical slice.
 
 - A signal already cancelled before invocation fails without calling the
   runtime.
-- Cancellation during a run is delegated through the existing runtime client's
-  signal boundary; the runner accepts only the normalized terminal outcome.
+- Cancellation during a run is delegated through the explicit runtime-client
+  signal boundary; the runner does not mutate the signal and accepts only the
+  normalized terminal outcome.
 - Runtime mismatch, missing host service, malformed request input, invalid event
   stream, runtime exception, and missing terminal event raise a public
   `ApplicationRunError`.

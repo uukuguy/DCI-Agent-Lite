@@ -263,6 +263,8 @@
 - 02:37 Asterion product/capability directories 已提交，DCI compatibility closure 可继续。[0d6cc5a]
 - 02:39 AF-095-H-004 confirmed 4/4；DCI CLI/examples、architecture 与 framework closure 通过。
 - 02:42 AF-095 closure 通过 258 Python、11 Node、19 Rust 及全部门禁；AF-100 接管。
+- 02:43 Asterion framework extraction 已关闭，runner 可在独立顶层边界上继续。[04a1f4a]
+- 02:50 AF-100 runner 计划已锁定；Python cancellation boundary 与 TypeScript signal parity 明确。
 - 01:36 AF-090-H-001 confirmed 4/4; package acceptance recorded.
 - 01:40 AF-090-H-002 confirmed 4/4; package acceptance recorded.
 - 01:47 AF-090-H-003 confirmed 4/4; package acceptance recorded.
