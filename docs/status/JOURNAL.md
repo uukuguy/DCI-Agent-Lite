@@ -23,3 +23,4 @@
 - 08:27 DCI climb adapter 已建立；research-tree 生成回归通过。[63531e4]
 - 08:29 active climb 恢复边界已 checkpoint，H-001 测试优先继续。[e65da92]
 - 08:31 Pi lock checkout state machine 六项集成回归通过。[27a68a6]
+- 08:32 Pi lock 配置、升级文档与 D-003 决策同步完成。[2049c3b]
