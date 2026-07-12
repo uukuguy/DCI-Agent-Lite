@@ -298,3 +298,6 @@
 - 04:09 独立 DCI research capability 已提交；Pi/Claude fixture parity 与 baseline import 隔离通过。[762ba85]
 - 04:14 Asterion 独立 Pi runtime client 已提交；取消、deadline、reap 与安全 JSONL 失败通过。[41811ec]
 - 04:18 显式 DCI application host 与最小 assembly 已提交，同一 capability 跨组合复用通过。[cbdceae]
+- 04:25 AF-110 全量验收通过：311 Python、11 Node、19 Rust 及 compile/lint/shell/scope/diff gates。
+- 04:25 provider-backed Asterion DCI probe 产出 research event/artifact；baseline example 六轮后空答案，score=false。
+- 04:26 AF-110 完成并激活 AF-120，下一步设计安全 installed-application binding。

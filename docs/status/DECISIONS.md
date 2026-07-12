@@ -263,10 +263,11 @@
 
 ## D-029 — Make capabilities executable composition units
 
-- Status: ✅ accepted decision
+- Status: ✅ accepted and implemented decision
 - Decided: 2026-07-13
 - Decision: capability packages are reusable executable units; applications are the executable boundaries that bind exact packages, a runtime, host services, and operator input.
 - Rationale: treating each package as an application breaks policy/evaluation/observability composition, while application-private plug-ins make manifests descriptive metadata and recreate DCI-specific coupling.
 - Baseline boundary: Asterion and its DCI capability implementation must not import or modify `src/dci/benchmark/`; the existing `dci-agent-lite` path remains an independent external baseline.
 - Delivery boundary: AF-110 adds explicit exact implementation binding and sequential execution. Secure installed-application binding and the generic `asterion run <assembly>` command are deferred to AF-120 because core cannot safely discover independently owned executable code without a reviewed binding mechanism.
 - Revalidation trigger: add scheduling only for a measured multi-branch execution need; add dynamic discovery only with an explicit distribution and authorization contract.
+- Implemented evidence: AF-110 adds immutable selected manifests, exact implementation bindings, declared output validation, deterministic sequential execution, an independently packaged DCI research implementation, an independent Pi runtime client, and an explicit application composition root. The same DCI implementation runs in two application graphs without Asterion importing DCI or the baseline.

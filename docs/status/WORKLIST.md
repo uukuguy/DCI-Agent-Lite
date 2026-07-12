@@ -116,17 +116,18 @@
 
 ## AF-110 — Composable capability execution
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Asterion Agent Application Framework
 - Scope: define exact reusable package-implementation bindings and deterministic sequential execution, then prove the DCI local-corpus research capability through an explicit application host without importing or modifying the DCI benchmark baseline.
 - Dependencies: AF-100
 - Acceptance: immutable selected declarations, exact implementation preflight, declared event/artifact validation, cancellation and safe failures, independent DCI implementation, Pi/Claude fixture parity, cross-application reuse, and baseline isolation pass all repository gates.
 - Design: `docs/superpowers/specs/2026-07-13-composable-capability-execution-design.md`
 - Plan: `docs/superpowers/plans/2026-07-13-composable-capability-execution.md`
+- Closure evidence: exact implementation binding, immutable declarations/results, sequential artifact routing, cancellation/failure containment, independent DCI capability packaging, independent Pi runtime, explicit host composition, cross-application reuse, and baseline isolation pass 311 Python, 11 Node, and 19 Rust tests plus compile, lint, shell, scope, and diff gates. A provider-backed Asterion probe produced the declared research event/artifact; the separate baseline example completed but scored false after its six-turn limit.
 
 ## AF-120 — Installed application binding and generic entry point
 
-- Status: pending
+- Status: in_progress
 - Parent objective: Asterion Agent Application Framework
 - Scope: define a security-reviewed mechanism for installed applications to supply implementation registries, then expose the generic `asterion run <assembly>` entry point without making Asterion core depend on capability implementations.
 - Dependencies: AF-110

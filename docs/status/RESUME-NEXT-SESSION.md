@@ -1,10 +1,10 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13 04:04 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-13 04:26 +0800. **Session remains active — not a final handoff.**
 
-Active work package: AF-110
+Active work package: AF-120
 
-Package state: Tasks 1–3 complete; independent DCI research capability implementation is next.
+Package state: AF-110 accepted and completed; AF-120 design discussion is next.
 
 ## TL;DR
 
@@ -14,6 +14,8 @@ Package state: Tasks 1–3 complete; independent DCI research capability impleme
 - AF-110 package execution and AF-120 application distribution/binding are deliberately split to keep Asterion core independent of capability implementations.
 - The implementation plan is committed at `c60f0b4`; inline test-first execution was selected and AF-110 is now active.
 - `fc5ab82`, `a679e0f`, and `3b44940` complete immutable plan declarations, exact implementation contracts, and deterministic composed execution.
+- `762ba85`, `41811ec`, `cbdceae`, and `30c2914` add the independent DCI implementation, independent Pi runtime, explicit application host, reuse proof, and architecture guide.
+- AF-110 closure passes 311 Python, 11 Node, and 19 Rust tests plus compile, lint, shell, scope, and diff gates. The provider-backed Asterion probe passed; the independent baseline example completed but scored false at its turn limit.
 
 ## Where things stand
 
@@ -35,13 +37,13 @@ Package state: Tasks 1–3 complete; independent DCI research capability impleme
 
 ## Next steps (immediate)
 
-1. Write the failing Task 4 tests for an independently packaged DCI local-research implementation.
-2. Implement the runtime-neutral capability without importing `dci.benchmark`.
-3. Verify Pi/Claude fixture parity, redaction, packaging, and Asterion dependency direction.
+1. Brainstorm AF-120's secure installed-application binding contract before implementation.
+2. Compare installation-time entry points, explicit host modules, and signed bundle/index approaches against the no-arbitrary-import boundary.
+3. Approve the smallest design that can support generic `asterion run <assembly>` without Asterion core depending on DCI.
 
 ## Open questions
 
-- None at the governance boundary; implementation follows the approved plan inline.
+- Which binding authority should map an application identity to exact implementation objects without executable paths in portable manifests?
 
 ## Don't go down these paths again
 
