@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import importlib.util
 import json
+import tempfile
 import unittest
 from collections.abc import AsyncIterator, Mapping
 from pathlib import Path
@@ -16,6 +18,10 @@ from asterion.runtime.host import RunEvent, RunRequest, RuntimeManifest
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_ROOT = ROOT / "capabilities/dci-research/manifests"
 ASSEMBLY = ROOT / "applications/dci-agent-lite/assemblies/dci-local-research.json"
+EXECUTABLE_ASSEMBLY = (
+    ROOT / "applications/dci-agent-lite/assemblies/dci-research-capability.json"
+)
+HOST_MODULE = ROOT / "applications/dci-agent-lite/python/dci_research_host.py"
 
 
 class FixtureRuntime:
@@ -36,6 +42,32 @@ class FixtureRuntime:
         self.requests.append(request)
         if False:
             yield RunEvent("", 0, "", {})
+
+
+class ResearchFixtureRuntime(FixtureRuntime):
+    async def run(
+        self,
+        request: RunRequest,
+        *,
+        signal: object | None = None,
+    ) -> AsyncIterator[RunEvent]:
+        del signal
+        self.requests.append(request)
+        yield RunEvent(request.run_id, 1, "run.started", {"capabilities": []})
+        yield RunEvent(
+            request.run_id,
+            2,
+            "artifact.created",
+            {
+                "artifact": {
+                    "artifact_id": "answer",
+                    "kind": "answer",
+                    "media_type": "text/plain",
+                    "uri": "final.txt",
+                }
+            },
+        )
+        yield RunEvent(request.run_id, 3, "run.completed", {"status": "completed"})
 
 
 class MutableSignal:
@@ -166,6 +198,78 @@ class ComposedApplicationRunnerTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(research.calls, [])
         self.assertEqual(evaluation.calls, [])
         self.assertEqual(observability.calls, [])
+
+
+class ExplicitDciApplicationHostTests(unittest.IsolatedAsyncioTestCase):
+    def load_host(self):
+        spec = importlib.util.spec_from_file_location("dci_research_host", HOST_MODULE)
+        if spec is None or spec.loader is None:
+            raise RuntimeError("unable to load DCI research host")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    async def test_checked_in_host_binds_the_independent_dci_implementation(self) -> None:
+        host = self.load_host()
+        runtime = ResearchFixtureRuntime()
+
+        result = await host.run_dci_research_application(
+            assembly_path=EXECUTABLE_ASSEMBLY,
+            catalog_roots=(MANIFEST_ROOT,),
+            runtime=runtime,
+            run_id="host-run",
+            input_text="Read the corpus",
+        )
+
+        self.assertEqual(result.application_id, "dci.research-capability")
+        self.assertEqual(len(runtime.requests), 1)
+        self.assertEqual(
+            result.artifacts[0]["media_type"],
+            "application/vnd.dci.research+json",
+        )
+
+    async def test_same_dci_implementation_is_reusable_with_extra_policy(self) -> None:
+        host = self.load_host()
+        assembly = json.loads(EXECUTABLE_ASSEMBLY.read_text())
+        assembly["application_id"] = "dci.research-with-extra-policy"
+        assembly["packages"].append(
+            {"package_id": "policy.extra-audit", "version": "1.0.0"}
+        )
+        assembly["packages"] = sorted(
+            assembly["packages"], key=lambda item: (item["package_id"], item["version"])
+        )
+        extra_policy = {
+            "protocol": "dci.package/v1",
+            "package_id": "policy.extra-audit",
+            "version": "1.0.0",
+            "kind": "policy",
+            "provides_capabilities": [],
+            "requires_capabilities": [],
+            "requires_policies": [],
+            "emits_events": [],
+            "consumes_events": [],
+            "produces_artifacts": [],
+            "consumes_artifacts": [],
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            assembly_path = root / "assembly.json"
+            policy_root = root / "manifests"
+            policy_root.mkdir()
+            assembly_path.write_text(json.dumps(assembly))
+            (policy_root / "extra-policy.json").write_text(json.dumps(extra_policy))
+            result = await host.run_dci_research_application(
+                assembly_path=assembly_path,
+                catalog_roots=(MANIFEST_ROOT, policy_root),
+                runtime=ResearchFixtureRuntime(),
+                run_id="reused-host-run",
+                input_text="Read the corpus",
+            )
+
+        self.assertEqual(result.application_id, "dci.research-with-extra-policy")
+
+
+class ComposedApplicationRunnerFailureTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_failure_stops_later_packages_and_redacts_content(self) -> None:
         plan, runtime = resolve_plan()

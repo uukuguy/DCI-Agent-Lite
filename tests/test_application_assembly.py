@@ -256,7 +256,12 @@ class ReferenceAssemblyTests(unittest.TestCase):
     def test_checked_in_reference_assemblies_are_valid(self) -> None:
         names = {path.name for path in ASSEMBLIES.glob("*.json")}
         self.assertEqual(
-            names, {"controlled-code-validation.json", "dci-local-research.json"}
+            names,
+            {
+                "controlled-code-validation.json",
+                "dci-local-research.json",
+                "dci-research-capability.json",
+            },
         )
         for name in names:
             validate_assembly_manifest(self.load(name))
