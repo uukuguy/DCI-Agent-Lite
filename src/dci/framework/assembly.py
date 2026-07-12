@@ -4,6 +4,15 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
+from dataclasses import dataclass
+
+from dci.framework.package_catalog import PackageCatalog, PackageCatalogError, PackageRef
+from dci.framework.packages import (
+    PackageComposition,
+    PackageCompositionError,
+    compose_packages,
+)
+from dci.framework.protocol import ProtocolError, validate_runtime_manifest
 
 
 ASSEMBLY_PROTOCOL_VERSION = "dci.assembly/v1"
@@ -29,6 +38,15 @@ REQUIRED_FIELDS = {
 
 class AssemblyError(ValueError):
     """Raised when a static application assembly is invalid or unresolved."""
+
+
+@dataclass(frozen=True)
+class AssemblyPlan:
+    application_id: str
+    version: str
+    runtime_id: str
+    package_refs: tuple[PackageRef, ...]
+    composition: PackageComposition
 
 
 def validate_assembly_manifest(value: Mapping[str, object]) -> None:
@@ -81,3 +99,68 @@ def validate_assembly_manifest(value: Mapping[str, object]) -> None:
             or edges != sorted(set(edges))
         ):
             raise AssemblyError(f"assembly {field} must be sorted unique strings")
+
+
+def resolve_assembly(
+    assembly: Mapping[str, object],
+    *,
+    catalog: PackageCatalog,
+    runtime_manifest: Mapping[str, object],
+) -> AssemblyPlan:
+    """Resolve portable identities and edges into a static composition plan."""
+
+    validate_assembly_manifest(assembly)
+    try:
+        validate_runtime_manifest(runtime_manifest)
+    except ProtocolError as error:
+        raise AssemblyError("assembly runtime manifest is invalid") from error
+    if runtime_manifest["runtime_id"] != assembly["runtime_id"]:
+        raise AssemblyError("assembly runtime identity does not match")
+
+    raw_packages = assembly["packages"]
+    assert isinstance(raw_packages, list)
+    package_refs = tuple(
+        PackageRef(package["package_id"], package["version"])
+        for package in raw_packages
+        if isinstance(package, Mapping)
+        and isinstance(package["package_id"], str)
+        and isinstance(package["version"], str)
+    )
+    try:
+        manifests = catalog.select(package_refs)
+    except PackageCatalogError as error:
+        raise AssemblyError("assembly package selection is unavailable") from error
+
+    runtime_capabilities = runtime_manifest["capabilities"]
+    assert isinstance(runtime_capabilities, list)
+    try:
+        composition = compose_packages(
+            manifests,
+            host_capabilities=set(runtime_capabilities)
+            | set(_string_edges(assembly, "host_capabilities")),
+            host_policies=set(_string_edges(assembly, "host_policies")),
+            host_events=set(_string_edges(assembly, "host_events")),
+            host_artifacts=set(_string_edges(assembly, "host_artifacts")),
+        )
+    except PackageCompositionError as error:
+        raise AssemblyError("assembly package graph cannot compose") from error
+
+    application_id = assembly["application_id"]
+    version = assembly["version"]
+    runtime_id = assembly["runtime_id"]
+    assert isinstance(application_id, str)
+    assert isinstance(version, str)
+    assert isinstance(runtime_id, str)
+    return AssemblyPlan(
+        application_id=application_id,
+        version=version,
+        runtime_id=runtime_id,
+        package_refs=package_refs,
+        composition=composition,
+    )
+
+
+def _string_edges(assembly: Mapping[str, object], field: str) -> list[str]:
+    values = assembly[field]
+    assert isinstance(values, list) and all(isinstance(value, str) for value in values)
+    return values

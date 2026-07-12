@@ -229,4 +229,6 @@
 - 01:36 AF-090 治理切换已提交，assembly contract 进入 scope-controlled implementation。[472cda9]
 - 01:36 AF-090-H-001 confirmed 4/4; package acceptance recorded.
 - 01:37 AF-090-H-001 通过 86 focused tests、compile、Ruff、shell、scope 与 diff。
+- 01:38 static assembly contract 已提交，pure resolver 可在稳定 schema 上继续。[0639362]
+- 01:40 pure assembly resolver 通过 7 focused tests；runtime/catalog/service 绑定保持静态且安全。
 - 01:36 AF-090-H-001 confirmed 4/4; package acceptance recorded.

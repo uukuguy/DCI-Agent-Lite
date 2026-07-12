@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13 01:37 +0800. **Session remains active — autonomous climb continues.**
+> Updated: 2026-07-13 01:40 +0800. **Session remains active — autonomous climb continues.**
 
 Active work package: AF-090
 
@@ -41,7 +41,7 @@ Active work package: AF-090
 
 ## Immediate next action
 
-Start AF-090-H-002 with failing runtime/catalog/service binding and safe resolver tests.
+Add AF-090-H-002 train/eval adapter tests for the now-green runtime/catalog/service resolver suite, run the cycle, then fresh focused gates.
 
 ## Guardrails
 
