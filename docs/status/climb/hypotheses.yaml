@@ -1003,9 +1003,21 @@ hypotheses:
   expected_lift: +1 independent framework surface
   cost_h: 1.2
   ranking: 0.9
-  status: pending
+  status: confirmed
   created_at: '2026-07-13T02:08:00+08:00'
-  results: []
+  results:
+  - session: 2026-07-13-af-095-asterion-extraction
+    cycle: 44
+    run: 20260713-023239-dci-climb-af095h002
+    local: 4
+    local_per_task:
+      package_extraction: 1
+      assembly_extraction: 1
+      wire_stability: 1
+      single_implementation: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-095-H-003
   work_package_id: AF-095
   description: Reorganize declarative capability application schema and cross-language

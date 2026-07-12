@@ -248,4 +248,4 @@
 - Packaging: use the bare `asterion` distribution/import name; exact PyPI and npm registry probes returned 404 on 2026-07-13, though publication remains out of scope.
 - Compatibility: preserve `dci-agent-lite`, both `scripts/examples/` entry paths, `dci.framework.*` re-exports, and current `dci.*` protocol literals during extraction.
 - Revalidation trigger: rename protocol literals only through a separate versioned compatibility decision; remove old imports only after downstream usage is measured.
-- Implemented evidence: AF-095-H-001 confirms the authoritative Asterion runtime/host/adapter modules, old/new object identity, one-way dependency rule, and dual-root wheel packaging.
+- Implemented evidence: H-001 confirms authoritative runtime/host/adapter modules, object identity, dependency direction, and dual-root packaging; H-002 confirms package/assembly/executor extraction, stable wire literals, and definition-free compatibility modules.

@@ -1578,6 +1578,31 @@ class ClimbToolTests(unittest.TestCase):
                 },
             )
 
+    def test_af095_h002_train_runs_extracted_contract_suite(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+        self.assertIn("AF-095-H-002", train_script)
+        self.assertIn("test_package_and_assembly_objects_are_compatibility_aliases", train_script)
+
+    def test_af095_h002_eval_reports_four_extraction_dimensions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            env = os.environ.copy()
+            env["DCI_CLIMB_HYPOTHESIS_ID"] = "AF-095-H-002"
+            result = subprocess.run(
+                ["bash", "tools/climb/eval-local.sh", str(run_dir)],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            evaluation = json.loads((run_dir / "local-eval.json").read_text())
+            self.assertEqual(evaluation["total"], 4)
+            self.assertEqual(
+                set(evaluation["per_task"]),
+                {"package_extraction", "assembly_extraction", "wire_stability", "single_implementation"},
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

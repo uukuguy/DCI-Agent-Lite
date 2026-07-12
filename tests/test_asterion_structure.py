@@ -73,6 +73,17 @@ class AsterionStructureTests(unittest.TestCase):
             ]
             self.assertEqual(definitions, [], path)
 
+    def test_extracted_wire_protocol_literals_remain_stable(self) -> None:
+        from asterion.assembly.protocol import ASSEMBLY_PROTOCOL_VERSION
+        from asterion.packages.protocol import PACKAGE_PROTOCOL_VERSION
+        from asterion.runtime.protocol import PROTOCOL_VERSION
+        from asterion.services.executor_protocol import EXECUTOR_PROTOCOL_VERSION
+
+        self.assertEqual(PROTOCOL_VERSION, "dci.agent-runtime/v1")
+        self.assertEqual(PACKAGE_PROTOCOL_VERSION, "dci.package/v1")
+        self.assertEqual(ASSEMBLY_PROTOCOL_VERSION, "dci.assembly/v1")
+        self.assertEqual(EXECUTOR_PROTOCOL_VERSION, "dci.executor/v1")
+
 
 if __name__ == "__main__":
     unittest.main()

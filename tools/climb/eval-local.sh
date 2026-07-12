@@ -345,6 +345,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_asterion_structure.AsterionStructureTests.test_asterion_never_imports_dci"
         override_test="tests.test_asterion_structure.AsterionStructureTests.test_wheel_contains_both_transition_packages"
         ;;
+    AF-095-H-002)
+        first_dimension="package_extraction"
+        second_dimension="assembly_extraction"
+        third_dimension="wire_stability"
+        fourth_dimension="single_implementation"
+        immutable_test="tests.test_asterion_structure.AsterionStructureTests.test_package_and_assembly_objects_are_compatibility_aliases"
+        repeat_test="tests.test_application_assembly.ReferenceAssemblyTests.test_checked_in_reference_assemblies_are_valid"
+        dirty_test="tests.test_asterion_structure.AsterionStructureTests.test_extracted_wire_protocol_literals_remain_stable"
+        override_test="tests.test_asterion_structure.AsterionStructureTests.test_dci_framework_compatibility_modules_define_no_behavior"
+        ;;
     H-001)
         first_dimension="immutable_resolution"
         second_dimension="repeat_validation"
