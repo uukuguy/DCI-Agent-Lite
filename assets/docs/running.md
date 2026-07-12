@@ -2,6 +2,8 @@
 
 ## Python RPC Wrapper
 
+Run `make check-pi-rpc` for a fast model-free compatibility check before a benchmark. It validates JSONL framing plus the `get_state` response contract without sending a prompt or consuming model tokens.
+
 Main entry point:
 
 ```bash

@@ -8,7 +8,7 @@
 
 ## Current Architecture
 
-- Python CLI/orchestration: `dci-agent-lite` launches the external Pi coding agent in RPC or terminal mode, waits for session-level `agent_settled`, applies a configurable wall-clock deadline, and records run artifacts.
+- Python CLI/orchestration: `dci-agent-lite` launches the external Pi coding agent in RPC or terminal mode, waits for session-level `agent_settled`, applies a configurable wall-clock deadline, and records run artifacts; a model-free `get_state` preflight detects basic RPC drift.
 - External runtime: Pi is resolved through `DCI_PI_DIR`, preferring `./pi` with a legacy `./pi-mono` fallback.
 - Corpus interaction: the agent searches local raw corpora directly with terminal tools; there is no required embedding index or retrieval service.
 - Evaluation: a shared judge transport supports OpenAI Responses and compatible Chat Completions backends; batch evaluators reuse the same `.env` configuration.
@@ -47,6 +47,7 @@
 - `tests/` — first-party configuration, judge transport, and Pi RPC lifecycle regressions.
 - `.env.template` — primary runtime, Pi, and judge configuration examples.
 - `setup.sh` — dependency, external Pi, corpus, and benchmark setup.
+- `scripts/check_pi_rpc.py` — fast model-free RPC framing and state-contract preflight.
 - `docs/status/climb/research-tree.md` — generated climb summary for active hypotheses, run evidence, and the next autonomous action.
 - `tools/climb/` — project adapter and deterministic climb state tooling.
 

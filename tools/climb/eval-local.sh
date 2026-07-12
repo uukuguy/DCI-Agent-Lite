@@ -8,13 +8,21 @@ fi
 
 RUN_DIR="$1"
 mkdir -p "$RUN_DIR"
-PYTHON_BIN="${PYTHON:-python3}"
+PYTHON_BIN="${PYTHON:-}"
 HYPOTHESIS_ID="${DCI_CLIMB_HYPOTHESIS_ID:-H-001}"
+
+run_python() {
+    if [ -n "$PYTHON_BIN" ]; then
+        "$PYTHON_BIN" "$@"
+    else
+        uv run python "$@"
+    fi
+}
 
 run_dimension() {
     name="$1"
     test_name="$2"
-    if "$PYTHON_BIN" -m unittest "$test_name" -v >"$RUN_DIR/$name.log" 2>&1; then
+    if run_python -m unittest "$test_name" -v >"$RUN_DIR/$name.log" 2>&1; then
         printf '1'
     else
         printf '0'
@@ -33,6 +41,12 @@ case "$HYPOTHESIS_ID" in
         repeat_test="tests.test_setup_pi.PiSetupTests.test_check_mode_does_not_clone_missing_checkout"
         dirty_test="tests.test_setup_pi.PiSetupTests.test_check_mode_accepts_matching_dirty_checkout_without_mutation"
         override_test="tests.test_setup_pi.PiSetupTests.test_repository_docs_use_the_canonical_revision_lock"
+        ;;
+    H-003)
+        immutable_test="tests.test_pi_rpc_runner.PiRpcLifecycleTests.test_protocol_probe_validates_get_state_shape"
+        repeat_test="tests.test_pi_rpc_runner.PiRpcLifecycleTests.test_protocol_probe_script_exposes_model_free_check"
+        dirty_test="tests.test_pi_rpc_runner.PiRpcLifecycleTests.test_protocol_probe_is_documented_as_make_target"
+        override_test="tests.test_pi_rpc_runner.PiRpcLifecycleTests.test_waits_for_agent_settled"
         ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2

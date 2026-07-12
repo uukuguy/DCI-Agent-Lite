@@ -1180,6 +1180,56 @@ class PiRpcClient:
             raise RuntimeError(f"Unexpected RPC queue item: {item!r}")
         return item
 
+    def probe_protocol(self, *, timeout_seconds: float = 10) -> Dict[str, Any]:
+        """Validate the model-free RPC ``get_state`` contract."""
+
+        request_id = self._next_id()
+        self._send({"id": request_id, "type": "get_state"})
+        deadline = time.monotonic() + timeout_seconds
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise RuntimeError(
+                    f"Pi RPC protocol probe timed out after {timeout_seconds:g} seconds"
+                )
+            try:
+                response = self._read_json_line(timeout_seconds=remaining)
+            except TimeoutError as exc:
+                raise RuntimeError(
+                    f"Pi RPC protocol probe timed out after {timeout_seconds:g} seconds"
+                ) from exc
+            if response.get("type") != "response" or response.get("id") != request_id:
+                continue
+            if response.get("command") != "get_state":
+                raise RuntimeError(
+                    "Pi RPC protocol mismatch: get_state response has command "
+                    f"{response.get('command')!r}"
+                )
+            if response.get("success") is not True:
+                raise RuntimeError(
+                    "Pi RPC get_state failed: "
+                    f"{response.get('error', 'unknown protocol error')}"
+                )
+            state = response.get("data")
+            if not isinstance(state, dict):
+                raise RuntimeError("Pi RPC protocol mismatch: get_state data is not an object")
+            expected_types = {
+                "isStreaming": bool,
+                "isCompacting": bool,
+                "messageCount": int,
+                "pendingMessageCount": int,
+            }
+            for field, expected_type in expected_types.items():
+                value = state.get(field)
+                if not isinstance(value, expected_type) or (
+                    expected_type is int and isinstance(value, bool)
+                ):
+                    raise RuntimeError(
+                        "Pi RPC protocol mismatch: get_state field "
+                        f"{field!r} must be {expected_type.__name__}"
+                    )
+            return state
+
     def prompt_and_wait(
         self,
         message: str,

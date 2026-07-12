@@ -64,6 +64,14 @@ bash scripts/setup_pi.sh --check
 
 The command succeeds when local `HEAD` matches the requested commit. Local file changes are reported but preserved; a missing checkout, unavailable commit, or revision mismatch exits nonzero without mutation.
 
+After building Pi, verify the JSONL RPC handshake without sending a model prompt:
+
+```bash
+make check-pi-rpc
+```
+
+The probe starts Pi in RPC mode, sends `get_state`, validates the response envelope and stable state fields, then terminates the process. Use it after changing `pi-revision.txt` and before benchmark runs; it does not consume model tokens.
+
 ### 4. Configure model access
 
 The easiest way is to copy `.env.template` to `.env` and fill in your keys:

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import io
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch
@@ -25,6 +27,54 @@ def make_client() -> PiRpcClient:
 
 
 class PiRpcLifecycleTests(unittest.TestCase):
+    def test_protocol_probe_script_exposes_model_free_check(self) -> None:
+        script = Path("scripts/check_pi_rpc.py")
+        self.assertTrue(script.exists())
+
+        result = subprocess.run(
+            [sys.executable, str(script), "--help"],
+            text=True,
+            capture_output=True,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("model-free Pi RPC", result.stdout)
+
+    def test_protocol_probe_is_documented_as_make_target(self) -> None:
+        makefile = Path("Makefile").read_text()
+        setup_doc = Path("assets/docs/setup.md").read_text()
+
+        self.assertIn("check-pi-rpc:", makefile)
+        self.assertIn("make check-pi-rpc", setup_doc)
+
+    def test_protocol_probe_validates_get_state_shape(self) -> None:
+        client = make_client()
+        probe = getattr(client, "probe_protocol", None)
+        self.assertIsNotNone(probe)
+        state_response = {
+            "type": "response",
+            "id": "py-1",
+            "command": "get_state",
+            "success": True,
+            "data": {
+                "model": None,
+                "isStreaming": False,
+                "isCompacting": False,
+                "messageCount": 0,
+                "pendingMessageCount": 0,
+            },
+        }
+
+        with (
+            patch.object(client, "_send") as send,
+            patch.object(client, "_read_json_line", return_value=state_response),
+        ):
+            state = probe(timeout_seconds=1)
+
+        send.assert_called_once_with({"id": "py-1", "type": "get_state"})
+        self.assertEqual(state["messageCount"], 0)
+        self.assertFalse(state["isStreaming"])
+
     def test_waits_for_agent_settled(self) -> None:
         client = make_client()
         events = [
