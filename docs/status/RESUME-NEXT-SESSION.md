@@ -1,6 +1,6 @@
 # Recovered Session Checkpoint
 
-> Updated: 2026-07-12 17:07 +0800. **Active H-006 preflight-evidence checkpoint — session remains active, not a final handoff.**
+> Updated: 2026-07-12 17:09 +0800. **Active H-006 credential-block checkpoint — session remains active, not a final handoff.**
 
 ## TL;DR
 
@@ -9,6 +9,8 @@
 - The final Journal entry and commit `9a046d7` were newer than the former baton, so this recovery checkpoint supersedes it. H-006 remains the only next action: a cheap live structured-output preflight for the configured judge backend.
 - H-006 scope and a test-first inline plan are committed; work proceeds in the clean shared checkout without touching the independent `pi/` repository.
 - The implementation is locally verified: the safe standalone preflight, Make target, documentation, and four-dimension climb adapter are ready for one live configured judge request.
+- The live request reached the selected DeepSeek endpoint but returned HTTP 401. The configured indirect key exists but is rejected by the provider; a new valid credential is required before H-006 can be confirmed.
+- Shared judge HTTP errors now retain endpoint/status while suppressing provider response bodies, preventing provider-side credential echoes from entering stderr or batch artifacts.
 
 ## Committed state
 
@@ -27,7 +29,7 @@
 
 ## Next action
 
-1. Run `make check-judge`, then execute `bash tools/climb/cycle.sh H-006` to record the credentialed preflight evidence.
+1. After rotating the key named by `DCI_EVAL_JUDGE_API_KEY_ENV`, run `make check-judge`, then `bash tools/climb/cycle.sh H-006` to record the credentialed evidence.
 2. Prefer reusing `JudgeConfig`/`judge_answer_sync`; do not introduce a second request-shaping path.
 3. Keep credentials out of artifacts/output, add a Make target and docs, then run the climb cycle and full verification.
 4. If the pool empties after H-006, trigger Knowledge Layer again rather than stopping.
@@ -37,6 +39,7 @@
 - No duplicated authoritative Pi pin, submodule/vendor ownership, destructive dirty-checkout reconciliation, or blocking custom-package runs.
 - Do not treat the unavailable Gemini/OpenCode consult stub as independent evidence.
 - Do not replace `make runtime-example` with the model-free RPC probe; they cover different contracts.
+- Do not treat the local H-006 suite as live backend acceptance; HTTP 401 is a credential failure, not structured-output evidence.
 
 ## Boundary and exceptions
 

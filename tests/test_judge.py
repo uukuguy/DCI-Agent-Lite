@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import io
 import json
 import os
 import tempfile
 import unittest
+import urllib.error
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -261,6 +263,31 @@ class JudgeTransportTests(unittest.TestCase):
         self.assertEqual(urlopen.call_count, 2)
         self.assertEqual(result["attempts"], 2)
         self.assertTrue(result["is_correct"])
+
+    def test_http_error_does_not_echo_provider_error_body(self) -> None:
+        config = JudgeConfig(api="responses", api_key="test-key")
+        http_error = urllib.error.HTTPError(
+            config.endpoint,
+            401,
+            "Unauthorized",
+            hdrs=None,
+            fp=io.BytesIO(b'{"error":"provider body includes exposed-secret"}'),
+        )
+
+        with patch(
+            "dci.benchmark.judge.urllib.request.urlopen", side_effect=http_error
+        ):
+            with self.assertRaisesRegex(RuntimeError, "HTTP 401") as raised:
+                judge_answer_sync(
+                    config=config,
+                    question="Who?",
+                    gold_answer="Adaku",
+                    predicted_answer="Adaku",
+                )
+
+        self.assertIn(config.endpoint, str(raised.exception))
+        self.assertNotIn("provider body", str(raised.exception))
+        self.assertNotIn("exposed-secret", str(raised.exception))
 
 
 class JudgeResultReuseTests(unittest.TestCase):

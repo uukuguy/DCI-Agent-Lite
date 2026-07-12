@@ -435,9 +435,9 @@ def judge_answer_sync(
             ) as response:
                 response_payload = json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
-            error_body = exc.read().decode("utf-8", errors="replace")
             raise RuntimeError(
-                f"Judge request to {config.endpoint} failed with HTTP {exc.code}: {error_body}"
+                f"Judge request to {config.endpoint} failed with HTTP {exc.code}; "
+                "verify the configured endpoint and credentials"
             ) from exc
         except urllib.error.URLError as exc:
             raise RuntimeError(
