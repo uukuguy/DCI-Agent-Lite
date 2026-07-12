@@ -41,4 +41,6 @@
 - 16:08 H-004 provenance 4/4；45 tests 与真实 runtime artifact 断言通过。
 - 16:09 H-004 run provenance 与幂等 climb recorder 已提交。[09d677d]
 - 16:12 H-005 pre-run mismatch warning 4/4；48 tests 全通过。
+- 16:13 H-005 non-blocking revision warning 已提交并推进 H-006。[b5b29b8]
 - 16:11 H-005 confirmed 4/4; setup-policy acceptance recorded.
+- 16:15 context hard pause：H-001..H-005 均 4/4；H-006 judge preflight 为唯一续点。

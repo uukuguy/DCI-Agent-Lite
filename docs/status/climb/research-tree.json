@@ -2,11 +2,11 @@
   "run_count": 5,
   "session": {
     "session": "2026-07-12-pi-revision",
-    "phase": "implementation",
+    "phase": "context-hard-pause",
     "last_cycle": 5,
     "next_hypothesis": "H-006",
     "in_flight": null,
-    "next_action": "Start H-006.",
+    "next_action": "Resume H-006 with a failing live judge structured-output preflight test.",
     "falsified_routes": [
       "duplicate the authoritative Pi commit across setup.sh and .env.template",
       "convert the independent Pi checkout to vendored or submodule ownership"

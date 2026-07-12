@@ -5,11 +5,11 @@
 
 ## In-flight / session state
 
-- Phase: implementation
+- Phase: context-hard-pause
 - Last cycle: 5
 - Next hypothesis: H-006
 - In flight: none
-- Next action: Start H-006.
+- Next action: Resume H-006 with a failing live judge structured-output preflight test.
 
 ## Active hypotheses
 
