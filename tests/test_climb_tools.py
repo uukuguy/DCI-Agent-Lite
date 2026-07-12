@@ -541,6 +541,16 @@ class ClimbToolTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_cycle_runs_scope_audit_before_training(self) -> None:
+        cycle_script = (REPO_ROOT / "tools/climb/cycle.sh").read_text()
+        guard = (
+            'python3 "$ROOT/tools/project_scope_check.py" '
+            '--climb-hypothesis "$HYPOTHESIS_ID"'
+        )
+
+        self.assertIn(guard, cycle_script)
+        self.assertLess(cycle_script.index(guard), cycle_script.index('run_dir="$(bash'))
+
     def test_h003_train_runs_the_real_model_free_probe(self) -> None:
         train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
 

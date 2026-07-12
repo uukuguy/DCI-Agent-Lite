@@ -12,6 +12,8 @@ STATE_DIR="$ROOT/docs/status/climb"
 JOURNAL="$ROOT/docs/status/JOURNAL.md"
 HYPOTHESIS_ID="$1"
 
+python3 "$ROOT/tools/project_scope_check.py" --climb-hypothesis "$HYPOTHESIS_ID"
+
 _sync_state() {
     python3 "$ROOT/tools/climb/regen-tree.py"
     set +e
