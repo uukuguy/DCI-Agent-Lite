@@ -281,4 +281,8 @@
 - 02:59 AF-100-H-003 confirmed 4/4; package acceptance recorded.
 - 03:00 Runner parity、cancellation、preflight 与 error redaction 已提交。[14dd358]
 - 03:02 AF-100-H-004 confirmed 4/4；284 Python、11 Node、19 Rust 及全部门禁通过。
+- 03:04 AF-100 runner acceptance 已关闭并记录 D-028；等待 successor governance。[bd97680]
 - 03:02 AF-100-H-004 confirmed 4/4; package acceptance recorded.
+- 03:05 correction: `bd97680` 是 AF-100 最新 closure 边界；03:04 记录位置非时间序。
+- 03:24 最终 handoff 固化 AF-100 已验收、等待 successor 治理的恢复边界。
+- 03:26 climb 转为无 in-flight 的 hard-pause，下一动作对齐 successor 治理。

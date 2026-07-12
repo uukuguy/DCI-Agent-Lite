@@ -1,11 +1,11 @@
 {
   "session": "2026-07-13-af-100-asterion-runner",
-  "phase": "implementation",
+  "phase": "hard-pause",
   "work_package_id": "AF-100",
   "last_cycle": 50,
   "next_hypothesis": null,
   "in_flight": null,
-  "next_action": "Trigger Knowledge Layer.",
+  "next_action": "Select and record the governed successor package, then close AF-100.",
   "falsified_routes": [
     "duplicate the authoritative Pi commit across setup.sh and .env.template",
     "convert the independent Pi checkout to vendored or submodule ownership",

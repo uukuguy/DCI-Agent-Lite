@@ -5,11 +5,11 @@
 
 ## In-flight / session state
 
-- Phase: implementation
+- Phase: hard-pause
 - Last cycle: 50
 - Next hypothesis: None
 - In flight: none
-- Next action: Trigger Knowledge Layer.
+- Next action: Select and record the governed successor package, then close AF-100.
 
 ## Active hypotheses
 
