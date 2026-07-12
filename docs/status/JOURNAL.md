@@ -287,3 +287,4 @@
 - 03:24 最终 handoff 固化 AF-100 已验收、等待 successor 治理的恢复边界。
 - 03:26 climb 转为无 in-flight 的 hard-pause，下一动作对齐 successor 治理。
 - 03:28 AF-100 最终 handoff 已提交，确保 resume 可恢复 successor 治理边界。[b1d5e48]
+- 03:40 可组合能力执行规格已提交，锁定 Asterion 独立于 DCI baseline。[015d881]
