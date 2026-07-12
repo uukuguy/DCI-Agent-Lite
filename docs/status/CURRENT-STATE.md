@@ -4,9 +4,11 @@
 
 - Project: Asterion framework under development in the DCI-Agent-Lite repository; DCI remains the first capability and reference application.
 - Current branch: `main`
-- Theme-level focus: Execute resolved Asterion application plans through explicit runtime and host-service boundaries.
+- Theme-level focus: Execute reusable capability packages through explicit application composition boundaries.
+- Project route: managed
+- Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: `AF-100` — application runner vertical slice.
+- Active work package: `AF-110` — composable capability execution.
 
 ## Current Architecture
 
@@ -33,12 +35,14 @@
 - AF-095 acceptance: all four extraction hypotheses pass; Asterion owns the sole generic implementation, DCI CLI/examples remain compatible, and 258 Python, 11 Node, and 19 Rust tests plus every compile/lint/scope gate pass.
 - Application runner: resolved plans carry explicit runtime/host ownership; Python executes one explicit runtime request with cancellation, immutable normalized results, service/capability preflight, runtime parity, and content-free failures.
 - AF-100 acceptance: all four runner hypotheses pass; 284 Python, 11 Node, and 19 Rust tests plus every compile/lint/scope gate pass. Formal package closure awaits successor governance.
+- Capability execution direction: AF-110 binds independently owned implementations by exact package identity and executes them sequentially through declared event/artifact edges; applications remain the executable composition boundary.
+- Distribution boundary: generic installed-application binding and `asterion run <assembly>` are deferred to AF-120 so Asterion core never imports DCI or silently discovers executable code.
 - Reference assemblies: checked-in DCI and controlled-code application manifests validate and resolve; DCI composition is identical for Pi/Claude runtime identities and controlled execution remains an explicit host service.
 
 ## Open Problems (theme-level)
 
 - Provider-backed acceptance of the first non-Pi runtime when credentials or a compatible gateway become available.
-- Governed successor selection for real DCI entry-point integration after the fixture-backed runner slice.
+- Safe executable package binding without coupling Asterion core to the DCI benchmark or capability implementation.
 
 ## Key Files
 

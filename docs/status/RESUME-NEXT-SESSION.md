@@ -1,18 +1,18 @@
-# Recovered Session Checkpoint
+# Live Session Checkpoint
 
-> Updated: 2026-07-13 03:27 +0800. **The prior session's final commit and journal entry landed after the handoff timestamp; this recovery checkpoint incorporates them.**
+> Updated: 2026-07-13 03:53 +0800. **Session remains active — not a final handoff.**
 
-Active work package: AF-100
+Active work package: AF-110
 
-Package state: implementation and acceptance complete; retained `in_progress` only for governed successor transition.
+Package state: governance activated; implementation begins with immutable selected package declarations.
 
 ## TL;DR
 
 - Asterion is now the independent top-level framework; DCI remains its first capability and reference application.
-- AF-100 is implemented and accepted at `bd97680`: all four hypotheses pass with 284 Python, 11 Node, and 19 Rust tests plus every repository gate.
+- AF-100 is completed with all four hypotheses and every repository gate passing.
 - The approved AF-110 architecture is committed through `1ae793c`: capability packages are reusable executable units, applications are executable composition boundaries, and the original DCI benchmark stays an independent baseline.
 - AF-110 package execution and AF-120 application distribution/binding are deliberately split to keep Asterion core independent of capability implementations.
-- The implementation plan is committed at `c60f0b4`; the next action is the atomic AF-100 → AF-110 governance transition, then test-first execution.
+- The implementation plan is committed at `c60f0b4`; inline test-first execution was selected and AF-110 is now active.
 
 ## Where things stand
 
@@ -34,13 +34,13 @@ Package state: implementation and acceptance complete; retained `in_progress` on
 
 ## Next steps (immediate)
 
-1. Choose inline or explicitly authorized subagent-driven execution for `docs/superpowers/plans/2026-07-13-composable-capability-execution.md`.
-2. Execute Task 0: update `docs/status/WORKLIST.md`, `docs/status/DECISIONS.md`, and structural state; atomically close AF-100 and activate AF-110.
-3. Run the scope preflight, then begin Task 1 test-first implementation.
+1. Run the AF-110 scope preflight.
+2. Write the failing Task 1 test for immutable selected package declarations in `AssemblyPlan`.
+3. Implement only enough assembly storage to make that test pass.
 
 ## Open questions
 
-- Which approved plan execution mode should be used?
+- None at the governance boundary; implementation follows the approved plan inline.
 
 ## Don't go down these paths again
 

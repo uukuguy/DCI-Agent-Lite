@@ -105,7 +105,7 @@
 
 ## AF-100 — Application runner vertical slice
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Asterion Agent Application Framework
 - Scope: execute one resolved DCI application plan through an explicitly supplied runtime client and host services, returning normalized immutable events/artifacts without a general workflow engine.
 - Dependencies: AF-020, AF-030, AF-090, AF-095
@@ -113,6 +113,26 @@
 - Design: `docs/superpowers/specs/2026-07-13-application-runner-vertical-slice-design.md`
 - Plan: `docs/superpowers/plans/2026-07-13-application-runner-vertical-slice.md`
 - Closure evidence: all four hypotheses are confirmed; 284 Python, 11 Node, and 19 Rust tests plus compile, lint, format, shell, scope, and diff gates pass. Formal status waits only for governed successor selection.
+
+## AF-110 — Composable capability execution
+
+- Status: in_progress
+- Parent objective: Asterion Agent Application Framework
+- Scope: define exact reusable package-implementation bindings and deterministic sequential execution, then prove the DCI local-corpus research capability through an explicit application host without importing or modifying the DCI benchmark baseline.
+- Dependencies: AF-100
+- Acceptance: immutable selected declarations, exact implementation preflight, declared event/artifact validation, cancellation and safe failures, independent DCI implementation, Pi/Claude fixture parity, cross-application reuse, and baseline isolation pass all repository gates.
+- Design: `docs/superpowers/specs/2026-07-13-composable-capability-execution-design.md`
+- Plan: `docs/superpowers/plans/2026-07-13-composable-capability-execution.md`
+
+## AF-120 — Installed application binding and generic entry point
+
+- Status: pending
+- Parent objective: Asterion Agent Application Framework
+- Scope: define a security-reviewed mechanism for installed applications to supply implementation registries, then expose the generic `asterion run <assembly>` entry point without making Asterion core depend on capability implementations.
+- Dependencies: AF-110
+- Acceptance: one independently owned application binds exact implementations through the approved distribution contract and runs from the generic entry point without arbitrary dynamic imports, implicit service discovery, or baseline coupling.
+- Design: pending AF-110 acceptance
+- Plan: pending design approval
 
 ## AF-095 — Asterion framework identity and extraction
 

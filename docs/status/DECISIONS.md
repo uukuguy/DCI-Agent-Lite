@@ -260,3 +260,13 @@
 - Boundary: Asterion validates runtime identity/capabilities, required service presence, request/event lifecycle, cancellation, and immutable result projection; it adds no scheduler, registry, retry engine, automatic service startup, TypeScript runner, or control plane.
 - Revalidation trigger: add scheduling only when a second executable application needs sequencing that one runtime invocation cannot express; add automatic service startup only for a concrete operator workflow with an explicit authorization model.
 - Closure evidence: AF-100 H-001 through H-004 confirm ownership, invocation, parity/safety, and documentation with 284 Python, 11 Node, and 19 Rust tests plus every compile, lint, format, shell, scope, and diff gate.
+
+## D-029 — Make capabilities executable composition units
+
+- Status: ✅ accepted decision
+- Decided: 2026-07-13
+- Decision: capability packages are reusable executable units; applications are the executable boundaries that bind exact packages, a runtime, host services, and operator input.
+- Rationale: treating each package as an application breaks policy/evaluation/observability composition, while application-private plug-ins make manifests descriptive metadata and recreate DCI-specific coupling.
+- Baseline boundary: Asterion and its DCI capability implementation must not import or modify `src/dci/benchmark/`; the existing `dci-agent-lite` path remains an independent external baseline.
+- Delivery boundary: AF-110 adds explicit exact implementation binding and sequential execution. Secure installed-application binding and the generic `asterion run <assembly>` command are deferred to AF-120 because core cannot safely discover independently owned executable code without a reviewed binding mechanism.
+- Revalidation trigger: add scheduling only for a measured multi-branch execution need; add dynamic discovery only with an explicit distribution and authorization contract.
