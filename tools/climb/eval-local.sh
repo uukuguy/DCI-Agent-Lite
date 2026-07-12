@@ -68,6 +68,18 @@ case "$HYPOTHESIS_ID" in
         dirty_test="closes_child_stdin"
         override_test="executes_in_the_authorized_canonical_working_directory"
         ;;
+    AF-050-H-003)
+        dimension_runner="run_rust_dimension"
+        rust_suite="process"
+        first_dimension="bounded_streams"
+        second_dimension="exact_limit"
+        third_dimension="deadline_kill_reap"
+        fourth_dimension="direct_boundary_regression"
+        immutable_test="bounds_stdout_and_stderr_independently_while_draining_to_eof"
+        repeat_test="exact_output_limit_is_not_marked_truncated"
+        dirty_test="deadline_kills_and_reaps_the_child_before_returning"
+        override_test="executes_literal_arguments_without_shell_expansion"
+        ;;
     H-001)
         first_dimension="immutable_resolution"
         second_dimension="repeat_validation"

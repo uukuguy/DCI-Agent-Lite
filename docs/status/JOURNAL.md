@@ -154,3 +154,6 @@
 - 22:05 Rust execute request 授权边界已提交，process spawning 可在可信值上继续。[ae4c560]
 - 22:07 AF-050-H-002 confirmed 4/4; executor acceptance recorded.
 - 22:08 AF-050-H-002 通过 11 Rust、46 Python tests、fmt、Clippy、Ruff、shell 与范围门。
+- 22:09 Rust direct process 边界已提交，literal argv 与无 ambient env 成为后续资源控制基础。[910bd35]
+- 22:12 AF-050-H-003 confirmed 4/4; executor acceptance recorded.
+- 22:13 AF-050-H-003 通过 14 Rust、48 Python tests、fmt、Clippy、Ruff、shell 与范围门。

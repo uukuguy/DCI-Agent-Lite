@@ -790,6 +790,40 @@ class ClimbToolTests(unittest.TestCase):
                 },
             )
 
+    def test_af050_h003_train_runs_bounded_process_suite(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+
+        self.assertIn("AF-050-H-003", train_script)
+        self.assertIn("H-003 bounded process resources", train_script)
+
+    def test_af050_h003_eval_reports_four_resource_dimensions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            env = os.environ.copy()
+            env["DCI_CLIMB_HYPOTHESIS_ID"] = "AF-050-H-003"
+
+            result = subprocess.run(
+                ["bash", "tools/climb/eval-local.sh", str(run_dir)],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            evaluation = json.loads((run_dir / "local-eval.json").read_text())
+            self.assertEqual(evaluation["hypothesis_id"], "AF-050-H-003")
+            self.assertEqual(evaluation["total"], 4)
+            self.assertEqual(
+                set(evaluation["per_task"]),
+                {
+                    "bounded_streams",
+                    "exact_limit",
+                    "deadline_kill_reap",
+                    "direct_boundary_regression",
+                },
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

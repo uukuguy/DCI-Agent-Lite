@@ -18,7 +18,7 @@
 - Maintenance history: Pi/Judge reliability H-001 through H-019 is completed and remains available as reference-maintenance evidence; it is not an active roadmap stream.
 - Claude Code provider access: the adapter supports stored login and inherited environment-configured backends; provider-backed UAT is deferred while the local account is unavailable and does not block host-language work.
 - Host contracts: Python and TypeScript expose the same schema-backed runtime manifest, request, event, and asynchronous client boundary without adapter-private types.
-- Controlled execution: `dci.executor/v1` defines execute/cancel/result envelopes; the Rust sidecar authorizes closed requests and directly executes canonical programs with literal argv, cleared environment, closed stdin, and canonical cwd. Bounded output, deadlines, cancellation, and the JSONL service remain pending.
+- Controlled execution: `dci.executor/v1` defines execute/cancel/result envelopes; the Rust sidecar authorizes and directly executes canonical programs, drains independently capped stdout/stderr to EOF, and kills/reaps on deadline. Explicit cancellation, duplicate-ID control, and the JSONL service remain pending.
 
 ## Open Problems (theme-level)
 
@@ -51,7 +51,7 @@
 - `src/dci/framework/host.py` — public Python Agent Runtime Protocol host contract.
 - `packages/typescript/agent-runtime/` — public TypeScript host package and shared-fixture validator.
 - `src/dci/framework/executor_protocol.py` — Python reference validator for `dci.executor/v1`.
-- `packages/rust/executor/` — active Rust controlled-executor package; trusted policy, request authorization, and direct process boundary exist; resource control and service concurrency are pending.
+- `packages/rust/executor/` — active Rust controlled-executor package; trusted policy, request authorization, direct execution, bounded output, and deadline enforcement exist; concurrent service/cancellation is pending.
 - `scripts/bcplus_eval/run_bcplus_eval.py` — DCI reference benchmark harness.
 - `tools/climb/` — autonomous-work adapter; future cycles require a work-package parent.
 
