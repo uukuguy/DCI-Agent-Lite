@@ -286,3 +286,4 @@
 - 03:05 correction: `bd97680` 是 AF-100 最新 closure 边界；03:04 记录位置非时间序。
 - 03:24 最终 handoff 固化 AF-100 已验收、等待 successor 治理的恢复边界。
 - 03:26 climb 转为无 in-flight 的 hard-pause，下一动作对齐 successor 治理。
+- 03:28 AF-100 最终 handoff 已提交，确保 resume 可恢复 successor 治理边界。[b1d5e48]
