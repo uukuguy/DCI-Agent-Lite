@@ -15,6 +15,7 @@ from dci.framework.package_catalog import PackageRef, discover_packages
 
 FIXTURES = Path(__file__).parent / "fixtures/assembly/v1"
 MANIFESTS = Path(__file__).resolve().parents[1] / "packages/manifests"
+ASSEMBLIES = Path(__file__).resolve().parents[1] / "assemblies"
 
 
 class AssemblyManifestTests(unittest.TestCase):
@@ -148,6 +149,47 @@ class AssemblyResolverTests(unittest.TestCase):
                     runtime_manifest=runtime,
                 )
             self.assertNotIn(sentinel, str(raised.exception))
+
+
+class ReferenceAssemblyTests(unittest.TestCase):
+    def load(self, name: str) -> dict[str, object]:
+        return json.loads((ASSEMBLIES / name).read_text())
+
+    def resolve(self, assembly: dict[str, object], runtime_id: str) -> AssemblyPlan:
+        return resolve_assembly(
+            {**assembly, "runtime_id": runtime_id},
+            catalog=discover_packages([MANIFESTS]),
+            runtime_manifest={
+                "protocol": "dci.agent-runtime/v1",
+                "runtime_id": runtime_id,
+                "capabilities": ["filesystem.read", "shell"],
+            },
+        )
+
+    def test_checked_in_reference_assemblies_are_valid(self) -> None:
+        names = {path.name for path in ASSEMBLIES.glob("*.json")}
+        self.assertEqual(
+            names, {"controlled-code-validation.json", "dci-local-research.json"}
+        )
+        for name in names:
+            validate_assembly_manifest(self.load(name))
+
+    def test_dci_plan_has_pi_and_claude_runtime_parity(self) -> None:
+        assembly = self.load("dci-local-research.json")
+        pi = self.resolve(assembly, "pi.reference")
+        claude = self.resolve(assembly, "claude-code.reference")
+        self.assertEqual(pi.composition, claude.composition)
+
+    def test_controlled_code_keeps_executor_as_a_host_service(self) -> None:
+        assembly = self.load("controlled-code-validation.json")
+        plan = self.resolve(assembly, "pi.reference")
+        self.assertIn("workflow.code-quality", plan.composition.package_ids)
+        self.assertEqual(assembly["host_capabilities"], ["executor.controlled"])
+
+    def test_reference_assemblies_contain_no_execution_or_secret_fields(self) -> None:
+        forbidden = {"command", "credentials", "model", "prompt", "transport"}
+        for path in ASSEMBLIES.glob("*.json"):
+            self.assertTrue(forbidden.isdisjoint(self.load(path)))
 
 
 if __name__ == "__main__":

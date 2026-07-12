@@ -27,6 +27,7 @@
 - Catalog selection: exact `package_id@version` refs return deterministic deep-fresh manifests; all eight checked-in packages are selectable and both reference graphs compose unchanged. Duplicate or unknown selections fail closed without implicit version policy.
 - AF-080 acceptance: explicit-root discovery, filesystem/document/identity safety, exact selection, both graph integrations, Python-only ownership, and operator documentation pass full framework closure without registry, installation, or execution scope.
 - Static assembly: `dci.assembly/v1` has a closed canonical schema, shared fixtures, and Python validation. The pure resolver binds a matching runtime manifest, exact catalog refs, and explicit host-service edges into an immutable `AssemblyPlan` without mutation or execution; AF-090-H-002 is confirmed 4/4.
+- Reference assemblies: checked-in DCI and controlled-code application manifests validate and resolve; DCI composition is identical for Pi/Claude runtime identities and controlled execution remains an explicit host service.
 
 ## Open Problems (theme-level)
 

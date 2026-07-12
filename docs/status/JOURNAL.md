@@ -233,5 +233,7 @@
 - 01:40 pure assembly resolver 通过 7 focused tests；runtime/catalog/service 绑定保持静态且安全。
 - 01:41 static assembly resolver 已提交，H002 climb acceptance 可继续。[40a7eff]
 - 01:41 AF-090-H-002 confirmed 4/4；101 focused tests 与 compile/lint/shell/scope/diff 通过。
+- 01:42 H002 resolver acceptance 已提交，为 reference assemblies 提供可恢复基线。[372fc93]
+- 01:44 two reference assemblies 通过 4 tests；Pi/Claude parity 与 host executor separation 成立。
 - 01:36 AF-090-H-001 confirmed 4/4; package acceptance recorded.
 - 01:40 AF-090-H-002 confirmed 4/4; package acceptance recorded.

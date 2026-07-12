@@ -29,6 +29,7 @@ Active work package: AF-090
 - AF-080 is complete; AF-090 is active under the approved static application assembly design and plan.
 - `AF-090-H-001` is confirmed: the closed canonical assembly contract and shared Python fixtures pass.
 - `AF-090-H-002` is confirmed: runtime identity, exact catalog refs, host-service separation, and safe immutable resolution pass 4/4.
+- AF-090-H-003 product evidence is green: both checked-in reference assemblies validate, DCI has Pi/Claude plan parity, and controlled execution stays host-owned.
 
 ## Durable boundary
 
@@ -42,7 +43,7 @@ Active work package: AF-090
 
 ## Immediate next action
 
-Implement AF-090-H-003 checked-in DCI and controlled-code assemblies, then prove Pi/Claude composition parity and host-service separation.
+Add AF-090-H-003 train/eval adapter acceptance, run its climb cycle, and execute fresh focused gates.
 
 ## Guardrails
 
