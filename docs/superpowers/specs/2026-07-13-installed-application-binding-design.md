@@ -1,6 +1,6 @@
 # Installed Application Binding and Generic Entry Point Design
 
-> Status: approved, including independent DCI capability/application distributions and canonical resource migration.
+> Status: approved, including independent Asterion/core/capability/application distributions, canonical resource migration, and frozen baseline-owned `dci.framework.*` implementations.
 >
 > Active package: AF-120.
 
@@ -168,9 +168,13 @@ import or hard-coded DCI identity.
 
 ## Distribution and canonical resource layout
 
-AF-120 makes the DCI capability and DCI application independently buildable
-Python distributions rather than treating their source directories as extra
-packages inside the repository-root `dci` wheel.
+AF-120 makes Asterion core, the DCI capability, and the DCI application
+independently buildable Python distributions. No Asterion distribution contains
+`src/dci`.
+
+The Asterion core distribution is rooted at `packages/python/asterion-core/` and
+owns the sole `asterion` Python implementation. The current `src/asterion/`
+files move there without leaving a second implementation.
 
 The capability distribution is rooted at `capabilities/dci-research/`:
 
@@ -201,8 +205,27 @@ documentation, and reference-host paths update atomically.
 The DCI application distribution depends on the DCI research capability
 distribution and Asterion public contracts. The capability distribution depends
 only on Asterion public contracts. Asterion core has no dependency on either DCI
-distribution. The repository-root development project may install both local
-distributions for integration tests without adding imports from `src/asterion/`.
+distribution or the baseline.
+
+The repository-root `dci` distribution remains the runnable comparison
+baseline. It preserves the already verified Pi/Judge reliability work, `.env`
+configuration extensions, CLI behavior, scripts, evaluation support, and prior
+security hardening. “Baseline” means an independent stable comparison path, not
+a byte-identical upstream checkout.
+
+AF-120 converts `dci.framework.*` from compatibility re-exports into frozen
+baseline-owned implementations so `src/dci/benchmark/` and its established
+imports remain unchanged. The baseline protocol/adapter code no longer follows
+future Asterion implementation changes. Product framework tests/callers use
+`asterion.*`; baseline tests continue to exercise `dci.framework.*` independently.
+The baseline retains no dependency on Asterion and Asterion retains no dependency
+on the baseline. Existing baseline commands (`dci-agent-lite`,
+`dci-run-pi-rpc`, exports, and system-prompt helper) remain runnable.
+
+This deliberately creates two independent implementations of the stable wire
+contract: one frozen in the comparison baseline and one evolving in Asterion.
+Shared JSON fixtures may test conformance, but Python object identity and
+implementation sharing are no longer acceptance requirements.
 
 Resource lookup uses `importlib.resources` from the owning installed package,
 then canonicalizes the resulting filesystem path for the provider contract.
@@ -265,7 +288,12 @@ Tests must prove:
 - provider/import/runtime/input/tool sentinels never appear in public errors or
   normalized CLI output;
 - `src/dci/benchmark/`, `dci-agent-lite`, and existing DCI examples remain
-  unchanged;
+  behaviorally unchanged and runnable, including established configuration and
+  reliability extensions;
+- `dci.framework.*` modules contain frozen baseline-owned behavior rather than
+  Asterion re-exports, and no baseline module imports Asterion;
+- the Asterion core wheel contains no `dci` package and the baseline wheel
+  contains no `asterion` package;
 - all Python, TypeScript, Rust, compilation, lint, shell, scope, and diff gates
   pass.
 
@@ -282,7 +310,8 @@ Tests must prove:
 - Invalid or malicious provider structure fails before unintended runtime work
   and without unsafe error content.
 - Existing DCI baseline behavior, commands, examples, and source remain
-  independent and unchanged.
+  independently runnable with their established reliability/configuration
+  extensions, while framework compatibility shims are removed.
 
 ## Revalidation triggers
 
