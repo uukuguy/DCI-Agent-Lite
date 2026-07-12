@@ -18,6 +18,7 @@
 - Maintenance history: Pi/Judge reliability H-001 through H-019 is completed and remains available as reference-maintenance evidence; it is not an active roadmap stream.
 - Claude Code provider access: the adapter supports stored login and inherited environment-configured backends; provider-backed UAT is deferred while the local account is unavailable and does not block host-language work.
 - Host contracts: Python and TypeScript expose the same schema-backed runtime manifest, request, event, and asynchronous client boundary without adapter-private types.
+- Controlled execution: `dci.executor/v1` defines execute/cancel/result envelopes; the Rust sidecar has a canonicalized trusted workspace/program policy and explicit protocol resource ceilings, but process execution is not implemented yet.
 
 ## Open Problems (theme-level)
 

@@ -144,3 +144,4 @@
 - 21:41 controlled executor 线协议已提交，隔离 sidecar 获得稳定语言无关边界。[fa4af98]
 - 21:47 Rust trusted policy 已 canonicalize workspace/绝对程序白名单并限制资源；tests、fmt、Clippy 通过。
 - 21:47 仓库级 Cargo sparse registry 修复用户级旧 Git index 导致的可恢复构建阻塞。
+- 21:48 Rust trusted policy 已提交，agent 请求无法控制程序路径、环境或资源上限。[0fa33d9]
