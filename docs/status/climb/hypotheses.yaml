@@ -838,17 +838,31 @@ hypotheses:
     decision_reason: deterministic local package acceptance
 - id: AF-090-H-001
   work_package_id: AF-090
-  description: Define the closed canonical dci.assembly/v1 schema fixtures and Python validator.
+  description: Define the closed canonical dci.assembly/v1 schema fixtures and Python
+    validator.
   parent_paradigm: assembly-manifest-contract
   expected_lift: +1 portable assembly boundary
   cost_h: 0.7
   ranking: 0.9
-  status: pending
+  status: confirmed
   created_at: '2026-07-13T01:35:00+08:00'
-  results: []
+  results:
+  - session: 2026-07-13-af-090-static-assembly
+    cycle: 39
+    run: 20260713-013600-dci-climb-af090h001
+    local: 4
+    local_per_task:
+      valid_manifest: 1
+      closed_contract: 1
+      canonical_refs: 1
+      canonical_edges: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-090-H-002
   work_package_id: AF-090
-  description: Resolve runtime identity exact catalog refs and host-service edges into immutable plans.
+  description: Resolve runtime identity exact catalog refs and host-service edges
+    into immutable plans.
   parent_paradigm: static-assembly-resolver
   expected_lift: +1 static planning boundary
   cost_h: 0.8
@@ -858,7 +872,8 @@ hypotheses:
   results: []
 - id: AF-090-H-003
   work_package_id: AF-090
-  description: Resolve DCI and controlled-code reference applications with runtime parity and service separation.
+  description: Resolve DCI and controlled-code reference applications with runtime
+    parity and service separation.
   parent_paradigm: reference-assembly-plans
   expected_lift: +1 application-level evidence
   cost_h: 0.7
@@ -868,7 +883,8 @@ hypotheses:
   results: []
 - id: AF-090-H-004
   work_package_id: AF-090
-  description: Add TypeScript parity documentation and full static-assembly closure gates.
+  description: Add TypeScript parity documentation and full static-assembly closure
+    gates.
   parent_paradigm: static-assembly-acceptance
   expected_lift: +1 AF-090 closure confidence
   cost_h: 0.5

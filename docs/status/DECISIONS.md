@@ -227,3 +227,4 @@
 - Rationale: the catalog now supplies stable identities; a portable static binding is required before any runner can safely consume runtime/package/service choices.
 - Boundary: resolution performs no runtime, executor, tool, or workflow execution and carries no prompts, credentials, provider/model settings, commands, transports, or mutable state.
 - Revalidation trigger: propose a runner only after static plans for both reference applications are portable, safe, and insufficient for a concrete execution use case.
+- Implemented evidence: AF-090-H-001 confirms the closed assembly protocol, exact canonical package refs, and canonical host edge arrays.

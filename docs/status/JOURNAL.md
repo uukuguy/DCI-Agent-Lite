@@ -226,3 +226,7 @@
 - 01:31 static application assembly 方向获批：绑定 runtime/catalog/host edges，但不执行。
 - 01:33 static assembly 设计已提交，`dci.assembly/v1` 进入详细计划。[8accea1]
 - 01:35 AF-080 完成；AF-090 assembly 设计、计划与四个 hypotheses 接管主线。
+- 01:36 AF-090 治理切换已提交，assembly contract 进入 scope-controlled implementation。[472cda9]
+- 01:36 AF-090-H-001 confirmed 4/4; package acceptance recorded.
+- 01:37 AF-090-H-001 通过 86 focused tests、compile、Ruff、shell、scope 与 diff。
+- 01:36 AF-090-H-001 confirmed 4/4; package acceptance recorded.

@@ -282,6 +282,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_package_catalog.PackageSelectionTests.test_duplicate_and_unknown_exact_selection_is_rejected"
         override_test="tests.test_climb_tools.ClimbToolTests.test_af080_h004_train_runs_full_framework_closure_gate"
         ;;
+    AF-090-H-001)
+        first_dimension="valid_manifest"
+        second_dimension="closed_contract"
+        third_dimension="canonical_refs"
+        fourth_dimension="canonical_edges"
+        immutable_test="tests.test_application_assembly.AssemblyManifestTests.test_valid_shared_assembly_fixture_conforms"
+        repeat_test="tests.test_application_assembly.AssemblyManifestTests.test_assembly_contract_is_closed"
+        dirty_test="tests.test_application_assembly.AssemblyManifestTests.test_package_refs_must_be_sorted_unique_and_exact"
+        override_test="tests.test_application_assembly.AssemblyManifestTests.test_host_edge_arrays_must_be_sorted_unique_strings"
+        ;;
     H-001)
         first_dimension="immutable_resolution"
         second_dimension="repeat_validation"

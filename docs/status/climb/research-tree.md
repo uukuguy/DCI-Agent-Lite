@@ -1,19 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (38 runs).
+> Deterministic summary generated from tracked state (39 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 38
-- Next hypothesis: AF-090-H-001
+- Last cycle: 39
+- Next hypothesis: AF-090-H-002
 - In flight: none
-- Next action: Start AF-090-H-001.
+- Next action: Start AF-090-H-002.
 
 ## Active hypotheses
 
-- **AF-090-H-001** (pending, rank 0.90): Define the closed canonical dci.assembly/v1 schema fixtures and Python validator.
 - **AF-090-H-002** (pending, rank 0.80): Resolve runtime identity exact catalog refs and host-service edges into immutable plans.
 - **AF-090-H-003** (pending, rank 0.70): Resolve DCI and controlled-code reference applications with runtime parity and service separation.
 - **AF-090-H-004** (pending, rank 0.60): Add TypeScript parity documentation and full static-assembly closure gates.
@@ -60,6 +59,7 @@
 | 20260713-011934-dci-climb-af080h002 | AF-080-H-002 | 4 | confirmed 4/4 |
 | 20260713-012204-dci-climb-af080h003 | AF-080-H-003 | 4 | confirmed 4/4 |
 | 20260713-012442-dci-climb-af080h004 | AF-080-H-004 | 4 | confirmed 4/4 |
+| 20260713-013600-dci-climb-af090h001 | AF-090-H-001 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

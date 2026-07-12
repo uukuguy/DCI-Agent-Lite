@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13 01:35 +0800. **Session remains active — autonomous climb continues.**
+> Updated: 2026-07-13 01:37 +0800. **Session remains active — autonomous climb continues.**
 
 Active work package: AF-090
 
@@ -27,6 +27,7 @@ Active work package: AF-090
 - `AF-080-H-004` is confirmed: catalog documentation and independent full framework closure pass.
 - AF-080 remains active only until the knowledge layer records the next governed package.
 - AF-080 is complete; AF-090 is active under the approved static application assembly design and plan.
+- `AF-090-H-001` is confirmed: the closed canonical assembly contract and shared Python fixtures pass.
 
 ## Durable boundary
 
@@ -40,7 +41,7 @@ Active work package: AF-090
 
 ## Immediate next action
 
-Start AF-090-H-001 with failing shared assembly schema and Python validation tests.
+Start AF-090-H-002 with failing runtime/catalog/service binding and safe resolver tests.
 
 ## Guardrails
 
@@ -51,7 +52,7 @@ Start AF-090-H-001 with failing shared assembly schema and Python validation tes
 ## Ready commands
 
 ```bash
-python3 tools/project_scope_check.py --climb-hypothesis AF-090-H-001
+python3 tools/project_scope_check.py --climb-hypothesis AF-090-H-002
 uv run python -m unittest tests.test_package_catalog -v
 uv run python -m unittest tests.test_package_composition -v
 ```
