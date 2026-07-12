@@ -1,6 +1,6 @@
 # Installed Application Binding and Generic Entry Point Design
 
-> Status: approved in discussion; awaiting written-spec review before implementation planning.
+> Status: approved, including independent DCI capability/application distributions and canonical resource migration.
 >
 > Active package: AF-120.
 
@@ -166,6 +166,49 @@ not in `src/asterion/` and not in `src/dci/benchmark/`. Asterion core must work
 with a synthetic independently installed provider in tests and contain no DCI
 import or hard-coded DCI identity.
 
+## Distribution and canonical resource layout
+
+AF-120 makes the DCI capability and DCI application independently buildable
+Python distributions rather than treating their source directories as extra
+packages inside the repository-root `dci` wheel.
+
+The capability distribution is rooted at `capabilities/dci-research/`:
+
+```text
+capabilities/dci-research/
+  pyproject.toml
+  src/asterion_dci_research/
+    implementation.py
+    manifests/*.json
+```
+
+The application distribution is rooted at `applications/dci-agent-lite/`:
+
+```text
+applications/dci-agent-lite/
+  pyproject.toml
+  src/asterion_dci_application/
+    provider.py
+    assemblies/*.json
+```
+
+These package-owned resource directories are the sole authoritative copies.
+The current top-level `capabilities/dci-research/manifests/` and
+`applications/dci-agent-lite/assemblies/` files move into them; AF-120 does not
+leave duplicate compatibility JSON documents. Catalog, assembly, tests,
+documentation, and reference-host paths update atomically.
+
+The DCI application distribution depends on the DCI research capability
+distribution and Asterion public contracts. The capability distribution depends
+only on Asterion public contracts. Asterion core has no dependency on either DCI
+distribution. The repository-root development project may install both local
+distributions for integration tests without adding imports from `src/asterion/`.
+
+Resource lookup uses `importlib.resources` from the owning installed package,
+then canonicalizes the resulting filesystem path for the provider contract.
+Wheel/sdist tests must prove that manifests and assemblies are included exactly
+once and remain usable outside the source checkout.
+
 ## Failures and privacy
 
 All failures are fail-closed and occur as early as their evidence permits.
@@ -216,6 +259,9 @@ Tests must prove:
   generic command and AF-110 composed runner;
 - application provider and capability implementation can be packaged and
   imported independently from Asterion core;
+- independent capability/application wheels contain their canonical manifests
+  and assemblies exactly once and work outside the repository checkout;
+- no duplicate compatibility JSON copies remain at the former resource paths;
 - provider/import/runtime/input/tool sentinels never appear in public errors or
   normalized CLI output;
 - `src/dci/benchmark/`, `dci-agent-lite`, and existing DCI examples remain
