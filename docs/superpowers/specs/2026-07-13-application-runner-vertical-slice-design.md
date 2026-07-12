@@ -1,6 +1,6 @@
 # Application Runner Vertical Slice Design
 
-> Status: approved direction; blocked on AF-095 Asterion extraction and written-spec revision.
+> Status: approved for implementation planning after AF-095 closure.
 
 ## Goal
 

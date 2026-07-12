@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import os
+import shutil
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -121,6 +125,63 @@ class AsterionStructureTests(unittest.TestCase):
         self.assertTrue((ROOT / "packages/rust/controlled-executor").is_dir())
         self.assertFalse((ROOT / "packages/typescript/agent-runtime").exists())
         self.assertFalse((ROOT / "packages/rust/executor").exists())
+
+    def test_verified_dci_examples_keep_the_product_cli(self) -> None:
+        for name in ("dci_basic_example.sh", "dci_runtime_context_example.sh"):
+            source = (ROOT / "scripts/examples" / name).read_text()
+            self.assertIn("uv run dci-agent-lite", source)
+            self.assertIn('source "$REPO_ROOT/.env"', source)
+
+    def test_examples_build_cli_commands_in_an_isolated_repository(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir)
+            subprocess.run(["git", "init", "-q", str(repo)], check=True)
+            (repo / "scripts/examples").mkdir(parents=True)
+            (repo / "corpus/wiki_corpus").mkdir(parents=True)
+            (repo / "corpus/bc_plus_docs").mkdir(parents=True)
+            (repo / ".env").write_text("DCI_PROVIDER=test-provider\nDCI_MODEL=test-model\n")
+            log = repo / "uv-args.txt"
+            bin_dir = repo / "bin"
+            bin_dir.mkdir()
+            uv = bin_dir / "uv"
+            uv.write_text('#!/usr/bin/env bash\nprintf "%s\\n" "$*" >> "$UV_ARGS_LOG"\n')
+            uv.chmod(0o755)
+            env = {
+                **os.environ,
+                "PATH": f"{bin_dir}:{os.environ['PATH']}",
+                "UV_ARGS_LOG": str(log),
+            }
+            for name in ("dci_basic_example.sh", "dci_runtime_context_example.sh"):
+                shutil.copy(ROOT / "scripts/examples" / name, repo / "scripts/examples" / name)
+                result = subprocess.run(
+                    ["bash", str(repo / "scripts/examples" / name)],
+                    cwd=repo,
+                    env=env,
+                    text=True,
+                    capture_output=True,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertNotIn("test-provider", result.stdout + result.stderr)
+                self.assertNotIn("test-model", result.stdout + result.stderr)
+            commands = log.read_text().splitlines()
+            self.assertEqual(len(commands), 2)
+            self.assertTrue(all(command.startswith("run dci-agent-lite ") for command in commands))
+
+    def test_distribution_preserves_existing_console_scripts(self) -> None:
+        pyproject = (ROOT / "pyproject.toml").read_text()
+        for command in (
+            "dci-agent-lite",
+            "dci-run-pi-rpc",
+            "dci-print-pi-system-prompt",
+        ):
+            self.assertIn(command, pyproject)
+
+    def test_layout_guide_defines_framework_ownership(self) -> None:
+        guide = (ROOT / "docs/architecture/asterion-framework-layout.md").read_text()
+        self.assertIn("Asterion owns framework contracts", guide)
+        self.assertIn("Asterion must not import DCI", guide)
+        self.assertIn("dci-agent-lite", guide)
+        self.assertIn("dci.agent-runtime/v1", guide)
 
 
 if __name__ == "__main__":

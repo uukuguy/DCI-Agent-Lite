@@ -260,6 +260,9 @@
 - 02:34 H002 extraction acceptance 已提交，product-directory separation 可继续。[1829e8b]
 - 02:35 Rust operator failure 根因为迁移后的 stale target absolute path；`cargo clean` 重建后 19 tests 通过。
 - 02:36 AF-095-H-003 confirmed 4/4；capability/application/cross-language roots 与 identities 通过。
+- 02:37 Asterion product/capability directories 已提交，DCI compatibility closure 可继续。[0d6cc5a]
+- 02:39 AF-095-H-004 confirmed 4/4；DCI CLI/examples、architecture 与 framework closure 通过。
+- 02:42 AF-095 closure 通过 258 Python、11 Node、19 Rust 及全部门禁；AF-100 接管。
 - 01:36 AF-090-H-001 confirmed 4/4; package acceptance recorded.
 - 01:40 AF-090-H-002 confirmed 4/4; package acceptance recorded.
 - 01:47 AF-090-H-003 confirmed 4/4; package acceptance recorded.
@@ -267,3 +270,4 @@
 - 02:28 AF-095-H-001 confirmed 4/4; package acceptance recorded.
 - 02:32 AF-095-H-002 confirmed 4/4; package acceptance recorded.
 - 02:36 AF-095-H-003 confirmed 4/4; package acceptance recorded.
+- 02:39 AF-095-H-004 confirmed 4/4; package acceptance recorded.

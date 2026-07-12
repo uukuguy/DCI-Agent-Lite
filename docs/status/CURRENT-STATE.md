@@ -4,9 +4,9 @@
 
 - Project: Asterion framework under development in the DCI-Agent-Lite repository; DCI remains the first capability and reference application.
 - Current branch: `main`
-- Theme-level focus: Extract Asterion as the independent framework before adding its application runner.
+- Theme-level focus: Execute resolved Asterion application plans through explicit runtime and host-service boundaries.
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: `AF-095` — Asterion framework identity and extraction.
+- Active work package: `AF-100` — application runner vertical slice.
 
 ## Current Architecture
 
@@ -30,12 +30,13 @@
 - Asterion extraction: AF-095-H-001 is confirmed 4/4. Runtime protocol, host contracts, Pi/Claude adapters, and Claude runtime are authoritative under `src/asterion/`; `dci.framework.*` preserves object-identity compatibility and the wheel contains both roots.
 - Asterion contract extraction: AF-095-H-002 is confirmed 4/4. Package protocol/catalog/composition, assembly, and executor protocol have sole authoritative implementations under Asterion with stable wire literals and definition-free DCI compatibility modules.
 - Product directories: AF-095-H-003 is confirmed 4/4. DCI and controlled-code manifests live under `capabilities/`, DCI assemblies under `applications/dci-agent-lite/`, and TypeScript/Rust working directories are Asterion-owned without changing declared identities.
+- AF-095 acceptance: all four extraction hypotheses pass; Asterion owns the sole generic implementation, DCI CLI/examples remain compatible, and 258 Python, 11 Node, and 19 Rust tests plus every compile/lint/scope gate pass.
 - Reference assemblies: checked-in DCI and controlled-code application manifests validate and resolve; DCI composition is identical for Pi/Claude runtime identities and controlled execution remains an explicit host service.
 
 ## Open Problems (theme-level)
 
 - Provider-backed acceptance of the first non-Pi runtime when credentials or a compatible gateway become available.
-- Complete written-spec review and implementation planning for AF-095, preserving both verified DCI example entry paths.
+- Write the AF-100 Asterion runner implementation plan, then begin explicit capability-ownership preconditions under AF-100-H-001.
 
 ## Key Files
 

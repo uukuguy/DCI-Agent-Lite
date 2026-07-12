@@ -1,8 +1,8 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13 02:28 +0800. **AF-095 Asterion extraction is approved and entering H001 implementation.**
+> Updated: 2026-07-13 02:42 +0800. **AF-095 is complete; AF-100 Asterion runner planning is active.**
 
-Active work package: AF-095
+Active work package: AF-100
 
 ## TL;DR
 
@@ -39,6 +39,7 @@ Active work package: AF-095
 - `AF-095-H-001` is confirmed 4/4: Asterion owns runtime/host/adapters, DCI re-exports identical objects, and dependency direction is enforced.
 - `AF-095-H-002` is confirmed 4/4: package/catalog/composition, assembly, executor, wire stability, and single-implementation boundaries pass.
 - `AF-095-H-003` is confirmed 4/4: capability/application roots, cross-language paths, and all declarative identities pass.
+- `AF-095-H-004` is confirmed 4/4; fresh closure passes 258 Python, 11 Node, and 19 Rust tests plus compile, Ruff, clean npm install, fmt, Clippy, shell, scope, and diff.
 
 ## Durable boundary
 
@@ -52,7 +53,7 @@ Active work package: AF-095
 
 ## Immediate next action
 
-Execute AF-095-H-004: prove DCI CLI/examples, document final layout, and run independent full closure.
+Write the AF-100 Asterion application-runner implementation plan, then execute AF-100-H-001 plan capability ownership.
 
 ## Guardrails
 

@@ -105,7 +105,7 @@
 
 ## AF-100 — Application runner vertical slice
 
-- Status: pending
+- Status: in_progress
 - Parent objective: Asterion Agent Application Framework
 - Scope: execute one resolved DCI application plan through an explicitly supplied runtime client and host services, returning normalized immutable events/artifacts without a general workflow engine.
 - Dependencies: AF-020, AF-030, AF-090, AF-095
@@ -115,7 +115,7 @@
 
 ## AF-095 — Asterion framework identity and extraction
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Asterion Agent Application Framework
 - Scope: establish Asterion as the independent top-level framework, extract generic Python modules from `dci`, and preserve existing DCI imports, CLI, examples, and wire literals through compatibility boundaries.
 - Dependencies: AF-090

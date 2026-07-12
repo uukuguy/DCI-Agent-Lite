@@ -1,11 +1,11 @@
 {
-  "session": "2026-07-13-af-095-asterion-extraction",
-  "phase": "implementation",
-  "work_package_id": "AF-095",
-  "last_cycle": 45,
-  "next_hypothesis": "AF-095-H-004",
+  "session": "2026-07-13-af-100-asterion-runner",
+  "phase": "planning",
+  "work_package_id": "AF-100",
+  "last_cycle": 46,
+  "next_hypothesis": "AF-100-H-001",
   "in_flight": null,
-  "next_action": "Start AF-095-H-004.",
+  "next_action": "Write the AF-100 implementation plan, then start AF-100-H-001.",
   "falsified_routes": [
     "duplicate the authoritative Pi commit across setup.sh and .env.template",
     "convert the independent Pi checkout to vendored or submodule ownership",

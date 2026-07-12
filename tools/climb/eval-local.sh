@@ -70,6 +70,18 @@ run_closure_dimension() {
         assembly_closure)
             command=(uv run python -m unittest tests.test_climb_tools.ClimbToolTests.test_af090_h004_train_runs_full_framework_closure_gate -v)
             ;;
+        asterion_closure)
+            command=(uv run python -m unittest tests.test_climb_tools.ClimbToolTests.test_af095_h004_train_runs_full_framework_closure_gate -v)
+            ;;
+        asterion_cli)
+            command=(uv run python -m unittest tests.test_asterion_structure.AsterionStructureTests.test_distribution_preserves_existing_console_scripts -v)
+            ;;
+        asterion_examples)
+            command=(uv run python -m unittest tests.test_asterion_structure.AsterionStructureTests.test_examples_build_cli_commands_in_an_isolated_repository -v)
+            ;;
+        asterion_architecture)
+            command=(uv run python -m unittest tests.test_asterion_structure.AsterionStructureTests.test_layout_guide_defines_framework_ownership -v)
+            ;;
         *)
             echo "ERROR: unknown closure check $check" >&2
             return 2
@@ -364,6 +376,17 @@ case "$HYPOTHESIS_ID" in
         repeat_test="tests.test_application_assembly.ReferenceAssemblyTests.test_checked_in_reference_assemblies_are_valid"
         dirty_test="tests.test_asterion_structure.AsterionStructureTests.test_cross_language_working_directories_are_asterion_owned"
         override_test="tests.test_package_catalog.PackageSelectionTests.test_selected_manifests_compose_both_reference_graphs"
+        ;;
+    AF-095-H-004)
+        first_dimension="dci_cli_compatibility"
+        second_dimension="example_compatibility"
+        third_dimension="architecture_boundary"
+        fourth_dimension="framework_closure"
+        dimension_runner="run_closure_dimension"
+        immutable_test="asterion_cli"
+        repeat_test="asterion_examples"
+        dirty_test="asterion_architecture"
+        override_test="asterion_closure"
         ;;
     H-001)
         first_dimension="immutable_resolution"

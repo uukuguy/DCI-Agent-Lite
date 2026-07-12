@@ -365,6 +365,10 @@ class ClimbToolTests(unittest.TestCase):
                     isolated_hypotheses, sort_keys=False, allow_unicode=True
                 )
             )
+            session_path = state_dir / "session-state.json"
+            legacy_session = json.loads(session_path.read_text())
+            legacy_session.pop("work_package_id", None)
+            session_path.write_text(json.dumps(legacy_session, indent=2) + "\n")
             journal = root / "JOURNAL.md"
             journal.write_text("# Test Journal\n\n## 2026-07-12\n")
             run_dir = root / "run-h001"
@@ -1628,6 +1632,34 @@ class ClimbToolTests(unittest.TestCase):
             self.assertEqual(
                 set(evaluation["per_task"]),
                 {"capability_roots", "application_root", "cross_language_paths", "identity_stability"},
+            )
+
+    def test_af095_h004_train_runs_full_framework_closure_gate(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+        self.assertIn("AF-095-H-004", train_script)
+        self.assertIn("python -m unittest discover -v", train_script)
+        self.assertIn("packages/typescript/asterion-runtime ci", train_script)
+        self.assertIn("make test-rust-executor", train_script)
+        self.assertIn("make check-rust-executor", train_script)
+
+    def test_af095_h004_eval_reports_four_closure_dimensions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            env = os.environ.copy()
+            env["DCI_CLIMB_HYPOTHESIS_ID"] = "AF-095-H-004"
+            result = subprocess.run(
+                ["bash", "tools/climb/eval-local.sh", str(run_dir)],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            evaluation = json.loads((run_dir / "local-eval.json").read_text())
+            self.assertEqual(evaluation["total"], 4)
+            self.assertEqual(
+                set(evaluation["per_task"]),
+                {"dci_cli_compatibility", "example_compatibility", "architecture_boundary", "framework_closure"},
             )
 
 
