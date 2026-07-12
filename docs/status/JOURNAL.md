@@ -123,3 +123,6 @@
 - 21:00 受限 Claude Code subprocess runtime 已测试提交；危险权限与会话持久化禁用。[0f6c712]
 - 21:02 AF-030 本地 121 tests、编译、Ruff、范围审计通过；两次 live probe 均因 Claude 未登录失败。
 - 21:02 Claude 认证失败流已实测安全；AF-030 保持 in_progress 并在外部认证门暂停。
+- 21:20 用户明确暂缓不可用的 Claude Code 帐号验收；外部认证不再阻塞框架主线。
+- 21:20 AF-030 增加完整调用环境传递边界，兼容登录态、`ANTHROPIC_*` 网关及 Bedrock/Vertex，同时不把环境配置写入命令或协议对象。
+- 21:22 AF-030 环境边界通过 122 tests、编译、Ruff、范围审计与差异检查；帐号实跑验收延期但不再阻塞主线。

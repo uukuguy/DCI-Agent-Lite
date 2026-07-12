@@ -59,6 +59,47 @@ class ClaudeCodeRuntimeTests(unittest.TestCase):
         self.assertEqual(result["final_text"], "OK")
         self.assertEqual(process.call_args.kwargs["input"], "Reply exactly OK.")
 
+    def test_runtime_passes_anthropic_gateway_environment_without_persisting_it(
+        self,
+    ) -> None:
+        completed = subprocess.CompletedProcess(
+            args=[],
+            returncode=0,
+            stdout=FIXTURE.read_text(),
+            stderr="",
+        )
+        process = Mock(return_value=completed)
+        environment = {
+            "PATH": "/test/bin",
+            "ANTHROPIC_BASE_URL": "https://gateway.invalid",
+            "ANTHROPIC_AUTH_TOKEN": "test-secret-token",
+            "ANTHROPIC_MODEL": "gateway-model",
+            "AWS_REGION": "us-test-1",
+        }
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "run"
+            result = run_claude_code(
+                prompt="Reply exactly OK.",
+                output_dir=output_dir,
+                cwd=Path(temp_dir),
+                tools=[],
+                timeout_seconds=30,
+                environment=environment,
+                run_process=process,
+            )
+            persisted = "\n".join(
+                path.read_text()
+                for path in output_dir.iterdir()
+                if path.is_file()
+            )
+
+        self.assertEqual(process.call_args.kwargs["env"], environment)
+        self.assertNotIn("test-secret-token", persisted)
+        self.assertNotIn("https://gateway.invalid", persisted)
+        self.assertNotIn("gateway-model", persisted)
+        self.assertNotIn("test-secret-token", json.dumps(result))
+
 
 if __name__ == "__main__":
     unittest.main()

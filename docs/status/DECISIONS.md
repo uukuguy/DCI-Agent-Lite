@@ -159,3 +159,12 @@
 - Decision: manager dispatch, climb cycles, maintenance, and experiments must name the single active `WORKLIST` package; unscoped work stops before implementation.
 - Rationale: a conversation-only product decision allowed local Pi/Judge reliability improvements to replace the intended framework roadmap.
 - Boundary: direct user authorization may amend the worklist or architecture, but it does not permit a hidden or unrecorded parallel roadmap.
+
+## D-019 — Keep Claude Code authentication on the subprocess environment boundary
+
+- Status: ✅ accepted and implemented decision
+- Decided: 2026-07-12
+- Decision: support both Claude Code's stored login and its environment-configured Anthropic-compatible/cloud backends by copying the complete caller environment to the restricted subprocess.
+- Rationale: allowlisting only `ANTHROPIC_*` would break PATH, proxy, Bedrock, Vertex, AWS, and GCP configuration; placing tokens or routing data in CLI arguments or protocol payloads would create persistence and process-inspection risks.
+- Privacy boundary: environment names and values are not copied into the command, Agent Runtime Protocol request, normalized events, or runtime result. Credentials remain owned by the caller environment or Claude Code credential store.
+- Acceptance boundary: the unavailable local Claude account defers provider-backed UAT but does not block AF-040; model-free conformance and the real safe unauthenticated path remain durable AF-030 evidence.

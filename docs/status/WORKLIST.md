@@ -38,10 +38,10 @@
 - Parent objective: Agent Application Framework
 - Scope: add one non-Pi adapter and run the same DCI research capability across both adapters.
 - Dependencies: AF-010
-- Acceptance: cross-runtime DCI acceptance proves shared events and artifacts.
+- Acceptance: Pi provider-backed evidence plus Claude Code fixture, safe-failure, restricted-command, and environment-boundary tests prove the shared protocol surface without requiring a currently unavailable account.
 - Design: `docs/superpowers/specs/2026-07-12-claude-code-protocol-adapter-design.md`
 - Plan: `docs/superpowers/plans/2026-07-12-claude-code-protocol-adapter.md`
-- Blocker: Claude Code 2.1.199 is installed but not authenticated; two live probes returned the safe authentication failure path.
+- Deferred acceptance: run the tiny local-corpus provider-backed Claude slice when a Claude login or compatible `ANTHROPIC_*` gateway is available; this does not block AF-040.
 
 ## AF-040 — Python and TypeScript host boundaries
 

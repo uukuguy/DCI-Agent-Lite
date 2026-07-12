@@ -98,6 +98,27 @@ export OPENAI_API_KEY=your_key_here
 export DEEPSEEK_API_KEY=your_key_here
 ```
 
+#### Claude Code login or compatible LLM gateway
+
+The Claude Code runtime supports either Claude Code's normal interactive login or
+the environment-based authentication and routing supported by the CLI. For an
+Anthropic-compatible gateway, configure the calling process (or repository-root
+`.env`) without adding credentials to command-line arguments:
+
+```bash
+export ANTHROPIC_BASE_URL=https://your-gateway.example
+export ANTHROPIC_AUTH_TOKEN=your_gateway_token
+export ANTHROPIC_MODEL=your_gateway_model
+```
+
+Direct Anthropic API access may use `ANTHROPIC_API_KEY`. Claude Code's documented
+Bedrock and Vertex modes also work because the runtime preserves the complete
+caller environment, including the required AWS/GCP and proxy variables. The
+runtime does not copy environment configuration into protocol requests,
+normalized events, or its returned status. Programmatic callers that rely on the
+repository `.env` should call `load_project_env()` before invoking the runtime;
+already-exported process values take precedence.
+
 The default `.env.template` example keeps the agent selection in `DCI_PROVIDER`/`DCI_MODEL`
 and configures the eval judge independently through `DCI_EVAL_JUDGE_*`. This allows an
 Anthropic or custom agent to be graded by `deepseek-v4-flash` without an OpenAI account.

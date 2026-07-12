@@ -21,6 +21,12 @@ The installed CLI provides non-interactive `--print`, `--output-format stream-js
 
 Use `claude -p --output-format stream-json --include-partial-messages --no-session-persistence`. Tool access is explicit; never use `--dangerously-skip-permissions`. Tests inject a fake process/fixture and do not require authentication.
 
+## Authentication and provider boundary
+
+The subprocess supports both Claude Code's stored login and its documented environment-based backends. It receives a copy of the complete caller environment so `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_BASE_URL`, model overrides, Bedrock/Vertex configuration, cloud credentials, and proxy settings retain native Claude Code semantics. Environment names and values are not copied into the command, Agent Runtime Protocol request, normalized events, or runtime return object.
+
+The local Claude account is unavailable as of 2026-07-12. Model-free conformance and the observed safe unauthenticated path remain AF-030 acceptance; a provider-backed research run is explicitly deferred and does not block the host-language framework packages.
+
 ## Mapping policy
 
 - System/init events establish effective capabilities but do not expose system prompt content.
@@ -34,4 +40,5 @@ Use `claude -p --output-format stream-json --include-partial-messages --no-sessi
 
 - Captured fixture translation is conformant and contains no forbidden hidden/provider keys.
 - Subprocess tests prove explicit safe flags, JSONL error handling, timeout/cancellation, and safe failure artifacts.
-- A tiny local-corpus task runs under both the existing Pi adapter and Claude Code adapter, with each producing a valid protocol stream and the expected evidence path.
+- Environment pass-through is tested with a compatible-gateway configuration and no credential/configuration persistence in protocol artifacts.
+- The Pi provider-backed evidence and Claude Code model-free/unauthenticated evidence establish both adapter boundaries. A Claude provider-backed tiny-corpus run remains a deferred acceptance item until a login or compatible gateway is available.

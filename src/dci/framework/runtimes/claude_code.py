@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -51,9 +52,15 @@ def run_claude_code(
     tools: list[str],
     timeout_seconds: float,
     executable: str = "claude",
+    environment: Mapping[str, str] | None = None,
     run_process: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
 ) -> dict[str, Any]:
-    """Run one Claude Code prompt and persist raw plus normalized artifacts."""
+    """Run one Claude Code prompt and persist raw plus normalized artifacts.
+
+    Claude Code authentication, gateway, cloud-provider, and proxy settings stay
+    on the subprocess environment boundary. They are never copied into the
+    protocol request, normalized events, or returned status.
+    """
 
     output_dir.mkdir(parents=True, exist_ok=True)
     run_id = f"claude-{output_dir.name or 'run'}"
@@ -68,9 +75,11 @@ def run_claude_code(
     validate_run_request(request)
     _write_json(output_dir / "request.json", request)
 
+    process_environment = dict(os.environ if environment is None else environment)
     completed = run_process(
         build_claude_command(executable=executable, tools=tools),
         cwd=cwd,
+        env=process_environment,
         input=prompt,
         text=True,
         capture_output=True,

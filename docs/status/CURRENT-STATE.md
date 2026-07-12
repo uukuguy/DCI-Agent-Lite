@@ -16,11 +16,12 @@
 - Language roles: Python owns research/evaluation/orchestration, TypeScript owns Node/service integration, and Rust is reserved for controlled execution infrastructure.
 - Governance: `docs/status/WORKLIST.md` is the sole active package ledger. A scope audit must pass before manager dispatch or climb execution.
 - Maintenance history: Pi/Judge reliability H-001 through H-019 is completed and remains available as reference-maintenance evidence; it is not an active roadmap stream.
+- Claude Code provider access: the adapter supports stored login and inherited environment-configured backends; provider-backed UAT is deferred while the local account is unavailable and does not block host-language work.
 
 ## Open Problems (theme-level)
 
 - Agent Runtime Protocol contract, capability manifest, and conformance semantics.
-- Selection and supported integration boundary of the first non-Pi runtime.
+- Provider-backed acceptance of the first non-Pi runtime when credentials or a compatible gateway become available.
 - Enterprise policy, artifact, observability, and isolation boundaries after the reference vertical slice.
 
 ## Key Files

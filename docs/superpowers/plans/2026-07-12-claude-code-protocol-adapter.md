@@ -12,6 +12,7 @@
 
 - Never use `--dangerously-skip-permissions`.
 - Never persist hidden thinking, signatures, account data, or provider payloads in normalized events.
+- Preserve Claude Code's native login and environment-configured provider modes; never put environment configuration in command arguments or protocol fields.
 - Tests must pass without credentials; the final vertical slice is a separate provider-backed acceptance.
 - Do not modify Pi behavior while adding Claude Code.
 
@@ -41,7 +42,8 @@
 
 ### Task 4: Prove the cross-runtime research slice
 
-- Create a tiny deterministic local corpus and one evidence question.
-- Run Claude Code with `Read`/`Bash`; validate answer, evidence path, and protocol stream.
+- Pass the complete caller environment to Claude Code and prove compatible-gateway variables do not enter persisted protocol artifacts.
+- When a login or compatible gateway is available, create a tiny deterministic local corpus and run Claude Code with `Read`/`Bash`; validate answer, evidence path, and protocol stream.
 - Reuse the existing Pi runtime example evidence as the Pi side of the same capability contract.
+- Treat the provider-backed Claude run as deferred external acceptance, not a blocker for host-language framework work.
 - Run full tests, compile, Ruff, scope audit, and diff checks before advancing the worklist.
