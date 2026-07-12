@@ -1,12 +1,12 @@
-score_name: setup_policy_acceptance
+score_name: executor_acceptance
 score_direction: max
 subscores:
-  - immutable_resolution
-  - repeat_validation
-  - dirty_checkout_safety
-  - override_compatibility
+  - policy_boundary
+  - process_boundary
+  - resource_boundary
+  - service_boundary
 push_mode: manual-csv
 state_dir: docs/status/climb
 artifact_dir: runs/climb
 run_tag_marker: dci-climb-
-paradigm_field: dependency_policy
+paradigm_field: executor_layer

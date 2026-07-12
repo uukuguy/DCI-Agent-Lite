@@ -1,6 +1,6 @@
 # Climb Session Target
 
-This is a closed legacy Pi/Judge maintenance session. H-001 through H-019 must not resume. A new climb session must identify an active `WORKLIST` package and a parented framework hypothesis before execution.
+This session advances only `AF-050` under the approved Rust controlled-executor design and plan. Legacy Pi/Judge hypotheses H-001 through H-019 remain closed.
 
 <!-- TARGET-BEGIN (machine-readable, check-target.py reads) -->
 target_metric: local

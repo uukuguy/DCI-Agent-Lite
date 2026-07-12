@@ -5,14 +5,19 @@
 
 ## In-flight / session state
 
-- Phase: hard-pause
+- Phase: implementation
 - Last cycle: 19
-- Next hypothesis: None
+- Next hypothesis: AF-050-H-001
 - In flight: none
-- Next action: Legacy Pi/Judge maintenance H-001 through H-019 is retired. Do not resume it; a new framework cycle requires a WORKLIST-parented hypothesis.
+- Next action: Write and verify failing Rust request-authorization tests for AF-050-H-001.
 
 ## Active hypotheses
 
+- **AF-050-H-001** (pending, rank 1.00): Authorize closed execute requests into canonical bounded execution values without spawning.
+- **AF-050-H-002** (pending, rank 0.90): Execute registered programs directly with argument vectors, closed stdin, and a cleared environment.
+- **AF-050-H-003** (pending, rank 0.80): Drain stdout and stderr concurrently with independent caps and deadline kill/reap.
+- **AF-050-H-004** (pending, rank 0.70): Keep JSONL input responsive while enforcing duplicate-ID rejection and exactly-once cancellation results.
+- **AF-050-H-005** (pending, rank 0.60): Document and verify the complete non-sandbox executor boundary across framework gates.
 
 ## Run ladder
 
@@ -42,3 +47,5 @@
 
 - duplicate the authoritative Pi commit across setup.sh and .env.template
 - convert the independent Pi checkout to vendored or submodule ownership
+- describe the local policy executor as an operating-system sandbox
+- accept executable paths, environment variables, shells, or workspace roots from agent requests
