@@ -138,3 +138,4 @@
 - 21:33 TypeScript runtime host 已提交，提供零 adapter 依赖的公共包与重复验证命令。[b6e9dbd]
 - 21:34 AF-040 通过 126 Python tests、编译、Ruff、干净 npm ci、TypeScript tests 与范围审计。
 - 21:34 AF-040 双语言主机边界完成；主线转入 AF-050 Rust 受控执行边界。
+- 21:35 AF-050 成为唯一活跃包，隔离执行工作受框架范围门控制。[d75c776]
