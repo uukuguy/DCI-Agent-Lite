@@ -146,6 +146,9 @@ unset any stale exported key or start a fresh shell before running the preflight
 Run `make check-judge-config` to inspect those same safe fields without making an HTTP request.
 For an official Responses judge, `DCI_EVAL_JUDGE_STRICT_JSON_SCHEMA=true` opts into a fixed
 strict verdict schema; leave it false for compatible Chat Completions backends.
+Official Responses requests also set `store=false` by default to avoid retaining the evaluation
+response. Set `DCI_EVAL_JUDGE_RESPONSES_STORE=true` only when that retention is intentional;
+compatible Responses endpoints do not receive the field.
 
 <a name="quick-start"></a>
 ## ⚡ Quick Start

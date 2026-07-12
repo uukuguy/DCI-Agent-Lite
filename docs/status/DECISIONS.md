@@ -125,3 +125,12 @@
 - Evidence: Python's default handler redirects POST 301/302/303 requests and preserves POST for 307/308; H-017 proves the replacement raises an error without exposing the destination, preserves ordinary configured requests, and keeps existing provider-error redaction intact.
 - Rationale: an ingress-validated URL is not a complete origin boundary when a redirect response can forward the bearer authorization header or evaluated input to a different destination.
 - Boundary: correctly configured OpenAI-compatible endpoints are expected to serve directly. The standard proxy configuration remains unchanged, and an endpoint that genuinely requires a redirect now fails explicitly instead of silently changing the trust boundary.
+
+## D-015 — Disable official Responses storage by default
+
+- Status: ✅ accepted and implemented decision
+- Decided: 2026-07-12
+- Decision: requests to the exact official OpenAI Responses endpoint include `store: false` unless `DCI_EVAL_JUDGE_RESPONSES_STORE=true` explicitly opts in; compatible Responses backends receive no `store` field.
+- Evidence: OpenAI documents 30-day application-state retention for Responses by default or with `store=true`; H-018 verifies default opt-out, the deliberate opt-in path, cache identity separation, environment loading, and a field-free compatible request.
+- Rationale: DCI judges may send questions, gold answers, and predictions. Local artifact minimization is incomplete when the official response endpoint stores that request by default.
+- Boundary: `store=false` does not alter ordinary abuse-monitoring controls, and the exact-endpoint scope avoids adding an unsupported field to nominally compatible providers.

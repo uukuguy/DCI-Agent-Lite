@@ -52,3 +52,11 @@ Append-only decision-gate record.
 - Ranked candidate: H-017 judge redirect containment (rank 0.92).
 - Held for the next Knowledge Layer: opt out of official Responses retention without changing generic-compatible request shapes (H-018 candidate).
 - Decision: advance H-017 because a configured origin boundary is incomplete if a transport redirect can move authorization or evaluated input elsewhere.
+
+## 2026-07-12 Knowledge Layer after H-017
+
+- External reference: OpenAI documents a 30-day Responses application-state retention period by default or when `store=true`; `store=false` opts out of that response storage.
+- Local evidence: DCI's official Responses payload contains evaluated input but omits `store`, while the generic-compatible Responses request intentionally uses only a minimal shared shape.
+- Multi-AI adapter: Gemini and OpenCode remain unavailable; the local stub returned PUSH and is not independent evidence.
+- Ranked candidate: H-018 official Responses storage opt-out (rank 0.90).
+- Decision: send `store=false` by default only to the exact official OpenAI Responses endpoint, permit an explicit opt-in, and omit the field entirely for compatible endpoints.

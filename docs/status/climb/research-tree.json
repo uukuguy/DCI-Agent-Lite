@@ -1,9 +1,9 @@
 {
-  "run_count": 17,
+  "run_count": 18,
   "session": {
     "session": "2026-07-12-pi-revision",
     "phase": "implementation",
-    "last_cycle": 17,
+    "last_cycle": 18,
     "next_hypothesis": null,
     "in_flight": null,
     "next_action": "Trigger Knowledge Layer.",
@@ -472,6 +472,33 @@
           "decision_reason": "deterministic local setup-policy acceptance"
         }
       ]
+    },
+    {
+      "id": "H-018",
+      "description": "Opt official OpenAI Responses judges out of server-side response storage by default without adding unsupported fields to compatible endpoints.",
+      "parent_paradigm": "official-responses-retention",
+      "expected_lift": "+1 official Responses retention-containment dimension",
+      "cost_h": 0.2,
+      "ranking": 0.9,
+      "status": "confirmed",
+      "created_at": "2026-07-12T19:36:00+08:00",
+      "results": [
+        {
+          "session": "2026-07-12-pi-revision",
+          "cycle": 18,
+          "run": "20260712-193835-dci-climb-h018",
+          "local": 4,
+          "local_per_task": {
+            "storage_default": 1,
+            "storage_opt_in_and_identity": 1,
+            "compatible_payload": 1,
+            "adapter_integration": 1
+          },
+          "online": null,
+          "verdict": "confirmed 4/4",
+          "decision_reason": "deterministic local setup-policy acceptance"
+        }
+      ]
     }
   ],
   "falsified": [],
@@ -849,6 +876,28 @@
       "verdict": "confirmed 4/4",
       "train_cost_h": "0.01",
       "manifest_path": "runs/climb/20260712-193519-dci-climb-h017/manifest.json"
+    },
+    {
+      "run_id": "20260712-193835-dci-climb-h018",
+      "cycle": "18",
+      "session": "2026-07-12-pi-revision",
+      "hypothesis_id": "H-018",
+      "paradigm": "official-responses-retention",
+      "parent_run": "",
+      "pushed_at": "2026-07-12T19:38:35+08:00",
+      "lb_landed_at": "",
+      "local_score": "4",
+      "immutable_resolution": "",
+      "repeat_validation": "",
+      "dirty_checkout_safety": "",
+      "override_compatibility": "",
+      "online_score": "",
+      "gap": "",
+      "push_decision": "PUSH",
+      "decision_reason": "cheap deterministic local acceptance",
+      "verdict": "confirmed 4/4",
+      "train_cost_h": "0.01",
+      "manifest_path": "runs/climb/20260712-193835-dci-climb-h018/manifest.json"
     }
   ],
   "calibration": {

@@ -98,6 +98,7 @@ class JudgeConfig:
     max_output_tokens: int = DEFAULT_JUDGE_MAX_OUTPUT_TOKENS
     json_mode: bool = True
     strict_json_schema: bool = False
+    responses_store: bool = False
     thinking: str = "auto"
     input_price_per_1m: float = DEFAULT_JUDGE_INPUT_PRICE_PER_1M
     cached_input_price_per_1m: float = DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M
@@ -167,6 +168,7 @@ class JudgeConfig:
         model: Optional[str] = None,
         timeout_seconds: Optional[int] = None,
         max_output_tokens: Optional[int] = None,
+        responses_store: Optional[bool] = None,
         input_price_per_1m: Optional[float] = None,
         cached_input_price_per_1m: Optional[float] = None,
         output_price_per_1m: Optional[float] = None,
@@ -219,6 +221,9 @@ class JudgeConfig:
             strict_json_schema=_env_bool(
                 f"{JUDGE_ENV_PREFIX}STRICT_JSON_SCHEMA", False
             ),
+            responses_store=responses_store
+            if responses_store is not None
+            else _env_bool(f"{JUDGE_ENV_PREFIX}RESPONSES_STORE", False),
             thinking=os.environ.get(f"{JUDGE_ENV_PREFIX}THINKING", "auto"),
             input_price_per_1m=input_price_per_1m
             if input_price_per_1m is not None
@@ -271,6 +276,7 @@ class JudgeConfig:
             "judge_max_output_tokens": self.max_output_tokens,
             "judge_json_mode": self.json_mode,
             "judge_strict_json_schema": self.strict_json_schema,
+            "judge_responses_store": self.responses_store,
             "judge_thinking": self.effective_thinking,
             "judge_input_price_per_1m": self.input_price_per_1m,
             "judge_cached_input_price_per_1m": self.cached_input_price_per_1m,
@@ -455,6 +461,8 @@ def build_judge_request(
             "max_output_tokens": config.max_output_tokens,
             "input": messages,
         }
+        if config.base_url == DEFAULT_JUDGE_BASE_URL:
+            payload["store"] = config.responses_store
         if config.strict_json_schema:
             payload["text"] = {
                 "format": {

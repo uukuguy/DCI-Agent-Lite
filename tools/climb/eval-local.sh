@@ -200,6 +200,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_judge.JudgeTransportTests.test_chat_completions_request_and_response_are_normalized"
         override_test="tests.test_climb_tools.ClimbToolTests.test_h017_train_checks_judge_redirect_containment"
         ;;
+    H-018)
+        first_dimension="storage_default"
+        second_dimension="storage_opt_in_and_identity"
+        third_dimension="compatible_payload"
+        fourth_dimension="adapter_integration"
+        immutable_test="tests.test_judge.JudgeTransportTests.test_official_responses_disable_server_storage_by_default"
+        repeat_test="tests.test_judge.JudgeTransportTests.test_official_responses_disable_server_storage_by_default"
+        dirty_test="tests.test_judge.JudgeTransportTests.test_compatible_responses_request_omits_storage_control"
+        override_test="tests.test_climb_tools.ClimbToolTests.test_h018_train_checks_official_responses_retention"
+        ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2
         exit 2

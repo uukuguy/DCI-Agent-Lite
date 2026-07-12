@@ -84,6 +84,16 @@ class JudgeConfigTests(unittest.TestCase):
         self.assertEqual(config.effective_thinking, "disabled")
         self.assertNotIn("api_key", config.public_dict())
 
+    def test_official_responses_storage_setting_is_loaded_from_environment(self) -> None:
+        with patch.dict(
+            os.environ,
+            {"DCI_EVAL_JUDGE_RESPONSES_STORE": "true"},
+            clear=True,
+        ):
+            config = JudgeConfig.from_env()
+
+        self.assertTrue(config.responses_store)
+
     def test_cli_style_overrides_take_precedence_over_environment(self) -> None:
         with patch.dict(
             os.environ,
@@ -132,6 +142,58 @@ class JudgeConfigTests(unittest.TestCase):
 
 
 class JudgeTransportTests(unittest.TestCase):
+    def test_official_responses_disable_server_storage_by_default(self) -> None:
+        config = JudgeConfig(api="responses")
+
+        payload = build_judge_request(
+            config,
+            question="Question",
+            gold_answer="Gold",
+            predicted_answer="Prediction",
+        )
+
+        self.assertIs(payload["store"], False)
+        self.assertIs(config.public_dict()["judge_responses_store"], False)
+
+        opted_in = JudgeConfig(api="responses", responses_store=True)
+        opted_in_payload = build_judge_request(
+            opted_in,
+            question="Question",
+            gold_answer="Gold",
+            predicted_answer="Prediction",
+        )
+        self.assertIs(opted_in_payload["store"], True)
+        self.assertNotEqual(
+            judge_module.judge_request_fingerprint(
+                config=config,
+                question="Question",
+                gold_answer="Gold",
+                predicted_answer="Prediction",
+            ),
+            judge_module.judge_request_fingerprint(
+                config=opted_in,
+                question="Question",
+                gold_answer="Gold",
+                predicted_answer="Prediction",
+            ),
+        )
+
+    def test_compatible_responses_request_omits_storage_control(self) -> None:
+        config = JudgeConfig(
+            base_url="https://compatible.example.test/v1",
+            api="responses",
+            responses_store=False,
+        )
+
+        payload = build_judge_request(
+            config,
+            question="Question",
+            gold_answer="Gold",
+            predicted_answer="Prediction",
+        )
+
+        self.assertNotIn("store", payload)
+
     def test_judge_transport_rejects_automatic_redirects(self) -> None:
         self.assertTrue(
             hasattr(judge_module, "_RejectJudgeRedirectHandler"),
@@ -277,7 +339,11 @@ class JudgeTransportTests(unittest.TestCase):
         self.assertAlmostEqual(result["cost_estimate_usd"]["total_cost"], 0.000018)
 
     def test_responses_request_keeps_the_common_compatible_subset(self) -> None:
-        config = JudgeConfig(api="responses", api_key="key")
+        config = JudgeConfig(
+            base_url="https://compatible.example.test/v1",
+            api="responses",
+            api_key="key",
+        )
         payload = build_judge_request(
             config,
             question="Question",
@@ -287,6 +353,7 @@ class JudgeTransportTests(unittest.TestCase):
         self.assertIn("input", payload)
         self.assertIn("max_output_tokens", payload)
         self.assertNotIn("reasoning", payload)
+        self.assertNotIn("store", payload)
         self.assertNotIn("text", payload)
 
         text = extract_responses_text(

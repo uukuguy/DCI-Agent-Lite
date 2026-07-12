@@ -91,4 +91,7 @@
 - 19:32 Live checkpoint set; redirect-containment research is the next grounded candidate.
 - 19:32 H-016 recovery checkpoint committed; redirect-containment research continues. [5f20e6a]
 - 19:32 Knowledge Layer promoted H-017 to reject automatic judge redirects before cross-origin transport.
+- 19:36 H-017 redirect containment committed after full local verification. [91c0cfc]
+- 19:36 Knowledge Layer promoted H-018: official Responses storage opt-out with compatible payload preservation.
 - 19:35 H-017 confirmed 4/4; setup-policy acceptance recorded.
+- 19:38 H-018 confirmed 4/4; setup-policy acceptance recorded.
