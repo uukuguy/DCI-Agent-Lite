@@ -24,6 +24,8 @@
 
 **DCI-Agent-Lite** is the **minimal open implementation** of this paradigm, built on [Pi](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) with **bash tools** and **lightweight context management** for **long-horizon deep research**. With `GPT-5.4-nano`, it achieves an impressive **62.9%** accuracy on BrowseComp-Plus, **surpassing** agentic search agents powered by `GPT-5.2`, `Claude-Sonnet-4.6`, `Qwen3.5-122B`, and `GLM-4.7`.
 
+The repository also develops **Asterion**, the independent agent-application framework beneath DCI. Its minimal application runner consumes a resolved plan and an explicit runtime client without adding a scheduler, registry, or automatic service startup; see [`docs/architecture/application-runner.md`](docs/architecture/application-runner.md).
+
 <div align="center">
   <img src="assets/imgs/teaser.png" alt="OpenResearcher Teaser" width="100%" style="max-width: 850px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
 </div>

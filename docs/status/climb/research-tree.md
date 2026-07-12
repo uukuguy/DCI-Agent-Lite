@@ -1,19 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (49 runs).
+> Deterministic summary generated from tracked state (50 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 49
-- Next hypothesis: AF-100-H-004
+- Last cycle: 50
+- Next hypothesis: None
 - In flight: none
-- Next action: Start AF-100-H-004.
+- Next action: Trigger Knowledge Layer.
 
 ## Active hypotheses
 
-- **AF-100-H-004** (pending, rank 0.60): Document and close the minimal runner without scheduler registry or automatic service startup.
 
 ## Run ladder
 
@@ -68,6 +67,7 @@
 | 20260713-025322-dci-climb-af100h001 | AF-100-H-001 | 4 | confirmed 4/4 |
 | 20260713-025708-dci-climb-af100h002 | AF-100-H-002 | 4 | confirmed 4/4 |
 | 20260713-025950-dci-climb-af100h003 | AF-100-H-003 | 4 | confirmed 4/4 |
+| 20260713-030210-dci-climb-af100h004 | AF-100-H-004 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

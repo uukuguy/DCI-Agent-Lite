@@ -188,19 +188,19 @@ Commit message: `test: harden application runner failures`
 - Documents: caller ownership, explicit services, cancellation, immutable results, safe errors, and non-goals.
 - Closes: AF-100 only with fresh whole-repository evidence and a governed successor or explicit no-successor state.
 
-- [ ] **Step 1: Write RED documentation and source-boundary tests**
+- [x] **Step 1: Write RED documentation and source-boundary tests**
 
 Assert the guide names `AssemblyPlan`, `AgentRuntimeClient`, explicit host services, cancellation, immutable normalized events/artifacts, and fail-closed behavior. Assert no scheduler, registry, TypeScript runner, automatic service startup, or Rust subprocess launch entered the runner boundary.
 
-- [ ] **Step 2: Write the guide and concise README entry**
+- [x] **Step 2: Write the guide and concise README entry**
 
 Show construction from an already resolved plan and fixture client. State clearly that host-service presence is not authorization and the controlled executor remains caller-owned.
 
-- [ ] **Step 3: Add and execute AF-100-H-004**
+- [x] **Step 3: Add and execute AF-100-H-004**
 
 Dimensions: `runner_docs`, `boundary_integrity`, `language_ownership`, `framework_closure`.
 
-- [ ] **Step 4: Run fresh closure gates**
+- [x] **Step 4: Run fresh closure gates**
 
 ```bash
 uv run python -m unittest discover -v
@@ -215,7 +215,7 @@ python3 tools/project_scope_check.py --climb-hypothesis AF-100-H-004
 git diff --check
 ```
 
-- [ ] **Step 5: Close and checkpoint**
+- [x] **Step 5: Close and checkpoint**
 
 Update `WORKLIST.md`, `CURRENT-STATE.md`, `DECISIONS.md`, climb state, and JOURNAL from fresh evidence. Re-run the scope preflight before the closure commit.
 

@@ -24,6 +24,7 @@ ASSEMBLY = ROOT / "applications/dci-agent-lite/assemblies/dci-local-research.jso
 CONTROLLED_ASSEMBLY = (
     ROOT / "applications/dci-agent-lite/assemblies/controlled-code-validation.json"
 )
+GUIDE = ROOT / "docs/architecture/application-runner.md"
 
 
 class FixtureRuntimeClient:
@@ -357,6 +358,45 @@ class ApplicationRunnerTests(unittest.IsolatedAsyncioTestCase):
             self.assertNotIn("SECRET-APPLICATION-INPUT", message)
             self.assertNotIn("SECRET-PROVIDER-PAYLOAD", message)
             self.assertNotIn("SECRET-RAW-TOOL-OUTPUT", message)
+
+
+class ApplicationRunnerDocumentationTests(unittest.TestCase):
+    def guide(self) -> str:
+        return GUIDE.read_text()
+
+    def test_guide_documents_the_explicit_plan_runtime_and_service_boundary(self) -> None:
+        guide = self.guide()
+        self.assertIn("AssemblyPlan", guide)
+        self.assertIn("AgentRuntimeClient", guide)
+        self.assertIn("explicit host services", guide)
+        self.assertIn("CancellationSignal", guide)
+
+    def test_guide_documents_immutable_results_and_safe_failures(self) -> None:
+        guide = self.guide()
+        self.assertIn("immutable normalized events and artifacts", guide)
+        self.assertIn("fail closed", guide)
+        self.assertIn("does not authorize", guide)
+
+    def test_runner_boundary_excludes_control_plane_and_process_ownership(self) -> None:
+        source = (ROOT / "src/asterion/runner/application.py").read_text()
+        typescript_sources = "\n".join(
+            path.read_text()
+            for path in (ROOT / "packages/typescript/asterion-runtime/src").glob("*.ts")
+        )
+
+        self.assertNotIn("subprocess", source)
+        self.assertNotIn("scheduler", source)
+        self.assertNotIn("service registry", source)
+        self.assertNotIn("runApplication", typescript_sources)
+
+    def test_runner_is_python_owned_without_dci_or_typescript_duplicate(self) -> None:
+        self.assertTrue((ROOT / "src/asterion/runner/application.py").is_file())
+        self.assertFalse((ROOT / "src/dci/framework/runner.py").exists())
+        typescript_sources = "\n".join(
+            path.read_text()
+            for path in (ROOT / "packages/typescript/asterion-runtime/src").glob("*.ts")
+        )
+        self.assertNotIn("runApplication", typescript_sources)
 
 
 if __name__ == "__main__":

@@ -250,3 +250,13 @@
 - Revalidation trigger: rename protocol literals only through a separate versioned compatibility decision; remove old imports only after downstream usage is measured.
 - Implemented evidence: H-001 confirms authoritative runtime/host/adapter modules, object identity, dependency direction, and dual-root packaging; H-002 confirms package/assembly/executor extraction, stable wire literals, and definition-free compatibility modules; H-003 confirms product-level capability/application assets and Asterion-owned TypeScript/Rust working directories without identity drift.
 - Closure evidence: H-004 confirms DCI console scripts, isolated model-free example commands, architecture ownership, and full closure with 258 Python, 11 Node, and 19 Rust tests plus compile, lint, clean install, format, shell, scope, and diff gates.
+
+## D-028 — Keep the first runner plan-driven and caller-owned
+
+- Status: ✅ accepted and implemented decision
+- Decided: 2026-07-13
+- Decision: execute one resolved `AssemblyPlan` through an explicitly supplied Python runtime client, cancellation signal, input, and host-service mapping.
+- Rationale: this proves the static-plan-to-runtime boundary while keeping runtime selection, service authorization, package loading, and process ownership outside the runner.
+- Boundary: Asterion validates runtime identity/capabilities, required service presence, request/event lifecycle, cancellation, and immutable result projection; it adds no scheduler, registry, retry engine, automatic service startup, TypeScript runner, or control plane.
+- Revalidation trigger: add scheduling only when a second executable application needs sequencing that one runtime invocation cannot express; add automatic service startup only for a concrete operator workflow with an explicit authorization model.
+- Closure evidence: AF-100 H-001 through H-004 confirm ownership, invocation, parity/safety, and documentation with 284 Python, 11 Node, and 19 Rust tests plus every compile, lint, format, shell, scope, and diff gate.

@@ -1755,6 +1755,40 @@ class ClimbToolTests(unittest.TestCase):
                 },
             )
 
+    def test_af100_h004_train_runs_full_framework_closure_gate(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+        self.assertIn("AF-100-H-004", train_script)
+        self.assertIn("python -m unittest discover -v", train_script)
+        self.assertIn("packages/typescript/asterion-runtime ci", train_script)
+        self.assertIn("make test-rust-executor", train_script)
+        self.assertIn("project_scope_check.py --climb-hypothesis AF-100-H-004", train_script)
+
+    def test_af100_h004_eval_reports_four_closure_dimensions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            env = os.environ.copy()
+            env["DCI_CLIMB_HYPOTHESIS_ID"] = "AF-100-H-004"
+            result = subprocess.run(
+                ["bash", "tools/climb/eval-local.sh", str(run_dir)],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            evaluation = json.loads((run_dir / "local-eval.json").read_text())
+            self.assertEqual(evaluation["hypothesis_id"], "AF-100-H-004")
+            self.assertEqual(evaluation["total"], 4)
+            self.assertEqual(
+                set(evaluation["per_task"]),
+                {
+                    "runner_docs",
+                    "boundary_integrity",
+                    "language_ownership",
+                    "framework_closure",
+                },
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

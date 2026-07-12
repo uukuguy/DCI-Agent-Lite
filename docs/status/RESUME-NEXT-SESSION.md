@@ -1,6 +1,6 @@
 # Recovered Session Checkpoint
 
-> Updated: 2026-07-13 02:58 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-13 03:02 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-100
 
@@ -11,7 +11,9 @@ Active work package: AF-100
 - The approved runner design now makes Python cancellation explicit, matching the existing TypeScript signal boundary.
 - `AF-100-H-001` is confirmed 4/4 at `7f51f2c`; `AssemblyPlan` now records explicit immutable runtime/host capability ownership.
 - `AF-100-H-002` is confirmed 4/4 at `4ca5f8e`; the minimal runner performs one portable invocation and returns immutable normalized results.
-- Execution continues with the cancellation, mismatch, and safe-failure matrix under `AF-100-H-003`.
+- `AF-100-H-003` is confirmed 4/4 at `14dd358`; parity, cancellation, mismatch preflight, malformed streams, and redaction pass.
+- `AF-100-H-004` is confirmed 4/4; fresh closure passes 284 Python, 11 Node, and 19 Rust tests plus all repository gates.
+- AF-100 remains the active package only until a governed successor is selected and recorded.
 
 ## Durable boundary
 
@@ -22,7 +24,7 @@ Active work package: AF-100
 
 ## Immediate next action
 
-Execute `AF-100-H-003`: complete runtime parity, cancellation, preflight, malformed-stream, and error-redaction acceptance.
+Select and design the governed successor for integrating the real DCI entry points with the Asterion runner, then formally close AF-100.
 
 ## Guardrails
 

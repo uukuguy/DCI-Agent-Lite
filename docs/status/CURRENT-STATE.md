@@ -31,12 +31,14 @@
 - Asterion contract extraction: AF-095-H-002 is confirmed 4/4. Package protocol/catalog/composition, assembly, and executor protocol have sole authoritative implementations under Asterion with stable wire literals and definition-free DCI compatibility modules.
 - Product directories: AF-095-H-003 is confirmed 4/4. DCI and controlled-code manifests live under `capabilities/`, DCI assemblies under `applications/dci-agent-lite/`, and TypeScript/Rust working directories are Asterion-owned without changing declared identities.
 - AF-095 acceptance: all four extraction hypotheses pass; Asterion owns the sole generic implementation, DCI CLI/examples remain compatible, and 258 Python, 11 Node, and 19 Rust tests plus every compile/lint/scope gate pass.
+- Application runner: resolved plans carry explicit runtime/host ownership; Python executes one explicit runtime request with cancellation, immutable normalized results, service/capability preflight, runtime parity, and content-free failures.
+- AF-100 acceptance: all four runner hypotheses pass; 284 Python, 11 Node, and 19 Rust tests plus every compile/lint/scope gate pass. Formal package closure awaits successor governance.
 - Reference assemblies: checked-in DCI and controlled-code application manifests validate and resolve; DCI composition is identical for Pi/Claude runtime identities and controlled execution remains an explicit host service.
 
 ## Open Problems (theme-level)
 
 - Provider-backed acceptance of the first non-Pi runtime when credentials or a compatible gateway become available.
-- Explicit capability ownership and minimal plan-driven execution under AF-100.
+- Governed successor selection for real DCI entry-point integration after the fixture-backed runner slice.
 
 ## Key Files
 
@@ -71,6 +73,7 @@
 - `docs/architecture/controlled-code-validation-packages.md` — second-graph, shared host-service, non-execution, and non-sandbox guide.
 - `docs/architecture/local-package-catalog.md` — explicit-root discovery, exact selection, filesystem trust, and non-execution guide.
 - `docs/architecture/static-application-assembly.md` — exact runtime/catalog/service binding, language ownership, safe failure, and non-execution guide.
+- `docs/architecture/application-runner.md` — explicit runtime/service execution boundary, cancellation, immutable results, and non-goals.
 - `docs/superpowers/specs/2026-07-13-application-runner-vertical-slice-design.md` — approved AF-100 scope and execution/security boundaries.
 - `docs/superpowers/plans/2026-07-13-application-runner-vertical-slice.md` — AF-100 implementation and verification slices.
 - `docs/superpowers/specs/2026-07-13-asterion-framework-extraction-design.md` — Asterion naming, directory ownership, compatibility, and migration boundaries.

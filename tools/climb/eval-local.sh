@@ -82,6 +82,18 @@ run_closure_dimension() {
         asterion_architecture)
             command=(uv run python -m unittest tests.test_asterion_structure.AsterionStructureTests.test_layout_guide_defines_framework_ownership -v)
             ;;
+        runner_docs)
+            command=(uv run python -m unittest tests.test_application_runner.ApplicationRunnerDocumentationTests.test_guide_documents_the_explicit_plan_runtime_and_service_boundary tests.test_application_runner.ApplicationRunnerDocumentationTests.test_guide_documents_immutable_results_and_safe_failures -v)
+            ;;
+        runner_boundary)
+            command=(uv run python -m unittest tests.test_application_runner.ApplicationRunnerDocumentationTests.test_runner_boundary_excludes_control_plane_and_process_ownership -v)
+            ;;
+        runner_language)
+            command=(uv run python -m unittest tests.test_application_runner.ApplicationRunnerDocumentationTests.test_runner_is_python_owned_without_dci_or_typescript_duplicate -v)
+            ;;
+        runner_closure)
+            command=(uv run python -m unittest tests.test_climb_tools.ClimbToolTests.test_af100_h004_train_runs_full_framework_closure_gate -v)
+            ;;
         *)
             echo "ERROR: unknown closure check $check" >&2
             return 2
@@ -417,6 +429,17 @@ case "$HYPOTHESIS_ID" in
         repeat_test="tests.test_application_runner.ApplicationRunnerTests.test_pre_run_and_in_run_cancellation_are_safe"
         dirty_test="tests.test_application_runner.ApplicationRunnerTests.test_runtime_and_service_mismatches_fail_before_invocation"
         override_test="tests.test_application_runner.ApplicationRunnerTests.test_malformed_streams_and_runtime_errors_are_redacted"
+        ;;
+    AF-100-H-004)
+        dimension_runner="run_closure_dimension"
+        first_dimension="runner_docs"
+        second_dimension="boundary_integrity"
+        third_dimension="language_ownership"
+        fourth_dimension="framework_closure"
+        immutable_test="runner_docs"
+        repeat_test="runner_boundary"
+        dirty_test="runner_language"
+        override_test="runner_closure"
         ;;
     H-001)
         first_dimension="immutable_resolution"

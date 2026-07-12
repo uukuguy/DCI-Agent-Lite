@@ -112,6 +112,7 @@
 - Acceptance: Pi and Claude fixture runtimes satisfy the same plan-driven runner contract; runtime/service mismatch, cancellation, malformed streams, and unsafe errors fail closed before accidental execution.
 - Design: `docs/superpowers/specs/2026-07-13-application-runner-vertical-slice-design.md`
 - Plan: `docs/superpowers/plans/2026-07-13-application-runner-vertical-slice.md`
+- Closure evidence: all four hypotheses are confirmed; 284 Python, 11 Node, and 19 Rust tests plus compile, lint, format, shell, scope, and diff gates pass. Formal status waits only for governed successor selection.
 
 ## AF-095 — Asterion framework identity and extraction
 

@@ -279,3 +279,6 @@
 - 02:57 AF-100-H-002 confirmed 4/4; package acceptance recorded.
 - 02:58 Asterion runner 完成单次 portable invocation 与 immutable result projection。[4ca5f8e]
 - 02:59 AF-100-H-003 confirmed 4/4; package acceptance recorded.
+- 03:00 Runner parity、cancellation、preflight 与 error redaction 已提交。[14dd358]
+- 03:02 AF-100-H-004 confirmed 4/4；284 Python、11 Node、19 Rust 及全部门禁通过。
+- 03:02 AF-100-H-004 confirmed 4/4; package acceptance recorded.
