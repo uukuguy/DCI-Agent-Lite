@@ -412,17 +412,43 @@ hypotheses:
     decision_reason: deterministic local setup-policy acceptance
 - id: AF-050-H-001
   work_package_id: AF-050
-  description: Authorize closed execute requests into canonical bounded execution values without spawning.
+  description: Authorize closed execute requests into canonical bounded execution
+    values without spawning.
   parent_paradigm: rust-request-authorization
   expected_lift: +1 executor policy boundary
   cost_h: 0.3
   ranking: 1.0
-  status: pending
+  status: confirmed
   created_at: '2026-07-12T21:57:42+08:00'
-  results: []
+  results:
+  - session: 2026-07-12-af-050-rust-executor
+    cycle: 20
+    run: 20260712-220238-dci-climb-af050h001
+    local: 4
+    local_per_task:
+      unknown_program_denial: 1
+      cwd_containment: 1
+      policy_limits: 1
+      authorized_values: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local executor acceptance
+  - session: 2026-07-12-af-050-rust-executor
+    cycle: 21
+    run: 20260712-220336-dci-climb-af050h001
+    local: 4
+    local_per_task:
+      unknown_program_denial: 1
+      cwd_containment: 1
+      policy_limits: 1
+      authorized_values: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local executor acceptance
 - id: AF-050-H-002
   work_package_id: AF-050
-  description: Execute registered programs directly with argument vectors, closed stdin, and a cleared environment.
+  description: Execute registered programs directly with argument vectors, closed
+    stdin, and a cleared environment.
   parent_paradigm: rust-process-boundary
   expected_lift: +1 direct process boundary
   cost_h: 0.5
@@ -432,7 +458,8 @@ hypotheses:
   results: []
 - id: AF-050-H-003
   work_package_id: AF-050
-  description: Drain stdout and stderr concurrently with independent caps and deadline kill/reap.
+  description: Drain stdout and stderr concurrently with independent caps and deadline
+    kill/reap.
   parent_paradigm: rust-resource-boundary
   expected_lift: +1 bounded resource boundary
   cost_h: 0.7
@@ -442,7 +469,8 @@ hypotheses:
   results: []
 - id: AF-050-H-004
   work_package_id: AF-050
-  description: Keep JSONL input responsive while enforcing duplicate-ID rejection and exactly-once cancellation results.
+  description: Keep JSONL input responsive while enforcing duplicate-ID rejection
+    and exactly-once cancellation results.
   parent_paradigm: rust-jsonl-service
   expected_lift: +1 concurrent service boundary
   cost_h: 1.0
@@ -452,7 +480,8 @@ hypotheses:
   results: []
 - id: AF-050-H-005
   work_package_id: AF-050
-  description: Document and verify the complete non-sandbox executor boundary across framework gates.
+  description: Document and verify the complete non-sandbox executor boundary across
+    framework gates.
   parent_paradigm: framework-executor-acceptance
   expected_lift: +1 AF-050 closure confidence
   cost_h: 0.5

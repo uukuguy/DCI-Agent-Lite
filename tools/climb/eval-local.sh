@@ -29,7 +29,32 @@ run_dimension() {
     fi
 }
 
+run_rust_dimension() {
+    name="$1"
+    test_name="$2"
+    if cargo test \
+        --manifest-path packages/rust/executor/Cargo.toml \
+        --test authorization \
+        "$test_name" -- --exact >"$RUN_DIR/$name.log" 2>&1; then
+        printf '1'
+    else
+        printf '0'
+    fi
+}
+
+dimension_runner="run_dimension"
 case "$HYPOTHESIS_ID" in
+    AF-050-H-001)
+        dimension_runner="run_rust_dimension"
+        first_dimension="unknown_program_denial"
+        second_dimension="cwd_containment"
+        third_dimension="policy_limits"
+        fourth_dimension="authorized_values"
+        immutable_test="denies_unknown_program_id"
+        repeat_test="denies_cwd_escape_and_missing_directory"
+        dirty_test="denies_request_limits_outside_trusted_policy"
+        override_test="valid_request_produces_only_canonical_bounded_execution_values"
+        ;;
     H-001)
         first_dimension="immutable_resolution"
         second_dimension="repeat_validation"
@@ -226,10 +251,10 @@ case "$HYPOTHESIS_ID" in
         ;;
 esac
 
-immutable_resolution="$(run_dimension immutable_resolution "$immutable_test")"
-repeat_validation="$(run_dimension repeat_validation "$repeat_test")"
-dirty_checkout_safety="$(run_dimension dirty_checkout_safety "$dirty_test")"
-override_compatibility="$(run_dimension override_compatibility "$override_test")"
+immutable_resolution="$($dimension_runner "$first_dimension" "$immutable_test")"
+repeat_validation="$($dimension_runner "$second_dimension" "$repeat_test")"
+dirty_checkout_safety="$($dimension_runner "$third_dimension" "$dirty_test")"
+override_compatibility="$($dimension_runner "$fourth_dimension" "$override_test")"
 total=$((immutable_resolution + repeat_validation + dirty_checkout_safety + override_compatibility))
 
 cat >"$RUN_DIR/local-eval.json" <<EOF

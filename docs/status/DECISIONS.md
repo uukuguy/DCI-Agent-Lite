@@ -184,5 +184,5 @@
 - Decided: 2026-07-12
 - Decision: the first Rust backend enforces a trusted canonical workspace, absolute executable allowlist, direct argument-vector spawning, cleared child environment, deadlines, bounded output, and cancellation; it must not be described as OS-level isolation.
 - Rationale: a local child process can still use the network, open absolute paths, spawn descendants, and call platform syscalls unless a real platform/container boundary is installed. Honest capability naming prevents enterprise callers from relying on protections that do not exist.
-- Implemented evidence: `dci.executor/v1` schemas/reference validation and the canonicalized trusted policy are committed; process spawning, output draining, deadlines, and cancellation remain AF-050 work.
+- Implemented evidence: `dci.executor/v1` schemas/reference validation, canonicalized trusted policy, closed execute-request parsing, and bounded request authorization are implemented; process spawning, output draining, deadlines, and cancellation remain AF-050 work.
 - Extension boundary: containers, remote workers, Linux namespace/seccomp/cgroup isolation, macOS sandbox profiles, or Windows job objects must be replaceable executor backends behind the same versioned contract.

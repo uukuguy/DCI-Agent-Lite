@@ -67,6 +67,15 @@ def main() -> None:
     hypothesis_state = yaml.safe_load(hypotheses_path.read_text())
     hypotheses = hypothesis_state["hypotheses"]
     hypothesis = next(item for item in hypotheses if item["id"] == args.hypothesis_id)
+    session_path = args.state_dir / "session-state.json"
+    session_state = json.loads(session_path.read_text())
+    session_id = session_state["session"]
+    executor_cycle = hypothesis.get("work_package_id") == "AF-050"
+    decision_reason = (
+        "deterministic local executor acceptance"
+        if executor_cycle
+        else "deterministic local setup-policy acceptance"
+    )
     existing_result = next(
         (result for result in hypothesis["results"] if result["run"] == args.run_id),
         None,
@@ -83,14 +92,14 @@ def main() -> None:
         hypothesis["status"] = status
         hypothesis["results"].append(
             {
-                "session": "2026-07-12-pi-revision",
+                "session": session_id,
                 "cycle": args.cycle,
                 "run": args.run_id,
                 "local": total,
                 "local_per_task": per_task,
                 "online": None,
                 "verdict": verdict,
-                "decision_reason": "deterministic local setup-policy acceptance",
+                "decision_reason": decision_reason,
             }
         )
     hypotheses_path.write_text(
@@ -102,14 +111,14 @@ def main() -> None:
         {
             "run_id": args.run_id,
             "cycle": args.cycle,
-            "session": "2026-07-12-pi-revision",
+            "session": session_id,
             "hypothesis_id": args.hypothesis_id,
             "paradigm": hypothesis["parent_paradigm"],
             "pushed_at": timestamp,
             "local_score": total,
             **{dimension: per_task.get(dimension, "") for dimension in LEGACY_DIMENSIONS},
             "push_decision": "PUSH",
-            "decision_reason": "cheap deterministic local acceptance",
+            "decision_reason": decision_reason,
             "verdict": verdict,
             "train_cost_h": "0.01",
             "manifest_path": f"runs/climb/{args.run_id}/manifest.json",
@@ -123,8 +132,6 @@ def main() -> None:
         key=lambda item: -float(item["ranking"]),
     )
     next_hypothesis = remaining[0]["id"] if remaining else None
-    session_path = args.state_dir / "session-state.json"
-    session_state = json.loads(session_path.read_text())
     session_state.update(
         {
             "phase": "implementation",
@@ -142,7 +149,11 @@ def main() -> None:
     journal_text = args.journal.read_text()
     if date_header not in journal_text:
         journal_text += f"\n{date_header}\n"
-    journal_text += f"- {now:%H:%M} {args.hypothesis_id} {verdict}; setup-policy acceptance recorded.\n"
+    acceptance_label = "executor" if executor_cycle else "setup-policy"
+    journal_text += (
+        f"- {now:%H:%M} {args.hypothesis_id} {verdict}; "
+        f"{acceptance_label} acceptance recorded.\n"
+    )
     args.journal.write_text(journal_text)
 
     print(json.dumps({"hypothesis": args.hypothesis_id, "verdict": verdict, "next": next_hypothesis}))

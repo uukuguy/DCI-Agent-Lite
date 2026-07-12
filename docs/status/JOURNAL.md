@@ -147,3 +147,7 @@
 - 21:48 Rust trusted policy 已提交，agent 请求无法控制程序路径、环境或资源上限。[0fa33d9]
 - 21:49 AF-050 live checkpoint 已提交，使新会话可从 request authorization 继续。[74dfd79]
 - 21:51 handoff 审计：主仓库干净、无项目任务进程、外部 Pi dirt 保留；AF-050 保持唯一活跃包。
+- 21:58 climb 已重挂 AF-050 并建立五个受治理假设，旧 Pi/Judge 路线保持退役。[ad4ef98]
+- 22:02 AF-050-H-001 confirmed 4/4; executor acceptance recorded.
+- 22:03 AF-050-H-001 confirmed 4/4; executor acceptance recorded.
+- 22:04 AF-050-H-001 全量 Rust、44 Python tests、fmt、Clippy、Ruff、shell 与范围门通过。

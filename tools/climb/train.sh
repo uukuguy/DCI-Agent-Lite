@@ -6,7 +6,7 @@ if [ "$#" -ne 1 ]; then
     exit 2
 fi
 case "$1" in
-    H-001|H-002|H-003|H-004|H-005|H-006|H-007|H-008|H-009|H-010|H-011|H-012|H-013|H-014|H-015|H-016|H-017|H-018|H-019) ;;
+    H-001|H-002|H-003|H-004|H-005|H-006|H-007|H-008|H-009|H-010|H-011|H-012|H-013|H-014|H-015|H-016|H-017|H-018|H-019|AF-050-H-001) ;;
     *)
         echo "ERROR: train adapter has no acceptance suite for $1." >&2
         exit 2
@@ -20,7 +20,9 @@ run_id="$(date '+%Y%m%d-%H%M%S')-dci-climb-$slug"
 run_dir="$ROOT/runs/climb/$run_id"
 mkdir -p "$run_dir"
 paradigm="external-git-lock"
-if [ "$1" = "H-003" ]; then
+if [ "$1" = "AF-050-H-001" ]; then
+    paradigm="rust-request-authorization"
+elif [ "$1" = "H-003" ]; then
     paradigm="rpc-contract-probe"
 elif [ "$1" = "H-004" ] || [ "$1" = "H-005" ]; then
     paradigm="run-provenance"
@@ -63,7 +65,12 @@ cat >"$run_dir/manifest.json" <<EOF
 }
 EOF
 
-if [ "$1" = "H-003" ]; then
+if [ "$1" = "AF-050-H-001" ]; then
+    if ! cargo test --manifest-path packages/rust/executor/Cargo.toml --test authorization >"$run_dir/train.log" 2>&1; then
+        echo "ERROR: AF-050-H-001 request authorization failed; see $run_dir/train.log" >&2
+        exit 1
+    fi
+elif [ "$1" = "H-003" ]; then
     if ! {
         uv run python -m unittest tests.test_pi_rpc_runner -v
         uv run python scripts/check_pi_rpc.py
