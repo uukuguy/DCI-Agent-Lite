@@ -9,6 +9,7 @@ import urllib.error
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import dci.benchmark.judge as judge_module
 from dci.benchmark.judge import (
     JudgeConfig,
     build_judge_request,
@@ -100,6 +101,43 @@ class JudgeConfigTests(unittest.TestCase):
 
 
 class JudgeTransportTests(unittest.TestCase):
+    def test_judge_request_fingerprint_is_deterministic_and_endpoint_sensitive(self) -> None:
+        self.assertTrue(
+            hasattr(judge_module, "judge_request_fingerprint"),
+            "Judge requests need a safe cache fingerprint",
+        )
+        config = JudgeConfig(
+            base_url="https://api.deepseek.com/v1",
+            api="chat-completions",
+            model="deepseek-v4-flash",
+        )
+        fingerprint = judge_module.judge_request_fingerprint(
+            config=config,
+            question="Question",
+            gold_answer="Gold",
+            predicted_answer="Prediction",
+        )
+        repeated = judge_module.judge_request_fingerprint(
+            config=config,
+            question="Question",
+            gold_answer="Gold",
+            predicted_answer="Prediction",
+        )
+        changed_endpoint = judge_module.judge_request_fingerprint(
+            config=JudgeConfig(
+                base_url="http://localhost:8000/v1",
+                api="chat-completions",
+                model="deepseek-v4-flash",
+            ),
+            question="Question",
+            gold_answer="Gold",
+            predicted_answer="Prediction",
+        )
+
+        self.assertRegex(fingerprint, r"^[0-9a-f]{64}$")
+        self.assertEqual(fingerprint, repeated)
+        self.assertNotEqual(fingerprint, changed_endpoint)
+
     def test_chat_completions_request_and_response_are_normalized(self) -> None:
         config = JudgeConfig(
             base_url="https://api.deepseek.com/v1",
@@ -163,6 +201,18 @@ class JudgeTransportTests(unittest.TestCase):
         self.assertEqual(result["usage"]["input_tokens"], 10)
         self.assertEqual(result["usage"]["output_tokens"], 5)
         self.assertEqual(result["judge_api"], "chat-completions")
+        self.assertNotIn("raw_response", result)
+        self.assertNotIn("raw_response_text", result)
+        self.assertIn("judge_request_fingerprint", result)
+        self.assertEqual(
+            result["judge_request_fingerprint"],
+            judge_module.judge_request_fingerprint(
+                config=config,
+                question="Who?",
+                gold_answer="Adaku",
+                predicted_answer="Adaku /path/to/file",
+            ),
+        )
         self.assertAlmostEqual(result["cost_estimate_usd"]["total_cost"], 0.000018)
 
     def test_responses_request_keeps_the_common_compatible_subset(self) -> None:
@@ -317,6 +367,42 @@ class JudgeTransportTests(unittest.TestCase):
         self.assertNotIn("provider body", str(raised.exception))
         self.assertNotIn("exposed-secret", str(raised.exception))
 
+    def test_invalid_structured_output_error_does_not_echo_provider_body(self) -> None:
+        config = JudgeConfig(api="chat-completions")
+        invalid_payload = {
+            "choices": [
+                {
+                    "finish_reason": "length",
+                    "message": {
+                        "content": "provider body includes exposed-secret"
+                    },
+                }
+            ]
+        }
+        responses = []
+        for _ in range(2):
+            response = MagicMock()
+            response.__enter__.return_value = response
+            response.read.return_value = json.dumps(invalid_payload).encode("utf-8")
+            responses.append(response)
+
+        with patch(
+            "dci.benchmark.judge.urllib.request.urlopen", side_effect=responses
+        ):
+            with self.assertRaisesRegex(
+                ValueError, "invalid structured output twice"
+            ) as raised:
+                judge_answer_sync(
+                    config=config,
+                    question="Who?",
+                    gold_answer="Adaku",
+                    predicted_answer="Adaku",
+                )
+
+        self.assertNotIn("provider body", str(raised.exception))
+        self.assertNotIn("exposed-secret", str(raised.exception))
+        self.assertNotIn("response_excerpt", str(raised.exception))
+
 
 class JudgeResultReuseTests(unittest.TestCase):
     def test_backend_identity_is_part_of_result_reuse(self) -> None:
@@ -325,8 +411,15 @@ class JudgeResultReuseTests(unittest.TestCase):
             api="chat-completions",
             model="deepseek-v4-flash",
         )
+        fingerprint = judge_module.judge_request_fingerprint(
+            config=config,
+            question="Question",
+            gold_answer="Gold",
+            predicted_answer="Prediction",
+        )
         existing = {
             **config.public_dict(),
+            "judge_request_fingerprint": fingerprint,
             "question": "Question",
             "gold_answer": "Gold",
             "predicted_answer": "Prediction",
@@ -365,10 +458,49 @@ class JudgeResultReuseTests(unittest.TestCase):
                 gold_answer="Gold",
                 predicted_answer="Prediction",
             )
+            legacy_path = Path(temporary_directory) / "legacy_eval_result.json"
+            legacy_path.write_text(
+                json.dumps(
+                    {
+                        **config.public_dict(),
+                        "question": "Question",
+                        "gold_answer": "Gold",
+                        "predicted_answer": "Prediction",
+                        "is_correct": True,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            legacy = maybe_reuse_existing_eval(
+                eval_result_path=legacy_path,
+                judge_config=config,
+                question="Question",
+                gold_answer="Gold",
+                predicted_answer="Prediction",
+            )
+            incomplete_path = Path(temporary_directory) / "incomplete_eval_result.json"
+            incomplete_path.write_text(
+                json.dumps(
+                    {
+                        **existing,
+                        "is_correct": None,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            incomplete = maybe_reuse_existing_eval(
+                eval_result_path=incomplete_path,
+                judge_config=config,
+                question="Question",
+                gold_answer="Gold",
+                predicted_answer="Prediction",
+            )
 
         self.assertEqual(reused, existing)
         self.assertIsNone(changed_backend)
         self.assertIsNone(strict_schema)
+        self.assertIsNone(legacy)
+        self.assertIsNone(incomplete)
 
 
 if __name__ == "__main__":

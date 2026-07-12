@@ -34,6 +34,7 @@ from dci.benchmark.judge import (
     DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M,
     JudgeConfig,
     judge_answer_sync,
+    judge_request_fingerprint,
 )
 from dci.config import load_project_env, resolve_pi_paths
 
@@ -253,23 +254,15 @@ def maybe_reuse_existing_eval(
     existing = read_json_if_exists(eval_result_path)
     if not existing:
         return None
-    current_config = judge_config.public_dict()
-    for key in (
-        "judge_model",
-        "judge_base_url",
-        "judge_api",
-        "judge_max_output_tokens",
-        "judge_json_mode",
-        "judge_strict_json_schema",
-        "judge_thinking",
-    ):
-        if existing.get(key) != current_config.get(key):
-            return None
-    if existing.get("question") != question:
+    current_fingerprint = judge_request_fingerprint(
+        config=judge_config,
+        question=question,
+        gold_answer=gold_answer,
+        predicted_answer=predicted_answer,
+    )
+    if existing.get("judge_request_fingerprint") != current_fingerprint:
         return None
-    if existing.get("gold_answer") != gold_answer:
-        return None
-    if existing.get("predicted_answer") != predicted_answer:
+    if not isinstance(existing.get("is_correct"), bool):
         return None
     return existing
 

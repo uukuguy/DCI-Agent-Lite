@@ -190,3 +190,91 @@ hypotheses:
     online: null
     verdict: confirmed 4/4
     decision_reason: deterministic local setup-policy acceptance
+- id: H-010
+  description: Fingerprint the safe judge configuration and fully shaped request before
+    reusing an evaluation result.
+  parent_paradigm: judge-request-fingerprint
+  expected_lift: +1 future request-shaping cache-safety dimension
+  cost_h: 0.1
+  ranking: 0.8
+  status: confirmed
+  created_at: '2026-07-12T18:47:26+08:00'
+  results:
+  - session: 2026-07-12-pi-revision
+    cycle: 10
+    run: 20260712-184823-dci-climb-h010
+    local: 4
+    local_per_task:
+      fingerprint_shape: 1
+      result_persistence: 1
+      reuse_contract: 1
+      adapter_integration: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local setup-policy acceptance
+- id: H-011
+  description: Redact malformed judge-response bodies from terminal errors before
+    preflight or batch artifacts retain them.
+  parent_paradigm: judge-error-redaction
+  expected_lift: +1 failure-path privacy dimension
+  cost_h: 0.1
+  ranking: 0.85
+  status: confirmed
+  created_at: '2026-07-12T18:50:12+08:00'
+  results:
+  - session: 2026-07-12-pi-revision
+    cycle: 11
+    run: 20260712-185042-dci-climb-h011
+    local: 4
+    local_per_task:
+      invalid_response_redaction: 1
+      http_error_redaction: 1
+      retry_contract: 1
+      adapter_integration: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local setup-policy acceptance
+- id: H-012
+  description: Persist only parsed judge verdict data and safe metadata, never raw
+    provider response bodies.
+  parent_paradigm: judge-artifact-privacy
+  expected_lift: +1 successful-artifact privacy dimension
+  cost_h: 0.1
+  ranking: 0.8
+  status: confirmed
+  created_at: '2026-07-12T18:51:56+08:00'
+  results:
+  - session: 2026-07-12-pi-revision
+    cycle: 12
+    run: 20260712-185232-dci-climb-h012
+    local: 4
+    local_per_task:
+      safe_result_projection: 1
+      invalid_error_redaction: 1
+      http_error_redaction: 1
+      adapter_integration: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local setup-policy acceptance
+- id: H-013
+  description: Reuse a cached judge result only after its matching request identity
+    and final boolean verdict are both present.
+  parent_paradigm: judge-cache-completeness
+  expected_lift: +1 corrupted-artifact recovery dimension
+  cost_h: 0.1
+  ranking: 0.75
+  status: confirmed
+  created_at: '2026-07-12T18:53:59+08:00'
+  results:
+  - session: 2026-07-12-pi-revision
+    cycle: 13
+    run: 20260712-185440-dci-climb-h013
+    local: 4
+    local_per_task:
+      matching_identity_reuse: 1
+      legacy_rejection: 1
+      incomplete_rejection: 1
+      adapter_integration: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local setup-policy acceptance

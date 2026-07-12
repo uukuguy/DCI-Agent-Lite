@@ -67,3 +67,11 @@
 - 17:39 H-009 confirmed 4/4; setup-policy acceptance recorded.
 - 18:10 handoff boundary: H-001 through H-009 are all confirmed; research tree has no active hypothesis or process. The latest full verification remains 72 tests plus Ruff, compileall, touched-Bash syntax, diff check, and the model-free Pi RPC probe. The parent worktree is clean; the independent dirty `pi/` checkout remains deliberately excluded. Safe judge configuration/provenance and opt-in Responses strict-schema support are the completed continuation surface.
 - 18:11 [2961daf] Handoff state finalized: safe judge reliability climb results and a recoverable next-session boundary.
+- 18:48 H-010 confirmed 4/4; setup-policy acceptance recorded.
+- 18:50 H-011 confirmed 4/4; setup-policy acceptance recorded.
+- 18:52 H-012 confirmed 4/4; setup-policy acceptance recorded.
+- 18:54 H-013 confirmed 4/4; setup-policy acceptance recorded.
+- 18:55 H-010..H-013 cache and provider-body privacy work ready for full verification and commit.
+- 18:56 H-010..H-013 full verification passed: 82 tests, compile, Ruff, Bash, diff check, and Pi RPC probe.
+- 18:52 H-012 confirmed 4/4; setup-policy acceptance recorded.
+- 18:54 H-013 confirmed 4/4; setup-policy acceptance recorded.

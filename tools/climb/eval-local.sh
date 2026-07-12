@@ -120,6 +120,46 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_judge.JudgeResultReuseTests.test_backend_identity_is_part_of_result_reuse"
         override_test="tests.test_climb_tools.ClimbToolTests.test_h009_train_checks_strict_schema"
         ;;
+    H-010)
+        first_dimension="fingerprint_shape"
+        second_dimension="result_persistence"
+        third_dimension="reuse_contract"
+        fourth_dimension="adapter_integration"
+        immutable_test="tests.test_judge.JudgeTransportTests.test_judge_request_fingerprint_is_deterministic_and_endpoint_sensitive"
+        repeat_test="tests.test_judge.JudgeTransportTests.test_chat_completions_request_and_response_are_normalized"
+        dirty_test="tests.test_judge.JudgeResultReuseTests.test_backend_identity_is_part_of_result_reuse"
+        override_test="tests.test_climb_tools.ClimbToolTests.test_h010_train_checks_request_fingerprints"
+        ;;
+    H-011)
+        first_dimension="invalid_response_redaction"
+        second_dimension="http_error_redaction"
+        third_dimension="retry_contract"
+        fourth_dimension="adapter_integration"
+        immutable_test="tests.test_judge.JudgeTransportTests.test_invalid_structured_output_error_does_not_echo_provider_body"
+        repeat_test="tests.test_judge.JudgeTransportTests.test_http_error_does_not_echo_provider_error_body"
+        dirty_test="tests.test_judge.JudgeTransportTests.test_invalid_structured_output_is_retried_once"
+        override_test="tests.test_climb_tools.ClimbToolTests.test_h011_train_checks_malformed_response_redaction"
+        ;;
+    H-012)
+        first_dimension="safe_result_projection"
+        second_dimension="invalid_error_redaction"
+        third_dimension="http_error_redaction"
+        fourth_dimension="adapter_integration"
+        immutable_test="tests.test_judge.JudgeTransportTests.test_chat_completions_request_and_response_are_normalized"
+        repeat_test="tests.test_judge.JudgeTransportTests.test_invalid_structured_output_error_does_not_echo_provider_body"
+        dirty_test="tests.test_judge.JudgeTransportTests.test_http_error_does_not_echo_provider_error_body"
+        override_test="tests.test_climb_tools.ClimbToolTests.test_h012_train_checks_judge_artifact_privacy"
+        ;;
+    H-013)
+        first_dimension="matching_identity_reuse"
+        second_dimension="legacy_rejection"
+        third_dimension="incomplete_rejection"
+        fourth_dimension="adapter_integration"
+        immutable_test="tests.test_judge.JudgeResultReuseTests.test_backend_identity_is_part_of_result_reuse"
+        repeat_test="tests.test_judge.JudgeResultReuseTests.test_backend_identity_is_part_of_result_reuse"
+        dirty_test="tests.test_judge.JudgeResultReuseTests.test_backend_identity_is_part_of_result_reuse"
+        override_test="tests.test_climb_tools.ClimbToolTests.test_h013_train_checks_complete_judge_cache_results"
+        ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2
         exit 2

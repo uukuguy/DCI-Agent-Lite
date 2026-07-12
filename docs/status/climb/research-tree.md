@@ -1,12 +1,12 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (9 runs).
+> Deterministic summary generated from tracked state (13 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 9
+- Last cycle: 13
 - Next hypothesis: None
 - In flight: none
 - Next action: Trigger Knowledge Layer.
@@ -27,6 +27,10 @@
 | 20260712-172903-dci-climb-h007 | H-007 | 4 | confirmed 4/4 |
 | 20260712-173300-dci-climb-h008 | H-008 | 4 | confirmed 4/4 |
 | 20260712-173934-dci-climb-h009 | H-009 | 4 | confirmed 4/4 |
+| 20260712-184823-dci-climb-h010 | H-010 | 4 | confirmed 4/4 |
+| 20260712-185042-dci-climb-h011 | H-011 | 4 | confirmed 4/4 |
+| 20260712-185232-dci-climb-h012 | H-012 | 4 | confirmed 4/4 |
+| 20260712-185440-dci-climb-h013 | H-013 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

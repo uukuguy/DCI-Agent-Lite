@@ -82,3 +82,20 @@
 - Decision: `DCI_EVAL_JUDGE_STRICT_JSON_SCHEMA` defaults to false and adds the fixed strict JSON Schema only to Responses requests when explicitly enabled.
 - Rationale: strict schema can eliminate malformed verdicts for supporting Responses backends, but sending it by default would break generic OpenAI-compatible Chat Completions services.
 - Cache boundary: the flag is part of all judge-result reuse identities, preventing a verdict generated under one request shape from being reused under another.
+
+## D-010 — Derive judge-result reuse from a canonical safe request fingerprint
+
+- Status: ✅ accepted and implemented decision
+- Decided: 2026-07-12
+- Decision: Persist a SHA-256 digest of `JudgeConfig.public_dict()`, the effective endpoint, and the fully built request. Reuse only a matching digest paired with a boolean `is_correct` verdict.
+- Rationale: hand-maintained field comparisons drift as request shaping evolves; a canonical safe identity prevents stale or partial artifacts from silently avoiding a new judgment.
+- Compatibility boundary: artifacts from before the fingerprint are deliberately rejudged once. The public configuration remains part of the identity so D-009's strict-schema separation applies consistently, including when a flag is a no-op for a compatible backend.
+- Privacy boundary: neither API keys nor raw request content are persisted by the fingerprint.
+
+## D-011 — Do not retain provider response bodies in judge errors or results
+
+- Status: ✅ accepted and implemented decision
+- Decided: 2026-07-12
+- Decision: malformed structured-output failures contain only generic diagnostics, and successful judge results persist only parsed verdict fields, usage, cost, and safe configuration.
+- Rationale: the same transport feeds preflight stderr and asynchronous evaluation artifacts; retaining provider bodies in either success or failure paths can expose unnecessary untrusted content.
+- Boundary: retry behavior and parsed verdict observability remain unchanged; raw provider response text and payloads are intentionally unavailable after the call returns.

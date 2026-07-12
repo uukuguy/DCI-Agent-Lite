@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -424,6 +425,42 @@ def build_judge_request(
     return payload
 
 
+def judge_request_fingerprint(
+    *,
+    config: JudgeConfig,
+    question: str,
+    gold_answer: str,
+    predicted_answer: str,
+) -> str:
+    """Return a stable, safe identity for a fully shaped judge request."""
+
+    request_payload = build_judge_request(
+        config,
+        question=question,
+        gold_answer=gold_answer,
+        predicted_answer=predicted_answer,
+    )
+    return _judge_request_fingerprint(config=config, request_payload=request_payload)
+
+
+def _judge_request_fingerprint(
+    *, config: JudgeConfig, request_payload: Dict[str, Any]
+) -> str:
+    """Fingerprint an already-built request without retaining its contents."""
+
+    canonical_request = json.dumps(
+        {
+            "configuration": config.public_dict(),
+            "endpoint": config.endpoint,
+            "request": request_payload,
+        },
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+    return hashlib.sha256(canonical_request.encode("utf-8")).hexdigest()
+
+
 def judge_answer_sync(
     *,
     config: JudgeConfig,
@@ -436,6 +473,9 @@ def judge_answer_sync(
         question=question,
         gold_answer=gold_answer,
         predicted_answer=predicted_answer,
+    )
+    request_fingerprint = _judge_request_fingerprint(
+        config=config, request_payload=request_payload
     )
     headers = {"Content-Type": "application/json"}
     if config.api_key:
@@ -486,17 +526,8 @@ def judge_answer_sync(
             continue
         break
     else:
-        choices = response_payload.get("choices")
-        first_choice = choices[0] if isinstance(choices, list) and choices else {}
-        finish_reason = (
-            first_choice.get("finish_reason")
-            if isinstance(first_choice, dict)
-            else None
-        )
-        excerpt = response_text[:240].replace("\n", "\\n")
         raise ValueError(
-            f"{last_parse_error}; judge returned invalid structured output twice "
-            f"(finish_reason={finish_reason!r}, response_excerpt={excerpt!r})"
+            f"{last_parse_error}; judge returned invalid structured output twice"
         ) from last_parse_error
 
     usage = normalize_usage(response_payload.get("usage"))
@@ -505,6 +536,7 @@ def judge_answer_sync(
         **config.public_dict(),
         "judged_at": _utc_now(),
         "attempts": attempts,
+        "judge_request_fingerprint": request_fingerprint,
         "question": question,
         "gold_answer": gold_answer,
         "predicted_answer": predicted_answer,
@@ -513,6 +545,4 @@ def judge_answer_sync(
         "reason": str(parsed.get("reason", "")),
         "usage": usage,
         "cost_estimate_usd": estimate_judge_cost(usage, config),
-        "raw_response_text": response_text,
-        "raw_response": response_payload,
     }
