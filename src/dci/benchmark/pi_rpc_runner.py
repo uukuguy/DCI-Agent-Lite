@@ -14,6 +14,7 @@ This variant is optimized for experiments:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import queue
@@ -37,6 +38,13 @@ from dci.benchmark.judge import (
     judge_request_fingerprint,
 )
 from dci.config import load_project_env, resolve_pi_paths
+from dci.framework.adapters.pi import PiProtocolAdapter, map_pi_capabilities
+from dci.framework.protocol import (
+    MAX_DEADLINE_MS,
+    PROTOCOL_VERSION,
+    validate_event_stream,
+    validate_run_request,
+)
 
 
 SCRIPT_PATH = Path(__file__).resolve()
@@ -491,6 +499,8 @@ class RunRecorder:
         self.stderr_path = self.output_dir / "stderr.txt"
         self.question_path = self.output_dir / "question.txt"
         self.tool_results_dir = self.output_dir / "tool_results"
+        self.protocol_dir = self.output_dir / "protocol"
+        self._protocol_events: List[Dict[str, Any]] = []
 
         if resume:
             self.state = self._load_existing_state()
@@ -622,8 +632,80 @@ class RunRecorder:
         self.state["pi_source"] = self.pi_source
         self.conversation_full["pi_source"] = self.pi_source
         self.latest_model_context["pi_source"] = self.pi_source
+        self._init_protocol_attempt(
+            question=question,
+            tools=tools,
+            rpc_timeout_seconds=rpc_timeout_seconds,
+        )
         self._restore_tool_call_timing_state()
         self._write_artifacts()
+
+    def _init_protocol_attempt(
+        self,
+        *,
+        question: str,
+        tools: Optional[str],
+        rpc_timeout_seconds: Optional[float],
+    ) -> None:
+        attempt = int(self.state.get("resume_count", 0)) + 1
+        attempt_stem = f"attempt-{attempt:04d}"
+        run_id = f"{sanitize_path_component(self.output_dir.name)}-{attempt_stem}"
+        self.protocol_dir.mkdir(parents=True, exist_ok=True)
+        self.protocol_request_path = self.protocol_dir / f"{attempt_stem}.request.json"
+        self.protocol_events_path = self.protocol_dir / f"{attempt_stem}.events.jsonl"
+        self.protocol_events_path.write_text("", encoding="utf-8")
+        capabilities = map_pi_capabilities(tools)
+        request: Dict[str, Any] = {
+            "protocol": PROTOCOL_VERSION,
+            "run_id": run_id,
+            "input": {"text": question},
+            "requested_capabilities": capabilities,
+        }
+        if (
+            rpc_timeout_seconds is not None
+            and rpc_timeout_seconds > 0
+            and rpc_timeout_seconds * 1000 <= MAX_DEADLINE_MS
+        ):
+            request["deadline_ms"] = max(1, int(round(rpc_timeout_seconds * 1000)))
+        validate_run_request(request)
+        write_json(self.protocol_request_path, request)
+        self._protocol_adapter = PiProtocolAdapter(
+            run_id=run_id,
+            capabilities=capabilities,
+            emit=self._emit_protocol_event,
+        )
+        self._protocol_adapter.start()
+        self.state["protocol"] = {
+            "version": PROTOCOL_VERSION,
+            "run_id": run_id,
+            "attempt": attempt,
+            "request_json": str(self.protocol_request_path),
+            "events_jsonl": str(self.protocol_events_path),
+        }
+
+    def _emit_protocol_event(self, event: Dict[str, object]) -> None:
+        cloned = clone_json(event)
+        self._protocol_events.append(cloned)
+        with self.protocol_events_path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(cloned, ensure_ascii=False) + "\n")
+
+    def _finalize_protocol_attempt(self, status: str) -> None:
+        if self._protocol_adapter.terminal:
+            return
+        if status == "completed":
+            artifact: Optional[Dict[str, object]] = None
+            if self.final_path.exists():
+                artifact = {
+                    "artifact_id": "final-answer",
+                    "kind": "answer",
+                    "media_type": "text/plain",
+                    "uri": self.final_path.name,
+                    "sha256": hashlib.sha256(self.final_path.read_bytes()).hexdigest(),
+                }
+            self._protocol_adapter.complete(artifact=artifact)
+        else:
+            self._protocol_adapter.fail()
+        validate_event_stream(self._protocol_events)
 
     def _restore_tool_call_timing_state(self) -> None:
         self._pending_tool_call_starts = {}
@@ -974,6 +1056,8 @@ class RunRecorder:
         with self.events_path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(event, ensure_ascii=False) + "\n")
 
+        self._protocol_adapter.consume(event)
+
         recorded_at = utc_now()
         self.state["event_count"] += 1
         self.state["last_event_type"] = event.get("type")
@@ -1096,6 +1180,7 @@ class RunRecorder:
         if error:
             self.latest_model_context["error"] = error
 
+        self._finalize_protocol_attempt(status)
         self._write_artifacts()
 
 

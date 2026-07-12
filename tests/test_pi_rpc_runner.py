@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import json
 import subprocess
 import sys
 import tempfile
@@ -10,6 +11,7 @@ from unittest.mock import MagicMock, call, patch
 
 import dci.benchmark.pi_rpc_runner as rpc_runner
 from dci.benchmark.pi_rpc_runner import PiRpcClient, parse_args
+from dci.framework.protocol import validate_event_stream, validate_run_request
 
 
 def make_client() -> PiRpcClient:
@@ -28,7 +30,95 @@ def make_client() -> PiRpcClient:
     )
 
 
+def make_recorder(output_dir: Path, *, resume: bool = False) -> rpc_runner.RunRecorder:
+    features = rpc_runner.ConversationFeatures(
+        clear_tool_results=False,
+        clear_tool_results_keep_last=3,
+        externalize_tool_results=False,
+        strip_thinking=False,
+        strip_usage=False,
+    )
+    return rpc_runner.RunRecorder(
+        output_dir=output_dir,
+        question="question",
+        package_dir=Path("pi/packages/coding-agent"),
+        agent_dir=Path("pi/.pi/agent"),
+        cwd=Path("."),
+        provider="provider",
+        model="model",
+        tools="read,bash",
+        max_turns=2,
+        rpc_timeout_seconds=30,
+        system_prompt_file=None,
+        append_system_prompt_file=None,
+        conversation_features=features,
+        keep_session=False,
+        resume=resume,
+    )
+
+
 class PiRpcLifecycleTests(unittest.TestCase):
+    def test_run_recorder_writes_a_conformant_protocol_attempt(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "run"
+            with patch.object(
+                rpc_runner,
+                "collect_pi_source_provenance",
+                return_value={"commit": "abc123", "dirty": False},
+            ):
+                recorder = make_recorder(output_dir)
+
+            recorder.record_event(
+                {
+                    "type": "message_update",
+                    "assistantMessageEvent": {
+                        "type": "text_delta",
+                        "delta": "answer",
+                    },
+                }
+            )
+            recorder.finalize(status="completed", final_text="answer")
+
+            request_path = output_dir / "protocol/attempt-0001.request.json"
+            events_path = output_dir / "protocol/attempt-0001.events.jsonl"
+            request = json.loads(request_path.read_text())
+            events = [json.loads(line) for line in events_path.read_text().splitlines()]
+
+        validate_run_request(request)
+        validate_event_stream(events)
+        self.assertEqual(events[-2]["type"], "artifact.created")
+        self.assertEqual(events[-1]["type"], "run.completed")
+        self.assertEqual(recorder.state["protocol"]["events_jsonl"], str(events_path))
+
+    def test_run_recorder_isolates_protocol_attempts_on_resume(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "run"
+            with patch.object(
+                rpc_runner,
+                "collect_pi_source_provenance",
+                return_value={"commit": "abc123", "dirty": False},
+            ):
+                first = make_recorder(output_dir)
+                first.finalize(status="failed", error="provider detail")
+                second = make_recorder(output_dir, resume=True)
+                second.finalize(status="failed", error="another detail")
+
+            first_events_path = output_dir / "protocol/attempt-0001.events.jsonl"
+            second_events_path = output_dir / "protocol/attempt-0002.events.jsonl"
+            first_events = [
+                json.loads(line) for line in first_events_path.read_text().splitlines()
+            ]
+            second_events = [
+                json.loads(line) for line in second_events_path.read_text().splitlines()
+            ]
+
+        validate_event_stream(first_events)
+        validate_event_stream(second_events)
+        self.assertNotEqual(first_events[0]["run_id"], second_events[0]["run_id"])
+        self.assertEqual(first_events[-1]["type"], "run.failed")
+        self.assertEqual(second_events[-1]["type"], "run.failed")
+        self.assertNotIn("provider detail", json.dumps(first_events))
+
     def test_pi_source_warning_reports_expected_revision_mismatch(self) -> None:
         formatter = getattr(rpc_runner, "format_pi_source_warning", None)
         self.assertIsNotNone(formatter)

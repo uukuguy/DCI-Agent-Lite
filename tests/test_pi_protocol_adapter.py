@@ -132,6 +132,24 @@ class PiProtocolAdapterTests(unittest.TestCase):
                 }
             )
 
+    def test_unmatched_tool_result_is_protocol_drift(self) -> None:
+        adapter = PiProtocolAdapter(
+            run_id="pi-run-unmatched",
+            capabilities=["shell"],
+            emit=lambda event: None,
+        )
+        adapter.start()
+
+        with self.assertRaises(ProtocolError):
+            adapter.consume(
+                {
+                    "type": "tool_execution_end",
+                    "toolCallId": "missing-call",
+                    "result": "none",
+                    "isError": False,
+                }
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

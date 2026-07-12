@@ -47,6 +47,8 @@ class PiProtocolAdapter:
         self.sequence = 0
         self.started = False
         self.terminal = False
+        self.tool_calls: set[str] = set()
+        self.tool_results: set[str] = set()
 
     def _emit(self, event_type: str, payload: dict[str, object]) -> None:
         if self.terminal:
@@ -98,6 +100,9 @@ class PiProtocolAdapter:
                 raise ProtocolError("Pi tool_execution_start lacks toolCallId")
             if not isinstance(tool_name, str) or not tool_name:
                 raise ProtocolError("Pi tool_execution_start lacks toolName")
+            if call_id in self.tool_calls:
+                raise ProtocolError(f"Pi emitted duplicate toolCallId {call_id}")
+            self.tool_calls.add(call_id)
             raw_args = raw_event.get("args")
             arguments = (
                 dict(deepcopy(raw_args))
@@ -117,6 +122,11 @@ class PiProtocolAdapter:
             is_error = raw_event.get("isError")
             if not isinstance(is_error, bool):
                 raise ProtocolError("Pi tool_execution_end lacks boolean isError")
+            if call_id not in self.tool_calls:
+                raise ProtocolError(f"Pi tool result has no matching call {call_id}")
+            if call_id in self.tool_results:
+                raise ProtocolError(f"Pi emitted duplicate tool result {call_id}")
+            self.tool_results.add(call_id)
             self._emit(
                 "tool.result",
                 {

@@ -12,7 +12,12 @@ outputs/runs/<timestamp>/
   final.txt                 # final assistant answer
   stderr.txt                # Pi stderr capture
   question.txt              # question text used for the run
+  protocol/
+    attempt-0001.request.json # Agent Runtime Protocol v1 request for this attempt
+    attempt-0001.events.jsonl # normalized, conformant event stream for this attempt
 ```
+
+Each resume creates the next isolated protocol attempt (`attempt-0002`, and so on). Raw Pi events continue to append to `events.jsonl`; protocol events contain normalized text, tool, usage, artifact, and terminal events, but exclude hidden thinking and provider request payloads. `state.json.protocol` points to the current attempt and its protocol run ID.
 
 `state.json`, `conversation_full.json`, and `latest_model_context.json` include a `pi_source` object so a result can identify its actual external runtime source:
 
