@@ -19,7 +19,7 @@
 - Claude Code provider access: the adapter supports stored login and inherited environment-configured backends; provider-backed UAT is deferred while the local account is unavailable and does not block host-language work.
 - Host contracts: Python and TypeScript expose the same schema-backed runtime manifest, request, event, and asynchronous client boundary without adapter-private types.
 - Controlled execution: `dci.executor/v1` has a runnable concurrent Rust JSONL sidecar with trusted startup policy, direct execution, bounded dual-stream draining, deadline/cancel kill-and-reap, duplicate-ID denial, out-of-order correlation, safe parse errors, EOF draining, operator documentation, and root verification targets.
-- Package composition: `dci.package/v1` manifests feed a deterministic Python static composer that rejects duplicate/ambiguous providers, missing capability/policy/event/artifact edges, and cycles while producing stable order. The DCI reference graph and TypeScript parity remain pending.
+- Package composition: `dci.package/v1` and the deterministic Python composer now resolve a portable policy → DCI research → evaluation → observability graph identically for Pi and Claude Code capability mappings. TypeScript schema/fixture parity remains pending.
 
 ## Open Problems (theme-level)
 

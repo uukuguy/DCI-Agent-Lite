@@ -151,6 +151,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_package_composition.PackageCompositionTests.test_missing_capability_policy_event_and_artifact_edges_are_rejected"
         override_test="tests.test_package_composition.PackageCompositionTests.test_dependency_cycles_are_rejected"
         ;;
+    AF-060-H-003)
+        first_dimension="portable_manifests"
+        second_dimension="runtime_parity"
+        third_dimension="research_audit_edges"
+        fourth_dimension="capability_rejection"
+        immutable_test="tests.test_package_composition.DciReferencePackageTests.test_reference_manifests_are_portable_and_closed"
+        repeat_test="tests.test_package_composition.DciReferencePackageTests.test_pi_and_claude_compose_the_same_reference_graph"
+        dirty_test="tests.test_package_composition.DciReferencePackageTests.test_reference_graph_exposes_research_and_audit_edges"
+        override_test="tests.test_package_composition.DciReferencePackageTests.test_reference_graph_rejects_a_runtime_without_required_capabilities"
+        ;;
     H-001)
         first_dimension="immutable_resolution"
         second_dimension="repeat_validation"

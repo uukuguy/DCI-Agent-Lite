@@ -6,10 +6,13 @@ from pathlib import Path
 
 from dci.framework.package_protocol import PackageProtocolError, validate_package_manifest
 from dci.framework.packages import PackageCompositionError, compose_packages
+from dci.framework.adapters.claude_code import map_claude_capabilities
+from dci.framework.adapters.pi import map_pi_capabilities
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_DIR = REPO_ROOT / "tests/fixtures/packages/v1"
+MANIFEST_DIR = REPO_ROOT / "packages/manifests"
 
 
 class PackageManifestTests(unittest.TestCase):
@@ -149,6 +152,68 @@ class PackageCompositionTests(unittest.TestCase):
 
         with self.assertRaises(PackageCompositionError):
             compose_packages([first, second])
+
+
+class DciReferencePackageTests(unittest.TestCase):
+    def manifests(self) -> list[dict[str, object]]:
+        names = (
+            "dci-research.json",
+            "local-corpus-policy.json",
+            "protocol-observability.json",
+            "dci-evaluation.json",
+        )
+        return [json.loads((MANIFEST_DIR / name).read_text()) for name in names]
+
+    def compose_for(self, capabilities: set[str]):
+        return compose_packages(
+            self.manifests(),
+            host_capabilities=capabilities,
+            host_events={
+                "artifact.created",
+                "run.completed",
+                "run.started",
+                "tool.result",
+            },
+            host_artifacts={"text/plain"},
+        )
+
+    def test_reference_manifests_are_portable_and_closed(self) -> None:
+        for manifest in self.manifests():
+            with self.subTest(package=manifest["package_id"]):
+                validate_package_manifest(manifest)
+                self.assertNotIn("runtime_id", manifest)
+                self.assertNotIn("provider", manifest)
+                self.assertNotIn("prompt", manifest)
+                self.assertNotIn("command", manifest)
+
+    def test_pi_and_claude_compose_the_same_reference_graph(self) -> None:
+        pi = self.compose_for(set(map_pi_capabilities("read,bash")))
+        claude = self.compose_for(set(map_claude_capabilities(["Read", "Bash"])))
+
+        self.assertEqual(pi, claude)
+        self.assertEqual(
+            pi.package_ids,
+            (
+                "policy.local-corpus",
+                "dci.research",
+                "dci.evaluation",
+                "protocol.observability",
+            ),
+        )
+
+    def test_reference_graph_exposes_research_and_audit_edges(self) -> None:
+        composition = self.compose_for({"filesystem.read", "shell"})
+
+        self.assertEqual(
+            composition.provided_capabilities, ("research.local-corpus",)
+        )
+        self.assertIn("application/vnd.dci.research+json", composition.produced_artifacts)
+        self.assertIn("application/vnd.dci.verdict+json", composition.produced_artifacts)
+        self.assertIn("audit.package-observed", composition.emitted_events)
+
+    def test_reference_graph_rejects_a_runtime_without_required_capabilities(self) -> None:
+        with self.assertRaises(PackageCompositionError):
+            self.compose_for({"filesystem.read"})
 
 
 if __name__ == "__main__":

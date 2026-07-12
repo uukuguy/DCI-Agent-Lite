@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-12 22:37 +0800. **Context recovery checkpoint — continue autonomous climb after resume.**
+> Updated: 2026-07-12 22:47 +0800. **Session remains active — autonomous climb continues.**
 
 Active work package: AF-060
 
@@ -10,7 +10,8 @@ Active work package: AF-060
 - AF-060 is active under the package-first design and implementation plan; workflow-engine/control-plane-first paths are explicitly excluded.
 - `AF-060-H-001` is confirmed: closed manifests, all six kinds, forbidden fields, identifiers, and sorted/unique edges are validated.
 - `AF-060-H-002` is confirmed: composition order is stable and duplicate, ambiguous, missing-edge, and cyclic graphs are rejected.
-- `AF-060-H-003` DCI multi-runtime reference package graph is next.
+- `AF-060-H-003` is confirmed: Pi and Claude Code compose the same policy/research/evaluation/observability graph.
+- `AF-060-H-004` TypeScript shared-schema/fixture parity is next.
 
 ## Durable boundary
 
@@ -22,7 +23,7 @@ Active work package: AF-060
 
 ## Immediate next action
 
-Write failing tests that load DCI research, local-corpus policy, protocol observability, and evaluation manifests and compose the same graph against Pi and Claude Code portable capabilities.
+Add failing Node tests for valid/invalid shared package fixtures and public `validatePackageManifest` types, then copy the canonical schema into the TypeScript build.
 
 ## Guardrails
 
@@ -33,6 +34,6 @@ Write failing tests that load DCI research, local-corpus policy, protocol observ
 ## Ready commands
 
 ```bash
-python3 tools/project_scope_check.py --climb-hypothesis AF-060-H-003
+python3 tools/project_scope_check.py --climb-hypothesis AF-060-H-004
 uv run python -m unittest tests.test_package_composition -v
 ```

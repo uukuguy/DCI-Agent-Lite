@@ -195,4 +195,4 @@
 - Rationale: a workflow engine or enterprise control plane built first would invent package, policy, event, and artifact semantics implicitly and couple them to one host.
 - Boundary: AF-060 does not implement scheduling, persistent memory storage, multi-tenant administration, or adapter-specific package variants.
 - Revalidation trigger: add an execution engine only after two independently useful package graphs cannot be expressed or validated by the static contract.
-- Implemented evidence: the closed manifest contract (H-001) and deterministic Python capability/policy/event/artifact composer (H-002) are confirmed; the DCI reference graph and TypeScript parity remain pending.
+- Implemented evidence: the manifest contract (H-001), deterministic composer (H-002), and one identical Pi/Claude DCI reference graph (H-003) are confirmed; TypeScript parity remains pending.
