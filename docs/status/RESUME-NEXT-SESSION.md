@@ -1,27 +1,28 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-12 20:37 +0800. **Session remains active — Agent Runtime Protocol v1 is being implemented.**
+> Updated: 2026-07-12 20:45 +0800. **Session remains active — the Pi reference adapter is being implemented.**
 
 ## TL;DR
 
 - The project north star is the multi-runtime, multi-language Agent Application Framework; DCI/Pi is the first reference capability and adapter surface.
 - AF-000 is verified complete: the worklist, scope audit, manager repair, climb parent enforcement, and recoverable state are installed.
-- AF-010 is the only authorized active package. It defines the language-neutral Agent Runtime Protocol v1, schemas, fixtures, and Python reference validation.
+- AF-010 is verified complete: the language-neutral schemas, fixtures, and Python reference validator pass full repository checks.
+- AF-020 is the only authorized active package. It maps stable Pi RPC events into isolated protocol v1 attempts without changing the benchmark runtime.
 - Legacy Pi/Judge climb H-001 through H-019 remains completed reference maintenance and must not be restarted without a new parented package.
 
 ## Active work package
 
-Active work package: AF-010
+Active work package: AF-020
 
-- Design: `docs/superpowers/specs/2026-07-12-agent-runtime-protocol-design.md`
-- Plan: `docs/superpowers/plans/2026-07-12-agent-runtime-protocol.md`
-- Acceptance in progress: canonical schemas, valid and invalid JSONL fixtures, and dependency-free Python lifecycle validation.
+- Design: `docs/superpowers/specs/2026-07-12-pi-protocol-adapter-design.md`
+- Plan: `docs/superpowers/plans/2026-07-12-pi-protocol-adapter.md`
+- Acceptance in progress: Pi event translation and per-attempt conformant request/event artifacts.
 
 ## Next action
 
-1. Write the failing AF-010 fixture and protocol tests.
-2. Add canonical JSON schemas and a dependency-free Python reference validator.
-3. Run full conformance verification and advance to AF-020 only with evidence.
+1. Write failing unit tests for Pi capability, text, tool, usage, terminal, and reasoning-omission mappings.
+2. Persist isolated protocol attempts through `RunRecorder` without altering raw artifacts.
+3. Run full compatibility verification and record whether provider-backed runtime acceptance is available.
 
 ## Guardrails
 

@@ -108,3 +108,7 @@
 - 20:35 ai-project-manager 已加入强制范围预检与治理修复循环。[902d9df external skill]
 - 20:37 AF-000 通过 104 tests、编译、Ruff、Bash 与正负范围审计，转入 AF-010。
 - 20:37 Agent Runtime Protocol v1 设计与测试计划已提交。[70e9075]
+- 20:38 工作包状态已验证切换至 AF-010，恢复入口与范围审计一致。[70d79b9]
+- 20:43 Agent Runtime Protocol v1 schema、JSONL fixtures 与 Python validator 已测试提交。[f03f081]
+- 20:45 AF-010 通过 109 tests、编译、Ruff 与范围审计；协议契约完成并转入 AF-020。
+- 20:45 Pi 协议适配器设计与测试计划已固化，原始 RPC 行为保持不变。
