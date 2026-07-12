@@ -44,6 +44,35 @@ class AsterionStructureTests(unittest.TestCase):
         pyproject = (ROOT / "pyproject.toml").read_text()
         self.assertIn('packages = ["src/asterion", "src/dci"]', pyproject)
 
+    def test_package_and_assembly_objects_are_compatibility_aliases(self) -> None:
+        from asterion.assembly.protocol import AssemblyPlan as NewPlan
+        from asterion.packages.catalog import PackageCatalog as NewCatalog
+        from asterion.packages.composition import PackageComposition as NewComposition
+        from asterion.services.executor_protocol import ExecutorProtocolError as NewError
+        from dci.framework.assembly import AssemblyPlan as OldPlan
+        from dci.framework.executor_protocol import ExecutorProtocolError as OldError
+        from dci.framework.package_catalog import PackageCatalog as OldCatalog
+        from dci.framework.packages import PackageComposition as OldComposition
+
+        self.assertIs(OldPlan, NewPlan)
+        self.assertIs(OldCatalog, NewCatalog)
+        self.assertIs(OldComposition, NewComposition)
+        self.assertIs(OldError, NewError)
+
+    def test_dci_framework_compatibility_modules_define_no_behavior(self) -> None:
+        import ast
+
+        for path in (ROOT / "src/dci/framework").glob("*.py"):
+            if path.name == "__init__.py":
+                continue
+            tree = ast.parse(path.read_text())
+            definitions = [
+                node
+                for node in tree.body
+                if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+            ]
+            self.assertEqual(definitions, [], path)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -253,6 +253,8 @@
 - 02:28 AF-095 spec 获批；实施计划锁定四个可验收的 Asterion extraction cycles。
 - 02:29 AF-095-H-001 confirmed 4/4；Asterion runtime ownership 与 DCI object-identity compatibility 成立。
 - 02:30 climb next selection 根因为全局 pending 排序；已限定 active work package 并加回归测试。
+- 02:31 Asterion runtime package 已提交，为其余框架模块抽离建立兼容模式。[5138fcf]
+- 02:34 Asterion package/assembly/executor extraction 通过 69 focused tests，旧模块无行为定义。
 - 01:36 AF-090-H-001 confirmed 4/4; package acceptance recorded.
 - 01:40 AF-090-H-002 confirmed 4/4; package acceptance recorded.
 - 01:47 AF-090-H-003 confirmed 4/4; package acceptance recorded.
