@@ -23,6 +23,7 @@
 - Controlled-code packages: portable policy → workflow → evaluation/observability manifests form the second static graph identically for Pi and Claude Code normalized read capabilities plus the shared `executor.controlled` host service. Capability, policy, event, artifact, and permutation boundaries are verified without changing the composer.
 - TypeScript package parity: the public host validates all eight checked-in manifests through the canonical schema, and a source-boundary test prevents a second TypeScript composer.
 - AF-070 acceptance: the controlled-code graph, host-service boundary, failure matrix, cross-language validation, and non-execution documentation pass full framework closure; the static contract did not require an execution engine change.
+- Local catalog: the Python reference surface deterministically discovers and validates direct JSON children across explicit root/file permutations without recursion; fail-closed filesystem and identity hardening is next.
 
 ## Open Problems (theme-level)
 
@@ -52,6 +53,7 @@
 - `src/dci/benchmark/pi_rpc_runner.py` — existing Pi RPC reference runtime.
 - `src/dci/benchmark/pi_system_prompt.py` — Pi-owned system-prompt bridge.
 - `src/dci/framework/host.py` — public Python Agent Runtime Protocol host contract.
+- `src/dci/framework/package_catalog.py` — explicit-root deterministic local package discovery and catalog types.
 - `packages/typescript/agent-runtime/` — public TypeScript host package and shared-fixture validator.
 - `src/dci/framework/executor_protocol.py` — Python reference validator for `dci.executor/v1`.
 - `packages/rust/executor/` — runnable Rust controlled-executor sidecar and library with complete AF-050 policy/process/resource/service acceptance.

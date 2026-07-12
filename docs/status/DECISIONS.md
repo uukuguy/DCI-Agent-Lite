@@ -216,3 +216,4 @@
 - Rationale: both static graphs are useful only as checked-in file lists today; deterministic validated discovery is the smallest next framework capability and precedes application assembly or distribution infrastructure.
 - Boundary: roots are trusted operator input; discovery rejects symlinks and ambiguity, does not recurse, load code, access a network, install packages, choose version ranges, or execute a graph.
 - Revalidation trigger: add an assembly manifest only after catalog selections need a portable binding to runtime and host-service identities; add distribution only when a real remote source is required.
+- Implemented evidence: AF-080-H-001 confirms root/file permutation stability, canonical manifest validation, direct-child filtering, and non-recursive discovery.

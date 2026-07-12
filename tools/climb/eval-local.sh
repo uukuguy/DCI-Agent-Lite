@@ -242,6 +242,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_package_composition.ControlledCodeDocumentationTests.test_guide_defines_the_shared_host_service_boundary"
         override_test="tests.test_climb_tools.ClimbToolTests.test_af070_h004_train_runs_full_framework_closure_gate"
         ;;
+    AF-080-H-001)
+        first_dimension="root_permutation"
+        second_dimension="file_order"
+        third_dimension="canonical_validation"
+        fourth_dimension="non_recursive_filtering"
+        immutable_test="tests.test_package_catalog.PackageDiscoveryTests.test_root_permutation_produces_identical_catalog_entries"
+        repeat_test="tests.test_package_catalog.PackageDiscoveryTests.test_file_creation_order_does_not_change_reference_order"
+        dirty_test="tests.test_package_catalog.PackageDiscoveryTests.test_discovered_manifests_pass_canonical_validation"
+        override_test="tests.test_package_catalog.PackageDiscoveryTests.test_discovery_ignores_non_json_and_nested_files"
+        ;;
     H-001)
         first_dimension="immutable_resolution"
         second_dimension="repeat_validation"

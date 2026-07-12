@@ -202,6 +202,12 @@
 - 00:04 local catalog 方向获批：显式 roots、精确版本、fail-closed discovery，不含 registry/安装/执行。
 - 00:06 local package catalog 设计已提交，为显式 discovery 固定 trust/version 边界。[a12bcd9]
 - 00:10 AF-070 完成；AF-080 catalog 设计、计划与四个 parented hypotheses 接管主线。
+- 00:11 AF-080 治理切换已提交，local catalog 进入显式 scope/trust 控制。[37cd9fb]
+- 01:16 AF-080-H-001 confirmed 4/4; package acceptance recorded.
+- 01:17 AF-080-H-001 通过 78 focused tests、compile、Ruff、shell、scope 与 diff。
 - 23:22 AF-070-H-002 confirmed 4/4; package acceptance recorded.
 - 23:25 AF-070-H-003 confirmed 4/4; package acceptance recorded.
 - 23:28 AF-070-H-004 confirmed 4/4; package acceptance recorded.
+
+## 2026-07-13
+- 01:16 AF-080-H-001 confirmed 4/4; package acceptance recorded.

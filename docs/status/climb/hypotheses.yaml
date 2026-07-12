@@ -746,17 +746,31 @@ hypotheses:
     decision_reason: deterministic local package acceptance
 - id: AF-080-H-001
   work_package_id: AF-080
-  description: Discover and validate direct local package documents deterministically across root and file permutations.
+  description: Discover and validate direct local package documents deterministically
+    across root and file permutations.
   parent_paradigm: local-package-discovery
   expected_lift: +1 deterministic discovery boundary
   cost_h: 0.6
   ranking: 0.9
-  status: pending
+  status: confirmed
   created_at: '2026-07-13T00:10:00+08:00'
-  results: []
+  results:
+  - session: 2026-07-13-af-080-local-package-catalog
+    cycle: 35
+    run: 20260713-011629-dci-climb-af080h001
+    local: 4
+    local_per_task:
+      root_permutation: 1
+      file_order: 1
+      canonical_validation: 1
+      non_recursive_filtering: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-080-H-002
   work_package_id: AF-080
-  description: Fail closed on invalid roots documents symlinks and duplicate exact identities with safe errors.
+  description: Fail closed on invalid roots documents symlinks and duplicate exact
+    identities with safe errors.
   parent_paradigm: local-package-discovery-safety
   expected_lift: +1 filesystem trust boundary
   cost_h: 0.7
@@ -766,7 +780,8 @@ hypotheses:
   results: []
 - id: AF-080-H-003
   work_package_id: AF-080
-  description: Select exact fresh manifests and compose both checked-in reference graphs.
+  description: Select exact fresh manifests and compose both checked-in reference
+    graphs.
   parent_paradigm: exact-package-selection
   expected_lift: +1 catalog composition integration
   cost_h: 0.6
@@ -776,7 +791,8 @@ hypotheses:
   results: []
 - id: AF-080-H-004
   work_package_id: AF-080
-  description: Document local catalog trust boundaries and close AF-080 through full framework gates.
+  description: Document local catalog trust boundaries and close AF-080 through full
+    framework gates.
   parent_paradigm: local-package-catalog-acceptance
   expected_lift: +1 AF-080 closure confidence
   cost_h: 0.4

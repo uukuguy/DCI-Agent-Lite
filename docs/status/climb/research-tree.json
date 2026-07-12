@@ -1,13 +1,13 @@
 {
-  "run_count": 34,
+  "run_count": 35,
   "session": {
     "session": "2026-07-13-af-080-local-package-catalog",
     "phase": "implementation",
     "work_package_id": "AF-080",
-    "last_cycle": 34,
-    "next_hypothesis": "AF-080-H-001",
+    "last_cycle": 35,
+    "next_hypothesis": "AF-080-H-002",
     "in_flight": null,
-    "next_action": "Start AF-080-H-001.",
+    "next_action": "Start AF-080-H-002.",
     "falsified_routes": [
       "duplicate the authoritative Pi commit across setup.sh and .env.template",
       "convert the independent Pi checkout to vendored or submodule ownership",
@@ -18,18 +18,6 @@
     ]
   },
   "active": [
-    {
-      "id": "AF-080-H-001",
-      "work_package_id": "AF-080",
-      "description": "Discover and validate direct local package documents deterministically across root and file permutations.",
-      "parent_paradigm": "local-package-discovery",
-      "expected_lift": "+1 deterministic discovery boundary",
-      "cost_h": 0.6,
-      "ranking": 0.9,
-      "status": "pending",
-      "created_at": "2026-07-13T00:10:00+08:00",
-      "results": []
-    },
     {
       "id": "AF-080-H-002",
       "work_package_id": "AF-080",
@@ -987,6 +975,34 @@
           "decision_reason": "deterministic local package acceptance"
         }
       ]
+    },
+    {
+      "id": "AF-080-H-001",
+      "work_package_id": "AF-080",
+      "description": "Discover and validate direct local package documents deterministically across root and file permutations.",
+      "parent_paradigm": "local-package-discovery",
+      "expected_lift": "+1 deterministic discovery boundary",
+      "cost_h": 0.6,
+      "ranking": 0.9,
+      "status": "confirmed",
+      "created_at": "2026-07-13T00:10:00+08:00",
+      "results": [
+        {
+          "session": "2026-07-13-af-080-local-package-catalog",
+          "cycle": 35,
+          "run": "20260713-011629-dci-climb-af080h001",
+          "local": 4,
+          "local_per_task": {
+            "root_permutation": 1,
+            "file_order": 1,
+            "canonical_validation": 1,
+            "non_recursive_filtering": 1
+          },
+          "online": null,
+          "verdict": "confirmed 4/4",
+          "decision_reason": "deterministic local package acceptance"
+        }
+      ]
     }
   ],
   "falsified": [],
@@ -1738,6 +1754,28 @@
       "verdict": "confirmed 4/4",
       "train_cost_h": "0.01",
       "manifest_path": "runs/climb/20260712-232806-dci-climb-af070h004/manifest.json"
+    },
+    {
+      "run_id": "20260713-011629-dci-climb-af080h001",
+      "cycle": "35",
+      "session": "2026-07-13-af-080-local-package-catalog",
+      "hypothesis_id": "AF-080-H-001",
+      "paradigm": "local-package-discovery",
+      "parent_run": "",
+      "pushed_at": "2026-07-13T01:16:30+08:00",
+      "lb_landed_at": "",
+      "local_score": "4",
+      "immutable_resolution": "",
+      "repeat_validation": "",
+      "dirty_checkout_safety": "",
+      "override_compatibility": "",
+      "online_score": "",
+      "gap": "",
+      "push_decision": "PUSH",
+      "decision_reason": "deterministic local package acceptance",
+      "verdict": "confirmed 4/4",
+      "train_cost_h": "0.01",
+      "manifest_path": "runs/climb/20260713-011629-dci-climb-af080h001/manifest.json"
     }
   ],
   "calibration": {
