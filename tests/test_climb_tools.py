@@ -540,6 +540,13 @@ class ClimbToolTests(unittest.TestCase):
                 for hypothesis in state["hypotheses"]
                 if hypothesis["id"] in {"AF-050-H-001", "AF-050-H-002"}
             ]
+            for hypothesis in state["hypotheses"]:
+                hypothesis["results"] = []
+                hypothesis["status"] = (
+                    "in-flight"
+                    if hypothesis["id"] == "AF-050-H-001"
+                    else "pending"
+                )
             hypothesis_path.write_text(
                 yaml.safe_dump(state, sort_keys=False, allow_unicode=True)
             )
@@ -746,6 +753,40 @@ class ClimbToolTests(unittest.TestCase):
                     "cwd_containment",
                     "policy_limits",
                     "authorized_values",
+                },
+            )
+
+    def test_af050_h002_train_runs_rust_process_suite(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+
+        self.assertIn("AF-050-H-002", train_script)
+        self.assertIn("--test process", train_script)
+
+    def test_af050_h002_eval_reports_four_process_dimensions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            env = os.environ.copy()
+            env["DCI_CLIMB_HYPOTHESIS_ID"] = "AF-050-H-002"
+
+            result = subprocess.run(
+                ["bash", "tools/climb/eval-local.sh", str(run_dir)],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            evaluation = json.loads((run_dir / "local-eval.json").read_text())
+            self.assertEqual(evaluation["hypothesis_id"], "AF-050-H-002")
+            self.assertEqual(evaluation["total"], 4)
+            self.assertEqual(
+                set(evaluation["per_task"]),
+                {
+                    "literal_arguments",
+                    "cleared_environment",
+                    "closed_stdin",
+                    "canonical_cwd",
                 },
             )
 

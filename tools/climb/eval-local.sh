@@ -34,7 +34,7 @@ run_rust_dimension() {
     test_name="$2"
     if cargo test \
         --manifest-path packages/rust/executor/Cargo.toml \
-        --test authorization \
+        --test "$rust_suite" \
         "$test_name" -- --exact >"$RUN_DIR/$name.log" 2>&1; then
         printf '1'
     else
@@ -43,6 +43,7 @@ run_rust_dimension() {
 }
 
 dimension_runner="run_dimension"
+rust_suite="authorization"
 case "$HYPOTHESIS_ID" in
     AF-050-H-001)
         dimension_runner="run_rust_dimension"
@@ -54,6 +55,18 @@ case "$HYPOTHESIS_ID" in
         repeat_test="denies_cwd_escape_and_missing_directory"
         dirty_test="denies_request_limits_outside_trusted_policy"
         override_test="valid_request_produces_only_canonical_bounded_execution_values"
+        ;;
+    AF-050-H-002)
+        dimension_runner="run_rust_dimension"
+        rust_suite="process"
+        first_dimension="literal_arguments"
+        second_dimension="cleared_environment"
+        third_dimension="closed_stdin"
+        fourth_dimension="canonical_cwd"
+        immutable_test="executes_literal_arguments_without_shell_expansion"
+        repeat_test="clears_the_child_environment"
+        dirty_test="closes_child_stdin"
+        override_test="executes_in_the_authorized_canonical_working_directory"
         ;;
     H-001)
         first_dimension="immutable_resolution"

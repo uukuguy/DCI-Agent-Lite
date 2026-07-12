@@ -453,9 +453,21 @@ hypotheses:
   expected_lift: +1 direct process boundary
   cost_h: 0.5
   ranking: 0.9
-  status: pending
+  status: confirmed
   created_at: '2026-07-12T21:57:42+08:00'
-  results: []
+  results:
+  - session: 2026-07-12-af-050-rust-executor
+    cycle: 22
+    run: 20260712-220744-dci-climb-af050h002
+    local: 4
+    local_per_task:
+      literal_arguments: 1
+      cleared_environment: 1
+      closed_stdin: 1
+      canonical_cwd: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local executor acceptance
 - id: AF-050-H-003
   work_package_id: AF-050
   description: Drain stdout and stderr concurrently with independent caps and deadline

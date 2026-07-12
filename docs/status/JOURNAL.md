@@ -151,3 +151,6 @@
 - 22:02 AF-050-H-001 confirmed 4/4; executor acceptance recorded.
 - 22:03 AF-050-H-001 confirmed 4/4; executor acceptance recorded.
 - 22:04 AF-050-H-001 全量 Rust、44 Python tests、fmt、Clippy、Ruff、shell 与范围门通过。
+- 22:05 Rust execute request 授权边界已提交，process spawning 可在可信值上继续。[ae4c560]
+- 22:07 AF-050-H-002 confirmed 4/4; executor acceptance recorded.
+- 22:08 AF-050-H-002 通过 11 Rust、46 Python tests、fmt、Clippy、Ruff、shell 与范围门。
