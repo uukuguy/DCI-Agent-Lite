@@ -141,6 +141,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_package_composition.PackageManifestTests.test_invalid_shared_manifest_fixtures_are_rejected"
         override_test="tests.test_package_composition.PackageManifestTests.test_edge_arrays_must_be_sorted_and_unique"
         ;;
+    AF-060-H-002)
+        first_dimension="stable_order"
+        second_dimension="duplicate_and_ambiguity"
+        third_dimension="missing_edges"
+        fourth_dimension="cycle_rejection"
+        immutable_test="tests.test_package_composition.PackageCompositionTests.test_composition_order_is_stable_under_permuted_input"
+        repeat_test="tests.test_package_composition.PackageCompositionTests.test_duplicate_ids_and_ambiguous_capability_providers_are_rejected"
+        dirty_test="tests.test_package_composition.PackageCompositionTests.test_missing_capability_policy_event_and_artifact_edges_are_rejected"
+        override_test="tests.test_package_composition.PackageCompositionTests.test_dependency_cycles_are_rejected"
+        ;;
     H-001)
         first_dimension="immutable_resolution"
         second_dimension="repeat_validation"

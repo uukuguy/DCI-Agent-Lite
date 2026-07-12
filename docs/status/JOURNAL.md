@@ -168,3 +168,6 @@
 - 22:30 AF-060 package-first worklist、设计、计划与 climb pool 已提交并通过 scope。[826ccb9]
 - 22:31 AF-060-H-001 confirmed 4/4; package acceptance recorded.
 - 22:33 AF-060-H-001 通过 59 focused tests、compile、Ruff、shell、scope 与 diff。
+- 22:34 portable package manifest contract 已提交，为 deterministic composer 固定输入边界。[a4266ad]
+- 22:35 AF-060-H-002 confirmed 4/4; package acceptance recorded.
+- 22:37 AF-060-H-002 通过 66 focused tests、compile、Ruff、shell、scope 与 diff。

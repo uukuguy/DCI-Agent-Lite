@@ -1,19 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (26 runs).
+> Deterministic summary generated from tracked state (27 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
-- Phase: implementation
-- Last cycle: 26
-- Next hypothesis: AF-060-H-002
+- Phase: hard-pause
+- Last cycle: 27
+- Next hypothesis: AF-060-H-003
 - In flight: none
-- Next action: Start AF-060-H-002.
+- Next action: Resume autonomous climb with AF-060-H-003 DCI multi-runtime reference package graph.
 
 ## Active hypotheses
 
-- **AF-060-H-002** (pending, rank 0.90): Resolve package capability, policy, event, and artifact dependencies deterministically.
 - **AF-060-H-003** (pending, rank 0.80): Compose one DCI research policy observability evaluation graph for Pi and Claude Code capability sets.
 - **AF-060-H-004** (pending, rank 0.70): Validate shared package schemas and fixtures through the TypeScript host.
 - **AF-060-H-005** (pending, rank 0.60): Document the static composition boundary and close AF-060 through full framework gates.
@@ -48,6 +47,7 @@
 | 20260712-221841-dci-climb-af050h004 | AF-050-H-004 | 4 | confirmed 4/4 |
 | 20260712-222325-dci-climb-af050h005 | AF-050-H-005 | 4 | confirmed 4/4 |
 | 20260712-223130-dci-climb-af060h001 | AF-060-H-001 | 4 | confirmed 4/4 |
+| 20260712-223459-dci-climb-af060h002 | AF-060-H-002 | 4 | confirmed 4/4 |
 
 ## Negative cache
 
