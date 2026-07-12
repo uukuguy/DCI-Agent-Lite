@@ -168,3 +168,12 @@
 - Rationale: allowlisting only `ANTHROPIC_*` would break PATH, proxy, Bedrock, Vertex, AWS, and GCP configuration; placing tokens or routing data in CLI arguments or protocol payloads would create persistence and process-inspection risks.
 - Privacy boundary: environment names and values are not copied into the command, Agent Runtime Protocol request, normalized events, or runtime result. Credentials remain owned by the caller environment or Claude Code credential store.
 - Acceptance boundary: the unavailable local Claude account defers provider-backed UAT but does not block AF-040; model-free conformance and the real safe unauthenticated path remain durable AF-030 evidence.
+
+## D-020 — Keep host APIs schema-backed and adapter-neutral
+
+- Status: ✅ accepted and implemented decision
+- Decided: 2026-07-12
+- Decision: Python and TypeScript hosts expose matching runtime manifest, request, event, and asynchronous client contracts; checked-in JSON Schemas and shared fixtures remain the canonical wire definition.
+- Rationale: application code should depend on one portable protocol surface instead of an adapter-by-language matrix, while runtime validation prevents static TypeScript/Python annotations from becoming an unverified parallel contract.
+- Boundary: AF-040 adds no transport, provider registry, workflow engine, or adapter selection. Pi and Claude Code private types remain behind their runtime adapters.
+- Revalidation trigger: automate type generation only when manual public type maintenance measurably drifts despite shared cross-language fixture gates.

@@ -135,3 +135,6 @@
 - 21:27 Python 公共异步 client 与不可变协议值对象已通过共享 fixture 测试。
 - 21:28 Python runtime host 公共契约已提交，应用层不再依赖 adapter 私有类型。[a730944]
 - 21:32 TypeScript host 以 Ajv 2020 校验共享 schemas/fixtures，构建与 Node tests 通过。
+- 21:33 TypeScript runtime host 已提交，提供零 adapter 依赖的公共包与重复验证命令。[b6e9dbd]
+- 21:34 AF-040 通过 126 Python tests、编译、Ruff、干净 npm ci、TypeScript tests 与范围审计。
+- 21:34 AF-040 双语言主机边界完成；主线转入 AF-050 Rust 受控执行边界。

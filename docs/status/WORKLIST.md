@@ -45,7 +45,7 @@
 
 ## AF-040 — Python and TypeScript host boundaries
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Agent Application Framework
 - Scope: expose protocol clients without adapter-private types in the Python and TypeScript hosts.
 - Dependencies: AF-020, AF-030
@@ -55,13 +55,13 @@
 
 ## AF-050 — Rust executor boundary
 
-- Status: pending
+- Status: in_progress
 - Parent objective: Agent Application Framework
 - Scope: define a controlled Rust tool-execution or isolation-sidecar boundary without duplicating orchestration.
 - Dependencies: AF-010
 - Acceptance: the executor contract conforms to policy, artifact, and cancellation semantics.
-- Design: `docs/architecture/agent-framework.md`
-- Plan: not yet planned
+- Design: `docs/superpowers/specs/2026-07-12-rust-executor-boundary-design.md`
+- Plan: `docs/superpowers/plans/2026-07-12-rust-executor-boundary.md`
 
 ## AF-060 — Composable workflow and enterprise packages
 

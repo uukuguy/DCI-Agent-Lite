@@ -6,7 +6,7 @@
 - Current branch: `main`
 - Theme-level focus: Agent Runtime Protocol foundation and governed multi-runtime framework delivery.
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: `AF-040` — Python and TypeScript host boundaries.
+- Active work package: `AF-050` — Rust controlled executor boundary.
 
 ## Current Architecture
 
@@ -17,11 +17,13 @@
 - Governance: `docs/status/WORKLIST.md` is the sole active package ledger. A scope audit must pass before manager dispatch or climb execution.
 - Maintenance history: Pi/Judge reliability H-001 through H-019 is completed and remains available as reference-maintenance evidence; it is not an active roadmap stream.
 - Claude Code provider access: the adapter supports stored login and inherited environment-configured backends; provider-backed UAT is deferred while the local account is unavailable and does not block host-language work.
+- Host contracts: Python and TypeScript expose the same schema-backed runtime manifest, request, event, and asynchronous client boundary without adapter-private types.
 
 ## Open Problems (theme-level)
 
 - Agent Runtime Protocol contract, capability manifest, and conformance semantics.
 - Provider-backed acceptance of the first non-Pi runtime when credentials or a compatible gateway become available.
+- Controlled Rust execution/isolation boundary without duplicating orchestration or runtime-adapter responsibilities.
 - Enterprise policy, artifact, observability, and isolation boundaries after the reference vertical slice.
 
 ## Key Files
