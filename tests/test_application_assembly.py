@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import unittest
+from dataclasses import FrozenInstanceError
 from pathlib import Path
 
 from dci.framework.assembly import (
@@ -73,6 +74,27 @@ class AssemblyResolverTests(unittest.TestCase):
             "capabilities": ["filesystem.read", "shell"],
         }
 
+    def controlled_assembly(self) -> dict[str, object]:
+        return {
+            **self.assembly(),
+            "application_id": "code.quality",
+            "packages": [
+                {"package_id": "evaluation.code-quality", "version": "1.0.0"},
+                {
+                    "package_id": "observability.execution-audit",
+                    "version": "1.0.0",
+                },
+                {
+                    "package_id": "policy.controlled-code-check",
+                    "version": "1.0.0",
+                },
+                {"package_id": "workflow.code-quality", "version": "1.0.0"},
+            ],
+            "host_capabilities": ["executor.controlled"],
+            "host_events": ["run.started", "tool.result"],
+            "host_artifacts": ["text/x-source"],
+        }
+
     def test_runtime_and_catalog_bind_into_an_immutable_plan(self) -> None:
         assembly = self.assembly()
         before = json.loads(json.dumps(assembly))
@@ -88,23 +110,16 @@ class AssemblyResolverTests(unittest.TestCase):
         self.assertEqual(plan.runtime_id, "pi.reference")
         self.assertEqual(plan.package_refs[0], PackageRef("dci.evaluation", "1.0.0"))
         self.assertEqual(plan.composition.package_ids[0], "policy.local-corpus")
+        self.assertEqual(plan.runtime_capabilities, ("filesystem.read", "shell"))
+        self.assertEqual(plan.host_capabilities, ())
         self.assertEqual(assembly, before)
 
     def test_host_service_capability_is_separate_from_runtime_capabilities(self) -> None:
-        assembly = {
-            **self.assembly(),
-            "application_id": "code.quality",
-            "packages": [
-                {"package_id": "evaluation.code-quality", "version": "1.0.0"},
-                {"package_id": "observability.execution-audit", "version": "1.0.0"},
-                {"package_id": "policy.controlled-code-check", "version": "1.0.0"},
-                {"package_id": "workflow.code-quality", "version": "1.0.0"},
-            ],
-            "host_capabilities": ["executor.controlled"],
-            "host_events": ["run.started", "tool.result"],
-            "host_artifacts": ["text/x-source"],
+        assembly = self.controlled_assembly()
+        runtime = {
+            **self.runtime(),
+            "capabilities": ["executor.controlled", "filesystem.read"],
         }
-        runtime = {**self.runtime(), "capabilities": ["filesystem.read"]}
 
         plan = resolve_assembly(
             assembly,
@@ -113,7 +128,56 @@ class AssemblyResolverTests(unittest.TestCase):
         )
 
         self.assertEqual(plan.composition.package_ids[0], "policy.controlled-code-check")
-        self.assertNotIn("executor.controlled", runtime["capabilities"])
+        self.assertEqual(
+            plan.runtime_capabilities,
+            ("executor.controlled", "filesystem.read"),
+        )
+        self.assertEqual(plan.host_capabilities, ("executor.controlled",))
+
+    def test_runtime_capability_ownership_is_deterministic(self) -> None:
+        runtime = {**self.runtime(), "capabilities": ["shell", "filesystem.read"]}
+
+        plan = resolve_assembly(
+            self.assembly(),
+            catalog=discover_packages(MANIFESTS),
+            runtime_manifest=runtime,
+        )
+
+        self.assertEqual(plan.runtime_capabilities, ("filesystem.read", "shell"))
+
+    def test_host_capability_ownership_is_explicit(self) -> None:
+        plan = resolve_assembly(
+            self.controlled_assembly(),
+            catalog=discover_packages(MANIFESTS),
+            runtime_manifest={**self.runtime(), "capabilities": ["filesystem.read"]},
+        )
+
+        self.assertEqual(plan.host_capabilities, ("executor.controlled",))
+
+    def test_capability_ownership_is_immutable(self) -> None:
+        plan = resolve_assembly(
+            self.assembly(),
+            catalog=discover_packages(MANIFESTS),
+            runtime_manifest=self.runtime(),
+        )
+
+        self.assertIsInstance(plan.runtime_capabilities, tuple)
+        self.assertIsInstance(plan.host_capabilities, tuple)
+        with self.assertRaises(FrozenInstanceError):
+            plan.runtime_capabilities = ()
+
+    def test_capability_ownership_is_not_inferred_from_names(self) -> None:
+        plan = resolve_assembly(
+            self.controlled_assembly(),
+            catalog=discover_packages(MANIFESTS),
+            runtime_manifest={
+                **self.runtime(),
+                "capabilities": ["executor.controlled", "filesystem.read"],
+            },
+        )
+
+        self.assertIn("executor.controlled", plan.runtime_capabilities)
+        self.assertIn("executor.controlled", plan.host_capabilities)
 
     def test_unknown_catalog_ref_is_rejected(self) -> None:
         assembly = {

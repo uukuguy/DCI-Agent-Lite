@@ -36,17 +36,17 @@
 - Produces: `AssemblyPlan.host_capabilities: tuple[str, ...]`
 - Preserves: existing application, runtime, package-ref, and composition fields.
 
-- [ ] **Step 1: Write RED ownership tests**
+- [x] **Step 1: Write RED ownership tests**
 
 Add assertions that a DCI plan records `("filesystem.read", "shell")` as runtime-owned and `()` as host-owned, while the controlled-code plan records `("executor.controlled",)` only as host-owned. Assert tuples are deterministic and source manifests remain unchanged.
 
-- [ ] **Step 2: Run the focused RED test**
+- [x] **Step 2: Run the focused RED test**
 
 Run: `uv run python -m unittest tests.test_application_assembly.AssemblyResolverTests tests.test_application_assembly.ReferenceAssemblyTests -v`
 
 Expected: fail because `AssemblyPlan` has no ownership fields.
 
-- [ ] **Step 3: Implement immutable ownership fields**
+- [x] **Step 3: Implement immutable ownership fields**
 
 Populate the plan only from the already validated inputs:
 
@@ -64,7 +64,7 @@ return AssemblyPlan(
 
 Do not derive either field from `composition.provided_capabilities` or capability-name conventions.
 
-- [ ] **Step 4: Run GREEN and static checks**
+- [x] **Step 4: Run GREEN and static checks**
 
 ```bash
 uv run python -m unittest tests.test_application_assembly -v
@@ -73,11 +73,11 @@ uv run ruff check src/asterion/assembly tests/test_application_assembly.py
 git diff --check
 ```
 
-- [ ] **Step 5: Add and execute AF-100-H-001**
+- [x] **Step 5: Add and execute AF-100-H-001**
 
 Add dimensions `runtime_ownership`, `host_ownership`, `immutable_plan`, and `no_name_inference`. Make train run the focused assembly suite and local eval map one deterministic assertion to each dimension. Run the climb cycle only after `python3 tools/project_scope_check.py --climb-hypothesis AF-100-H-001` passes.
 
-- [ ] **Step 6: Commit the verified slice**
+- [x] **Step 6: Commit the verified slice**
 
 Commit message: `feat: record application capability ownership`
 

@@ -936,9 +936,21 @@ hypotheses:
   expected_lift: +1 execution precondition boundary
   cost_h: 0.6
   ranking: 1.0
-  status: pending
+  status: confirmed
   created_at: '2026-07-13T01:56:00+08:00'
-  results: []
+  results:
+  - session: 2026-07-13-af-100-asterion-runner
+    cycle: 47
+    run: 20260713-025322-dci-climb-af100h001
+    local: 4
+    local_per_task:
+      runtime_ownership: 1
+      host_ownership: 1
+      immutable_plan: 1
+      no_name_inference: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-100-H-002
   work_package_id: AF-100
   description: Run one DCI application through an explicit runtime client into immutable

@@ -388,6 +388,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="asterion_architecture"
         override_test="asterion_closure"
         ;;
+    AF-100-H-001)
+        first_dimension="runtime_ownership"
+        second_dimension="host_ownership"
+        third_dimension="immutable_plan"
+        fourth_dimension="no_name_inference"
+        immutable_test="tests.test_application_assembly.AssemblyResolverTests.test_runtime_capability_ownership_is_deterministic"
+        repeat_test="tests.test_application_assembly.AssemblyResolverTests.test_host_capability_ownership_is_explicit"
+        dirty_test="tests.test_application_assembly.AssemblyResolverTests.test_capability_ownership_is_immutable"
+        override_test="tests.test_application_assembly.AssemblyResolverTests.test_capability_ownership_is_not_inferred_from_names"
+        ;;
     H-001)
         first_dimension="immutable_resolution"
         second_dimension="repeat_validation"

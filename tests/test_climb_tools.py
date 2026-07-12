@@ -1662,6 +1662,37 @@ class ClimbToolTests(unittest.TestCase):
                 {"dci_cli_compatibility", "example_compatibility", "architecture_boundary", "framework_closure"},
             )
 
+    def test_af100_h001_train_runs_capability_ownership_suite(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+        self.assertIn("AF-100-H-001", train_script)
+        self.assertIn("test_capability_ownership_is_not_inferred_from_names", train_script)
+
+    def test_af100_h001_eval_reports_four_ownership_dimensions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            env = os.environ.copy()
+            env["DCI_CLIMB_HYPOTHESIS_ID"] = "AF-100-H-001"
+            result = subprocess.run(
+                ["bash", "tools/climb/eval-local.sh", str(run_dir)],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            evaluation = json.loads((run_dir / "local-eval.json").read_text())
+            self.assertEqual(evaluation["hypothesis_id"], "AF-100-H-001")
+            self.assertEqual(evaluation["total"], 4)
+            self.assertEqual(
+                set(evaluation["per_task"]),
+                {
+                    "runtime_ownership",
+                    "host_ownership",
+                    "immutable_plan",
+                    "no_name_inference",
+                },
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

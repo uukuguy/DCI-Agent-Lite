@@ -47,6 +47,8 @@ class AssemblyPlan:
     runtime_id: str
     package_refs: tuple[PackageRef, ...]
     composition: PackageComposition
+    runtime_capabilities: tuple[str, ...]
+    host_capabilities: tuple[str, ...]
 
 
 def validate_assembly_manifest(value: Mapping[str, object]) -> None:
@@ -157,6 +159,8 @@ def resolve_assembly(
         runtime_id=runtime_id,
         package_refs=package_refs,
         composition=composition,
+        runtime_capabilities=tuple(sorted(runtime_capabilities)),
+        host_capabilities=tuple(_string_edges(assembly, "host_capabilities")),
     )
 
 
