@@ -74,3 +74,11 @@
 - Rationale: `load_project_env(..., override=False)` deliberately preserves explicit caller configuration, but that behavior can otherwise disguise a rotated `.env` key as a provider authentication failure.
 - Privacy boundary: report only a source label and boolean shadowing status—never a key, hash, length, or provider error body.
 - Implemented follow-up: H-008 adds `make check-judge-config`, a no-request configuration check that exposes source metadata before the credentialed preflight spends a request.
+
+## D-009 — Keep strict verdict schema opt-in and Responses-only
+
+- Status: ✅ accepted and implemented decision
+- Decided: 2026-07-12
+- Decision: `DCI_EVAL_JUDGE_STRICT_JSON_SCHEMA` defaults to false and adds the fixed strict JSON Schema only to Responses requests when explicitly enabled.
+- Rationale: strict schema can eliminate malformed verdicts for supporting Responses backends, but sending it by default would break generic OpenAI-compatible Chat Completions services.
+- Cache boundary: the flag is part of all judge-result reuse identities, preventing a verdict generated under one request shape from being reused under another.

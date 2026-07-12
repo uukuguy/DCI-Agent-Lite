@@ -64,3 +64,4 @@
 - 17:33 H-008 confirmed 4/4; setup-policy acceptance recorded.
 - 17:34 Knowledge Layer added H-009: opt-in strict JSON Schema for Responses judge verdicts.
 - 17:39 H-009 local contract passed: 72 tests, Ruff, compile, Bash syntax, and Pi RPC probe before cycle.
+- 17:39 H-009 confirmed 4/4; setup-policy acceptance recorded.

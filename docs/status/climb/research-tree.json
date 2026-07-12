@@ -1,30 +1,18 @@
 {
-  "run_count": 8,
+  "run_count": 9,
   "session": {
     "session": "2026-07-12-pi-revision",
-    "phase": "knowledge-layer",
-    "last_cycle": 8,
-    "next_hypothesis": "H-009",
+    "phase": "implementation",
+    "last_cycle": 9,
+    "next_hypothesis": null,
     "in_flight": null,
-    "next_action": "Implement H-009 opt-in Responses strict judge schema.",
+    "next_action": "Trigger Knowledge Layer.",
     "falsified_routes": [
       "duplicate the authoritative Pi commit across setup.sh and .env.template",
       "convert the independent Pi checkout to vendored or submodule ownership"
     ]
   },
-  "active": [
-    {
-      "id": "H-009",
-      "description": "Add opt-in strict JSON Schema verdict output for OpenAI Responses judges.",
-      "parent_paradigm": "judge-structured-output",
-      "expected_lift": "+1 deterministic structured-output-prevention dimension",
-      "cost_h": 0.4,
-      "ranking": 0.6,
-      "status": "pending",
-      "created_at": "2026-07-12T17:34:00+08:00",
-      "results": []
-    }
-  ],
+  "active": [],
   "confirmed": [
     {
       "id": "H-001",
@@ -241,6 +229,33 @@
           "decision_reason": "deterministic local setup-policy acceptance"
         }
       ]
+    },
+    {
+      "id": "H-009",
+      "description": "Add opt-in strict JSON Schema verdict output for OpenAI Responses judges.",
+      "parent_paradigm": "judge-structured-output",
+      "expected_lift": "+1 deterministic structured-output-prevention dimension",
+      "cost_h": 0.4,
+      "ranking": 0.6,
+      "status": "confirmed",
+      "created_at": "2026-07-12T17:34:00+08:00",
+      "results": [
+        {
+          "session": "2026-07-12-pi-revision",
+          "cycle": 9,
+          "run": "20260712-173934-dci-climb-h009",
+          "local": 4,
+          "local_per_task": {
+            "strict_schema_shape": 1,
+            "default_compatibility": 1,
+            "cache_identity": 1,
+            "adapter_integration": 1
+          },
+          "online": null,
+          "verdict": "confirmed 4/4",
+          "decision_reason": "deterministic local setup-policy acceptance"
+        }
+      ]
     }
   ],
   "falsified": [],
@@ -420,6 +435,28 @@
       "verdict": "confirmed 4/4",
       "train_cost_h": "0.01",
       "manifest_path": "runs/climb/20260712-173300-dci-climb-h008/manifest.json"
+    },
+    {
+      "run_id": "20260712-173934-dci-climb-h009",
+      "cycle": "9",
+      "session": "2026-07-12-pi-revision",
+      "hypothesis_id": "H-009",
+      "paradigm": "judge-structured-output",
+      "parent_run": "",
+      "pushed_at": "2026-07-12T17:39:34+08:00",
+      "lb_landed_at": "",
+      "local_score": "4",
+      "immutable_resolution": "",
+      "repeat_validation": "",
+      "dirty_checkout_safety": "",
+      "override_compatibility": "",
+      "online_score": "",
+      "gap": "",
+      "push_decision": "PUSH",
+      "decision_reason": "cheap deterministic local acceptance",
+      "verdict": "confirmed 4/4",
+      "train_cost_h": "0.01",
+      "manifest_path": "runs/climb/20260712-173934-dci-climb-h009/manifest.json"
     }
   ],
   "calibration": {

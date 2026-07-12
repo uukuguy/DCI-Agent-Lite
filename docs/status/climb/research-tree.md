@@ -1,19 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (8 runs).
+> Deterministic summary generated from tracked state (9 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
-- Phase: knowledge-layer
-- Last cycle: 8
-- Next hypothesis: H-009
+- Phase: implementation
+- Last cycle: 9
+- Next hypothesis: None
 - In flight: none
-- Next action: Implement H-009 opt-in Responses strict judge schema.
+- Next action: Trigger Knowledge Layer.
 
 ## Active hypotheses
 
-- **H-009** (pending, rank 0.60): Add opt-in strict JSON Schema verdict output for OpenAI Responses judges.
 
 ## Run ladder
 
@@ -27,6 +26,7 @@
 | 20260712-171944-dci-climb-h006 | H-006 | 4 | confirmed 4/4 |
 | 20260712-172903-dci-climb-h007 | H-007 | 4 | confirmed 4/4 |
 | 20260712-173300-dci-climb-h008 | H-008 | 4 | confirmed 4/4 |
+| 20260712-173934-dci-climb-h009 | H-009 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

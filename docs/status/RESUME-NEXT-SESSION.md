@@ -1,6 +1,6 @@
 # Recovered Session Checkpoint
 
-> Updated: 2026-07-12 17:39 +0800. **Active H-009 local-compatibility checkpoint — session remains active, not a final handoff.**
+> Updated: 2026-07-12 17:40 +0800. **Active post-H-009 Knowledge Layer checkpoint — session remains active, not a final handoff.**
 
 ## TL;DR
 
@@ -11,6 +11,7 @@
 - Knowledge Layer added H-008: an offline configuration check will expose the same source information before a credentialed preflight request.
 - H-008 confirmed 4/4; Knowledge Layer added H-009 for default-off strict JSON Schema on supporting Responses backends.
 - H-009 is locally verified: the opt-in Responses request shape and cache identity changed, while default and Chat Completions request shapes remain compatible.
+- H-009 is confirmed 4/4. The active DeepSeek Chat backend deliberately did not receive strict schema, so the remaining optional evidence is a live run only after configuring a supporting Responses backend.
 - H-008 is locally verified: its config-only path makes no request and emits safe dotenv/process/shadow metadata through a four-dimension climb adapter.
 - H-006 scope and a test-first inline plan are committed; work proceeds in the clean shared checkout without touching the independent `pi/` repository.
 - The safe standalone preflight, Make target, documentation, and four-dimension climb adapter are fully verified and H-006 is recorded as cycle 6.
@@ -35,7 +36,7 @@
 
 ## Next action
 
-1. Run `bash tools/climb/cycle.sh H-009` to record local strict-schema compatibility evidence; do not send the flag to the configured DeepSeek Chat backend.
+1. If a supporting OpenAI Responses judge is configured, set `DCI_EVAL_JUDGE_STRICT_JSON_SCHEMA=true` and run `make check-judge`; otherwise trigger Knowledge Layer only for a newly observed failure or user goal.
 2. Prefer reusing `JudgeConfig`/`judge_answer_sync`; do not introduce a second request-shaping path.
 3. Keep credentials out of artifacts/output, add a Make target and docs, then run the climb cycle and full verification.
 4. If the pool empties after H-006, trigger Knowledge Layer again rather than stopping.
