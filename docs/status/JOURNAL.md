@@ -49,3 +49,4 @@
 - 16:18 final handoff baton 已提交，固化 H-006 续点与恢复边界。[9f335ec]
 - 16:29 resume detected final Journal boundary after baton; recovery checkpoint restored H-006 as the active continuation.
 - 16:35 H-006 design accepted: one explicit judge preflight reusing the existing transport; no automatic batch gate.
+- 16:40 H-006 implementation plan locks test-first CLI, explicit Make target, documentation, and deterministic climb acceptance.
