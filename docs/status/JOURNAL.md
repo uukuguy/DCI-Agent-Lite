@@ -249,6 +249,8 @@
 - 02:20 🔴 superseded: Asterism 仅为命名过渡历史，不得作为框架或包名继续使用。
 - 02:20 Asterion 定名；PyPI/npm 精确查询均为 404，统一使用 `asterion` namespace。
 - 02:23 registry 抢注降为非阻塞待办，AF-095 先完成目录与权威边界。
+- 02:24 Asterion framework boundary spec 已提交，为渐进抽离锁定兼容基线。[f2f8d27]
+- 02:28 AF-095 spec 获批；实施计划锁定四个可验收的 Asterion extraction cycles。
 - 01:36 AF-090-H-001 confirmed 4/4; package acceptance recorded.
 - 01:40 AF-090-H-002 confirmed 4/4; package acceptance recorded.
 - 01:47 AF-090-H-003 confirmed 4/4; package acceptance recorded.

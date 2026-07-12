@@ -121,4 +121,4 @@
 - Dependencies: AF-090
 - Acceptance: Asterion owns the sole generic implementation; DCI depends on it as a capability/application; both verified DCI examples and all cross-language gates remain compatible.
 - Design: `docs/superpowers/specs/2026-07-13-asterion-framework-extraction-design.md`
-- Plan: pending written-spec approval
+- Plan: `docs/superpowers/plans/2026-07-13-asterion-framework-extraction.md`

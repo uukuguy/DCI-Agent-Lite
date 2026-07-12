@@ -5,11 +5,11 @@
 
 ## In-flight / session state
 
-- Phase: design-review
+- Phase: implementation
 - Last cycle: 42
 - Next hypothesis: AF-095-H-001
 - In flight: none
-- Next action: Complete written-spec review, then write the AF-095 implementation plan.
+- Next action: Execute AF-095-H-001 authoritative Asterion runtime package extraction.
 
 ## Active hypotheses
 

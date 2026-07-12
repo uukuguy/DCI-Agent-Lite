@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13 02:08 +0800. **AF-095 Asterion extraction awaits written-spec review; AF-100 follows it.**
+> Updated: 2026-07-13 02:28 +0800. **AF-095 Asterion extraction is approved and entering H001 implementation.**
 
 Active work package: AF-095
 
@@ -49,7 +49,7 @@ Active work package: AF-095
 
 ## Immediate next action
 
-Review the written AF-095 specification; after approval invoke writing-plans before any extraction implementation.
+Execute AF-095-H-001: establish authoritative Asterion runtime/host/adapters with object-identity DCI compatibility re-exports.
 
 ## Guardrails
 

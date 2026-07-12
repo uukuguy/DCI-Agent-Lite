@@ -2,12 +2,12 @@
   "run_count": 42,
   "session": {
     "session": "2026-07-13-af-095-asterion-extraction",
-    "phase": "design-review",
+    "phase": "implementation",
     "work_package_id": "AF-095",
     "last_cycle": 42,
     "next_hypothesis": "AF-095-H-001",
     "in_flight": null,
-    "next_action": "Complete written-spec review, then write the AF-095 implementation plan.",
+    "next_action": "Execute AF-095-H-001 authoritative Asterion runtime package extraction.",
     "falsified_routes": [
       "duplicate the authoritative Pi commit across setup.sh and .env.template",
       "convert the independent Pi checkout to vendored or submodule ownership",
