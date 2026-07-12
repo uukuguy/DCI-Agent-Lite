@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13 01:27 +0800. **Session remains active — knowledge layer continues.**
+> Updated: 2026-07-13 01:28 +0800. **Session remains active — strategic design gate.**
 
 Active work package: AF-080
 
@@ -39,7 +39,7 @@ Active work package: AF-080
 
 ## Immediate next action
 
-Commit AF-080 documentation/closure evidence, then select the next governed package without adding registry, installation, or execution scope by inertia.
+Approve the recommended static application assembly contract, then design AF-090 without runtime, executor, or workflow execution.
 
 ## Guardrails
 

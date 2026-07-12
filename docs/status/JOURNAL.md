@@ -222,3 +222,5 @@
 - 01:22 AF-080-H-003 confirmed 4/4; package acceptance recorded.
 - 01:25 AF-080-H-004 confirmed 4/4; package acceptance recorded.
 - 01:27 AF-080 closure 通过 213 Python、7 Node、21 Rust、clean install、lint、scope 与 diff。
+- 01:28 local catalog acceptance 已提交；exact selections 具备进入静态 application assembly 的基础。[760c9a5]
+- 01:31 static application assembly 方向获批：绑定 runtime/catalog/host edges，但不执行。
