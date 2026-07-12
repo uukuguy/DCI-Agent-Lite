@@ -1,10 +1,10 @@
 {
   "session": "2026-07-12-pi-revision",
-  "phase": "implementation",
+  "phase": "knowledge-layer",
   "last_cycle": 6,
-  "next_hypothesis": null,
+  "next_hypothesis": "H-007",
   "in_flight": null,
-  "next_action": "Trigger Knowledge Layer.",
+  "next_action": "Implement H-007 safe judge credential provenance preflight.",
   "falsified_routes": [
     "duplicate the authoritative Pi commit across setup.sh and .env.template",
     "convert the independent Pi checkout to vendored or submodule ownership"

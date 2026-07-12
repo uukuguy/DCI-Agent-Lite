@@ -1,12 +1,13 @@
 # Recovered Session Checkpoint
 
-> Updated: 2026-07-12 17:23 +0800. **Active post-H-006 Knowledge Layer checkpoint — session remains active, not a final handoff.**
+> Updated: 2026-07-12 17:24 +0800. **Active H-007 provenance checkpoint — session remains active, not a final handoff.**
 
 ## TL;DR
 
 - Autonomous climb confirmed and committed H-001 through H-005 at 4/4 each: immutable Pi lock, read-only pin review, model-free RPC preflight, run provenance, and pre-run revision warning.
 - The exact Pi default is `8479bd84743e8889f728acb21a62794102db0529`; the independent dirty `pi/` checkout was never modified.
 - H-006 is confirmed 4/4 against the real configured DeepSeek backend after using the new `.env` key without the stale inherited process value. The pool is empty, so Knowledge Layer is active.
+- Knowledge Layer added H-007 to make this configuration source visible without exposing secrets; it is the ranked next hypothesis.
 - H-006 scope and a test-first inline plan are committed; work proceeds in the clean shared checkout without touching the independent `pi/` repository.
 - The safe standalone preflight, Make target, documentation, and four-dimension climb adapter are fully verified and H-006 is recorded as cycle 6.
 - The earlier HTTP 401 was caused by a stale exported `DEEPSEEK_API_KEY` overriding the rotated `.env` value; `load_project_env` deliberately uses `override=False`.

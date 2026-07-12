@@ -5,14 +5,15 @@
 
 ## In-flight / session state
 
-- Phase: implementation
+- Phase: knowledge-layer
 - Last cycle: 6
-- Next hypothesis: None
+- Next hypothesis: H-007
 - In flight: none
-- Next action: Trigger Knowledge Layer.
+- Next action: Implement H-007 safe judge credential provenance preflight.
 
 ## Active hypotheses
 
+- **H-007** (pending, rank 0.70): Report safe judge credential provenance and warn when process environment shadows rotated .env values.
 
 ## Run ladder
 

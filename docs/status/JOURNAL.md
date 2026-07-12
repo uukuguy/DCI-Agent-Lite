@@ -56,3 +56,4 @@
 - 17:16 user-requested retry again reached DeepSeek and returned redacted HTTP 401; credential remains invalid.
 - 17:21 H-006 confirmed 4/4; setup-policy acceptance recorded.
 - 17:23 Recorder now recovers hypothesis-specific partial writes; H-006 state is synchronized and fully verified.
+- 17:24 Knowledge Layer added H-007: safe judge credential provenance and environment-shadow warning.
