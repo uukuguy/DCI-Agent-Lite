@@ -8,8 +8,8 @@ validates those identities and asks the existing package composer to prove the
 declared graph. It does not start a runtime, invoke a tool, execute a workflow,
 launch the Rust sidecar, or mutate any input manifest.
 
-The checked-in `assemblies/dci-local-research.json` and
-`assemblies/controlled-code-validation.json` files are portable application
+The checked-in `applications/dci-agent-lite/assemblies/dci-local-research.json` and
+`applications/dci-agent-lite/assemblies/controlled-code-validation.json` files are portable application
 descriptions. Their package refs are sorted, unique, and exact: assembly does
 not select a highest version, solve ranges, install packages, or access a
 registry.
@@ -49,6 +49,6 @@ not participate in static application planning.
 
 ```bash
 uv run python -m unittest tests.test_application_assembly -v
-npm --prefix packages/typescript/agent-runtime test
+npm --prefix packages/typescript/asterion-runtime test
 python3 tools/project_scope_check.py --climb-hypothesis AF-090-H-004
 ```

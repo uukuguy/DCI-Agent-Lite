@@ -11,7 +11,7 @@ Expose Agent Runtime Protocol v1 as stable public Python and TypeScript host API
 The JSON Schemas under `schemas/agent-runtime/v1/` remain the canonical wire contract. AF-040 adds a runtime-manifest schema and matching fixtures, then exposes deliberately small host-native types and client interfaces:
 
 - Python: `dci.framework.host` provides public typed records, validation entry points, and an `AgentRuntimeClient` protocol.
-- TypeScript: `packages/typescript/agent-runtime` provides equivalent public types, runtime validation, and an `AgentRuntimeClient` interface.
+- TypeScript: `packages/typescript/asterion-runtime` provides equivalent public types, runtime validation, and an `AgentRuntimeClient` interface.
 - Both clients expose one immutable runtime manifest and one asynchronous `run` operation.
 - Both consume the same checked-in conformance fixtures. A schema change is incomplete until both suites accept and reject the same fixture classes.
 

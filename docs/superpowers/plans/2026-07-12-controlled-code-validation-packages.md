@@ -211,7 +211,7 @@ git commit -m "test: prove controlled code graph boundaries"
 ### Task 3: TypeScript validates every reference manifest
 
 **Files:**
-- Modify: `packages/typescript/agent-runtime/test/runtime.test.mjs`
+- Modify: `packages/typescript/asterion-runtime/test/runtime.test.mjs`
 - Modify: `tests/test_climb_tools.py`
 - Modify: `tools/climb/train.sh`
 - Modify: `tools/climb/eval-local.sh`
@@ -246,7 +246,7 @@ for (const name of names) {
 
 - [ ] **Step 2: Run Node tests to verify RED**
 
-Run: `npm --prefix packages/typescript/agent-runtime test`
+Run: `npm --prefix packages/typescript/asterion-runtime test`
 
 Expected: FAIL because the manifest-directory helper/import or exact eight-file assertion is absent while the test is introduced.
 
@@ -259,8 +259,8 @@ Import `readdir` from `node:fs/promises`, define the repository-relative manifes
 Run:
 
 ```bash
-npm --prefix packages/typescript/agent-runtime ci
-npm --prefix packages/typescript/agent-runtime test
+npm --prefix packages/typescript/asterion-runtime ci
+npm --prefix packages/typescript/asterion-runtime test
 ```
 
 Expected: build/type contract and all Node tests pass; `src/` contains no graph-composition implementation.
@@ -328,11 +328,11 @@ Run:
 uv run python -m unittest discover -v
 uv run python -m compileall -q src tests tools
 uv run ruff check src tests tools
-npm --prefix packages/typescript/agent-runtime ci
-npm --prefix packages/typescript/agent-runtime test
-cargo test --manifest-path packages/rust/executor/Cargo.toml
-cargo fmt --manifest-path packages/rust/executor/Cargo.toml --check
-cargo clippy --manifest-path packages/rust/executor/Cargo.toml --all-targets -- -D warnings
+npm --prefix packages/typescript/asterion-runtime ci
+npm --prefix packages/typescript/asterion-runtime test
+cargo test --manifest-path packages/rust/controlled-executor/Cargo.toml
+cargo fmt --manifest-path packages/rust/controlled-executor/Cargo.toml --check
+cargo clippy --manifest-path packages/rust/controlled-executor/Cargo.toml --all-targets -- -D warnings
 bash -n tools/climb/train.sh tools/climb/eval-local.sh tools/climb/cycle.sh
 python3 tools/project_scope_check.py --climb-hypothesis AF-070-H-004
 git diff --check

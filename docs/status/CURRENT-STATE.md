@@ -29,6 +29,7 @@
 - Static assembly: all four AF-090 hypotheses are confirmed. `dci.assembly/v1`, its immutable Python resolver, both reference assemblies, TypeScript schema/type validation, and the non-execution guide pass full Python/Node/Rust closure.
 - Asterion extraction: AF-095-H-001 is confirmed 4/4. Runtime protocol, host contracts, Pi/Claude adapters, and Claude runtime are authoritative under `src/asterion/`; `dci.framework.*` preserves object-identity compatibility and the wheel contains both roots.
 - Asterion contract extraction: AF-095-H-002 is confirmed 4/4. Package protocol/catalog/composition, assembly, and executor protocol have sole authoritative implementations under Asterion with stable wire literals and definition-free DCI compatibility modules.
+- Product directories: AF-095-H-003 is confirmed 4/4. DCI and controlled-code manifests live under `capabilities/`, DCI assemblies under `applications/dci-agent-lite/`, and TypeScript/Rust working directories are Asterion-owned without changing declared identities.
 - Reference assemblies: checked-in DCI and controlled-code application manifests validate and resolve; DCI composition is identical for Pi/Claude runtime identities and controlled execution remains an explicit host service.
 
 ## Open Problems (theme-level)
@@ -59,9 +60,9 @@
 - `src/dci/benchmark/pi_system_prompt.py` — Pi-owned system-prompt bridge.
 - `src/dci/framework/host.py` — public Python Agent Runtime Protocol host contract.
 - `src/dci/framework/package_catalog.py` — explicit-root deterministic local package discovery and catalog types.
-- `packages/typescript/agent-runtime/` — public TypeScript host package and shared-fixture validator.
+- `packages/typescript/asterion-runtime/` — public TypeScript host package and shared-fixture validator.
 - `src/dci/framework/executor_protocol.py` — Python reference validator for `dci.executor/v1`.
-- `packages/rust/executor/` — runnable Rust controlled-executor sidecar and library with complete AF-050 policy/process/resource/service acceptance.
+- `packages/rust/controlled-executor/` — runnable Rust controlled-executor sidecar and library with complete AF-050 policy/process/resource/service acceptance.
 - `docs/superpowers/specs/2026-07-12-composable-framework-packages-design.md` — active AF-060 package contract and non-goals.
 - `docs/superpowers/specs/2026-07-12-controlled-code-validation-packages-design.md` — active AF-070 second-graph contract and non-goals.
 - `docs/superpowers/specs/2026-07-13-local-package-catalog-design.md` — active AF-080 discovery, exact-selection, and trust-boundary contract.

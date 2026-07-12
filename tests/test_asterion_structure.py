@@ -84,6 +84,44 @@ class AsterionStructureTests(unittest.TestCase):
         self.assertEqual(ASSEMBLY_PROTOCOL_VERSION, "dci.assembly/v1")
         self.assertEqual(EXECUTOR_PROTOCOL_VERSION, "dci.executor/v1")
 
+    def test_declarative_assets_have_product_level_owners(self) -> None:
+        capabilities = ROOT / "capabilities"
+        applications = ROOT / "applications"
+        self.assertEqual(
+            {path.name for path in capabilities.iterdir()},
+            {"controlled-code", "dci-research"},
+        )
+        self.assertTrue(
+            (
+                applications
+                / "dci-agent-lite/assemblies/dci-local-research.json"
+            ).is_file()
+        )
+        package_ids = set()
+        for path in capabilities.glob("*/manifests/*.json"):
+            import json
+
+            package_ids.add(json.loads(path.read_text())["package_id"])
+        self.assertEqual(
+            package_ids,
+            {
+                "dci.evaluation",
+                "dci.research",
+                "evaluation.code-quality",
+                "observability.execution-audit",
+                "policy.controlled-code-check",
+                "policy.local-corpus",
+                "protocol.observability",
+                "workflow.code-quality",
+            },
+        )
+
+    def test_cross_language_working_directories_are_asterion_owned(self) -> None:
+        self.assertTrue((ROOT / "packages/typescript/asterion-runtime").is_dir())
+        self.assertTrue((ROOT / "packages/rust/controlled-executor").is_dir())
+        self.assertFalse((ROOT / "packages/typescript/agent-runtime").exists())
+        self.assertFalse((ROOT / "packages/rust/executor").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

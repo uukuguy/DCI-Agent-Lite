@@ -16,14 +16,14 @@ check-judge-config:
 	uv run python scripts/check_judge.py --config-only
 
 test-typescript-host:
-	npm --prefix packages/typescript/agent-runtime test
+	npm --prefix packages/typescript/asterion-runtime test
 
 test-rust-executor:
-	cargo test --manifest-path packages/rust/executor/Cargo.toml
+	cargo test --manifest-path packages/rust/controlled-executor/Cargo.toml
 
 check-rust-executor:
-	cargo fmt --manifest-path packages/rust/executor/Cargo.toml --check
-	cargo clippy --manifest-path packages/rust/executor/Cargo.toml --all-targets -- -D warnings
+	cargo fmt --manifest-path packages/rust/controlled-executor/Cargo.toml --check
+	cargo clippy --manifest-path packages/rust/controlled-executor/Cargo.toml --all-targets -- -D warnings
 
 codex-example:
 	bash scripts/examples/dci_basic_openai_codex_example.sh

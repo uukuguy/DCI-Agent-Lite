@@ -16,16 +16,19 @@ const packageFixtures = new URL(
   "../../../../tests/fixtures/packages/v1/",
   import.meta.url,
 );
-const referenceManifests = new URL(
-  "../../../manifests/",
-  import.meta.url,
-);
+const referenceManifestRoots = [
+  new URL("../../../../capabilities/dci-research/manifests/", import.meta.url),
+  new URL("../../../../capabilities/controlled-code/manifests/", import.meta.url),
+];
 const sourceDirectory = new URL("../src/", import.meta.url);
 const assemblyFixtures = new URL(
   "../../../../tests/fixtures/assembly/v1/",
   import.meta.url,
 );
-const referenceAssemblies = new URL("../../../../assemblies/", import.meta.url);
+const referenceAssemblies = new URL(
+  "../../../../applications/dci-agent-lite/assemblies/",
+  import.meta.url,
+);
 
 async function readJson(name) {
   return JSON.parse(await readFile(new URL(name, fixtures), "utf8"));
@@ -110,9 +113,16 @@ test("rejects package edge arrays that are not sorted", async () => {
 });
 
 test("validates every checked-in reference package manifest", async () => {
-  const names = (await readdir(referenceManifests))
-    .filter((name) => name.endsWith(".json"))
-    .sort();
+  const entries = (
+    await Promise.all(
+      referenceManifestRoots.map(async (root) =>
+        (await readdir(root))
+          .filter((name) => name.endsWith(".json"))
+          .map((name) => ({ name, root })),
+      ),
+    )
+  ).flat();
+  const names = entries.map(({ name }) => name).sort();
   assert.deepEqual(names, [
     "code-quality-evaluation.json",
     "code-quality-workflow.json",
@@ -123,9 +133,9 @@ test("validates every checked-in reference package manifest", async () => {
     "local-corpus-policy.json",
     "protocol-observability.json",
   ]);
-  for (const name of names) {
+  for (const { name, root } of entries) {
     const manifest = JSON.parse(
-      await readFile(new URL(name, referenceManifests), "utf8"),
+      await readFile(new URL(name, root), "utf8"),
     );
     assert.deepEqual(validatePackageManifest(manifest), manifest);
   }

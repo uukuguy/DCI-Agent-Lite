@@ -67,14 +67,14 @@
 ### Task 4: TypeScript shared-fixture parity
 
 **Files:**
-- Modify: `packages/typescript/agent-runtime/scripts/copy-schemas.mjs`
-- Modify: `packages/typescript/agent-runtime/test/runtime.test.mjs`
-- Modify: `packages/typescript/agent-runtime/src/index.ts`
+- Modify: `packages/typescript/asterion-runtime/scripts/copy-schemas.mjs`
+- Modify: `packages/typescript/asterion-runtime/test/runtime.test.mjs`
+- Modify: `packages/typescript/asterion-runtime/src/index.ts`
 
 **Interfaces:** `validatePackageManifest(value: unknown): PackageManifest` validates the same checked-in schema/fixtures; it does not compose graphs.
 
 - [ ] Add failing Node tests for valid and invalid shared package fixtures.
-- [ ] Run `npm --prefix packages/typescript/agent-runtime test`; expect missing validator failure.
+- [ ] Run `npm --prefix packages/typescript/asterion-runtime test`; expect missing validator failure.
 - [ ] Add schema copying, public portable types, and Ajv validation.
 - [ ] Re-run clean install, build, and Node tests.
 - [ ] Commit TypeScript parity.

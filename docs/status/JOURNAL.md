@@ -257,9 +257,13 @@
 - 02:34 Asterion package/assembly/executor extraction 通过 69 focused tests，旧模块无行为定义。
 - 02:35 Asterion composition contracts 已提交，H002 climb acceptance 可继续。[a7aa713]
 - 02:33 AF-095-H-002 confirmed 4/4；contracts、wire stability 与 single implementation 通过。
+- 02:34 H002 extraction acceptance 已提交，product-directory separation 可继续。[1829e8b]
+- 02:35 Rust operator failure 根因为迁移后的 stale target absolute path；`cargo clean` 重建后 19 tests 通过。
+- 02:36 AF-095-H-003 confirmed 4/4；capability/application/cross-language roots 与 identities 通过。
 - 01:36 AF-090-H-001 confirmed 4/4; package acceptance recorded.
 - 01:40 AF-090-H-002 confirmed 4/4; package acceptance recorded.
 - 01:47 AF-090-H-003 confirmed 4/4; package acceptance recorded.
 - 01:50 AF-090-H-004 confirmed 4/4; package acceptance recorded.
 - 02:28 AF-095-H-001 confirmed 4/4; package acceptance recorded.
 - 02:32 AF-095-H-002 confirmed 4/4; package acceptance recorded.
+- 02:36 AF-095-H-003 confirmed 4/4; package acceptance recorded.

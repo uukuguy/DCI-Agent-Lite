@@ -1093,7 +1093,7 @@ class ClimbToolTests(unittest.TestCase):
         train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
 
         self.assertIn("AF-060-H-004", train_script)
-        self.assertIn("npm --prefix packages/typescript/agent-runtime test", train_script)
+        self.assertIn("npm --prefix packages/typescript/asterion-runtime test", train_script)
 
     def test_af060_h004_eval_reports_four_typescript_parity_dimensions(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1232,7 +1232,7 @@ class ClimbToolTests(unittest.TestCase):
         train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
 
         self.assertIn("AF-070-H-003", train_script)
-        self.assertIn("npm --prefix packages/typescript/agent-runtime test", train_script)
+        self.assertIn("npm --prefix packages/typescript/asterion-runtime test", train_script)
 
     def test_af070_h003_eval_reports_four_typescript_dimensions(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1267,7 +1267,7 @@ class ClimbToolTests(unittest.TestCase):
 
         self.assertIn("AF-070-H-004", train_script)
         self.assertIn("python -m unittest discover -v", train_script)
-        self.assertIn("npm --prefix packages/typescript/agent-runtime ci", train_script)
+        self.assertIn("npm --prefix packages/typescript/asterion-runtime ci", train_script)
         self.assertIn("make test-rust-executor", train_script)
         self.assertIn("make check-rust-executor", train_script)
 
@@ -1406,7 +1406,7 @@ class ClimbToolTests(unittest.TestCase):
 
         self.assertIn("AF-080-H-004", train_script)
         self.assertIn("python -m unittest discover -v", train_script)
-        self.assertIn("npm --prefix packages/typescript/agent-runtime ci", train_script)
+        self.assertIn("npm --prefix packages/typescript/asterion-runtime ci", train_script)
         self.assertIn("make test-rust-executor", train_script)
         self.assertIn("make check-rust-executor", train_script)
 
@@ -1523,7 +1523,7 @@ class ClimbToolTests(unittest.TestCase):
         train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
         self.assertIn("AF-090-H-004", train_script)
         self.assertIn("python -m unittest discover -v", train_script)
-        self.assertIn("npm --prefix packages/typescript/agent-runtime ci", train_script)
+        self.assertIn("npm --prefix packages/typescript/asterion-runtime ci", train_script)
         self.assertIn("make test-rust-executor", train_script)
         self.assertIn("make check-rust-executor", train_script)
 
@@ -1601,6 +1601,33 @@ class ClimbToolTests(unittest.TestCase):
             self.assertEqual(
                 set(evaluation["per_task"]),
                 {"package_extraction", "assembly_extraction", "wire_stability", "single_implementation"},
+            )
+
+    def test_af095_h003_train_runs_product_directory_suite(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+        self.assertIn("AF-095-H-003", train_script)
+        self.assertIn("test_declarative_assets_have_product_level_owners", train_script)
+        self.assertIn("packages/typescript/asterion-runtime", train_script)
+        self.assertIn("packages/rust/controlled-executor", train_script)
+
+    def test_af095_h003_eval_reports_four_directory_dimensions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            env = os.environ.copy()
+            env["DCI_CLIMB_HYPOTHESIS_ID"] = "AF-095-H-003"
+            result = subprocess.run(
+                ["bash", "tools/climb/eval-local.sh", str(run_dir)],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            evaluation = json.loads((run_dir / "local-eval.json").read_text())
+            self.assertEqual(evaluation["total"], 4)
+            self.assertEqual(
+                set(evaluation["per_task"]),
+                {"capability_roots", "application_root", "cross_language_paths", "identity_stability"},
             )
 
 

@@ -34,7 +34,7 @@
 
 ### Task 3: Publish the TypeScript host package
 
-**Files:** `packages/typescript/agent-runtime/package.json`, `tsconfig.json`, `src/`, `test/`, package lock.
+**Files:** `packages/typescript/asterion-runtime/package.json`, `tsconfig.json`, `src/`, `test/`, package lock.
 
 - Write failing Node tests against shared protocol fixtures.
 - Add discriminated public protocol types and the async client interface.

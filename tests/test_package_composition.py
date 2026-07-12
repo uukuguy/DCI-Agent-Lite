@@ -12,7 +12,14 @@ from dci.framework.adapters.pi import map_pi_capabilities
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_DIR = REPO_ROOT / "tests/fixtures/packages/v1"
-MANIFEST_DIR = REPO_ROOT / "packages/manifests"
+MANIFEST_DIRS = (
+    REPO_ROOT / "capabilities/dci-research/manifests",
+    REPO_ROOT / "capabilities/controlled-code/manifests",
+)
+
+
+def manifest_path(name: str) -> Path:
+    return next(path / name for path in MANIFEST_DIRS if (path / name).is_file())
 PACKAGE_GUIDE = REPO_ROOT / "docs/architecture/composable-packages.md"
 CONTROLLED_CODE_GUIDE = (
     REPO_ROOT / "docs/architecture/controlled-code-validation-packages.md"
@@ -166,7 +173,7 @@ class DciReferencePackageTests(unittest.TestCase):
             "protocol-observability.json",
             "dci-evaluation.json",
         )
-        return [json.loads((MANIFEST_DIR / name).read_text()) for name in names]
+        return [json.loads(manifest_path(name).read_text()) for name in names]
 
     def compose_for(self, capabilities: set[str]):
         return compose_packages(
@@ -230,7 +237,7 @@ class ControlledCodePackageTests(unittest.TestCase):
 
     def manifests(self) -> list[dict[str, object]]:
         return [
-            json.loads((MANIFEST_DIR / name).read_text())
+            json.loads(manifest_path(name).read_text())
             for name in self.manifest_names
         ]
 

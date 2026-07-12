@@ -21,7 +21,7 @@ The binary accepts exactly one argument: a JSON file containing trusted operator
 Run the newline-delimited JSON service with:
 
 ```bash
-cargo run --manifest-path packages/rust/executor/Cargo.toml -- /path/to/policy.json
+cargo run --manifest-path packages/rust/controlled-executor/Cargo.toml -- /path/to/policy.json
 ```
 
 Requests arrive on stdin and protocol responses are the only stdout content. Safe startup/runtime diagnostics use stderr. Agent requests can name only a configured `program_id`, literal argument vector, workspace-relative existing cwd, and values within the trusted deadline/output ceilings.

@@ -38,6 +38,7 @@ Active work package: AF-095
 - Registry reservation is deliberately deferred and does not block AF-095 extraction.
 - `AF-095-H-001` is confirmed 4/4: Asterion owns runtime/host/adapters, DCI re-exports identical objects, and dependency direction is enforced.
 - `AF-095-H-002` is confirmed 4/4: package/catalog/composition, assembly, executor, wire stability, and single-implementation boundaries pass.
+- `AF-095-H-003` is confirmed 4/4: capability/application roots, cross-language paths, and all declarative identities pass.
 
 ## Durable boundary
 
@@ -51,7 +52,7 @@ Active work package: AF-095
 
 ## Immediate next action
 
-Execute AF-095-H-003: separate capability/application declarative roots and cross-language working directories without identity changes.
+Execute AF-095-H-004: prove DCI CLI/examples, document final layout, and run independent full closure.
 
 ## Guardrails
 

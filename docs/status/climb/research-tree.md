@@ -1,22 +1,21 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (44 runs).
+> Deterministic summary generated from tracked state (45 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 44
-- Next hypothesis: AF-095-H-003
+- Last cycle: 45
+- Next hypothesis: AF-095-H-004
 - In flight: none
-- Next action: Start AF-095-H-003.
+- Next action: Start AF-095-H-004.
 
 ## Active hypotheses
 
 - **AF-100-H-001** (pending, rank 1.00): Extend immutable assembly plans with explicit runtime and host-service capability ownership.
 - **AF-100-H-002** (pending, rank 0.90): Run one DCI application through an explicit runtime client into immutable normalized results.
 - **AF-100-H-003** (pending, rank 0.80): Prove runtime parity cancellation safe failures and missing-service preflight behavior.
-- **AF-095-H-003** (pending, rank 0.80): Reorganize declarative capability application schema and cross-language roots while preserving identities.
 - **AF-095-H-004** (pending, rank 0.70): Prove DCI CLI examples packaging compatibility and full Asterion extraction closure.
 - **AF-100-H-004** (pending, rank 0.60): Document and close the minimal runner without scheduler registry or automatic service startup.
 
@@ -68,6 +67,7 @@
 | 20260713-014956-dci-climb-af090h004 | AF-090-H-004 | 4 | confirmed 4/4 |
 | 20260713-022833-dci-climb-af095h001 | AF-095-H-001 | 4 | confirmed 4/4 |
 | 20260713-023239-dci-climb-af095h002 | AF-095-H-002 | 4 | confirmed 4/4 |
+| 20260713-023630-dci-climb-af095h003 | AF-095-H-003 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

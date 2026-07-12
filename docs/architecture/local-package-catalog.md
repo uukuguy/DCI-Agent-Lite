@@ -30,7 +30,12 @@ from pathlib import Path
 from dci.framework.package_catalog import PackageRef, discover_packages
 from dci.framework.packages import compose_packages
 
-catalog = discover_packages([Path("packages/manifests")])
+catalog = discover_packages(
+    [
+        Path("capabilities/dci-research/manifests"),
+        Path("capabilities/controlled-code/manifests"),
+    ]
+)
 refs = (
     PackageRef("policy.local-corpus", "1.0.0"),
     PackageRef("dci.research", "1.0.0"),
@@ -88,6 +93,6 @@ schema.
 ```bash
 uv run python -m unittest tests.test_package_catalog -v
 uv run python -m unittest tests.test_package_composition -v
-npm --prefix packages/typescript/agent-runtime test
+npm --prefix packages/typescript/asterion-runtime test
 python3 tools/project_scope_check.py
 ```

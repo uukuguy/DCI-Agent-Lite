@@ -16,7 +16,10 @@ from dci.framework.packages import compose_packages
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-MANIFEST_DIR = REPO_ROOT / "packages/manifests"
+MANIFEST_DIRS = (
+    REPO_ROOT / "capabilities/dci-research/manifests",
+    REPO_ROOT / "capabilities/controlled-code/manifests",
+)
 CATALOG_GUIDE = REPO_ROOT / "docs/architecture/local-package-catalog.md"
 
 
@@ -215,7 +218,7 @@ class PackageSelectionTests(unittest.TestCase):
     )
 
     def catalog(self):
-        return discover_packages([MANIFEST_DIR])
+        return discover_packages(MANIFEST_DIRS)
 
     def test_exact_selection_is_complete_and_deterministic(self) -> None:
         catalog = self.catalog()

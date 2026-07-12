@@ -100,6 +100,6 @@ represented or safely validated by the static contract.
 
 ```bash
 uv run python -m unittest tests.test_package_composition -v
-npm --prefix packages/typescript/agent-runtime test
+npm --prefix packages/typescript/asterion-runtime test
 python3 tools/project_scope_check.py
 ```

@@ -26,7 +26,7 @@
 
 ### Task 2: Build trusted policy and request validation
 
-**Files:** `packages/rust/executor/Cargo.toml`, `src/policy.rs`, `src/protocol.rs`, unit tests.
+**Files:** `packages/rust/controlled-executor/Cargo.toml`, `src/policy.rs`, `src/protocol.rs`, unit tests.
 
 - Start with failing tests for relative executables, duplicate program IDs, invalid limits, unknown fields, and workspace traversal.
 - Canonicalize trusted workspace/program paths at startup.

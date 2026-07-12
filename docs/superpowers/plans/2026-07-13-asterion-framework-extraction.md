@@ -202,7 +202,7 @@ git commit -m "refactor: extract Asterion composition contracts"
 - Create: `capabilities/controlled-code/manifests/*.json`
 - Create: `applications/dci-agent-lite/assemblies/*.json`
 - Modify: `src/asterion/packages/catalog.py` only if a named explicit-root helper is required
-- Modify: TypeScript schema-copy/test paths under `packages/typescript/agent-runtime/`
+- Modify: TypeScript schema-copy/test paths under `packages/typescript/asterion-runtime/`
 - Modify: architecture documentation
 - Test: `tests/test_asterion_structure.py`
 - Test: catalog, composition, assembly, and TypeScript suites
@@ -241,7 +241,7 @@ Use `git mv` so history follows the files. Split the eight manifests by graph an
 
 - [ ] **Step 4: Rename cross-language working directories without changing package publication metadata**
 
-Move `packages/typescript/agent-runtime/` to `packages/typescript/asterion-runtime/` and `packages/rust/executor/` to `packages/rust/controlled-executor/`. Update Make targets and test paths. Keep current internal package names and protocol literals until a separate release decision.
+Move `packages/typescript/asterion-runtime/` to `packages/typescript/asterion-runtime/` and `packages/rust/controlled-executor/` to `packages/rust/controlled-executor/`. Update Make targets and test paths. Keep current internal package names and protocol literals until a separate release decision.
 
 - [ ] **Step 5: Run cross-language focused gates**
 

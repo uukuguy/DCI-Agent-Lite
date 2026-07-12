@@ -248,4 +248,4 @@
 - Packaging: use the bare `asterion` distribution/import name; exact PyPI and npm registry probes returned 404 on 2026-07-13, though publication remains out of scope.
 - Compatibility: preserve `dci-agent-lite`, both `scripts/examples/` entry paths, `dci.framework.*` re-exports, and current `dci.*` protocol literals during extraction.
 - Revalidation trigger: rename protocol literals only through a separate versioned compatibility decision; remove old imports only after downstream usage is measured.
-- Implemented evidence: H-001 confirms authoritative runtime/host/adapter modules, object identity, dependency direction, and dual-root packaging; H-002 confirms package/assembly/executor extraction, stable wire literals, and definition-free compatibility modules.
+- Implemented evidence: H-001 confirms authoritative runtime/host/adapter modules, object identity, dependency direction, and dual-root packaging; H-002 confirms package/assembly/executor extraction, stable wire literals, and definition-free compatibility modules; H-003 confirms product-level capability/application assets and Asterion-owned TypeScript/Rust working directories without identity drift.

@@ -14,8 +14,12 @@ from dci.framework.package_catalog import PackageRef, discover_packages
 
 
 FIXTURES = Path(__file__).parent / "fixtures/assembly/v1"
-MANIFESTS = Path(__file__).resolve().parents[1] / "packages/manifests"
-ASSEMBLIES = Path(__file__).resolve().parents[1] / "assemblies"
+ROOT = Path(__file__).resolve().parents[1]
+MANIFESTS = (
+    ROOT / "capabilities/dci-research/manifests",
+    ROOT / "capabilities/controlled-code/manifests",
+)
+ASSEMBLIES = ROOT / "applications/dci-agent-lite/assemblies"
 GUIDE = Path(__file__).resolve().parents[1] / "docs/architecture/static-application-assembly.md"
 
 
@@ -75,7 +79,7 @@ class AssemblyResolverTests(unittest.TestCase):
 
         plan = resolve_assembly(
             assembly,
-            catalog=discover_packages([MANIFESTS]),
+            catalog=discover_packages(MANIFESTS),
             runtime_manifest=self.runtime(),
         )
 
@@ -104,7 +108,7 @@ class AssemblyResolverTests(unittest.TestCase):
 
         plan = resolve_assembly(
             assembly,
-            catalog=discover_packages([MANIFESTS]),
+            catalog=discover_packages(MANIFESTS),
             runtime_manifest=runtime,
         )
 
@@ -120,7 +124,7 @@ class AssemblyResolverTests(unittest.TestCase):
         with self.assertRaises(AssemblyError):
             resolve_assembly(
                 assembly,
-                catalog=discover_packages([MANIFESTS]),
+                catalog=discover_packages(MANIFESTS),
                 runtime_manifest=self.runtime(),
             )
 
@@ -146,7 +150,7 @@ class AssemblyResolverTests(unittest.TestCase):
             ) as raised:
                 resolve_assembly(
                     assembly,
-                    catalog=discover_packages([MANIFESTS]),
+                    catalog=discover_packages(MANIFESTS),
                     runtime_manifest=runtime,
                 )
             self.assertNotIn(sentinel, str(raised.exception))
@@ -159,7 +163,7 @@ class ReferenceAssemblyTests(unittest.TestCase):
     def resolve(self, assembly: dict[str, object], runtime_id: str) -> AssemblyPlan:
         return resolve_assembly(
             {**assembly, "runtime_id": runtime_id},
-            catalog=discover_packages([MANIFESTS]),
+            catalog=discover_packages(MANIFESTS),
             runtime_manifest={
                 "protocol": "dci.agent-runtime/v1",
                 "runtime_id": runtime_id,

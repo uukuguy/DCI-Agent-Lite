@@ -33,7 +33,7 @@ run_rust_dimension() {
     name="$1"
     test_name="$2"
     if cargo test \
-        --manifest-path packages/rust/executor/Cargo.toml \
+        --manifest-path packages/rust/controlled-executor/Cargo.toml \
         --test "$rust_suite" \
         "$test_name" -- --exact >"$RUN_DIR/$name.log" 2>&1; then
         printf '1'
@@ -47,7 +47,7 @@ run_closure_dimension() {
     check="$2"
     case "$check" in
         operator_binary)
-            command=(cargo test --manifest-path packages/rust/executor/Cargo.toml --test operator)
+            command=(cargo test --manifest-path packages/rust/controlled-executor/Cargo.toml --test operator)
             ;;
         operator_docs)
             command=(uv run python -m unittest tests.test_climb_tools.ClimbToolTests.test_af050_operator_docs_and_root_verification_targets_exist -v)
@@ -59,13 +59,13 @@ run_closure_dimension() {
             command=(make check-rust-executor)
             ;;
         assembly_typescript)
-            command=(npm --prefix packages/typescript/agent-runtime test)
+            command=(npm --prefix packages/typescript/asterion-runtime test)
             ;;
         assembly_docs)
             command=(uv run python -m unittest tests.test_application_assembly.AssemblyDocumentationTests -v)
             ;;
         assembly_non_execution)
-            command=(node --test --test-name-pattern "keeps assembly resolution outside" packages/typescript/agent-runtime/test/runtime.test.mjs)
+            command=(node --test --test-name-pattern "keeps assembly resolution outside" packages/typescript/asterion-runtime/test/runtime.test.mjs)
             ;;
         assembly_closure)
             command=(uv run python -m unittest tests.test_climb_tools.ClimbToolTests.test_af090_h004_train_runs_full_framework_closure_gate -v)
@@ -86,14 +86,14 @@ run_typescript_dimension() {
     name="$1"
     test_name="$2"
     if [ "$test_name" = "public_type_contract" ]; then
-        command=(npm --prefix packages/typescript/agent-runtime run build)
+        command=(npm --prefix packages/typescript/asterion-runtime run build)
     else
         command=(
             node --test --test-name-pattern "$test_name"
-            packages/typescript/agent-runtime/test/runtime.test.mjs
+            packages/typescript/asterion-runtime/test/runtime.test.mjs
         )
     fi
-    if npm --prefix packages/typescript/agent-runtime run build >"$RUN_DIR/$name.log" 2>&1 \
+    if npm --prefix packages/typescript/asterion-runtime run build >"$RUN_DIR/$name.log" 2>&1 \
         && "${command[@]}" >>"$RUN_DIR/$name.log" 2>&1; then
         printf '1'
     else
@@ -354,6 +354,16 @@ case "$HYPOTHESIS_ID" in
         repeat_test="tests.test_application_assembly.ReferenceAssemblyTests.test_checked_in_reference_assemblies_are_valid"
         dirty_test="tests.test_asterion_structure.AsterionStructureTests.test_extracted_wire_protocol_literals_remain_stable"
         override_test="tests.test_asterion_structure.AsterionStructureTests.test_dci_framework_compatibility_modules_define_no_behavior"
+        ;;
+    AF-095-H-003)
+        first_dimension="capability_roots"
+        second_dimension="application_root"
+        third_dimension="cross_language_paths"
+        fourth_dimension="identity_stability"
+        immutable_test="tests.test_asterion_structure.AsterionStructureTests.test_declarative_assets_have_product_level_owners"
+        repeat_test="tests.test_application_assembly.ReferenceAssemblyTests.test_checked_in_reference_assemblies_are_valid"
+        dirty_test="tests.test_asterion_structure.AsterionStructureTests.test_cross_language_working_directories_are_asterion_owned"
+        override_test="tests.test_package_catalog.PackageSelectionTests.test_selected_manifests_compose_both_reference_graphs"
         ;;
     H-001)
         first_dimension="immutable_resolution"
