@@ -227,4 +227,5 @@
 - Rationale: the catalog now supplies stable identities; a portable static binding is required before any runner can safely consume runtime/package/service choices.
 - Boundary: resolution performs no runtime, executor, tool, or workflow execution and carries no prompts, credentials, provider/model settings, commands, transports, or mutable state.
 - Revalidation trigger: propose a runner only after static plans for both reference applications are portable, safe, and insufficient for a concrete execution use case.
-- Implemented evidence: AF-090-H-001 confirms the closed assembly protocol, exact canonical package refs, and canonical host edge arrays; H-002 confirms immutable runtime/catalog binding, explicit host-service separation, unknown-ref rejection, and content-safe failures.
+- Implemented evidence: H-001 confirms the closed protocol and canonical refs/edges; H-002 confirms immutable safe resolution; H-003 confirms both reference applications, runtime parity, and service separation; H-004 confirms TypeScript validation ownership, non-execution documentation, and full repository closure.
+- Closure evidence: 237 Python, 11 Node, and 19 Rust tests plus compile, Ruff, clean npm install, fmt, Clippy, shell, scope, and diff gates pass. Formal package closure waits only for an approved successor package.

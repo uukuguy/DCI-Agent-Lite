@@ -16,6 +16,7 @@ from dci.framework.package_catalog import PackageRef, discover_packages
 FIXTURES = Path(__file__).parent / "fixtures/assembly/v1"
 MANIFESTS = Path(__file__).resolve().parents[1] / "packages/manifests"
 ASSEMBLIES = Path(__file__).resolve().parents[1] / "assemblies"
+GUIDE = Path(__file__).resolve().parents[1] / "docs/architecture/static-application-assembly.md"
 
 
 class AssemblyManifestTests(unittest.TestCase):
@@ -190,6 +191,35 @@ class ReferenceAssemblyTests(unittest.TestCase):
         forbidden = {"command", "credentials", "model", "prompt", "transport"}
         for path in ASSEMBLIES.glob("*.json"):
             self.assertTrue(forbidden.isdisjoint(self.load(path)))
+
+
+class AssemblyDocumentationTests(unittest.TestCase):
+    def guide(self) -> str:
+        return GUIDE.read_text()
+
+    def test_guide_defines_static_planning_and_exact_refs(self) -> None:
+        guide = self.guide()
+        self.assertIn("Static planning, not execution", guide)
+        self.assertIn("package_id@version", guide)
+        self.assertIn("AssemblyPlan", guide)
+
+    def test_guide_separates_runtime_and_host_service_capabilities(self) -> None:
+        guide = self.guide()
+        self.assertIn("Runtime capabilities", guide)
+        self.assertIn("Host-service capabilities", guide)
+        self.assertIn("executor.controlled", guide)
+
+    def test_guide_documents_safe_failure_and_language_ownership(self) -> None:
+        guide = self.guide()
+        self.assertIn("fail closed", guide)
+        self.assertIn("Python owns resolution", guide)
+        self.assertIn("TypeScript validates", guide)
+
+    def test_guide_excludes_runtime_execution_and_secrets(self) -> None:
+        guide = self.guide()
+        self.assertIn("does not start a runtime", guide)
+        self.assertIn("credentials", guide)
+        self.assertIn("commands", guide)
 
 
 if __name__ == "__main__":

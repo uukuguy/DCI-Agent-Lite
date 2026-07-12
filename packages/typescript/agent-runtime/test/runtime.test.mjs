@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   ProtocolValidationError,
+  validateAssemblyManifest,
   validateEventStream,
   validatePackageManifest,
   validateRunRequest,
@@ -20,6 +21,11 @@ const referenceManifests = new URL(
   import.meta.url,
 );
 const sourceDirectory = new URL("../src/", import.meta.url);
+const assemblyFixtures = new URL(
+  "../../../../tests/fixtures/assembly/v1/",
+  import.meta.url,
+);
+const referenceAssemblies = new URL("../../../../assemblies/", import.meta.url);
 
 async function readJson(name) {
   return JSON.parse(await readFile(new URL(name, fixtures), "utf8"));
@@ -134,4 +140,54 @@ test("keeps package composition outside the TypeScript host", async () => {
   const publicSource = sources.join("\n");
 
   assert.doesNotMatch(publicSource, /composePackages|PackageComposition/);
+});
+
+test("validates the shared assembly fixtures", async () => {
+  const valid = JSON.parse(
+    await readFile(new URL("valid-dci.json", assemblyFixtures), "utf8"),
+  );
+  const invalid = JSON.parse(
+    await readFile(new URL("invalid-unknown-field.json", assemblyFixtures), "utf8"),
+  );
+  assert.deepEqual(validateAssemblyManifest(valid), valid);
+  assert.throws(() => validateAssemblyManifest(invalid), ProtocolValidationError);
+});
+
+test("validates every checked-in reference assembly", async () => {
+  const names = (await readdir(referenceAssemblies))
+    .filter((name) => name.endsWith(".json"))
+    .sort();
+  assert.deepEqual(names, [
+    "controlled-code-validation.json",
+    "dci-local-research.json",
+  ]);
+  for (const name of names) {
+    const assembly = JSON.parse(
+      await readFile(new URL(name, referenceAssemblies), "utf8"),
+    );
+    assert.deepEqual(validateAssemblyManifest(assembly), assembly);
+  }
+});
+
+test("rejects non-canonical assembly arrays", async () => {
+  const valid = JSON.parse(
+    await readFile(new URL("valid-dci.json", assemblyFixtures), "utf8"),
+  );
+  assert.throws(
+    () => validateAssemblyManifest({ ...valid, packages: [...valid.packages].reverse() }),
+    ProtocolValidationError,
+  );
+  assert.throws(
+    () => validateAssemblyManifest({ ...valid, host_events: ["z.last", "a.first"] }),
+    ProtocolValidationError,
+  );
+});
+
+test("keeps assembly resolution outside the TypeScript host", async () => {
+  const sources = await Promise.all(
+    (await readdir(sourceDirectory))
+      .filter((name) => name.endsWith(".ts"))
+      .map((name) => readFile(new URL(name, sourceDirectory), "utf8")),
+  );
+  assert.doesNotMatch(sources.join("\n"), /resolveAssembly|AssemblyPlan/);
 });

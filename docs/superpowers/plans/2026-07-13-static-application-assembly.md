@@ -39,17 +39,17 @@
 
 **Files:** create DCI and controlled-code manifests under `assemblies/`; modify assembly tests and climb adapters/tests.
 
-- [ ] Write RED tests loading checked-in assemblies and stable Pi/Claude/runtime fixtures.
-- [ ] Add canonical DCI and controlled-code assemblies; resolve DCI for equivalent Pi/Claude capabilities and controlled-code with separate `executor.controlled` host service.
-- [ ] Assert stable package orders, portable outputs, host-service separation, and no execution fields.
-- [ ] Add AF-090-H-003 dimensions `dci_plan`, `runtime_parity`, `controlled_plan`, `service_separation`; cycle, gates, commit `feat: add reference application assemblies`.
+- [x] Write RED tests loading checked-in assemblies and stable Pi/Claude/runtime fixtures.
+- [x] Add canonical DCI and controlled-code assemblies; resolve DCI for equivalent Pi/Claude capabilities and controlled-code with separate `executor.controlled` host service.
+- [x] Assert stable package orders, portable outputs, host-service separation, and no execution fields.
+- [x] Add AF-090-H-003 dimensions `dci_plan`, `runtime_parity`, `controlled_plan`, `service_separation`; cycle and gates.
 
 ### Task 4: TypeScript parity, documentation, and closure
 
 **Files:** modify TypeScript types/validator/schema copy/tests; create `docs/architecture/static-application-assembly.md`; modify Python docs tests, status, climb adapters/tests.
 
-- [ ] Add Node RED tests for valid/invalid assembly fixtures and both checked-in assemblies; export `AssemblyManifest` and `validateAssemblyManifest` without resolver code.
-- [ ] Add documentation RED tests for static planning, runtime/host-service separation, exact refs, safe errors, and non-execution.
-- [ ] Add AF-090-H-004 full closure with dimensions `typescript_parity`, `assembly_docs`, `non_execution`, `framework_closure`.
-- [ ] Run cycle then independently run full Python discovery/compile/Ruff, clean TypeScript tests, Rust tests/fmt/Clippy, shell syntax, `python3 tools/project_scope_check.py --climb-hypothesis AF-090-H-004`, and `git diff --check`.
+- [x] Add Node RED tests for valid/invalid assembly fixtures and both checked-in assemblies; export `AssemblyManifest` and `validateAssemblyManifest` without resolver code.
+- [x] Add documentation RED tests for static planning, runtime/host-service separation, exact refs, safe errors, and non-execution.
+- [x] Add AF-090-H-004 full closure with dimensions `typescript_parity`, `assembly_docs`, `non_execution`, `framework_closure`.
+- [x] Run cycle then independently run full Python discovery/compile/Ruff, clean TypeScript tests, Rust tests/fmt/Clippy, shell syntax, scope, and diff gates.
 - [ ] Close AF-090 only with fresh evidence and commit `docs: close static assembly acceptance` while keeping one next governed package active.

@@ -11,9 +11,13 @@ const packageManifestSource = fileURLToPath(
     import.meta.url,
   ),
 );
+const assemblyManifestSource = fileURLToPath(
+  new URL("../../../../schemas/assembly/v1/assembly.schema.json", import.meta.url),
+);
 const destination = `${packageRoot}/dist/schemas`;
 
 rmSync(destination, { force: true, recursive: true });
 mkdirSync(destination, { recursive: true });
 cpSync(source, destination, { recursive: true });
 cpSync(packageManifestSource, `${destination}/package-manifest.schema.json`);
+cpSync(assemblyManifestSource, `${destination}/assembly.schema.json`);

@@ -58,6 +58,18 @@ run_closure_dimension() {
         root_check_target)
             command=(make check-rust-executor)
             ;;
+        assembly_typescript)
+            command=(npm --prefix packages/typescript/agent-runtime test)
+            ;;
+        assembly_docs)
+            command=(uv run python -m unittest tests.test_application_assembly.AssemblyDocumentationTests -v)
+            ;;
+        assembly_non_execution)
+            command=(node --test --test-name-pattern "keeps assembly resolution outside" packages/typescript/agent-runtime/test/runtime.test.mjs)
+            ;;
+        assembly_closure)
+            command=(uv run python -m unittest tests.test_climb_tools.ClimbToolTests.test_af090_h004_train_runs_full_framework_closure_gate -v)
+            ;;
         *)
             echo "ERROR: unknown closure check $check" >&2
             return 2
@@ -301,6 +313,27 @@ case "$HYPOTHESIS_ID" in
         repeat_test="tests.test_application_assembly.AssemblyResolverTests.test_unknown_catalog_ref_is_rejected"
         dirty_test="tests.test_application_assembly.AssemblyResolverTests.test_host_service_capability_is_separate_from_runtime_capabilities"
         override_test="tests.test_application_assembly.AssemblyResolverTests.test_resolution_failures_are_safe"
+        ;;
+    AF-090-H-003)
+        first_dimension="dci_plan"
+        second_dimension="runtime_parity"
+        third_dimension="controlled_plan"
+        fourth_dimension="service_separation"
+        immutable_test="tests.test_application_assembly.ReferenceAssemblyTests.test_checked_in_reference_assemblies_are_valid"
+        repeat_test="tests.test_application_assembly.ReferenceAssemblyTests.test_dci_plan_has_pi_and_claude_runtime_parity"
+        dirty_test="tests.test_application_assembly.ReferenceAssemblyTests.test_controlled_code_keeps_executor_as_a_host_service"
+        override_test="tests.test_application_assembly.ReferenceAssemblyTests.test_reference_assemblies_contain_no_execution_or_secret_fields"
+        ;;
+    AF-090-H-004)
+        dimension_runner="run_closure_dimension"
+        first_dimension="typescript_parity"
+        second_dimension="assembly_docs"
+        third_dimension="non_execution"
+        fourth_dimension="framework_closure"
+        immutable_test="assembly_typescript"
+        repeat_test="assembly_docs"
+        dirty_test="assembly_non_execution"
+        override_test="assembly_closure"
         ;;
     H-001)
         first_dimension="immutable_resolution"

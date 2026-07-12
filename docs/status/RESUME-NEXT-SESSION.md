@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13 01:41 +0800. **Session remains active — autonomous climb continues.**
+> Updated: 2026-07-13 01:51 +0800. **AF-090 is implementation-complete; package closure awaits the next governed design.**
 
 Active work package: AF-090
 
@@ -30,6 +30,8 @@ Active work package: AF-090
 - `AF-090-H-001` is confirmed: the closed canonical assembly contract and shared Python fixtures pass.
 - `AF-090-H-002` is confirmed: runtime identity, exact catalog refs, host-service separation, and safe immutable resolution pass 4/4.
 - AF-090-H-003 product evidence is green: both checked-in reference assemblies validate, DCI has Pi/Claude plan parity, and controlled execution stays host-owned.
+- `AF-090-H-003` and `AF-090-H-004` are confirmed 4/4; TypeScript parity, documentation, and full closure are green.
+- Fresh closure evidence: 237 Python, 11 Node, and 19 Rust tests plus compile, Ruff, clean npm install, fmt, Clippy, shell, scope, and diff gates.
 
 ## Durable boundary
 
@@ -43,7 +45,7 @@ Active work package: AF-090
 
 ## Immediate next action
 
-Add AF-090-H-003 train/eval adapter acceptance, run its climb cycle, and execute fresh focused gates.
+After strategic approval, write and commit the AF-100 minimal application-runner design, activate it in WORKLIST, and formally close AF-090.
 
 ## Guardrails
 
@@ -54,6 +56,6 @@ Add AF-090-H-003 train/eval adapter acceptance, run its climb cycle, and execute
 ## Ready commands
 
 ```bash
-python3 tools/project_scope_check.py --climb-hypothesis AF-090-H-003
+python3 tools/project_scope_check.py --climb-hypothesis AF-090-H-004
 uv run python -m unittest tests.test_application_assembly -v
 ```

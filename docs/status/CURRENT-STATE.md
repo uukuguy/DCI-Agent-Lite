@@ -26,13 +26,13 @@
 - Local catalog: the Python reference surface deterministically discovers and validates direct JSON children across explicit root/file permutations without recursion. Missing/file/symlink/duplicate roots, invalid/unreadable documents, symlink manifests, and duplicate exact identities fail closed with content-free public errors.
 - Catalog selection: exact `package_id@version` refs return deterministic deep-fresh manifests; all eight checked-in packages are selectable and both reference graphs compose unchanged. Duplicate or unknown selections fail closed without implicit version policy.
 - AF-080 acceptance: explicit-root discovery, filesystem/document/identity safety, exact selection, both graph integrations, Python-only ownership, and operator documentation pass full framework closure without registry, installation, or execution scope.
-- Static assembly: `dci.assembly/v1` has a closed canonical schema, shared fixtures, and Python validation. The pure resolver binds a matching runtime manifest, exact catalog refs, and explicit host-service edges into an immutable `AssemblyPlan` without mutation or execution; AF-090-H-002 is confirmed 4/4.
+- Static assembly: all four AF-090 hypotheses are confirmed. `dci.assembly/v1`, its immutable Python resolver, both reference assemblies, TypeScript schema/type validation, and the non-execution guide pass full Python/Node/Rust closure.
 - Reference assemblies: checked-in DCI and controlled-code application manifests validate and resolve; DCI composition is identical for Pi/Claude runtime identities and controlled execution remains an explicit host service.
 
 ## Open Problems (theme-level)
 
 - Provider-backed acceptance of the first non-Pi runtime when credentials or a compatible gateway become available.
-- Check in DCI and controlled-code reference application assemblies and prove runtime parity plus host-service separation.
+- Select and approve the next governed package before formally closing AF-090; the recommended direction is a minimal assembly-plan application runner vertical slice.
 
 ## Key Files
 
@@ -66,6 +66,7 @@
 - `docs/architecture/composable-packages.md` — package authoring, static composition, extension, and security boundary guide.
 - `docs/architecture/controlled-code-validation-packages.md` — second-graph, shared host-service, non-execution, and non-sandbox guide.
 - `docs/architecture/local-package-catalog.md` — explicit-root discovery, exact selection, filesystem trust, and non-execution guide.
+- `docs/architecture/static-application-assembly.md` — exact runtime/catalog/service binding, language ownership, safe failure, and non-execution guide.
 - `scripts/bcplus_eval/run_bcplus_eval.py` — DCI reference benchmark harness.
 - `tools/climb/` — autonomous-work adapter; future cycles require a work-package parent.
 

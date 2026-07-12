@@ -1,10 +1,23 @@
 import type {
   AgentRuntimeClient,
+  AssemblyManifest,
   PackageManifest,
   RunEvent,
   RunRequest,
   RuntimeManifest,
 } from "../src/index.js";
+
+export const fixtureAssembly: AssemblyManifest = {
+  protocol: "dci.assembly/v1",
+  application_id: "dci.local-research",
+  version: "1.0.0",
+  runtime_id: "pi.reference",
+  packages: [{ package_id: "dci.research", version: "1.0.0" }],
+  host_capabilities: [],
+  host_policies: [],
+  host_events: ["run.started"],
+  host_artifacts: ["text/plain"],
+};
 
 export const fixturePackage: PackageManifest = {
   protocol: "dci.package/v1",

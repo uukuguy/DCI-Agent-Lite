@@ -1,8 +1,25 @@
 export const PROTOCOL_VERSION = "dci.agent-runtime/v1" as const;
 export const PACKAGE_PROTOCOL_VERSION = "dci.package/v1" as const;
+export const ASSEMBLY_PROTOCOL_VERSION = "dci.assembly/v1" as const;
 
 export type ProtocolVersion = typeof PROTOCOL_VERSION;
 export type PackageProtocolVersion = typeof PACKAGE_PROTOCOL_VERSION;
+export type AssemblyProtocolVersion = typeof ASSEMBLY_PROTOCOL_VERSION;
+
+export interface AssemblyManifest {
+  readonly protocol: AssemblyProtocolVersion;
+  readonly application_id: string;
+  readonly version: string;
+  readonly runtime_id: string;
+  readonly packages: readonly {
+    readonly package_id: string;
+    readonly version: string;
+  }[];
+  readonly host_capabilities: readonly string[];
+  readonly host_policies: readonly string[];
+  readonly host_events: readonly string[];
+  readonly host_artifacts: readonly string[];
+}
 export type PackageKind =
   | "capability"
   | "workflow"

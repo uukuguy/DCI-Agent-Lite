@@ -1478,6 +1478,61 @@ class ClimbToolTests(unittest.TestCase):
                 },
             )
 
+    def test_af090_h003_train_runs_reference_assembly_suite(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+        self.assertIn("AF-090-H-003", train_script)
+        self.assertIn("ReferenceAssemblyTests", train_script)
+
+    def test_af090_h003_eval_reports_four_reference_dimensions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            env = os.environ.copy()
+            env["DCI_CLIMB_HYPOTHESIS_ID"] = "AF-090-H-003"
+            result = subprocess.run(
+                ["bash", "tools/climb/eval-local.sh", str(run_dir)],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            evaluation = json.loads((run_dir / "local-eval.json").read_text())
+            self.assertEqual(evaluation["hypothesis_id"], "AF-090-H-003")
+            self.assertEqual(evaluation["total"], 4)
+            self.assertEqual(
+                set(evaluation["per_task"]),
+                {"dci_plan", "runtime_parity", "controlled_plan", "service_separation"},
+            )
+
+    def test_af090_h004_train_runs_full_framework_closure_gate(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+        self.assertIn("AF-090-H-004", train_script)
+        self.assertIn("python -m unittest discover -v", train_script)
+        self.assertIn("npm --prefix packages/typescript/agent-runtime ci", train_script)
+        self.assertIn("make test-rust-executor", train_script)
+        self.assertIn("make check-rust-executor", train_script)
+
+    def test_af090_h004_eval_reports_four_closure_dimensions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            env = os.environ.copy()
+            env["DCI_CLIMB_HYPOTHESIS_ID"] = "AF-090-H-004"
+            result = subprocess.run(
+                ["bash", "tools/climb/eval-local.sh", str(run_dir)],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            evaluation = json.loads((run_dir / "local-eval.json").read_text())
+            self.assertEqual(evaluation["hypothesis_id"], "AF-090-H-004")
+            self.assertEqual(evaluation["total"], 4)
+            self.assertEqual(
+                set(evaluation["per_task"]),
+                {"typescript_parity", "assembly_docs", "non_execution", "framework_closure"},
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

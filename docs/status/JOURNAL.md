@@ -235,5 +235,11 @@
 - 01:41 AF-090-H-002 confirmed 4/4；101 focused tests 与 compile/lint/shell/scope/diff 通过。
 - 01:42 H002 resolver acceptance 已提交，为 reference assemblies 提供可恢复基线。[372fc93]
 - 01:44 two reference assemblies 通过 4 tests；Pi/Claude parity 与 host executor separation 成立。
+- 01:45 reference assemblies 已提交，H003 acceptance adapter 可继续。[6d8acfc]
+- 01:47 AF-090-H-003 confirmed 4/4；reference plans 与 service separation 通过。
+- 01:50 AF-090-H-004 confirmed 4/4；TypeScript parity、docs 与 closure adapter 通过。
+- 01:51 AF-090 closure 通过 237 Python、11 Node、19 Rust 及全部门禁；等待 successor governance。
 - 01:36 AF-090-H-001 confirmed 4/4; package acceptance recorded.
 - 01:40 AF-090-H-002 confirmed 4/4; package acceptance recorded.
+- 01:47 AF-090-H-003 confirmed 4/4; package acceptance recorded.
+- 01:50 AF-090-H-004 confirmed 4/4; package acceptance recorded.

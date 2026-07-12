@@ -7,6 +7,7 @@ import {
 } from "ajv/dist/2020.js";
 
 import type {
+  AssemblyManifest,
   PackageManifest,
   RunEvent,
   RunRequest,
@@ -23,6 +24,9 @@ const ajv = new Ajv2020({ allErrors: true });
 const manifestValidator = ajv.compile(readSchema("runtime-manifest.schema.json"));
 const packageManifestValidator = ajv.compile(
   readSchema("package-manifest.schema.json"),
+);
+const assemblyManifestValidator = ajv.compile(
+  readSchema("assembly.schema.json"),
 );
 const requestValidator = ajv.compile(readSchema("run-request.schema.json"));
 const eventValidator = ajv.compile(readSchema("event.schema.json"));
@@ -75,6 +79,34 @@ export function validatePackageManifest(value: unknown): PackageManifest {
     }
   }
   return manifest;
+}
+
+const assemblyEdgeFields = [
+  "host_capabilities",
+  "host_policies",
+  "host_events",
+  "host_artifacts",
+] as const;
+
+export function validateAssemblyManifest(value: unknown): AssemblyManifest {
+  const assembly = requireValid<AssemblyManifest>(
+    "assembly manifest",
+    assemblyManifestValidator,
+    value,
+  );
+  const refs = assembly.packages.map(
+    ({ package_id, version }) => `${package_id}@${version}`,
+  );
+  if (refs.some((entry, index) => index > 0 && refs[index - 1]! >= entry)) {
+    throw new ProtocolValidationError("assembly manifest packages", null);
+  }
+  for (const field of assemblyEdgeFields) {
+    const values = assembly[field];
+    if (values.some((entry, index) => index > 0 && values[index - 1]! >= entry)) {
+      throw new ProtocolValidationError(`assembly manifest ${field}`, null);
+    }
+  }
+  return assembly;
 }
 
 export function validateRunRequest(value: unknown): RunRequest {
