@@ -1,6 +1,6 @@
 # Recovered Session Checkpoint
 
-> Updated: 2026-07-12 17:24 +0800. **Active H-007 provenance checkpoint — session remains active, not a final handoff.**
+> Updated: 2026-07-12 17:28 +0800. **Active H-007 live-evidence checkpoint — session remains active, not a final handoff.**
 
 ## TL;DR
 
@@ -8,6 +8,7 @@
 - The exact Pi default is `8479bd84743e8889f728acb21a62794102db0529`; the independent dirty `pi/` checkout was never modified.
 - H-006 is confirmed 4/4 against the real configured DeepSeek backend after using the new `.env` key without the stale inherited process value. The pool is empty, so Knowledge Layer is active.
 - Knowledge Layer added H-007 to make this configuration source visible without exposing secrets; it is the ranked next hypothesis.
+- H-007 is locally verified: dotenv/process/shadow provenance, safe output, docs, and a four-dimension climb adapter are ready for live recording.
 - H-006 scope and a test-first inline plan are committed; work proceeds in the clean shared checkout without touching the independent `pi/` repository.
 - The safe standalone preflight, Make target, documentation, and four-dimension climb adapter are fully verified and H-006 is recorded as cycle 6.
 - The earlier HTTP 401 was caused by a stale exported `DEEPSEEK_API_KEY` overriding the rotated `.env` value; `load_project_env` deliberately uses `override=False`.
@@ -31,7 +32,7 @@
 
 ## Next action
 
-1. Continue Knowledge Layer with the new H-007 hypothesis: safely expose whether the active judge key came from the process environment or `.env`, preventing stale-key confusion before the preflight spends a request.
+1. Run `env -u DEEPSEEK_API_KEY bash tools/climb/cycle.sh H-007` to record live provenance evidence without the known stale inherited value.
 2. Prefer reusing `JudgeConfig`/`judge_answer_sync`; do not introduce a second request-shaping path.
 3. Keep credentials out of artifacts/output, add a Make target and docs, then run the climb cycle and full verification.
 4. If the pool empties after H-006, trigger Knowledge Layer again rather than stopping.

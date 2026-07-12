@@ -138,6 +138,11 @@ configured judge transport and verify that it returns the required structured ve
 uses the configured credential indirectly and prints only safe configuration, verdict, usage, and
 cost metadata.
 
+An exported **process environment** key intentionally takes precedence over a value in `.env`.
+`make check-judge` reports `judge_api_key_source` and
+`judge_api_key_shadowed_by_environment` without exposing key material; after rotating only `.env`,
+unset any stale exported key or start a fresh shell before running the preflight.
+
 <a name="quick-start"></a>
 ## ⚡ Quick Start
 

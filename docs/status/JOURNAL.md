@@ -57,3 +57,4 @@
 - 17:21 H-006 confirmed 4/4; setup-policy acceptance recorded.
 - 17:23 Recorder now recovers hypothesis-specific partial writes; H-006 state is synchronized and fully verified.
 - 17:24 Knowledge Layer added H-007: safe judge credential provenance and environment-shadow warning.
+- 17:28 H-007 local contract 4/4; 65 tests, Ruff, compile, Bash syntax, and Pi RPC probe passed before live cycle.

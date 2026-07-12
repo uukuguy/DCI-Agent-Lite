@@ -90,6 +90,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_check_judge.CheckJudgeTests.test_main_outputs_only_safe_result_fields"
         override_test="tests.test_climb_tools.ClimbToolTests.test_h006_train_runs_the_live_judge_preflight"
         ;;
+    H-007)
+        first_dimension="dotenv_source"
+        second_dimension="process_source"
+        third_dimension="shadow_warning"
+        fourth_dimension="safe_output"
+        immutable_test="tests.test_check_judge.CheckJudgeTests.test_key_provenance_reports_dotenv_source"
+        repeat_test="tests.test_check_judge.CheckJudgeTests.test_key_provenance_reports_process_environment_source"
+        dirty_test="tests.test_check_judge.CheckJudgeTests.test_key_provenance_warns_when_process_shadows_dotenv"
+        override_test="tests.test_check_judge.CheckJudgeTests.test_main_outputs_safe_key_provenance"
+        ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2
         exit 2

@@ -94,6 +94,80 @@ class CheckJudgeTests(unittest.TestCase):
         self.assertNotIn("api_key", payload)
         self.assertNotIn("raw_response", payload)
 
+    def test_key_provenance_reports_dotenv_source(self) -> None:
+        check_judge = load_check_judge()
+        provenance = getattr(check_judge, "judge_key_provenance", None)
+        self.assertIsNotNone(provenance, "preflight must expose key provenance")
+
+        result = provenance(
+            JudgeConfig(api_key_env="DEEPSEEK_API_KEY", api_key="dotenv-key"),
+            process_environment={},
+            dotenv_environment={"DEEPSEEK_API_KEY": "dotenv-key"},
+        )
+
+        self.assertEqual(result["judge_api_key_source"], "dotenv")
+        self.assertFalse(result["judge_api_key_shadowed_by_environment"])
+
+    def test_key_provenance_reports_process_environment_source(self) -> None:
+        check_judge = load_check_judge()
+        provenance = getattr(check_judge, "judge_key_provenance", None)
+        self.assertIsNotNone(provenance, "preflight must expose key provenance")
+
+        result = provenance(
+            JudgeConfig(api_key_env="DEEPSEEK_API_KEY", api_key="process-key"),
+            process_environment={"DEEPSEEK_API_KEY": "process-key"},
+            dotenv_environment={},
+        )
+
+        self.assertEqual(result["judge_api_key_source"], "process-environment")
+        self.assertFalse(result["judge_api_key_shadowed_by_environment"])
+
+    def test_key_provenance_warns_when_process_shadows_dotenv(self) -> None:
+        check_judge = load_check_judge()
+        provenance = getattr(check_judge, "judge_key_provenance", None)
+        self.assertIsNotNone(provenance, "preflight must expose key provenance")
+
+        result = provenance(
+            JudgeConfig(api_key_env="DEEPSEEK_API_KEY", api_key="process-key"),
+            process_environment={"DEEPSEEK_API_KEY": "process-key"},
+            dotenv_environment={"DEEPSEEK_API_KEY": "rotated-dotenv-key"},
+        )
+
+        self.assertEqual(result["judge_api_key_source"], "process-environment")
+        self.assertTrue(result["judge_api_key_shadowed_by_environment"])
+
+    def test_main_outputs_safe_key_provenance(self) -> None:
+        check_judge = load_check_judge()
+        loader = getattr(check_judge, "load_judge_config_with_provenance", None)
+        main = getattr(check_judge, "main", None)
+        self.assertIsNotNone(loader, "preflight must load configuration with provenance")
+        self.assertIsNotNone(main, "preflight must expose main")
+        config = JudgeConfig(api="responses", api_key="secret-key")
+        provenance = {
+            "judge_api_key_source": "dotenv",
+            "judge_api_key_shadowed_by_environment": False,
+        }
+
+        with (
+            patch.object(
+                check_judge,
+                "load_judge_config_with_provenance",
+                return_value=(config, provenance),
+            ),
+            patch.object(
+                check_judge,
+                "run_preflight",
+                return_value={"is_correct": True},
+            ),
+            redirect_stdout(io.StringIO()) as stdout,
+        ):
+            self.assertEqual(main(), 0)
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["judge_api_key_source"], "dotenv")
+        self.assertFalse(payload["judge_api_key_shadowed_by_environment"])
+        self.assertNotIn("secret-key", stdout.getvalue())
+
     def test_make_target_runs_the_preflight_script(self) -> None:
         makefile = (REPO_ROOT / "Makefile").read_text()
 
@@ -106,6 +180,14 @@ class CheckJudgeTests(unittest.TestCase):
 
         self.assertIn("make check-judge", readme)
         self.assertIn("make check-judge", template)
+
+    def test_documentation_explains_key_precedence_and_provenance(self) -> None:
+        readme = (REPO_ROOT / "README.md").read_text()
+        template = (REPO_ROOT / ".env.template").read_text()
+
+        self.assertIn("process environment", readme)
+        self.assertIn("judge_api_key_source", readme)
+        self.assertIn("process environment", template)
 
 
 if __name__ == "__main__":

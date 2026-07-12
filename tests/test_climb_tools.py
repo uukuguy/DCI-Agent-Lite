@@ -165,6 +165,32 @@ class ClimbToolTests(unittest.TestCase):
                 },
             )
 
+    def test_h007_local_eval_identifies_judge_key_provenance_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            env = os.environ.copy()
+            env["DCI_CLIMB_HYPOTHESIS_ID"] = "H-007"
+            result = subprocess.run(
+                ["bash", "tools/climb/eval-local.sh", str(run_dir)],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            evaluation = json.loads((run_dir / "local-eval.json").read_text())
+            self.assertEqual(evaluation.get("hypothesis_id"), "H-007")
+            self.assertEqual(
+                evaluation["per_task"],
+                {
+                    "dotenv_source": 1,
+                    "process_source": 1,
+                    "shadow_warning": 1,
+                    "safe_output": 1,
+                },
+            )
+
     def test_record_cycle_confirms_four_of_four_and_advances(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -384,6 +410,12 @@ class ClimbToolTests(unittest.TestCase):
 
         self.assertIn("tests.test_check_judge", train_script)
         self.assertIn("make check-judge", train_script)
+
+    def test_h007_train_checks_dotenv_provenance(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+
+        self.assertIn("H-007", train_script)
+        self.assertIn("env -u DEEPSEEK_API_KEY make check-judge", train_script)
 
 
 if __name__ == "__main__":
