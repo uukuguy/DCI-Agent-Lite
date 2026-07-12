@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
+from types import MappingProxyType
 
 from asterion.packages.catalog import PackageCatalog, PackageCatalogError, PackageRef
 from asterion.packages.composition import (
@@ -46,6 +47,7 @@ class AssemblyPlan:
     version: str
     runtime_id: str
     package_refs: tuple[PackageRef, ...]
+    package_manifests: tuple[Mapping[str, object], ...]
     composition: PackageComposition
     runtime_capabilities: tuple[str, ...]
     host_capabilities: tuple[str, ...]
@@ -153,11 +155,16 @@ def resolve_assembly(
     assert isinstance(application_id, str)
     assert isinstance(version, str)
     assert isinstance(runtime_id, str)
+    manifests_by_id = {manifest["package_id"]: manifest for manifest in manifests}
     return AssemblyPlan(
         application_id=application_id,
         version=version,
         runtime_id=runtime_id,
         package_refs=package_refs,
+        package_manifests=tuple(
+            _freeze_mapping(manifests_by_id[package_id])
+            for package_id in composition.package_ids
+        ),
         composition=composition,
         runtime_capabilities=tuple(sorted(runtime_capabilities)),
         host_capabilities=tuple(_string_edges(assembly, "host_capabilities")),
@@ -168,3 +175,17 @@ def _string_edges(assembly: Mapping[str, object], field: str) -> list[str]:
     values = assembly[field]
     assert isinstance(values, list) and all(isinstance(value, str) for value in values)
     return values
+
+
+def _freeze_mapping(value: Mapping[str, object]) -> Mapping[str, object]:
+    return MappingProxyType({key: _freeze(item) for key, item in value.items()})
+
+
+def _freeze(value: object) -> object:
+    if isinstance(value, Mapping):
+        return _freeze_mapping(value)
+    if isinstance(value, (list, tuple)):
+        return tuple(_freeze(item) for item in value)
+    if isinstance(value, set):
+        return frozenset(_freeze(item) for item in value)
+    return value

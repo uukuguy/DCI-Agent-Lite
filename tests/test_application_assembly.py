@@ -4,6 +4,7 @@ import json
 import unittest
 from dataclasses import FrozenInstanceError
 from pathlib import Path
+from types import MappingProxyType
 
 from dci.framework.assembly import (
     AssemblyError,
@@ -113,6 +114,23 @@ class AssemblyResolverTests(unittest.TestCase):
         self.assertEqual(plan.runtime_capabilities, ("filesystem.read", "shell"))
         self.assertEqual(plan.host_capabilities, ())
         self.assertEqual(assembly, before)
+
+    def test_plan_retains_deeply_immutable_manifests_in_execution_order(self) -> None:
+        plan = resolve_assembly(
+            self.assembly(),
+            catalog=discover_packages(MANIFESTS),
+            runtime_manifest=self.runtime(),
+        )
+
+        self.assertEqual(
+            tuple(manifest["package_id"] for manifest in plan.package_manifests),
+            plan.composition.package_ids,
+        )
+        self.assertIsInstance(plan.package_manifests[0], MappingProxyType)
+        with self.assertRaises(TypeError):
+            plan.package_manifests[0]["kind"] = "workflow"
+        required = plan.package_manifests[-1]["requires_capabilities"]
+        self.assertIsInstance(required, tuple)
 
     def test_host_service_capability_is_separate_from_runtime_capabilities(self) -> None:
         assembly = self.controlled_assembly()
