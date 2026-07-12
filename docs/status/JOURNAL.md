@@ -52,3 +52,4 @@
 - 16:40 H-006 implementation plan locks test-first CLI, explicit Make target, documentation, and deterministic climb acceptance.
 - 17:07 H-006 local contract 4/4; 56 tests, Ruff, compile, Bash syntax, and Pi RPC probe passed before live preflight.
 - 17:09 H-006 live request reached DeepSeek but 401 rejected configured key; provider bodies are now redacted. Await credential rotation.
+- 17:10 repeated live preflight confirms the 401 is safely redacted; H-006 remains pending on credential rotation.
