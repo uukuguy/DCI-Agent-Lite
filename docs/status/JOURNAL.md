@@ -192,4 +192,8 @@
 - 23:22 controlled-code package graph 已提交，跨 host 与缺失边界验证可继续。[355b342]
 - 23:23 AF-070-H-002 confirmed 4/4; package acceptance recorded.
 - 23:24 AF-070-H-002 通过 93 focused tests、compile、Ruff、shell、scope 与 diff。
+- 23:25 controlled-code graph 边界证据已提交，TypeScript 全 manifest parity 可继续。[a237d93]
+- 23:25 AF-070-H-003 confirmed 4/4; package acceptance recorded.
+- 23:26 AF-070-H-003 通过 clean install、7 Node、95 focused Python tests 与全部 static/scope gates。
 - 23:22 AF-070-H-002 confirmed 4/4; package acceptance recorded.
+- 23:25 AF-070-H-003 confirmed 4/4; package acceptance recorded.

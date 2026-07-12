@@ -221,6 +221,17 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_package_composition.ControlledCodePackageTests.test_controlled_code_graph_exposes_portable_outputs"
         override_test="tests.test_package_composition.ControlledCodePackageTests.test_controlled_code_graph_rejects_every_missing_boundary"
         ;;
+    AF-070-H-003)
+        dimension_runner="run_typescript_dimension"
+        first_dimension="all_reference_manifests"
+        second_dimension="canonical_schema"
+        third_dimension="public_validator"
+        fourth_dimension="no_typescript_composer"
+        immutable_test="validates every checked-in reference package manifest"
+        repeat_test="validates the shared package manifest fixture"
+        dirty_test="public_type_contract"
+        override_test="keeps package composition outside the TypeScript host"
+        ;;
     H-001)
         first_dimension="immutable_resolution"
         second_dimension="repeat_validation"

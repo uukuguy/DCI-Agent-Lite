@@ -1213,6 +1213,40 @@ class ClimbToolTests(unittest.TestCase):
                 },
             )
 
+    def test_af070_h003_train_runs_typescript_reference_manifest_suite(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+
+        self.assertIn("AF-070-H-003", train_script)
+        self.assertIn("npm --prefix packages/typescript/agent-runtime test", train_script)
+
+    def test_af070_h003_eval_reports_four_typescript_dimensions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            env = os.environ.copy()
+            env["DCI_CLIMB_HYPOTHESIS_ID"] = "AF-070-H-003"
+
+            result = subprocess.run(
+                ["bash", "tools/climb/eval-local.sh", str(run_dir)],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            evaluation = json.loads((run_dir / "local-eval.json").read_text())
+            self.assertEqual(evaluation["hypothesis_id"], "AF-070-H-003")
+            self.assertEqual(evaluation["total"], 4)
+            self.assertEqual(
+                set(evaluation["per_task"]),
+                {
+                    "all_reference_manifests",
+                    "canonical_schema",
+                    "public_validator",
+                    "no_typescript_composer",
+                },
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

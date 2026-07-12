@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-12 23:24 +0800. **Session remains active — autonomous climb continues.**
+> Updated: 2026-07-12 23:26 +0800. **Session remains active — autonomous climb continues.**
 
 Active work package: AF-070
 
@@ -17,6 +17,7 @@ Active work package: AF-070
 - AF-070 is active under the approved controlled-code validation design and implementation plan.
 - `AF-070-H-001` is confirmed: four portable manifests use the workflow kind, form a stable graph, and exclude runtime-controlled fields.
 - `AF-070-H-002` is confirmed: Pi/Claude parity, permutation stability, portable outputs, and every missing boundary pass without changing the composer.
+- `AF-070-H-003` is confirmed: TypeScript validates all eight reference manifests and retains no composer implementation.
 
 ## Durable boundary
 
@@ -30,7 +31,7 @@ Active work package: AF-070
 
 ## Immediate next action
 
-Start AF-070-H-003 with a failing Node test that validates every checked-in reference manifest and proves no TypeScript composer exists.
+Start AF-070-H-004 with failing documentation tests, then run the full independent AF-070 closure gate.
 
 ## Guardrails
 
@@ -41,6 +42,6 @@ Start AF-070-H-003 with a failing Node test that validates every checked-in refe
 ## Ready commands
 
 ```bash
-python3 tools/project_scope_check.py --climb-hypothesis AF-070-H-003
+python3 tools/project_scope_check.py --climb-hypothesis AF-070-H-004
 uv run python -m unittest tests.test_package_composition -v
 ```

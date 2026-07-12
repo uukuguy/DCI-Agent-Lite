@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -15,6 +15,11 @@ const packageFixtures = new URL(
   "../../../../tests/fixtures/packages/v1/",
   import.meta.url,
 );
+const referenceManifests = new URL(
+  "../../../manifests/",
+  import.meta.url,
+);
+const sourceDirectory = new URL("../src/", import.meta.url);
 
 async function readJson(name) {
   return JSON.parse(await readFile(new URL(name, fixtures), "utf8"));
@@ -96,4 +101,37 @@ test("rejects package edge arrays that are not sorted", async () => {
   };
 
   assert.throws(() => validatePackageManifest(unsorted), ProtocolValidationError);
+});
+
+test("validates every checked-in reference package manifest", async () => {
+  const names = (await readdir(referenceManifests))
+    .filter((name) => name.endsWith(".json"))
+    .sort();
+  assert.deepEqual(names, [
+    "code-quality-evaluation.json",
+    "code-quality-workflow.json",
+    "controlled-code-policy.json",
+    "dci-evaluation.json",
+    "dci-research.json",
+    "execution-audit-observability.json",
+    "local-corpus-policy.json",
+    "protocol-observability.json",
+  ]);
+  for (const name of names) {
+    const manifest = JSON.parse(
+      await readFile(new URL(name, referenceManifests), "utf8"),
+    );
+    assert.deepEqual(validatePackageManifest(manifest), manifest);
+  }
+});
+
+test("keeps package composition outside the TypeScript host", async () => {
+  const sources = await Promise.all(
+    (await readdir(sourceDirectory))
+      .filter((name) => name.endsWith(".ts"))
+      .map((name) => readFile(new URL(name, sourceDirectory), "utf8")),
+  );
+  const publicSource = sources.join("\n");
+
+  assert.doesNotMatch(publicSource, /composePackages|PackageComposition/);
 });

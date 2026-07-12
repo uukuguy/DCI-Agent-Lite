@@ -706,9 +706,21 @@ hypotheses:
   expected_lift: +1 cross-language graph confidence
   cost_h: 0.4
   ranking: 0.7
-  status: pending
+  status: confirmed
   created_at: '2026-07-12T23:05:00+08:00'
-  results: []
+  results:
+  - session: 2026-07-12-af-070-controlled-code-validation
+    cycle: 33
+    run: 20260712-232516-dci-climb-af070h003
+    local: 4
+    local_per_task:
+      all_reference_manifests: 1
+      canonical_schema: 1
+      public_validator: 1
+      no_typescript_composer: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-070-H-004
   work_package_id: AF-070
   description: Document the second static graph and close AF-070 through full framework
