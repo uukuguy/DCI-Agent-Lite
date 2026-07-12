@@ -116,3 +116,12 @@
 - Evidence: `urlsplit()` accepts unsupported and relative URL forms, while `urllib.request` installs file and FTP handlers by default; H-016's focused tests prove those forms are rejected and normal remote/local HTTP(S) endpoints retain their request paths.
 - Rationale: URL parsing alone is not transport validation. A configured judge should never route the authorization header or evaluated input to a non-HTTP handler, a relative path, or an empty authority.
 - Boundary: this does not change support for HTTPS hosts, explicitly configured local HTTP judges, path prefixes such as `/v1`, or H-015's credential/query/fragment rejection.
+
+## D-014 — Reject judge endpoint redirects
+
+- Status: ✅ accepted and implemented decision
+- Decided: 2026-07-12
+- Decision: open judge requests through a redirect handler that turns every HTTP redirect into a safe HTTP error instead of following the location.
+- Evidence: Python's default handler redirects POST 301/302/303 requests and preserves POST for 307/308; H-017 proves the replacement raises an error without exposing the destination, preserves ordinary configured requests, and keeps existing provider-error redaction intact.
+- Rationale: an ingress-validated URL is not a complete origin boundary when a redirect response can forward the bearer authorization header or evaluated input to a different destination.
+- Boundary: correctly configured OpenAI-compatible endpoints are expected to serve directly. The standard proxy configuration remains unchanged, and an endpoint that genuinely requires a redirect now fails explicitly instead of silently changing the trust boundary.

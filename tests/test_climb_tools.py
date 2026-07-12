@@ -614,6 +614,12 @@ class ClimbToolTests(unittest.TestCase):
         self.assertIn("H-016", train_script)
         self.assertIn("tests.test_judge", train_script)
 
+    def test_h017_train_checks_judge_redirect_containment(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+
+        self.assertIn("H-017", train_script)
+        self.assertIn("tests.test_judge", train_script)
+
 
 if __name__ == "__main__":
     unittest.main()

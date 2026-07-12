@@ -132,7 +132,7 @@ Common variables:
 - `DCI_EVAL_JUDGE_BASE_URL`, `DCI_EVAL_JUDGE_API`, `DCI_EVAL_JUDGE_MODEL`, and
   `DCI_EVAL_JUDGE_API_KEY_ENV` select the eval judge backend. See `.env.template` for DeepSeek,
   OpenAI, and local-compatible examples. The base URL must be an absolute HTTP(S) origin without
-  credentials, query data, or a fragment.
+  credentials, query data, or a fragment; judge redirects are rejected rather than followed.
 
 Before a costly batch evaluation, run `make check-judge` to make one small request through the
 configured judge transport and verify that it returns the required structured verdict. The command

@@ -132,6 +132,33 @@ class JudgeConfigTests(unittest.TestCase):
 
 
 class JudgeTransportTests(unittest.TestCase):
+    def test_judge_transport_rejects_automatic_redirects(self) -> None:
+        self.assertTrue(
+            hasattr(judge_module, "_RejectJudgeRedirectHandler"),
+            "Judge transport must reject redirects before they leave the configured origin",
+        )
+        request = judge_module.urllib.request.Request(
+            "https://judge.example.test/v1/responses",
+            data=b"{}",
+            method="POST",
+        )
+        handler = judge_module._RejectJudgeRedirectHandler()
+
+        with self.assertRaises(urllib.error.HTTPError) as raised:
+            handler.redirect_request(
+                request,
+                None,
+                307,
+                "Temporary Redirect",
+                {},
+                "https://untrusted.example.test/responses",
+            )
+
+        redirect_error = raised.exception
+        self.assertEqual(redirect_error.code, 307)
+        self.assertNotIn("untrusted.example.test", str(redirect_error))
+        redirect_error.close()
+
     def test_judge_request_fingerprint_is_deterministic_and_endpoint_sensitive(self) -> None:
         self.assertTrue(
             hasattr(judge_module, "judge_request_fingerprint"),
@@ -206,7 +233,7 @@ class JudgeTransportTests(unittest.TestCase):
         response.read.return_value = json.dumps(response_payload).encode("utf-8")
 
         with patch(
-            "dci.benchmark.judge.urllib.request.urlopen", return_value=response
+            "dci.benchmark.judge._open_judge_request", return_value=response
         ) as urlopen:
             result = judge_answer_sync(
                 config=config,
@@ -363,7 +390,7 @@ class JudgeTransportTests(unittest.TestCase):
             responses.append(response)
 
         with patch(
-            "dci.benchmark.judge.urllib.request.urlopen", side_effect=responses
+            "dci.benchmark.judge._open_judge_request", side_effect=responses
         ) as urlopen:
             result = judge_answer_sync(
                 config=config,
@@ -387,7 +414,7 @@ class JudgeTransportTests(unittest.TestCase):
         )
 
         with patch(
-            "dci.benchmark.judge.urllib.request.urlopen", side_effect=http_error
+            "dci.benchmark.judge._open_judge_request", side_effect=http_error
         ):
             with self.assertRaisesRegex(RuntimeError, "HTTP 401") as raised:
                 judge_answer_sync(
@@ -421,7 +448,7 @@ class JudgeTransportTests(unittest.TestCase):
             responses.append(response)
 
         with patch(
-            "dci.benchmark.judge.urllib.request.urlopen", side_effect=responses
+            "dci.benchmark.judge._open_judge_request", side_effect=responses
         ):
             with self.assertRaisesRegex(
                 ValueError, "invalid structured output twice"

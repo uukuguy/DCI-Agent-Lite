@@ -43,3 +43,12 @@ Append-only decision-gate record.
 - Ranked candidate: H-016 absolute HTTP(S) judge-origin validation (rank 0.95).
 - Held for the next Knowledge Layer: reject automatic judge redirects (H-017 candidate) and opt out of official Responses retention without changing generic-compatible request shapes (H-018 candidate).
 - Decision: advance H-016 first because it removes already-proven unsupported URL schemes before an authorization header or evaluated input can reach `urllib` handlers.
+
+## 2026-07-12 Knowledge Layer after H-016
+
+- Local evidence: `judge_answer_sync()` calls the default `urllib.request.urlopen()` handler chain after configuration ingress; it does not constrain a later redirect response.
+- External reference: Python documents that its default redirect handler automatically redirects POST 301/302/303 responses and retains POST for 307/308; standard OpenAI-compatible judge endpoints do not require redirects.
+- Multi-AI adapter: Gemini and OpenCode remain unavailable; the local stub returned PUSH and is not independent evidence.
+- Ranked candidate: H-017 judge redirect containment (rank 0.92).
+- Held for the next Knowledge Layer: opt out of official Responses retention without changing generic-compatible request shapes (H-018 candidate).
+- Decision: advance H-017 because a configured origin boundary is incomplete if a transport redirect can move authorization or evaluated input elsewhere.

@@ -278,6 +278,36 @@ class JudgeConfig:
         }
 
 
+class _RejectJudgeRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Keep judge requests at the explicitly configured origin."""
+
+    def redirect_request(
+        self,
+        request: urllib.request.Request,
+        fp: Any,
+        code: int,
+        msg: str,
+        headers: Any,
+        new_url: str,
+    ) -> urllib.request.Request:
+        raise urllib.error.HTTPError(
+            request.full_url,
+            code,
+            "Judge redirects are not permitted",
+            headers,
+            fp,
+        )
+
+
+def _open_judge_request(
+    request: urllib.request.Request, *, timeout_seconds: int
+) -> Any:
+    """Open a judge request without following a redirect to another origin."""
+
+    opener = urllib.request.build_opener(_RejectJudgeRedirectHandler())
+    return opener.open(request, timeout=timeout_seconds)
+
+
 def estimate_judge_cost(usage: Dict[str, Any], config: JudgeConfig) -> Dict[str, float]:
     input_tokens = float(usage.get("input_tokens", 0) or 0)
     output_tokens = float(usage.get("output_tokens", 0) or 0)
@@ -517,8 +547,8 @@ def judge_answer_sync(
     attempts = 0
     for attempts in range(1, 3):
         try:
-            with urllib.request.urlopen(
-                request, timeout=config.timeout_seconds
+            with _open_judge_request(
+                request, timeout_seconds=config.timeout_seconds
             ) as response:
                 response_payload = json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
