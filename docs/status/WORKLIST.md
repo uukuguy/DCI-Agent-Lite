@@ -4,7 +4,7 @@
 
 ## AF-000 — Framework control plane
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Agent Application Framework
 - Scope: north star, worklist, scope audit, manager repair, climb parent enforcement, and state migration only.
 - Dependencies: none
@@ -14,13 +14,13 @@
 
 ## AF-010 — Agent Runtime Protocol
 
-- Status: pending
+- Status: in_progress
 - Parent objective: Agent Application Framework
 - Scope: versioned run, session, capability, event, artifact, cancellation, and deadline contracts with conformance fixtures.
 - Dependencies: AF-000
 - Acceptance: fixtures define portable lifecycle and event semantics for every adapter.
-- Design: `docs/architecture/agent-framework.md`
-- Plan: not yet planned
+- Design: `docs/superpowers/specs/2026-07-12-agent-runtime-protocol-design.md`
+- Plan: `docs/superpowers/plans/2026-07-12-agent-runtime-protocol.md`
 
 ## AF-020 — Pi reference adapter
 

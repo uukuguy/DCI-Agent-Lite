@@ -6,7 +6,7 @@
 - Current branch: `main`
 - Theme-level focus: Agent Runtime Protocol foundation and governed multi-runtime framework delivery.
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: `AF-000` — Framework control plane.
+- Active work package: `AF-010` — Agent Runtime Protocol.
 
 ## Current Architecture
 
