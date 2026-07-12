@@ -76,6 +76,7 @@
 - 18:56 Judge cache completeness and provider-body privacy committed. [706f3c0]
 - 18:56 Live recovery checkpoint refreshed after the H-010..H-013 commit.
 - 19:06 H-014 minimized duplicate judge input artifacts. [ffbbfd5]
+- 19:07 correction: H-014 commit was amended; current implementation commit is 9a41a34.
 - 18:52 H-012 confirmed 4/4; setup-policy acceptance recorded.
 - 18:54 H-013 confirmed 4/4; setup-policy acceptance recorded.
 - 19:06 H-014 confirmed 4/4; setup-policy acceptance recorded.
