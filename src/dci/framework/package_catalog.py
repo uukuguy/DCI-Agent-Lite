@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable, Mapping
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -30,6 +31,24 @@ class CatalogEntry:
 @dataclass(frozen=True)
 class PackageCatalog:
     entries: tuple[CatalogEntry, ...]
+
+    def select(
+        self, refs: Iterable[PackageRef]
+    ) -> tuple[Mapping[str, object], ...]:
+        """Return fresh manifests for exact package identities in stable order."""
+
+        requested = list(refs)
+        if len(requested) != len(set(requested)):
+            raise PackageCatalogError("duplicate package selection")
+        entries = {entry.ref: entry for entry in self.entries}
+        missing = next((ref for ref in requested if ref not in entries), None)
+        if missing is not None:
+            raise PackageCatalogError(
+                f"unknown package identity: {missing.package_id}@{missing.version}"
+            )
+        return tuple(
+            deepcopy(dict(entries[ref].manifest)) for ref in sorted(requested)
+        )
 
 
 def discover_packages(roots: Iterable[Path]) -> PackageCatalog:

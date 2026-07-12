@@ -1,19 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (36 runs).
+> Deterministic summary generated from tracked state (37 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 36
-- Next hypothesis: AF-080-H-003
+- Last cycle: 37
+- Next hypothesis: AF-080-H-004
 - In flight: none
-- Next action: Start AF-080-H-003.
+- Next action: Start AF-080-H-004.
 
 ## Active hypotheses
 
-- **AF-080-H-003** (pending, rank 0.70): Select exact fresh manifests and compose both checked-in reference graphs.
 - **AF-080-H-004** (pending, rank 0.60): Document local catalog trust boundaries and close AF-080 through full framework gates.
 
 ## Run ladder
@@ -56,6 +55,7 @@
 | 20260712-232806-dci-climb-af070h004 | AF-070-H-004 | 4 | confirmed 4/4 |
 | 20260713-011629-dci-climb-af080h001 | AF-080-H-001 | 4 | confirmed 4/4 |
 | 20260713-011934-dci-climb-af080h002 | AF-080-H-002 | 4 | confirmed 4/4 |
+| 20260713-012204-dci-climb-af080h003 | AF-080-H-003 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

@@ -208,6 +208,9 @@
 - 01:18 deterministic local discovery 已提交，filesystem/identity hardening 可继续。[219acd8]
 - 01:19 AF-080-H-002 confirmed 4/4; package acceptance recorded.
 - 01:20 AF-080-H-002 通过 84 focused tests、compile、Ruff、shell、scope 与 diff。
+- 01:21 fail-closed discovery 已提交，exact selection 与 composer integration 可继续。[7f724c8]
+- 01:22 AF-080-H-003 confirmed 4/4; package acceptance recorded.
+- 01:23 AF-080-H-003 通过 90 focused tests、compile、Ruff、shell、scope 与 diff。
 - 23:22 AF-070-H-002 confirmed 4/4; package acceptance recorded.
 - 23:25 AF-070-H-003 confirmed 4/4; package acceptance recorded.
 - 23:28 AF-070-H-004 confirmed 4/4; package acceptance recorded.
@@ -215,3 +218,4 @@
 ## 2026-07-13
 - 01:16 AF-080-H-001 confirmed 4/4; package acceptance recorded.
 - 01:19 AF-080-H-002 confirmed 4/4; package acceptance recorded.
+- 01:22 AF-080-H-003 confirmed 4/4; package acceptance recorded.

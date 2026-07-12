@@ -12,6 +12,11 @@ from dci.framework.package_catalog import (
     discover_packages,
 )
 from dci.framework.package_protocol import validate_package_manifest
+from dci.framework.packages import compose_packages
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+MANIFEST_DIR = REPO_ROOT / "packages/manifests"
 
 
 class PackageDiscoveryTests(unittest.TestCase):
@@ -192,6 +197,78 @@ class PackageCatalogBoundaryTests(unittest.TestCase):
                 PackageCatalogError, "duplicate package identity"
             ):
                 discover_packages([first, second])
+
+
+class PackageSelectionTests(unittest.TestCase):
+    dci_refs = (
+        PackageRef("dci.evaluation", "1.0.0"),
+        PackageRef("dci.research", "1.0.0"),
+        PackageRef("policy.local-corpus", "1.0.0"),
+        PackageRef("protocol.observability", "1.0.0"),
+    )
+    controlled_refs = (
+        PackageRef("evaluation.code-quality", "1.0.0"),
+        PackageRef("observability.execution-audit", "1.0.0"),
+        PackageRef("policy.controlled-code-check", "1.0.0"),
+        PackageRef("workflow.code-quality", "1.0.0"),
+    )
+
+    def catalog(self):
+        return discover_packages([MANIFEST_DIR])
+
+    def test_exact_selection_is_complete_and_deterministic(self) -> None:
+        catalog = self.catalog()
+
+        selected = catalog.select(reversed(self.controlled_refs))
+
+        self.assertEqual(len(catalog.entries), 8)
+        self.assertEqual(
+            tuple(manifest["package_id"] for manifest in selected),
+            tuple(ref.package_id for ref in self.controlled_refs),
+        )
+
+    def test_selection_returns_fresh_manifest_copies(self) -> None:
+        catalog = self.catalog()
+        first = catalog.select((self.controlled_refs[0],))
+        first_manifest = first[0]
+        assert isinstance(first_manifest, dict)
+        first_manifest["package_id"] = "mutated"
+
+        second = catalog.select((self.controlled_refs[0],))
+
+        self.assertEqual(second[0]["package_id"], "evaluation.code-quality")
+
+    def test_selected_manifests_compose_both_reference_graphs(self) -> None:
+        catalog = self.catalog()
+        dci = compose_packages(
+            catalog.select(reversed(self.dci_refs)),
+            host_capabilities={"filesystem.read", "shell"},
+            host_events={
+                "artifact.created",
+                "run.completed",
+                "run.started",
+                "tool.result",
+            },
+            host_artifacts={"text/plain"},
+        )
+        controlled = compose_packages(
+            catalog.select(reversed(self.controlled_refs)),
+            host_capabilities={"executor.controlled", "filesystem.read"},
+            host_events={"run.started", "tool.result"},
+            host_artifacts={"text/x-source"},
+        )
+
+        self.assertEqual(dci.package_ids[0], "policy.local-corpus")
+        self.assertEqual(controlled.package_ids[0], "policy.controlled-code-check")
+
+    def test_duplicate_and_unknown_exact_selection_is_rejected(self) -> None:
+        catalog = self.catalog()
+        known = self.controlled_refs[0]
+
+        with self.assertRaisesRegex(PackageCatalogError, "duplicate package selection"):
+            catalog.select((known, known))
+        with self.assertRaisesRegex(PackageCatalogError, "unknown package identity"):
+            catalog.select((PackageRef(known.package_id, "9.9.9"),))
 
 
 if __name__ == "__main__":

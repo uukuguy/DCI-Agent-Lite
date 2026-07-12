@@ -798,9 +798,21 @@ hypotheses:
   expected_lift: +1 catalog composition integration
   cost_h: 0.6
   ranking: 0.7
-  status: pending
+  status: confirmed
   created_at: '2026-07-13T00:10:00+08:00'
-  results: []
+  results:
+  - session: 2026-07-13-af-080-local-package-catalog
+    cycle: 37
+    run: 20260713-012204-dci-climb-af080h003
+    local: 4
+    local_per_task:
+      exact_selection: 1
+      fresh_manifests: 1
+      graph_integration: 1
+      selection_rejection: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-080-H-004
   work_package_id: AF-080
   description: Document local catalog trust boundaries and close AF-080 through full

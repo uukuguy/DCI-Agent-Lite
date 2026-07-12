@@ -262,6 +262,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_package_catalog.PackageCatalogBoundaryTests.test_symlink_manifest_files_are_rejected"
         override_test="tests.test_package_catalog.PackageCatalogBoundaryTests.test_duplicate_exact_identity_is_rejected"
         ;;
+    AF-080-H-003)
+        first_dimension="exact_selection"
+        second_dimension="fresh_manifests"
+        third_dimension="graph_integration"
+        fourth_dimension="selection_rejection"
+        immutable_test="tests.test_package_catalog.PackageSelectionTests.test_exact_selection_is_complete_and_deterministic"
+        repeat_test="tests.test_package_catalog.PackageSelectionTests.test_selection_returns_fresh_manifest_copies"
+        dirty_test="tests.test_package_catalog.PackageSelectionTests.test_selected_manifests_compose_both_reference_graphs"
+        override_test="tests.test_package_catalog.PackageSelectionTests.test_duplicate_and_unknown_exact_selection_is_rejected"
+        ;;
     H-001)
         first_dimension="immutable_resolution"
         second_dimension="repeat_validation"
