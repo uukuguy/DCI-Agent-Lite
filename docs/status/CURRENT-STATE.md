@@ -6,7 +6,7 @@
 - Current branch: `main`
 - Theme-level focus: Agent Runtime Protocol foundation and governed multi-runtime framework delivery.
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: `AF-030` — Claude Code independent runtime vertical slice.
+- Active work package: `AF-040` — Python and TypeScript host boundaries.
 
 ## Current Architecture
 

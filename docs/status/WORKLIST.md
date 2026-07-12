@@ -34,7 +34,7 @@
 
 ## AF-030 — Independent runtime vertical slice
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Agent Application Framework
 - Scope: add one non-Pi adapter and run the same DCI research capability across both adapters.
 - Dependencies: AF-010
@@ -45,13 +45,13 @@
 
 ## AF-040 — Python and TypeScript host boundaries
 
-- Status: pending
+- Status: in_progress
 - Parent objective: Agent Application Framework
 - Scope: expose protocol clients without adapter-private types in the Python and TypeScript hosts.
 - Dependencies: AF-020, AF-030
 - Acceptance: both hosts consume the same contract and capability manifests.
-- Design: `docs/architecture/agent-framework.md`
-- Plan: not yet planned
+- Design: `docs/superpowers/specs/2026-07-12-python-typescript-host-boundaries-design.md`
+- Plan: `docs/superpowers/plans/2026-07-12-python-typescript-host-boundaries.md`
 
 ## AF-050 — Rust executor boundary
 
