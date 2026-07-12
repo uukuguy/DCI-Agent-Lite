@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-12 18:52 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-12 18:56 +0800. **Session remains active — not a final handoff.**
 
 ## TL;DR
 
@@ -14,12 +14,12 @@
 - H-011 removes `response_excerpt` and other provider-derived response fields from terminal invalid-JSON errors, preventing the async batch wrapper from persisting them as failure strings.
 - H-012 removes `raw_response_text` and `raw_response` from successful judge result dictionaries; parsed verdict data, usage, cost, and safe configuration remain.
 - H-013 rejects a matching-fingerprint cache artifact unless it also contains a final boolean `is_correct` verdict.
-- Fresh verification passed: 82 unit tests, Python compilation, Ruff, touched-Bash syntax, `git diff --check`, and the live model-free Pi RPC probe. The cohesive implementation and state update are ready to commit.
+- Commit `706f3c0` contains the H-010–H-013 implementation, state updates, and fresh verification evidence (82 unit tests, Python compilation, Ruff, touched-Bash syntax, `git diff --check`, and the live model-free Pi RPC probe).
 
 ## Immediate next action
 
-1. Trigger Knowledge Layer for the next grounded cache invariant, then run its bounded local cycle.
-2. Refresh `CURRENT-STATE.md` and `DECISIONS.md`, run full verification, and commit the completed reliability work atomically.
+1. Commit the pending journal/checkpoint update, then trigger Knowledge Layer only from another grounded cache, artifact, or transport invariant.
+2. If continuing privacy work, first decide whether duplicate `question`/`gold_answer`/`predicted_answer` fields in `eval_result.json` are needed beyond their existing run artifacts; preserve reproducibility if they are.
 
 ## Guardrails
 

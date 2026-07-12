@@ -73,5 +73,7 @@
 - 18:54 H-013 confirmed 4/4; setup-policy acceptance recorded.
 - 18:55 H-010..H-013 cache and provider-body privacy work ready for full verification and commit.
 - 18:56 H-010..H-013 full verification passed: 82 tests, compile, Ruff, Bash, diff check, and Pi RPC probe.
+- 18:56 Judge cache completeness and provider-body privacy committed. [706f3c0]
+- 18:56 Live recovery checkpoint refreshed after the H-010..H-013 commit.
 - 18:52 H-012 confirmed 4/4; setup-policy acceptance recorded.
 - 18:54 H-013 confirmed 4/4; setup-policy acceptance recorded.
