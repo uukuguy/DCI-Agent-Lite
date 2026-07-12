@@ -17,6 +17,7 @@ from dci.framework.packages import compose_packages
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_DIR = REPO_ROOT / "packages/manifests"
+CATALOG_GUIDE = REPO_ROOT / "docs/architecture/local-package-catalog.md"
 
 
 class PackageDiscoveryTests(unittest.TestCase):
@@ -269,6 +270,39 @@ class PackageSelectionTests(unittest.TestCase):
             catalog.select((known, known))
         with self.assertRaisesRegex(PackageCatalogError, "unknown package identity"):
             catalog.select((PackageRef(known.package_id, "9.9.9"),))
+
+
+class PackageCatalogDocumentationTests(unittest.TestCase):
+    def guide(self) -> str:
+        return CATALOG_GUIDE.read_text()
+
+    def test_guide_documents_explicit_direct_exact_catalog_contract(self) -> None:
+        guide = self.guide()
+
+        self.assertIn("Explicit local roots", guide)
+        self.assertIn("Direct JSON children only", guide)
+        self.assertIn("Exact package_id@version selection", guide)
+
+    def test_guide_documents_filesystem_and_execution_boundaries(self) -> None:
+        guide = self.guide()
+
+        self.assertIn("Symlinks are rejected", guide)
+        self.assertIn("No network registry or installation", guide)
+        self.assertIn("does not execute packages", guide)
+
+    def test_guide_contains_discovery_selection_and_composition_examples(self) -> None:
+        guide = self.guide()
+
+        self.assertIn("discover_packages(", guide)
+        self.assertIn("PackageRef(", guide)
+        self.assertIn("catalog.select(", guide)
+        self.assertIn("compose_packages(", guide)
+
+    def test_guide_keeps_discovery_python_only(self) -> None:
+        guide = self.guide()
+
+        self.assertIn("Python owns discovery", guide)
+        self.assertIn("TypeScript does not implement a parallel catalog", guide)
 
 
 if __name__ == "__main__":

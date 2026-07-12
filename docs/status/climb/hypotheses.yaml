@@ -821,6 +821,18 @@ hypotheses:
   expected_lift: +1 AF-080 closure confidence
   cost_h: 0.4
   ranking: 0.6
-  status: pending
+  status: confirmed
   created_at: '2026-07-13T00:10:00+08:00'
-  results: []
+  results:
+  - session: 2026-07-13-af-080-local-package-catalog
+    cycle: 38
+    run: 20260713-012442-dci-climb-af080h004
+    local: 4
+    local_per_task:
+      catalog_docs: 1
+      filesystem_boundary: 1
+      selection_boundary: 1
+      framework_closure: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance

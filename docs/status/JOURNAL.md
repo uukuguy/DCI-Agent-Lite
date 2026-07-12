@@ -211,6 +211,7 @@
 - 01:21 fail-closed discovery 已提交，exact selection 与 composer integration 可继续。[7f724c8]
 - 01:22 AF-080-H-003 confirmed 4/4; package acceptance recorded.
 - 01:23 AF-080-H-003 通过 90 focused tests、compile、Ruff、shell、scope 与 diff。
+- 01:24 exact catalog selection 已提交，AF-080 可进入文档与全框架关闭。[21678de]
 - 23:22 AF-070-H-002 confirmed 4/4; package acceptance recorded.
 - 23:25 AF-070-H-003 confirmed 4/4; package acceptance recorded.
 - 23:28 AF-070-H-004 confirmed 4/4; package acceptance recorded.
@@ -219,3 +220,5 @@
 - 01:16 AF-080-H-001 confirmed 4/4; package acceptance recorded.
 - 01:19 AF-080-H-002 confirmed 4/4; package acceptance recorded.
 - 01:22 AF-080-H-003 confirmed 4/4; package acceptance recorded.
+- 01:25 AF-080-H-004 confirmed 4/4; package acceptance recorded.
+- 01:27 AF-080 closure 通过 213 Python、7 Node、21 Rust、clean install、lint、scope 与 diff。

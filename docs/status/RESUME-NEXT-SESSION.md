@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13 01:23 +0800. **Session remains active — autonomous climb continues.**
+> Updated: 2026-07-13 01:27 +0800. **Session remains active — knowledge layer continues.**
 
 Active work package: AF-080
 
@@ -24,6 +24,8 @@ Active work package: AF-080
 - `AF-080-H-001` is confirmed: explicit roots yield stable validated direct-child catalogs across root and file permutations.
 - `AF-080-H-002` is confirmed: filesystem, document, symlink, and duplicate-identity ambiguity fails closed with safe errors.
 - `AF-080-H-003` is confirmed: exact selections are deterministic/fresh, compose both graphs, and reject duplicate/unknown refs.
+- `AF-080-H-004` is confirmed: catalog documentation and independent full framework closure pass.
+- AF-080 remains active only until the knowledge layer records the next governed package.
 
 ## Durable boundary
 
@@ -37,7 +39,7 @@ Active work package: AF-080
 
 ## Immediate next action
 
-Start AF-080-H-004 with failing catalog documentation tests, then run full independent framework closure.
+Commit AF-080 documentation/closure evidence, then select the next governed package without adding registry, installation, or execution scope by inertia.
 
 ## Guardrails
 
@@ -48,7 +50,7 @@ Start AF-080-H-004 with failing catalog documentation tests, then run full indep
 ## Ready commands
 
 ```bash
-python3 tools/project_scope_check.py --climb-hypothesis AF-080-H-004
+python3 tools/project_scope_check.py
 uv run python -m unittest tests.test_package_catalog -v
 uv run python -m unittest tests.test_package_composition -v
 ```
