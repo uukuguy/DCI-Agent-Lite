@@ -177,4 +177,8 @@
 - 22:49 DCI reference package graph 已提交，TypeScript 共享 schema/fixture parity 成为下一恢复边界。[fc9b9cd]
 - 22:51 AF-060-H-004 confirmed 4/4; TypeScript package acceptance recorded.
 - 22:52 AF-060-H-004 通过 5 Node tests、74 focused Python tests、compile、Ruff、shell、scope 与 diff。
+- 22:53 TypeScript 共享 package 验证已提交，保证跨语言 canonical contract。[e0e1ae4]
+- 22:54 AF-060-H-005 confirmed 4/4; static-composition documentation acceptance recorded.
+- 22:55 AF-060 closure 通过 168 Python、5 Node、21 Rust、clean install、lint、scope 与 diff。
 - 22:50 AF-060-H-004 confirmed 4/4; package acceptance recorded.
+- 22:54 AF-060-H-005 confirmed 4/4; package acceptance recorded.

@@ -13,6 +13,7 @@ from dci.framework.adapters.pi import map_pi_capabilities
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_DIR = REPO_ROOT / "tests/fixtures/packages/v1"
 MANIFEST_DIR = REPO_ROOT / "packages/manifests"
+PACKAGE_GUIDE = REPO_ROOT / "docs/architecture/composable-packages.md"
 
 
 class PackageManifestTests(unittest.TestCase):
@@ -214,6 +215,41 @@ class DciReferencePackageTests(unittest.TestCase):
     def test_reference_graph_rejects_a_runtime_without_required_capabilities(self) -> None:
         with self.assertRaises(PackageCompositionError):
             self.compose_for({"filesystem.read"})
+
+
+class PackageDocumentationTests(unittest.TestCase):
+    def guide(self) -> str:
+        return PACKAGE_GUIDE.read_text()
+
+    def test_guide_defines_static_composition_not_execution(self) -> None:
+        guide = self.guide()
+
+        self.assertIn("Static composition, not execution", guide)
+        self.assertIn("does not execute", guide)
+        self.assertIn("does not implement a second composer", guide)
+
+    def test_guide_contains_a_portable_manifest_example(self) -> None:
+        guide = self.guide()
+
+        self.assertIn('"protocol": "dci.package/v1"', guide)
+        self.assertIn('"requires_policies": ["policy.local-corpus"]', guide)
+        self.assertIn('"requires_capabilities": ["filesystem.read", "shell"]', guide)
+
+    def test_guide_contains_a_reference_composer_example(self) -> None:
+        guide = self.guide()
+
+        self.assertIn("compose_packages(", guide)
+        self.assertIn("host_capabilities=", guide)
+        self.assertIn("composition.package_ids", guide)
+
+    def test_guide_defines_extension_and_security_boundaries(self) -> None:
+        guide = self.guide()
+
+        self.assertIn("Adding a package", guide)
+        self.assertIn("adapter-specific variants", guide)
+        for forbidden in ("prompts", "credentials", "executable paths", "commands"):
+            with self.subTest(forbidden=forbidden):
+                self.assertIn(forbidden, guide)
 
 
 if __name__ == "__main__":

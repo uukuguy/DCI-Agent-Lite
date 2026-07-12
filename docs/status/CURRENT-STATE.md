@@ -55,6 +55,7 @@
 - `src/dci/framework/executor_protocol.py` — Python reference validator for `dci.executor/v1`.
 - `packages/rust/executor/` — runnable Rust controlled-executor sidecar and library with complete AF-050 policy/process/resource/service acceptance.
 - `docs/superpowers/specs/2026-07-12-composable-framework-packages-design.md` — active AF-060 package contract and non-goals.
+- `docs/architecture/composable-packages.md` — package authoring, static composition, extension, and security boundary guide.
 - `scripts/bcplus_eval/run_bcplus_eval.py` — DCI reference benchmark harness.
 - `tools/climb/` — autonomous-work adapter; future cycles require a work-package parent.
 

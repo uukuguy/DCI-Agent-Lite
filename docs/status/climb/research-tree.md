@@ -1,19 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (29 runs).
+> Deterministic summary generated from tracked state (30 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
-- Phase: implementation
-- Last cycle: 29
-- Next hypothesis: AF-060-H-005
+- Phase: knowledge
+- Last cycle: 30
+- Next hypothesis: None
 - In flight: none
-- Next action: Start AF-060-H-005.
+- Next action: Select and govern the next framework work package before closing AF-060.
 
 ## Active hypotheses
 
-- **AF-060-H-005** (pending, rank 0.60): Document the static composition boundary and close AF-060 through full framework gates.
 
 ## Run ladder
 
@@ -48,6 +47,7 @@
 | 20260712-223459-dci-climb-af060h002 | AF-060-H-002 | 4 | confirmed 4/4 |
 | 20260712-224635-dci-climb-af060h003 | AF-060-H-003 | 4 | confirmed 4/4 |
 | 20260712-225049-dci-climb-af060h004 | AF-060-H-004 | 4 | confirmed 4/4 |
+| 20260712-225355-dci-climb-af060h005 | AF-060-H-005 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

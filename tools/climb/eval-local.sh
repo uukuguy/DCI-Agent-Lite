@@ -191,6 +191,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="rejects package edge arrays that are not sorted"
         override_test="public_type_contract"
         ;;
+    AF-060-H-005)
+        first_dimension="static_boundary"
+        second_dimension="manifest_example"
+        third_dimension="composer_example"
+        fourth_dimension="extension_security"
+        immutable_test="tests.test_package_composition.PackageDocumentationTests.test_guide_defines_static_composition_not_execution"
+        repeat_test="tests.test_package_composition.PackageDocumentationTests.test_guide_contains_a_portable_manifest_example"
+        dirty_test="tests.test_package_composition.PackageDocumentationTests.test_guide_contains_a_reference_composer_example"
+        override_test="tests.test_package_composition.PackageDocumentationTests.test_guide_defines_extension_and_security_boundaries"
+        ;;
     H-001)
         first_dimension="immutable_resolution"
         second_dimension="repeat_validation"

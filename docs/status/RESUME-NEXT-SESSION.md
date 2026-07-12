@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-12 22:52 +0800. **Session remains active — autonomous climb continues.**
+> Updated: 2026-07-12 22:55 +0800. **Session remains active — autonomous climb continues.**
 
 Active work package: AF-060
 
@@ -12,7 +12,8 @@ Active work package: AF-060
 - `AF-060-H-002` is confirmed: composition order is stable and duplicate, ambiguous, missing-edge, and cyclic graphs are rejected.
 - `AF-060-H-003` is confirmed: Pi and Claude Code compose the same policy/research/evaluation/observability graph.
 - `AF-060-H-004` is confirmed: TypeScript exports portable package types and validates the canonical schema/fixtures without a second composer.
-- `AF-060-H-005` documentation/static-boundary and full framework closure is next.
+- `AF-060-H-005` is confirmed: the static boundary/extension guide and full framework closure gate pass.
+- AF-060 remains active only until the knowledge layer selects and records the next governed package.
 
 ## Durable boundary
 
@@ -21,11 +22,12 @@ Active work package: AF-060
 - AF-060-H-001 package manifests are committed at `a4266ad`.
 - AF-060-H-002 deterministic composer is committed at `0e7c15b`.
 - AF-060-H-003 DCI reference graph is committed at `fc9b9cd`.
+- AF-060-H-004 TypeScript parity is committed at `e0e1ae4`.
 - No long-running process is active; external `pi/` remains intentionally untouched and dirty.
 
 ## Immediate next action
 
-Add failing documentation tests for static composition, extension boundaries, and the developer/operator guide, then run the full AF-060 closure gate.
+Commit H005 documentation/closure evidence, then run the knowledge layer and atomically transition AF-060 to the next governed work package.
 
 ## Guardrails
 
@@ -36,6 +38,6 @@ Add failing documentation tests for static composition, extension boundaries, an
 ## Ready commands
 
 ```bash
-python3 tools/project_scope_check.py --climb-hypothesis AF-060-H-005
-uv run python -m unittest tests.test_package_composition tests.test_climb_tools -v
+git status --short
+python3 tools/project_scope_check.py
 ```

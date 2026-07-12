@@ -637,6 +637,18 @@ hypotheses:
   expected_lift: +1 AF-060 closure confidence
   cost_h: 0.4
   ranking: 0.6
-  status: pending
+  status: confirmed
   created_at: '2026-07-12T22:26:43+08:00'
-  results: []
+  results:
+  - session: 2026-07-12-af-060-package-composition
+    cycle: 30
+    run: 20260712-225355-dci-climb-af060h005
+    local: 4
+    local_per_task:
+      static_boundary: 1
+      manifest_example: 1
+      composer_example: 1
+      extension_security: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
