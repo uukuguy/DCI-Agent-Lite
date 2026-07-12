@@ -71,11 +71,13 @@ def main() -> None:
     session_state = json.loads(session_path.read_text())
     session_id = session_state["session"]
     work_package_id = hypothesis.get("work_package_id")
-    acceptance_kind = {
-        "AF-050": "executor",
-        "AF-060": "package",
-        "AF-070": "package",
-    }.get(work_package_id, "setup-policy")
+    acceptance_kind = (
+        "executor"
+        if work_package_id == "AF-050"
+        else "package"
+        if work_package_id is not None
+        else "setup-policy"
+    )
     decision_reason = f"deterministic local {acceptance_kind} acceptance"
     existing_result = next(
         (result for result in hypothesis["results"] if result["run"] == args.run_id),

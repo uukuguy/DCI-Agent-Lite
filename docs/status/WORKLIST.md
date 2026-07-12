@@ -75,10 +75,20 @@
 
 ## AF-070 — Controlled code validation packages
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Agent Application Framework
 - Scope: prove a second portable policy/workflow/observability/evaluation graph against normalized runtimes plus the shared controlled-executor host service.
 - Dependencies: AF-050, AF-060
 - Acceptance: the controlled-code graph composes deterministically across Pi and Claude Code normalized edges, rejects every missing boundary, and remains static composition rather than execution.
 - Design: `docs/superpowers/specs/2026-07-12-controlled-code-validation-packages-design.md`
 - Plan: `docs/superpowers/plans/2026-07-12-controlled-code-validation-packages.md`
+
+## AF-080 — Local package catalog
+
+- Status: in_progress
+- Parent objective: Agent Application Framework
+- Scope: deterministically discover, validate, and exact-select portable manifests from explicit local directories without loading or executing packages.
+- Dependencies: AF-060, AF-070
+- Acceptance: explicit roots produce a deterministic fail-closed catalog whose exact selections compose both reference graphs without network, installation, or implicit version policy.
+- Design: `docs/superpowers/specs/2026-07-13-local-package-catalog-design.md`
+- Plan: `docs/superpowers/plans/2026-07-13-local-package-catalog.md`

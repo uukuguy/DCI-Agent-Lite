@@ -207,3 +207,12 @@
 - Revalidation trigger: consider an execution layer only if this second graph cannot be expressed through the existing package, policy, event, and artifact edges.
 - Implemented evidence: AF-070-H-001 confirms the four closed manifests, `workflow` kind, stable dependency order, and exclusion of runtime-controlled fields; H-002 confirms cross-host equality, permutation stability, portable outputs, and every missing edge rejection without a composer change; H-003 confirms canonical TypeScript validation for all eight manifests without a second composer.
 - Closure evidence: H-004 documents the shared host-service/non-sandbox boundary and passes 189 Python, 7 Node, and 21 Rust tests plus every compile, lint, format, scope, shell, and diff gate.
+
+## D-024 — Discover packages locally before assembly or distribution
+
+- Status: ✅ accepted decision
+- Decided: 2026-07-13
+- Decision: AF-080 adds a Python-only catalog over explicit local directories with direct JSON discovery and exact `package_id@version` selection.
+- Rationale: both static graphs are useful only as checked-in file lists today; deterministic validated discovery is the smallest next framework capability and precedes application assembly or distribution infrastructure.
+- Boundary: roots are trusted operator input; discovery rejects symlinks and ambiguity, does not recurse, load code, access a network, install packages, choose version ranges, or execute a graph.
+- Revalidation trigger: add an assembly manifest only after catalog selections need a portable binding to runtime and host-service identities; add distribution only when a real remote source is required.

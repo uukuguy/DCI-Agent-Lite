@@ -5,14 +5,18 @@
 
 ## In-flight / session state
 
-- Phase: knowledge
+- Phase: implementation
 - Last cycle: 34
-- Next hypothesis: None
+- Next hypothesis: AF-080-H-001
 - In flight: none
-- Next action: Select and govern the next framework package; D-022 still excludes an execution engine.
+- Next action: Start AF-080-H-001.
 
 ## Active hypotheses
 
+- **AF-080-H-001** (pending, rank 0.90): Discover and validate direct local package documents deterministically across root and file permutations.
+- **AF-080-H-002** (pending, rank 0.80): Fail closed on invalid roots documents symlinks and duplicate exact identities with safe errors.
+- **AF-080-H-003** (pending, rank 0.70): Select exact fresh manifests and compose both checked-in reference graphs.
+- **AF-080-H-004** (pending, rank 0.60): Document local catalog trust boundaries and close AF-080 through full framework gates.
 
 ## Run ladder
 

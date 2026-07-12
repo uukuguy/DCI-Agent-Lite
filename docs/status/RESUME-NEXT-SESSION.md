@@ -1,8 +1,8 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13 00:04 +0800. **Session remains active — autonomous design continues.**
+> Updated: 2026-07-13 00:10 +0800. **Session remains active — autonomous climb continues.**
 
-Active work package: AF-070
+Active work package: AF-080
 
 ## TL;DR
 
@@ -19,7 +19,8 @@ Active work package: AF-070
 - `AF-070-H-002` is confirmed: Pi/Claude parity, permutation stability, portable outputs, and every missing boundary pass without changing the composer.
 - `AF-070-H-003` is confirmed: TypeScript validates all eight reference manifests and retains no composer implementation.
 - `AF-070-H-004` is confirmed: documentation and the independent full framework closure gate pass.
-- AF-070 remains active only until the knowledge layer records the next governed package.
+- AF-070 is complete with all four hypotheses and full framework closure evidence.
+- AF-080 is active under the approved explicit-root, exact-version local catalog design and implementation plan.
 
 ## Durable boundary
 
@@ -33,17 +34,18 @@ Active work package: AF-070
 
 ## Immediate next action
 
-Commit the approved local package catalog design, write its implementation plan, and atomically transition AF-070 to AF-080.
+Start AF-080-H-001 with failing deterministic discovery tests over explicit temporary roots.
 
 ## Guardrails
 
 - Static composition precedes workflow execution.
 - Do not put prompts, credentials, executable paths, commands, mutable state, or adapter-private types in package manifests.
-- Do not execute commands, add automatic repair, persistent memory, a registry, or a workflow scheduler in AF-070.
+- Do not recurse, load code, follow symlinks, install packages, access a network, solve versions, or execute packages in AF-080.
 
 ## Ready commands
 
 ```bash
-python3 tools/project_scope_check.py
+python3 tools/project_scope_check.py --climb-hypothesis AF-080-H-001
+uv run python -m unittest tests.test_package_catalog -v
 uv run python -m unittest tests.test_package_composition -v
 ```

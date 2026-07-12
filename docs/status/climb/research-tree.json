@@ -1,13 +1,13 @@
 {
   "run_count": 34,
   "session": {
-    "session": "2026-07-12-af-070-controlled-code-validation",
-    "phase": "knowledge",
-    "work_package_id": "AF-070",
+    "session": "2026-07-13-af-080-local-package-catalog",
+    "phase": "implementation",
+    "work_package_id": "AF-080",
     "last_cycle": 34,
-    "next_hypothesis": null,
+    "next_hypothesis": "AF-080-H-001",
     "in_flight": null,
-    "next_action": "Select and govern the next framework package; D-022 still excludes an execution engine.",
+    "next_action": "Start AF-080-H-001.",
     "falsified_routes": [
       "duplicate the authoritative Pi commit across setup.sh and .env.template",
       "convert the independent Pi checkout to vendored or submodule ownership",
@@ -17,7 +17,56 @@
       "build an enterprise control plane before a reference package graph"
     ]
   },
-  "active": [],
+  "active": [
+    {
+      "id": "AF-080-H-001",
+      "work_package_id": "AF-080",
+      "description": "Discover and validate direct local package documents deterministically across root and file permutations.",
+      "parent_paradigm": "local-package-discovery",
+      "expected_lift": "+1 deterministic discovery boundary",
+      "cost_h": 0.6,
+      "ranking": 0.9,
+      "status": "pending",
+      "created_at": "2026-07-13T00:10:00+08:00",
+      "results": []
+    },
+    {
+      "id": "AF-080-H-002",
+      "work_package_id": "AF-080",
+      "description": "Fail closed on invalid roots documents symlinks and duplicate exact identities with safe errors.",
+      "parent_paradigm": "local-package-discovery-safety",
+      "expected_lift": "+1 filesystem trust boundary",
+      "cost_h": 0.7,
+      "ranking": 0.8,
+      "status": "pending",
+      "created_at": "2026-07-13T00:10:00+08:00",
+      "results": []
+    },
+    {
+      "id": "AF-080-H-003",
+      "work_package_id": "AF-080",
+      "description": "Select exact fresh manifests and compose both checked-in reference graphs.",
+      "parent_paradigm": "exact-package-selection",
+      "expected_lift": "+1 catalog composition integration",
+      "cost_h": 0.6,
+      "ranking": 0.7,
+      "status": "pending",
+      "created_at": "2026-07-13T00:10:00+08:00",
+      "results": []
+    },
+    {
+      "id": "AF-080-H-004",
+      "work_package_id": "AF-080",
+      "description": "Document local catalog trust boundaries and close AF-080 through full framework gates.",
+      "parent_paradigm": "local-package-catalog-acceptance",
+      "expected_lift": "+1 AF-080 closure confidence",
+      "cost_h": 0.4,
+      "ranking": 0.6,
+      "status": "pending",
+      "created_at": "2026-07-13T00:10:00+08:00",
+      "results": []
+    }
+  ],
   "confirmed": [
     {
       "id": "H-001",

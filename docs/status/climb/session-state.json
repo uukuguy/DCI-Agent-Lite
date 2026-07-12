@@ -1,11 +1,11 @@
 {
-  "session": "2026-07-12-af-070-controlled-code-validation",
-  "phase": "knowledge",
-  "work_package_id": "AF-070",
+  "session": "2026-07-13-af-080-local-package-catalog",
+  "phase": "implementation",
+  "work_package_id": "AF-080",
   "last_cycle": 34,
-  "next_hypothesis": null,
+  "next_hypothesis": "AF-080-H-001",
   "in_flight": null,
-  "next_action": "Select and govern the next framework package; D-022 still excludes an execution engine.",
+  "next_action": "Start AF-080-H-001.",
   "falsified_routes": [
     "duplicate the authoritative Pi commit across setup.sh and .env.template",
     "convert the independent Pi checkout to vendored or submodule ownership",

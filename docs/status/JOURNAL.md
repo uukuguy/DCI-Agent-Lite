@@ -200,6 +200,8 @@
 - 23:30 AF-070 closure 通过 189 Python、7 Node、21 Rust、clean install、lint、scope 与 diff。
 - 23:31 controlled-code acceptance 已提交；第二 graph 可表达，execution-engine trigger 未满足。[6a9969c]
 - 00:04 local catalog 方向获批：显式 roots、精确版本、fail-closed discovery，不含 registry/安装/执行。
+- 00:06 local package catalog 设计已提交，为显式 discovery 固定 trust/version 边界。[a12bcd9]
+- 00:10 AF-070 完成；AF-080 catalog 设计、计划与四个 parented hypotheses 接管主线。
 - 23:22 AF-070-H-002 confirmed 4/4; package acceptance recorded.
 - 23:25 AF-070-H-003 confirmed 4/4; package acceptance recorded.
 - 23:28 AF-070-H-004 confirmed 4/4; package acceptance recorded.
