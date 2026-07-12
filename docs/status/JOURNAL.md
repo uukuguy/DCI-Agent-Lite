@@ -139,3 +139,5 @@
 - 21:34 AF-040 通过 126 Python tests、编译、Ruff、干净 npm ci、TypeScript tests 与范围审计。
 - 21:34 AF-040 双语言主机边界完成；主线转入 AF-050 Rust 受控执行边界。
 - 21:35 AF-050 成为唯一活跃包，隔离执行工作受框架范围门控制。[d75c776]
+- 21:37 Rust 受控 executor 的真实安全边界与异步取消计划已固化。[6441770]
+- 21:40 `dci.executor/v1` execute/cancel/result/ack schemas、fixtures 与参考 validator 通过测试。
