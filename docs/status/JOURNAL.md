@@ -189,3 +189,7 @@
 - 23:18 AF-070-H-001 confirmed 4/4; setup-policy acceptance recorded.
 - 23:20 Correction: AF-070-H-001 是 package acceptance；recorder 的新 work-package 分类已修复。
 - 23:21 AF-070-H-001 通过 87 focused tests、compile、Ruff、shell、scope 与 diff。
+- 23:22 controlled-code package graph 已提交，跨 host 与缺失边界验证可继续。[355b342]
+- 23:23 AF-070-H-002 confirmed 4/4; package acceptance recorded.
+- 23:24 AF-070-H-002 通过 93 focused tests、compile、Ruff、shell、scope 与 diff。
+- 23:22 AF-070-H-002 confirmed 4/4; package acceptance recorded.

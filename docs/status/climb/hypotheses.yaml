@@ -683,9 +683,21 @@ hypotheses:
   expected_lift: +1 cross-host graph confidence
   cost_h: 0.6
   ranking: 0.8
-  status: pending
+  status: confirmed
   created_at: '2026-07-12T23:05:00+08:00'
-  results: []
+  results:
+  - session: 2026-07-12-af-070-controlled-code-validation
+    cycle: 32
+    run: 20260712-232257-dci-climb-af070h002
+    local: 4
+    local_per_task:
+      runtime_parity: 1
+      permutation_stability: 1
+      portable_outputs: 1
+      missing_boundary_rejection: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-070-H-003
   work_package_id: AF-070
   description: Validate every checked-in reference manifest through the TypeScript

@@ -205,4 +205,4 @@
 - Rationale: the graph exercises a different dependency shape, the unused `workflow` kind, and the existing Rust executor boundary as a shared host capability without conflating static validation with scheduling.
 - Boundary: `executor.controlled` comes from the shared host service, not from Pi or Claude Code natively; AF-070 does not execute commands, repair code, add persistent memory, or build a registry/control plane.
 - Revalidation trigger: consider an execution layer only if this second graph cannot be expressed through the existing package, policy, event, and artifact edges.
-- Implemented evidence: AF-070-H-001 confirms the four closed manifests, `workflow` kind, stable dependency order, and exclusion of runtime-controlled fields.
+- Implemented evidence: AF-070-H-001 confirms the four closed manifests, `workflow` kind, stable dependency order, and exclusion of runtime-controlled fields; H-002 confirms cross-host equality, permutation stability, portable outputs, and every missing edge rejection without a composer change.

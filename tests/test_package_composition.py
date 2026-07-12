@@ -232,12 +232,32 @@ class ControlledCodePackageTests(unittest.TestCase):
         ]
 
     def composition(self):
+        return self.compose_for({"executor.controlled", "filesystem.read"})
+
+    def compose_for(
+        self,
+        capabilities: set[str],
+        *,
+        manifests: list[dict[str, object]] | None = None,
+        events: set[str] | None = None,
+        artifacts: set[str] | None = None,
+    ):
         return compose_packages(
-            self.manifests(),
-            host_capabilities={"executor.controlled", "filesystem.read"},
-            host_events={"run.started", "tool.result"},
-            host_artifacts={"text/x-source"},
+            self.manifests() if manifests is None else manifests,
+            host_capabilities=capabilities,
+            host_events={"run.started", "tool.result"} if events is None else events,
+            host_artifacts={"text/x-source"} if artifacts is None else artifacts,
         )
+
+    def replace_manifest(
+        self, package_id: str, **changes: object
+    ) -> list[dict[str, object]]:
+        return [
+            {**manifest, **changes}
+            if manifest["package_id"] == package_id
+            else manifest
+            for manifest in self.manifests()
+        ]
 
     def test_controlled_code_manifests_are_portable(self) -> None:
         for manifest in self.manifests():
@@ -279,6 +299,90 @@ class ControlledCodePackageTests(unittest.TestCase):
         for manifest in self.manifests():
             with self.subTest(package=manifest["package_id"]):
                 self.assertTrue(forbidden.isdisjoint(manifest))
+
+    def test_pi_and_claude_compose_the_same_controlled_code_graph(self) -> None:
+        pi = self.compose_for(
+            set(map_pi_capabilities("read")) | {"executor.controlled"}
+        )
+        claude = self.compose_for(
+            set(map_claude_capabilities(["Read"])) | {"executor.controlled"}
+        )
+
+        self.assertEqual(pi, claude)
+
+    def test_controlled_code_graph_is_stable_under_permutation(self) -> None:
+        first = self.compose_for(
+            {"executor.controlled", "filesystem.read"},
+            manifests=self.manifests(),
+        )
+        second = self.compose_for(
+            {"executor.controlled", "filesystem.read"},
+            manifests=list(reversed(self.manifests())),
+        )
+
+        self.assertEqual(first, second)
+
+    def test_controlled_code_graph_exposes_portable_outputs(self) -> None:
+        composition = self.compose_for({"executor.controlled", "filesystem.read"})
+
+        self.assertIn("workflow.code-quality", composition.provided_capabilities)
+        self.assertIn("workflow.code-quality.completed", composition.emitted_events)
+        self.assertEqual(
+            set(composition.produced_artifacts),
+            {
+                "application/vnd.dci.code-quality+json",
+                "application/vnd.dci.code-quality-verdict+json",
+                "application/vnd.dci.execution-audit+json",
+            },
+        )
+
+    def test_controlled_code_graph_rejects_every_missing_boundary(self) -> None:
+        cases = (
+            ({"filesystem.read"}, None, {"run.started", "tool.result"}, {"text/x-source"}),
+            ({"executor.controlled"}, None, {"run.started", "tool.result"}, {"text/x-source"}),
+            ({"executor.controlled", "filesystem.read"}, None, {"run.started"}, {"text/x-source"}),
+            ({"executor.controlled", "filesystem.read"}, None, {"run.started", "tool.result"}, set()),
+            (
+                {"executor.controlled", "filesystem.read"},
+                [
+                    manifest
+                    for manifest in self.manifests()
+                    if manifest["package_id"] != "policy.controlled-code-check"
+                ],
+                {"run.started", "tool.result"},
+                {"text/x-source"},
+            ),
+            (
+                {"executor.controlled", "filesystem.read"},
+                self.replace_manifest(
+                    "workflow.code-quality", emits_events=[]
+                ),
+                {"run.started", "tool.result"},
+                {"text/x-source"},
+            ),
+            (
+                {"executor.controlled", "filesystem.read"},
+                self.replace_manifest(
+                    "workflow.code-quality", produces_artifacts=[]
+                ),
+                {"run.started", "tool.result"},
+                {"text/x-source"},
+            ),
+        )
+
+        for capabilities, manifests, events, artifacts in cases:
+            with self.subTest(
+                capabilities=capabilities,
+                manifests=manifests,
+                events=events,
+                artifacts=artifacts,
+            ), self.assertRaises(PackageCompositionError):
+                self.compose_for(
+                    capabilities,
+                    manifests=manifests,
+                    events=events,
+                    artifacts=artifacts,
+                )
 
 
 class PackageDocumentationTests(unittest.TestCase):

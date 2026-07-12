@@ -211,6 +211,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_package_composition.ControlledCodePackageTests.test_controlled_code_graph_has_stable_order"
         override_test="tests.test_package_composition.ControlledCodePackageTests.test_controlled_code_manifests_exclude_runtime_fields"
         ;;
+    AF-070-H-002)
+        first_dimension="runtime_parity"
+        second_dimension="permutation_stability"
+        third_dimension="portable_outputs"
+        fourth_dimension="missing_boundary_rejection"
+        immutable_test="tests.test_package_composition.ControlledCodePackageTests.test_pi_and_claude_compose_the_same_controlled_code_graph"
+        repeat_test="tests.test_package_composition.ControlledCodePackageTests.test_controlled_code_graph_is_stable_under_permutation"
+        dirty_test="tests.test_package_composition.ControlledCodePackageTests.test_controlled_code_graph_exposes_portable_outputs"
+        override_test="tests.test_package_composition.ControlledCodePackageTests.test_controlled_code_graph_rejects_every_missing_boundary"
+        ;;
     H-001)
         first_dimension="immutable_resolution"
         second_dimension="repeat_validation"
