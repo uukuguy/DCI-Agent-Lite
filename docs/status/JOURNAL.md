@@ -297,3 +297,4 @@
 - 04:04 composed runner 完成全量 preflight、顺序执行、artifact 路由及失败/取消短路。[3b44940]
 - 04:09 独立 DCI research capability 已提交；Pi/Claude fixture parity 与 baseline import 隔离通过。[762ba85]
 - 04:14 Asterion 独立 Pi runtime client 已提交；取消、deadline、reap 与安全 JSONL 失败通过。[41811ec]
+- 04:18 显式 DCI application host 与最小 assembly 已提交，同一 capability 跨组合复用通过。[cbdceae]
