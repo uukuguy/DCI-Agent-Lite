@@ -145,3 +145,5 @@
 - 21:47 Rust trusted policy 已 canonicalize workspace/绝对程序白名单并限制资源；tests、fmt、Clippy 通过。
 - 21:47 仓库级 Cargo sparse registry 修复用户级旧 Git index 导致的可恢复构建阻塞。
 - 21:48 Rust trusted policy 已提交，agent 请求无法控制程序路径、环境或资源上限。[0fa33d9]
+- 21:49 AF-050 live checkpoint 已提交，使新会话可从 request authorization 继续。[74dfd79]
+- 21:51 handoff 审计：主仓库干净、无项目任务进程、外部 Pi dirt 保留；AF-050 保持唯一活跃包。

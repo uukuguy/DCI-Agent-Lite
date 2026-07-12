@@ -48,6 +48,10 @@
 
 - `src/dci/benchmark/pi_rpc_runner.py` — existing Pi RPC reference runtime.
 - `src/dci/benchmark/pi_system_prompt.py` — Pi-owned system-prompt bridge.
+- `src/dci/framework/host.py` — public Python Agent Runtime Protocol host contract.
+- `packages/typescript/agent-runtime/` — public TypeScript host package and shared-fixture validator.
+- `src/dci/framework/executor_protocol.py` — Python reference validator for `dci.executor/v1`.
+- `packages/rust/executor/` — active Rust controlled-executor package; trusted policy exists, process service is pending.
 - `scripts/bcplus_eval/run_bcplus_eval.py` — DCI reference benchmark harness.
 - `tools/climb/` — autonomous-work adapter; future cycles require a work-package parent.
 
