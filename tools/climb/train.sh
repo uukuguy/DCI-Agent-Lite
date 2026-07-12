@@ -6,7 +6,7 @@ if [ "$#" -ne 1 ]; then
     exit 2
 fi
 case "$1" in
-    H-001|H-002|H-003|H-004|H-005|H-006|H-007|H-008|H-009|H-010|H-011|H-012|H-013) ;;
+    H-001|H-002|H-003|H-004|H-005|H-006|H-007|H-008|H-009|H-010|H-011|H-012|H-013|H-014) ;;
     *)
         echo "ERROR: train adapter has no acceptance suite for $1." >&2
         exit 2
@@ -40,6 +40,8 @@ elif [ "$1" = "H-012" ]; then
     paradigm="judge-artifact-privacy"
 elif [ "$1" = "H-013" ]; then
     paradigm="judge-cache-completeness"
+elif [ "$1" = "H-014" ]; then
+    paradigm="judge-input-privacy"
 fi
 
 cat >"$run_dir/manifest.json" <<EOF
@@ -121,6 +123,11 @@ elif [ "$1" = "H-012" ]; then
 elif [ "$1" = "H-013" ]; then
     if ! uv run python -m unittest tests.test_judge -v >"$run_dir/train.log" 2>&1; then
         echo "ERROR: H-013 judge cache completeness acceptance failed; see $run_dir/train.log" >&2
+        exit 1
+    fi
+elif [ "$1" = "H-014" ]; then
+    if ! uv run python -m unittest tests.test_judge -v >"$run_dir/train.log" 2>&1; then
+        echo "ERROR: H-014 judge input privacy acceptance failed; see $run_dir/train.log" >&2
         exit 1
     fi
 elif ! uv run python -m unittest tests.test_setup_pi -v >"$run_dir/train.log" 2>&1; then

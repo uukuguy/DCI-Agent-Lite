@@ -160,6 +160,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_judge.JudgeResultReuseTests.test_backend_identity_is_part_of_result_reuse"
         override_test="tests.test_climb_tools.ClimbToolTests.test_h013_train_checks_complete_judge_cache_results"
         ;;
+    H-014)
+        first_dimension="input_text_redaction"
+        second_dimension="result_fingerprint"
+        third_dimension="cache_reuse"
+        fourth_dimension="adapter_integration"
+        immutable_test="tests.test_judge.JudgeTransportTests.test_chat_completions_request_and_response_are_normalized"
+        repeat_test="tests.test_judge.JudgeTransportTests.test_judge_request_fingerprint_is_deterministic_and_endpoint_sensitive"
+        dirty_test="tests.test_judge.JudgeResultReuseTests.test_backend_identity_is_part_of_result_reuse"
+        override_test="tests.test_climb_tools.ClimbToolTests.test_h014_train_checks_judge_input_privacy"
+        ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2
         exit 2

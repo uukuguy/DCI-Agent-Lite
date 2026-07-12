@@ -278,3 +278,25 @@ hypotheses:
     online: null
     verdict: confirmed 4/4
     decision_reason: deterministic local setup-policy acceptance
+- id: H-014
+  description: Persist judge verdict metadata without duplicating the evaluated question,
+    gold answer, or prediction.
+  parent_paradigm: judge-input-privacy
+  expected_lift: +1 input-data-minimization dimension
+  cost_h: 0.1
+  ranking: 0.75
+  status: confirmed
+  created_at: '2026-07-12T19:06:00+08:00'
+  results:
+  - session: 2026-07-12-pi-revision
+    cycle: 14
+    run: 20260712-190650-dci-climb-h014
+    local: 4
+    local_per_task:
+      input_text_redaction: 1
+      result_fingerprint: 1
+      cache_reuse: 1
+      adapter_integration: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local setup-policy acceptance

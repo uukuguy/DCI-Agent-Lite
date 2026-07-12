@@ -1,10 +1,10 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-12 18:56 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-12 19:06 +0800. **Session remains active — not a final handoff.**
 
 ## TL;DR
 
-- H-010 through H-013 are locally confirmed at 4/4. Evaluation-result reuse now keys off a safe SHA-256 fingerprint of public judge configuration, endpoint, and the fully shaped request.
+- H-010 through H-014 are locally confirmed at 4/4. Evaluation-result reuse now keys off a safe SHA-256 fingerprint of public judge configuration, endpoint, and the fully shaped request.
 - Judge failures no longer echo malformed provider response bodies, and successful evaluation artifacts no longer retain raw provider responses.
 - The climb pool is empty again. No process is running; the next action is another Knowledge Layer pass for a grounded cache or transport invariant.
 
@@ -14,7 +14,8 @@
 - H-011 removes `response_excerpt` and other provider-derived response fields from terminal invalid-JSON errors, preventing the async batch wrapper from persisting them as failure strings.
 - H-012 removes `raw_response_text` and `raw_response` from successful judge result dictionaries; parsed verdict data, usage, cost, and safe configuration remain.
 - H-013 rejects a matching-fingerprint cache artifact unless it also contains a final boolean `is_correct` verdict.
-- Commit `706f3c0` contains the H-010–H-013 implementation, state updates, and fresh verification evidence (82 unit tests, Python compilation, Ruff, touched-Bash syntax, `git diff --check`, and the live model-free Pi RPC probe).
+- H-014 removes duplicated question, gold-answer, and prediction fields from `eval_result.json`; the run's primary artifacts retain their own source data.
+- Commit `706f3c0` contains the H-010–H-013 implementation, state updates, and fresh verification evidence (82 unit tests, Python compilation, Ruff, touched-Bash syntax, `git diff --check`, and the live model-free Pi RPC probe). Commit `ffbbfd5` adds H-014's duplicate-input minimization; its focused suite, compilation, Ruff, Bash syntax, and diff check passed.
 
 ## Immediate next action
 

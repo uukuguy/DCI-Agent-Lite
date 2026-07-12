@@ -1,9 +1,9 @@
 {
-  "run_count": 13,
+  "run_count": 14,
   "session": {
     "session": "2026-07-12-pi-revision",
     "phase": "implementation",
-    "last_cycle": 13,
+    "last_cycle": 14,
     "next_hypothesis": null,
     "in_flight": null,
     "next_action": "Trigger Knowledge Layer.",
@@ -364,6 +364,33 @@
           "decision_reason": "deterministic local setup-policy acceptance"
         }
       ]
+    },
+    {
+      "id": "H-014",
+      "description": "Persist judge verdict metadata without duplicating the evaluated question, gold answer, or prediction.",
+      "parent_paradigm": "judge-input-privacy",
+      "expected_lift": "+1 input-data-minimization dimension",
+      "cost_h": 0.1,
+      "ranking": 0.75,
+      "status": "confirmed",
+      "created_at": "2026-07-12T19:06:00+08:00",
+      "results": [
+        {
+          "session": "2026-07-12-pi-revision",
+          "cycle": 14,
+          "run": "20260712-190650-dci-climb-h014",
+          "local": 4,
+          "local_per_task": {
+            "input_text_redaction": 1,
+            "result_fingerprint": 1,
+            "cache_reuse": 1,
+            "adapter_integration": 1
+          },
+          "online": null,
+          "verdict": "confirmed 4/4",
+          "decision_reason": "deterministic local setup-policy acceptance"
+        }
+      ]
     }
   ],
   "falsified": [],
@@ -653,6 +680,28 @@
       "verdict": "confirmed 4/4",
       "train_cost_h": "0.01",
       "manifest_path": "runs/climb/20260712-185440-dci-climb-h013/manifest.json"
+    },
+    {
+      "run_id": "20260712-190650-dci-climb-h014",
+      "cycle": "14",
+      "session": "2026-07-12-pi-revision",
+      "hypothesis_id": "H-014",
+      "paradigm": "judge-input-privacy",
+      "parent_run": "",
+      "pushed_at": "2026-07-12T19:06:50+08:00",
+      "lb_landed_at": "",
+      "local_score": "4",
+      "immutable_resolution": "",
+      "repeat_validation": "",
+      "dirty_checkout_safety": "",
+      "override_compatibility": "",
+      "online_score": "",
+      "gap": "",
+      "push_decision": "PUSH",
+      "decision_reason": "cheap deterministic local acceptance",
+      "verdict": "confirmed 4/4",
+      "train_cost_h": "0.01",
+      "manifest_path": "runs/climb/20260712-190650-dci-climb-h014/manifest.json"
     }
   ],
   "calibration": {
