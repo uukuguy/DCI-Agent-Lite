@@ -65,3 +65,4 @@
 - 17:34 Knowledge Layer added H-009: opt-in strict JSON Schema for Responses judge verdicts.
 - 17:39 H-009 local contract passed: 72 tests, Ruff, compile, Bash syntax, and Pi RPC probe before cycle.
 - 17:39 H-009 confirmed 4/4; setup-policy acceptance recorded.
+- 18:10 handoff boundary: H-001 through H-009 are all confirmed; research tree has no active hypothesis or process. The latest full verification remains 72 tests plus Ruff, compileall, touched-Bash syntax, diff check, and the model-free Pi RPC probe. The parent worktree is clean; the independent dirty `pi/` checkout remains deliberately excluded. Safe judge configuration/provenance and opt-in Responses strict-schema support are the completed continuation surface.

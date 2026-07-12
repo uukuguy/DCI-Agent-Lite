@@ -1,64 +1,43 @@
-# Recovered Session Checkpoint
+# Next-Session Handoff
 
-> Updated: 2026-07-12 17:40 +0800. **Active post-H-009 Knowledge Layer checkpoint — session remains active, not a final handoff.**
+> Updated: 2026-07-12 18:10 +0800. This is a completed session boundary.
 
 ## TL;DR
 
-- Autonomous climb confirmed and committed H-001 through H-005 at 4/4 each: immutable Pi lock, read-only pin review, model-free RPC preflight, run provenance, and pre-run revision warning.
-- The exact Pi default is `8479bd84743e8889f728acb21a62794102db0529`; the independent dirty `pi/` checkout was never modified.
-- H-006 is confirmed 4/4 against the real configured DeepSeek backend after using the new `.env` key without the stale inherited process value. The pool is empty, so Knowledge Layer is active.
-- H-007 confirmed 4/4 and now reports safe dotenv/process/shadow provenance on successful preflight output.
-- Knowledge Layer added H-008: an offline configuration check will expose the same source information before a credentialed preflight request.
-- H-008 confirmed 4/4; Knowledge Layer added H-009 for default-off strict JSON Schema on supporting Responses backends.
-- H-009 is locally verified: the opt-in Responses request shape and cache identity changed, while default and Chat Completions request shapes remain compatible.
-- H-009 is confirmed 4/4. The active DeepSeek Chat backend deliberately did not receive strict schema, so the remaining optional evidence is a live run only after configuring a supporting Responses backend.
-- H-008 is locally verified: its config-only path makes no request and emits safe dotenv/process/shadow metadata through a four-dimension climb adapter.
-- H-006 scope and a test-first inline plan are committed; work proceeds in the clean shared checkout without touching the independent `pi/` repository.
-- The safe standalone preflight, Make target, documentation, and four-dimension climb adapter are fully verified and H-006 is recorded as cycle 6.
-- The earlier HTTP 401 was caused by a stale exported `DEEPSEEK_API_KEY` overriding the rotated `.env` value; `load_project_env` deliberately uses `override=False`.
-- Shared judge HTTP errors now retain endpoint/status while suppressing provider response bodies, preventing provider-side credential echoes from entering stderr or batch artifacts.
-- A real preflight with `env -u DEEPSEEK_API_KEY make check-judge` passed, returning `is_correct: true`; no API key, request prompt, or provider response body was emitted.
+- Autonomous climb H-001 through H-009 are all confirmed at 4/4. The research tree has no in-flight work; its next action is to trigger Knowledge Layer only for a new, grounded failure or user goal.
+- Judge reliability work is complete: `make check-judge` uses the production judge transport, `make check-judge-config` reports safe effective configuration without a request, and Responses backends can opt into strict verdict schemas.
+- The active DeepSeek setup uses Chat Completions, so strict schemas stay off. A prior 401 was a stale exported `DEEPSEEK_API_KEY` shadowing the rotated `.env` value; `.env` loading intentionally preserves process-environment precedence.
+- No processes are running. The parent worktree is clean at closeout; `pi/` is an independent, dirty user-owned checkout and was not changed.
 
-## Committed state
+## Delivered and verified
 
-- Branch: `main`; the last recorded boundary said 18 commits ahead of `origin/main` before the handoff-state commit, with nothing pushed. The working tree is clean at recovery.
-- Latest feature commit: `b5b29b8 feat: warn on Pi revision drift before RPC runs`.
-- Key earlier commits: `09d677d` run provenance, `e53822f` RPC probe, `862a51e` read-only pin check, `27a68a6` immutable setup lock.
-- `docs/status/climb/research-tree.md` contains five confirmed runs and H-006 pending; `session-state.json` has no in-flight cycle or process.
-- The climb post-commit hook is installed and recorder replay is idempotent.
+- `scripts/check_judge.py` and `make check-judge` submit a fixed trivial request through `JudgeConfig` and `judge_answer_sync`; provider HTTP failures expose only endpoint and status, never response bodies.
+- Preflight output safely labels the judge key source (`process-environment`, `dotenv`, or `missing`) and warns when a different `.env` key is shadowed by the process environment.
+- `make check-judge-config` / `--config-only` performs no HTTP request while reporting the same safe provenance.
+- `DCI_EVAL_JUDGE_STRICT_JSON_SCHEMA=false` is the default. When enabled, only `api=responses` requests receive the strict verdict JSON Schema; Chat Completions and default Requests retain their prior request shapes. The flag is included in judge-result cache identities.
+- The generic climb recorder now supports hypothesis-specific acceptance dimensions and recovers a partial YAML-only write without replaying a live request.
+- Latest full verification: `72` unit tests passed; Ruff, `compileall`, touched-Bash syntax, `git diff --check`, and `make check-pi-rpc` passed. A real DeepSeek preflight passed after unsetting the stale exported key.
 
-## Verification evidence
+## Committed / remote state
 
-- Latest full suite: 48 tests, 0 failures; Ruff, compileall, all touched Bash syntax, and `git diff --check` passed.
-- `make check-pi-rpc` returned a valid model-free `get_state` response.
-- H-004 runtime acceptance answered `Adaku`, judge `is_correct: true`; `state.json.pi_source` recorded commit `8479…`, `lock_match=true`, `dirty=true`.
-- Real `pi/` HEAD and dirty file list remained unchanged across setup, probe, and runtime checks.
+- Branch: `main`; the handoff began clean and `35` commits ahead of `origin/main`, with no local commits missing from the remote. This state handoff adds one further documentation commit; nothing has been pushed.
+- Latest implementation/evidence commits before this handoff include `984957f feat: support strict Responses judge schemas` and `b8160d7 docs: record strict judge schema compatibility evidence`.
 
-## Next action
+## First resume action
 
-1. If a supporting OpenAI Responses judge is configured, set `DCI_EVAL_JUDGE_STRICT_JSON_SCHEMA=true` and run `make check-judge`; otherwise trigger Knowledge Layer only for a newly observed failure or user goal.
-2. Prefer reusing `JudgeConfig`/`judge_answer_sync`; do not introduce a second request-shaping path.
-3. Keep credentials out of artifacts/output, add a Make target and docs, then run the climb cycle and full verification.
-4. If the pool empties after H-006, trigger Knowledge Layer again rather than stopping.
+1. Run `project-state resume`, then review `docs/status/climb/research-tree.md` and `git status --short`.
+2. If an OpenAI-compatible **Responses** judge is configured and live strict-schema evidence is desired, set `DCI_EVAL_JUDGE_STRICT_JSON_SCHEMA=true` and run `make check-judge`. Otherwise, begin a new Knowledge Layer cycle only from an observed issue or a new user goal.
 
-## Ruled-out paths
+## Guardrails and ready commands
 
-- No duplicated authoritative Pi pin, submodule/vendor ownership, destructive dirty-checkout reconciliation, or blocking custom-package runs.
-- Do not treat the unavailable Gemini/OpenCode consult stub as independent evidence.
-- Do not replace `make runtime-example` with the model-free RPC probe; they cover different contracts.
-- Do not change `.env` precedence globally: exported process variables intentionally win. Address the observed confusion with safe provenance reporting rather than silently overriding caller configuration.
-
-## Boundary and exceptions
-
-- No processes are in flight. Temporary root planning files from this session have been removed.
-- `pi/` is an independent, deliberately excluded checkout at `8479bd84743e8889f728acb21a62794102db0529`; it remains dirty in user-owned provider manifest/model files plus `.pi/agent/`. Do not reset, clean, stage, or commit it from this repository.
-- No credentials, judge requests, or runtime output need recovery from this session.
-
-## Ready commands
+- Do not reset, clean, stage, or commit `pi/`; it remains an independent checkout pinned by the parent project's configuration at `8479bd84743e8889f728acb21a62794102db0529`.
+- Do not change `.env` precedence globally. To test the rotated DeepSeek value while an old shell export exists, use `env -u DEEPSEEK_API_KEY make check-judge`.
+- Keep judge credentials, prompts, and provider response bodies out of output and artifacts.
 
 ```bash
 project-state resume
-cat docs/status/climb/research-tree.md
+make check-judge-config
+env -u DEEPSEEK_API_KEY make check-judge
 uv run python -m unittest discover -v
 make check-pi-rpc
 ```
