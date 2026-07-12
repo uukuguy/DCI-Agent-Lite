@@ -87,3 +87,5 @@
 - 19:20 H-015 confirmed 4/4; setup-policy acceptance recorded.
 - 19:28 Knowledge Layer grounded H-016 absolute HTTP(S) judge-origin validation; redirect and Responses-retention candidates queued.
 - 19:30 H-016 confirmed 4/4; setup-policy acceptance recorded.
+- 19:32 H-016 rejects unsupported judge URL origins before transport or metadata. [7db038f]
+- 19:32 Live checkpoint set; redirect-containment research is the next grounded candidate.
