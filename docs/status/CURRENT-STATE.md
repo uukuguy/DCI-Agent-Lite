@@ -19,7 +19,7 @@
 - Claude Code provider access: the adapter supports stored login and inherited environment-configured backends; provider-backed UAT is deferred while the local account is unavailable and does not block host-language work.
 - Host contracts: Python and TypeScript expose the same schema-backed runtime manifest, request, event, and asynchronous client boundary without adapter-private types.
 - Controlled execution: `dci.executor/v1` has a runnable concurrent Rust JSONL sidecar with trusted startup policy, direct execution, bounded dual-stream draining, deadline/cancel kill-and-reap, duplicate-ID denial, out-of-order correlation, safe parse errors, EOF draining, operator documentation, and root verification targets.
-- Package composition: AF-060 uses a package-first `dci.package/v1` contract and deterministic static resolver before any workflow engine or enterprise control plane.
+- Package composition: closed `dci.package/v1` schemas, shared fixtures, and Python reference validation define six portable package kinds and sorted capability/policy/event/artifact edges; deterministic graph resolution is pending.
 
 ## Open Problems (theme-level)
 

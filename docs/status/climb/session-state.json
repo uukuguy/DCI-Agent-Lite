@@ -2,10 +2,10 @@
   "session": "2026-07-12-af-060-package-composition",
   "phase": "implementation",
   "work_package_id": "AF-060",
-  "last_cycle": 25,
-  "next_hypothesis": "AF-060-H-001",
+  "last_cycle": 26,
+  "next_hypothesis": "AF-060-H-002",
   "in_flight": null,
-  "next_action": "Write failing shared-fixture tests for the dci.package/v1 manifest contract.",
+  "next_action": "Start AF-060-H-002.",
   "falsified_routes": [
     "duplicate the authoritative Pi commit across setup.sh and .env.template",
     "convert the independent Pi checkout to vendored or submodule ownership",

@@ -539,17 +539,31 @@ hypotheses:
     decision_reason: deterministic local executor acceptance
 - id: AF-060-H-001
   work_package_id: AF-060
-  description: Define closed portable dci.package/v1 manifests with shared positive and negative fixtures.
+  description: Define closed portable dci.package/v1 manifests with shared positive
+    and negative fixtures.
   parent_paradigm: package-manifest-contract
   expected_lift: +1 portable package contract
   cost_h: 0.4
   ranking: 1.0
-  status: pending
+  status: confirmed
   created_at: '2026-07-12T22:26:43+08:00'
-  results: []
+  results:
+  - session: 2026-07-12-af-060-package-composition
+    cycle: 26
+    run: 20260712-223130-dci-climb-af060h001
+    local: 4
+    local_per_task:
+      valid_manifest: 1
+      portable_kinds: 1
+      closed_invalid_fixtures: 1
+      sorted_unique_edges: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-060-H-002
   work_package_id: AF-060
-  description: Resolve package capability, policy, event, and artifact dependencies deterministically.
+  description: Resolve package capability, policy, event, and artifact dependencies
+    deterministically.
   parent_paradigm: python-package-composer
   expected_lift: +1 static composition boundary
   cost_h: 0.7
@@ -559,7 +573,8 @@ hypotheses:
   results: []
 - id: AF-060-H-003
   work_package_id: AF-060
-  description: Compose one DCI research policy observability evaluation graph for Pi and Claude Code capability sets.
+  description: Compose one DCI research policy observability evaluation graph for
+    Pi and Claude Code capability sets.
   parent_paradigm: dci-package-vertical-slice
   expected_lift: +1 multi-runtime package evidence
   cost_h: 0.5
@@ -569,7 +584,8 @@ hypotheses:
   results: []
 - id: AF-060-H-004
   work_package_id: AF-060
-  description: Validate shared package schemas and fixtures through the TypeScript host.
+  description: Validate shared package schemas and fixtures through the TypeScript
+    host.
   parent_paradigm: typescript-package-parity
   expected_lift: +1 language-host parity
   cost_h: 0.5
@@ -579,7 +595,8 @@ hypotheses:
   results: []
 - id: AF-060-H-005
   work_package_id: AF-060
-  description: Document the static composition boundary and close AF-060 through full framework gates.
+  description: Document the static composition boundary and close AF-060 through full
+    framework gates.
   parent_paradigm: framework-package-acceptance
   expected_lift: +1 AF-060 closure confidence
   cost_h: 0.4

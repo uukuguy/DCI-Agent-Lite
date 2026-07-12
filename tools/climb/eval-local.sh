@@ -131,6 +131,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="root_test_target"
         override_test="root_check_target"
         ;;
+    AF-060-H-001)
+        first_dimension="valid_manifest"
+        second_dimension="portable_kinds"
+        third_dimension="closed_invalid_fixtures"
+        fourth_dimension="sorted_unique_edges"
+        immutable_test="tests.test_package_composition.PackageManifestTests.test_valid_shared_manifest_fixture_conforms"
+        repeat_test="tests.test_package_composition.PackageManifestTests.test_all_package_kinds_are_portable"
+        dirty_test="tests.test_package_composition.PackageManifestTests.test_invalid_shared_manifest_fixtures_are_rejected"
+        override_test="tests.test_package_composition.PackageManifestTests.test_edge_arrays_must_be_sorted_and_unique"
+        ;;
     H-001)
         first_dimension="immutable_resolution"
         second_dimension="repeat_validation"

@@ -70,12 +70,12 @@ def main() -> None:
     session_path = args.state_dir / "session-state.json"
     session_state = json.loads(session_path.read_text())
     session_id = session_state["session"]
-    executor_cycle = hypothesis.get("work_package_id") == "AF-050"
-    decision_reason = (
-        "deterministic local executor acceptance"
-        if executor_cycle
-        else "deterministic local setup-policy acceptance"
-    )
+    work_package_id = hypothesis.get("work_package_id")
+    acceptance_kind = {
+        "AF-050": "executor",
+        "AF-060": "package",
+    }.get(work_package_id, "setup-policy")
+    decision_reason = f"deterministic local {acceptance_kind} acceptance"
     existing_result = next(
         (result for result in hypothesis["results"] if result["run"] == args.run_id),
         None,
@@ -149,10 +149,9 @@ def main() -> None:
     journal_text = args.journal.read_text()
     if date_header not in journal_text:
         journal_text += f"\n{date_header}\n"
-    acceptance_label = "executor" if executor_cycle else "setup-policy"
     journal_text += (
         f"- {now:%H:%M} {args.hypothesis_id} {verdict}; "
-        f"{acceptance_label} acceptance recorded.\n"
+        f"{acceptance_kind} acceptance recorded.\n"
     )
     args.journal.write_text(journal_text)
 

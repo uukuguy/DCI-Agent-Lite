@@ -19,7 +19,7 @@ class ClimbToolTests(unittest.TestCase):
     def test_live_checkpoint_retains_scope_audit_package_marker(self) -> None:
         resume = (REPO_ROOT / "docs/status/RESUME-NEXT-SESSION.md").read_text()
 
-        self.assertIn("\nActive work package: AF-050\n", resume)
+        self.assertRegex(resume, r"(?m)^Active work package: AF-[0-9]+$")
 
     def test_regen_tree_serializes_tracked_hypothesis_state(self) -> None:
         result = subprocess.run(
@@ -547,6 +547,10 @@ class ClimbToolTests(unittest.TestCase):
                     if hypothesis["id"] == "AF-050-H-001"
                     else "pending"
                 )
+            session_path = state_dir / "session-state.json"
+            session = json.loads(session_path.read_text())
+            session["session"] = "2026-07-12-af-050-rust-executor"
+            session_path.write_text(json.dumps(session, indent=2) + "\n")
             hypothesis_path.write_text(
                 yaml.safe_dump(state, sort_keys=False, allow_unicode=True)
             )
@@ -899,6 +903,40 @@ class ClimbToolTests(unittest.TestCase):
                     "operator_docs",
                     "root_test_target",
                     "root_check_target",
+                },
+            )
+
+    def test_af060_h001_train_runs_package_manifest_suite(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+
+        self.assertIn("AF-060-H-001", train_script)
+        self.assertIn("tests.test_package_composition", train_script)
+
+    def test_af060_h001_eval_reports_four_manifest_dimensions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            env = os.environ.copy()
+            env["DCI_CLIMB_HYPOTHESIS_ID"] = "AF-060-H-001"
+
+            result = subprocess.run(
+                ["bash", "tools/climb/eval-local.sh", str(run_dir)],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            evaluation = json.loads((run_dir / "local-eval.json").read_text())
+            self.assertEqual(evaluation["hypothesis_id"], "AF-060-H-001")
+            self.assertEqual(evaluation["total"], 4)
+            self.assertEqual(
+                set(evaluation["per_task"]),
+                {
+                    "valid_manifest",
+                    "portable_kinds",
+                    "closed_invalid_fixtures",
+                    "sorted_unique_edges",
                 },
             )
 

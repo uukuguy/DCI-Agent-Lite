@@ -195,3 +195,4 @@
 - Rationale: a workflow engine or enterprise control plane built first would invent package, policy, event, and artifact semantics implicitly and couple them to one host.
 - Boundary: AF-060 does not implement scheduling, persistent memory storage, multi-tenant administration, or adapter-specific package variants.
 - Revalidation trigger: add an execution engine only after two independently useful package graphs cannot be expressed or validated by the static contract.
+- Implemented evidence: the closed `dci.package/v1` schema/reference validator and positive/negative fixtures are committed under AF-060-H-001; graph resolution remains pending.

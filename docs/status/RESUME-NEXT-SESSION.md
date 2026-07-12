@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-12 22:27 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-12 22:33 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-060
 
@@ -8,17 +8,18 @@ Active work package: AF-060
 
 - AF-050 is complete with a runnable, verified Rust controlled-executor sidecar at `ef8f898`.
 - AF-060 is active under the package-first design and implementation plan; workflow-engine/control-plane-first paths are explicitly excluded.
-- `AF-060-H-001` portable `dci.package/v1` manifests and shared fixtures is the next cycle.
+- `AF-060-H-001` is confirmed: closed manifests, all six kinds, forbidden fields, identifiers, and sorted/unique edges are validated.
+- `AF-060-H-002` deterministic capability/policy/event/artifact composition is next.
 
 ## Durable boundary
 
 - Branch: `main`; AF-050 functional closure is committed at `ef8f898`.
-- AF-060 governance/design/climb transition is the current uncommitted recovery boundary.
+- AF-060 governance/design/climb transition is committed at `826ccb9`.
 - No long-running process is active; external `pi/` remains intentionally untouched and dirty.
 
 ## Immediate next action
 
-Write failing Python fixture tests for closed package manifests, invalid identifiers, duplicate edges, forbidden fields, and all six package kinds; verify RED before adding schemas/fixtures.
+Write failing Python tests for duplicate package IDs, missing capability/policy providers, incompatible event/artifact edges, cycles, and stable order under permuted input.
 
 ## Guardrails
 
@@ -29,6 +30,6 @@ Write failing Python fixture tests for closed package manifests, invalid identif
 ## Ready commands
 
 ```bash
-python3 tools/project_scope_check.py --climb-hypothesis AF-060-H-001
+python3 tools/project_scope_check.py --climb-hypothesis AF-060-H-002
 uv run python -m unittest tests.test_package_composition -v
 ```
