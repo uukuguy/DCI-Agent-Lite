@@ -133,6 +133,11 @@ Common variables:
   `DCI_EVAL_JUDGE_API_KEY_ENV` select the eval judge backend. See `.env.template` for DeepSeek,
   OpenAI, and local-compatible examples.
 
+Before a costly batch evaluation, run `make check-judge` to make one small request through the
+configured judge transport and verify that it returns the required structured verdict. The command
+uses the configured credential indirectly and prints only safe configuration, verdict, usage, and
+cost metadata.
+
 <a name="quick-start"></a>
 ## ⚡ Quick Start
 

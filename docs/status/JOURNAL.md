@@ -50,3 +50,4 @@
 - 16:29 resume detected final Journal boundary after baton; recovery checkpoint restored H-006 as the active continuation.
 - 16:35 H-006 design accepted: one explicit judge preflight reusing the existing transport; no automatic batch gate.
 - 16:40 H-006 implementation plan locks test-first CLI, explicit Make target, documentation, and deterministic climb acceptance.
+- 17:07 H-006 local contract 4/4; 56 tests, Ruff, compile, Bash syntax, and Pi RPC probe passed before live preflight.

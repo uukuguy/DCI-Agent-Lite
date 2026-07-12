@@ -1,12 +1,14 @@
 # Recovered Session Checkpoint
 
-> Updated: 2026-07-12 16:30 +0800. **The prior baton predates the final Journal boundary record; recovered during `project-state resume`. Session remains active — not a final handoff.**
+> Updated: 2026-07-12 17:07 +0800. **Active H-006 preflight-evidence checkpoint — session remains active, not a final handoff.**
 
 ## TL;DR
 
 - Autonomous climb confirmed and committed H-001 through H-005 at 4/4 each: immutable Pi lock, read-only pin review, model-free RPC preflight, run provenance, and pre-run revision warning.
 - The exact Pi default is `8479bd84743e8889f728acb21a62794102db0529`; the independent dirty `pi/` checkout was never modified.
 - The final Journal entry and commit `9a046d7` were newer than the former baton, so this recovery checkpoint supersedes it. H-006 remains the only next action: a cheap live structured-output preflight for the configured judge backend.
+- H-006 scope and a test-first inline plan are committed; work proceeds in the clean shared checkout without touching the independent `pi/` repository.
+- The implementation is locally verified: the safe standalone preflight, Make target, documentation, and four-dimension climb adapter are ready for one live configured judge request.
 
 ## Committed state
 
@@ -25,7 +27,7 @@
 
 ## Next action
 
-1. Resume H-006 in RED: specify a judge preflight that makes one tiny configured request and validates structured JSON before batch evaluation.
+1. Run `make check-judge`, then execute `bash tools/climb/cycle.sh H-006` to record the credentialed preflight evidence.
 2. Prefer reusing `JudgeConfig`/`judge_answer_sync`; do not introduce a second request-shaping path.
 3. Keep credentials out of artifacts/output, add a Make target and docs, then run the climb cycle and full verification.
 4. If the pool empties after H-006, trigger Knowledge Layer again rather than stopping.
