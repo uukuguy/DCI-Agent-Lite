@@ -185,4 +185,27 @@ class ClaudeCodeProtocolAdapter:
                 },
             )
         else:
+            result_text = raw_event.get("result")
+            if isinstance(result_text, str) and result_text:
+                self._emit(
+                    "artifact.created",
+                    {
+                        "artifact": {
+                            "artifact_id": "final-answer",
+                            "kind": "answer",
+                            "media_type": "text/plain",
+                            "uri": "final.txt",
+                        }
+                    },
+                )
             self._emit("run.completed", {"status": "completed"})
+
+    def fail(self) -> None:
+        self._require_started()
+        self._emit(
+            "run.failed",
+            {
+                "code": "claude_code_failed",
+                "message": "Claude Code runtime failed; see the raw stderr artifact.",
+            },
+        )

@@ -33,7 +33,13 @@ class ClaudeCodeProtocolAdapterTests(unittest.TestCase):
 
         self.assertEqual(
             [event["type"] for event in events],
-            ["run.started", "text.delta", "usage.reported", "run.completed"],
+            [
+                "run.started",
+                "text.delta",
+                "usage.reported",
+                "artifact.created",
+                "run.completed",
+            ],
         )
         self.assertNotIn("hidden", json.dumps(events))
 
