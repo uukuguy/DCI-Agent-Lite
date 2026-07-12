@@ -307,3 +307,4 @@
 - 06:40 AF-120 七阶段 TDD 计划已提交，先拆分发布边界再实现 provider/CLI。[58a7131]
 - 06:52 Asterion core 与 enhanced DCI baseline 已拆分为独立 wheel；benchmark 未改。[550e5c6]
 - 06:58 DCI research capability 独立 wheel 与单一 canonical manifests 已提交。[8c2c434]
+- 07:02 installed application provider v1 契约已提交，资源逃逸与 identity/binding 错配 fail closed。[1d0b71d]
