@@ -2,59 +2,54 @@
 
 ## Project Snapshot
 
-- Project: DCI-Agent-Lite — minimal Pi-based implementation of direct raw-corpus interaction for agentic search.
+- Project: DCI-Agent-Lite — evolving from a Pi-based DCI benchmark harness into an agent-application framework.
 - Current branch: `main`
-- Theme-level focus: Configuration-driven, failure-bounded Pi runtime and OpenAI-compatible benchmark evaluation.
+- Theme-level focus: Agent Runtime Protocol foundation and governed multi-runtime framework delivery.
+- Framework north star: `docs/architecture/agent-framework.md`
+- Active work package: `AF-000` — Framework control plane.
 
 ## Current Architecture
 
-- Python CLI/orchestration: `dci-agent-lite` launches the external Pi coding agent in RPC or terminal mode, waits for session-level `agent_settled`, confirms the resulting Pi state is idle within the same wall-clock deadline, and records run artifacts; a model-free `get_state` preflight detects basic RPC drift.
-- External runtime: Pi is resolved through `DCI_PI_DIR`, preferring `./pi` with a legacy `./pi-mono` fallback.
-- Corpus interaction: the agent searches local raw corpora directly with terminal tools; there is no required embedding index or retrieval service.
-- Evaluation: a shared judge transport supports OpenAI Responses and compatible Chat Completions backends; `make check-judge` sends one trivial request through that same path, `make check-judge-config` exposes its effective safe configuration without a request, and Responses can opt into strict verdict schema output. Official Responses requests disable response storage by default while compatible payloads remain field-free. Result reuse requires a safe full-request fingerprint and a completed boolean verdict; persisted results exclude raw provider responses and duplicated evaluated inputs.
-- Configuration/artifacts: repository-root `.env` controls agent, Pi, and judge settings; judge base URLs must be absolute HTTP(S) origins, reject embedded credentials/query data/fragments, and never follow redirects before they can enter safe metadata or errors; run outputs under `outputs/` record the actual Pi commit, dirty state, and lock match.
-- Autonomous research: tracked climb state under `docs/status/climb/` ranks dependency/runtime hypotheses; `research-tree.md` is the resume-load summary and `tools/climb/` provides deterministic synchronization.
+- Product contract: a versioned Agent Runtime Protocol will normalize lifecycle, capabilities, events, artifacts, cancellation, and deadlines across adapters.
+- Reference runtime: the existing Python controller drives external Pi through a hardened JSONL RPC boundary; it is the first reference adapter, not the framework boundary.
+- Capability direction: DCI direct local-corpus research becomes the first reusable capability package; no embedding index is required by that capability.
+- Language roles: Python owns research/evaluation/orchestration, TypeScript owns Node/service integration, and Rust is reserved for controlled execution infrastructure.
+- Governance: `docs/status/WORKLIST.md` is the sole active package ledger. A scope audit must pass before manager dispatch or climb execution.
+- Maintenance history: Pi/Judge reliability H-001 through H-019 is completed and remains available as reference-maintenance evidence; it is not an active roadmap stream.
 
 ## Open Problems (theme-level)
 
-- Protocol compatibility as the external Pi checkout evolves independently.
-- Structured-output variability across nominally OpenAI-compatible judge backends.
+- Agent Runtime Protocol contract, capability manifest, and conformance semantics.
+- Selection and supported integration boundary of the first non-Pi runtime.
+- Enterprise policy, artifact, observability, and isolation boundaries after the reference vertical slice.
 
 ## Key Files
 
-### Loaded every Claude session
+### Loaded every session
 
-- `CLAUDE.md` — symlink to the canonical local `AGENTS.md` project instructions.
-- `AGENTS.md` — shared Codex/Claude repository working instructions.
-- `~/.claude/projects/-Users-sujiangwen-sandbox-agentic-2026-DCI-Agent-Lite/memory/MEMORY.md` — concise collaboration-memory index with confidence labels and Cold/Audit pointers.
+- `AGENTS.md` — shared repository operating rules and framework scope control.
+- `docs/architecture/agent-framework.md` — framework north star.
+- `docs/status/WORKLIST.md` — active package ledger.
+- `~/.claude/projects/-Users-sujiangwen-sandbox-agentic-2026-DCI-Agent-Lite/memory/MEMORY.md` — concise collaboration-memory index.
 
 ### State / handoff
 
 - `docs/status/INDEX.md` — status-file discovery hub.
 - `docs/status/JOURNAL.md` — append-only event log.
 - `docs/status/RESUME-NEXT-SESSION.md` — current session handoff baton.
-- `docs/status/CURRENT-STATE.md` — this structural snapshot.
-- `docs/status/DECISIONS.md` — architecture decisions, confidence, rationale, and revalidation triggers.
+- `docs/status/DECISIONS.md` — architecture decisions and revalidation triggers.
+- `docs/status/climb/research-tree.md` — generated summary of legacy or parented autonomous research state.
 
 ### Implementation entry points
 
-- `pyproject.toml` — Python package metadata and CLI entry points.
-- `src/dci/config.py` — `.env` loading and Pi path resolution.
-- `src/dci/benchmark/pi_rpc_runner.py` — main CLI, Pi RPC orchestration, artifacts, and single-run evaluation.
-- `src/dci/benchmark/judge.py` — OpenAI-compatible judge configuration, request shaping, parsing, and cost metadata.
-- `scripts/bcplus_eval/run_bcplus_eval.py` — concurrent BrowseComp-Plus execution and aggregation.
-- `scripts/examples/dci_runtime_context_example.sh` — representative agent-plus-judge end-to-end example.
-- `tests/` — first-party configuration, judge transport, and Pi RPC lifecycle regressions.
-- `.env.template` — primary runtime, Pi, and judge configuration examples.
-- `setup.sh` — dependency, external Pi, corpus, and benchmark setup.
-- `scripts/check_pi_rpc.py` — fast model-free RPC framing and state-contract preflight.
-- `scripts/check_judge.py` — credentialed structured-output preflight using the shared judge transport.
-- `docs/status/climb/research-tree.md` — generated climb summary for active hypotheses, run evidence, and the next autonomous action.
-- `tools/climb/` — project adapter and deterministic climb state tooling.
+- `src/dci/benchmark/pi_rpc_runner.py` — existing Pi RPC reference runtime.
+- `src/dci/benchmark/pi_system_prompt.py` — Pi-owned system-prompt bridge.
+- `scripts/bcplus_eval/run_bcplus_eval.py` — DCI reference benchmark harness.
+- `tools/climb/` — autonomous-work adapter; future cycles require a work-package parent.
 
 ## Resume Instructions
 
-1. Read this file for structure, theme, and open problems.
-2. Read `RESUME-NEXT-SESSION.md` for in-flight intent and the next concrete action, if it exists.
-3. Run `git status --short` and `git log --oneline -5`.
-4. Load `CLAUDE.md`/`AGENTS.md`, then the project MEMORY index and only directly relevant linked memory entries.
+1. Read this file, then `docs/architecture/agent-framework.md` and `docs/status/WORKLIST.md`.
+2. Read `RESUME-NEXT-SESSION.md`, recent JOURNAL entries, and the relevant collaboration-memory entry.
+3. Run `git status --short`, `git log --oneline -5`, and `python3 tools/project_scope_check.py`.
+4. Work only on the named active package; repair state before dispatch when the scope audit fails.

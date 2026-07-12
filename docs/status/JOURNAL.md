@@ -101,3 +101,5 @@
 - 19:38 H-018 confirmed 4/4; setup-policy acceptance recorded.
 - 19:42 H-019 confirmed 4/4; setup-policy acceptance recorded.
 - 20:09 框架北极星与范围治理设计已固化，防止维护工作替代主线。[6c68ef3]
+- 20:20 AF-000 范围治理实施计划已提交，climb 改为受工作包约束。[704baea]
+- 20:28 框架北极星、唯一工作包与旧 Pi/Judge climb 退役边界已迁移。

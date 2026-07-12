@@ -143,3 +143,19 @@
 - Evidence: Pi exposes stable idle fields through `get_state`; H-019 verifies the successful postcondition, rejection of queued work, deadline-bound probing, and legacy `agent_end` fallback compatibility.
 - Rationale: a settlement event is a useful lifecycle signal but an independently validated idle state detects protocol drift before a run artifact is treated as final.
 - Boundary: the additional probe applies only after `agent_settled`; legacy Pi versions that signal completion with an `agent_end` lacking `willRetry` retain the prior fallback behavior.
+
+## D-017 — Build protocol-first with Pi as the reference adapter
+
+- Status: ✅ accepted and implemented decision
+- Decided: 2026-07-12
+- Decision: define a language-neutral Agent Runtime Protocol before adding new runtime adapters; retain the existing hardened Pi JSONL RPC path as the first reference adapter.
+- Rationale: this avoids per-language, per-runtime integration matrices while preserving the verified Python benchmark path and direct-corpus DCI capability.
+- Boundary: this does not commit the project to a Pi rewrite, nor does it claim feature parity across Pi, Claude Code, Hermes-agent, Pydantic AI, or LangGraph.
+
+## D-018 — Require a work-package parent for autonomous work
+
+- Status: ✅ accepted and implemented decision
+- Decided: 2026-07-12
+- Decision: manager dispatch, climb cycles, maintenance, and experiments must name the single active `WORKLIST` package; unscoped work stops before implementation.
+- Rationale: a conversation-only product decision allowed local Pi/Judge reliability improvements to replace the intended framework roadmap.
+- Boundary: direct user authorization may amend the worklist or architecture, but it does not permit a hidden or unrecorded parallel roadmap.

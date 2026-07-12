@@ -6,7 +6,7 @@
     "last_cycle": 19,
     "next_hypothesis": null,
     "in_flight": null,
-    "next_action": "Hard pause: await a new grounded Pi, judge, or artifact invariant.",
+    "next_action": "Legacy Pi/Judge maintenance H-001 through H-019 is retired. Do not resume it; a new framework cycle requires a WORKLIST-parented hypothesis.",
     "falsified_routes": [
       "duplicate the authoritative Pi commit across setup.sh and .env.template",
       "convert the independent Pi checkout to vendored or submodule ownership"

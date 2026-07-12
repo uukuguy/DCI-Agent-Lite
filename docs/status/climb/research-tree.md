@@ -9,7 +9,7 @@
 - Last cycle: 19
 - Next hypothesis: None
 - In flight: none
-- Next action: Hard pause: await a new grounded Pi, judge, or artifact invariant.
+- Next action: Legacy Pi/Judge maintenance H-001 through H-019 is retired. Do not resume it; a new framework cycle requires a WORKLIST-parented hypothesis.
 
 ## Active hypotheses
 

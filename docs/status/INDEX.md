@@ -18,6 +18,7 @@ When adding a new file to `docs/status/`, **also add its row here** — otherwis
 | `RESUME-NEXT-SESSION.md` | 🟢 active | Session handoff baton. |
 | `CURRENT-STATE.md` | 🟢 active | Structural snapshot. |
 | `DECISIONS.md` | 🟢 active | Current architecture decisions with confidence labels and revalidation triggers. |
+| `WORKLIST.md` | 🟢 active | Sole multi-package ledger: scope, dependencies, acceptance, status, and plan links. |
 | `climb/` | 🟢 active | `research-tree.md` is the climb resume summary; sibling YAML/JSON/CSV files are storage-layer state. |
 | `INDEX.md` (this file) | 🟢 active | Discovery hub. |
 
@@ -40,6 +41,7 @@ When adding a new file to `docs/status/`, **also add its row here** — otherwis
 | Path | Purpose |
 |---|---|
 | `AGENTS.md` / `CLAUDE.md` | Local cross-agent operating rules, including the fast `handoff` protocol. |
+| `docs/architecture/agent-framework.md` | Framework north star, runtime strategy, language roles, and non-goals. |
 | `~/.claude/projects/-Users-sujiangwen-sandbox-agentic-2026-DCI-Agent-Lite/memory/MEMORY.md` | Collaboration-memory index; linked detail files carry confidence and supersession metadata. |
 
 ## Don't add new files unless they fit one of the categories above
