@@ -80,6 +80,18 @@ case "$HYPOTHESIS_ID" in
         dirty_test="deadline_kills_and_reaps_the_child_before_returning"
         override_test="executes_literal_arguments_without_shell_expansion"
         ;;
+    AF-050-H-004)
+        dimension_runner="run_rust_dimension"
+        rust_suite="service"
+        first_dimension="responsive_out_of_order"
+        second_dimension="duplicate_id_denial"
+        third_dimension="cancel_exactly_once"
+        fourth_dimension="safe_parse_error"
+        immutable_test="service_keeps_input_responsive_and_emits_out_of_order_results"
+        repeat_test="duplicate_in_flight_request_id_is_denied"
+        dirty_test="accepted_cancel_emits_ack_and_exactly_one_cancelled_terminal_result"
+        override_test="malformed_json_returns_safe_error_without_echoing_input"
+        ;;
     H-001)
         first_dimension="immutable_resolution"
         second_dimension="repeat_validation"

@@ -1,19 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (23 runs).
+> Deterministic summary generated from tracked state (24 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 23
-- Next hypothesis: AF-050-H-004
+- Last cycle: 24
+- Next hypothesis: AF-050-H-005
 - In flight: none
-- Next action: Start AF-050-H-004.
+- Next action: Start AF-050-H-005.
 
 ## Active hypotheses
 
-- **AF-050-H-004** (pending, rank 0.70): Keep JSONL input responsive while enforcing duplicate-ID rejection and exactly-once cancellation results.
 - **AF-050-H-005** (pending, rank 0.60): Document and verify the complete non-sandbox executor boundary across framework gates.
 
 ## Run ladder
@@ -43,6 +42,7 @@
 | 20260712-220336-dci-climb-af050h001 | AF-050-H-001 | 4 | confirmed 4/4 |
 | 20260712-220744-dci-climb-af050h002 | AF-050-H-002 | 4 | confirmed 4/4 |
 | 20260712-221215-dci-climb-af050h003 | AF-050-H-003 | 4 | confirmed 4/4 |
+| 20260712-221841-dci-climb-af050h004 | AF-050-H-004 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

@@ -4,8 +4,9 @@ use std::time::Duration;
 
 use tokio::io::{AsyncRead, AsyncReadExt};
 use tokio::process::Command;
+use tokio::sync::watch;
 use tokio::task::JoinHandle;
-use tokio::time::timeout;
+use tokio::time::sleep;
 
 use crate::policy::AuthorizedExecution;
 
@@ -21,6 +22,7 @@ pub struct BoundedProcessOutput {
     pub stdout: CapturedOutput,
     pub stderr: CapturedOutput,
     pub timed_out: bool,
+    pub cancelled: bool,
 }
 
 pub async fn execute_direct(execution: AuthorizedExecution) -> io::Result<Output> {
@@ -35,6 +37,14 @@ pub async fn execute_direct(execution: AuthorizedExecution) -> io::Result<Output
 }
 
 pub async fn execute_bounded(execution: AuthorizedExecution) -> io::Result<BoundedProcessOutput> {
+    let (_cancel_tx, cancel_rx) = watch::channel(false);
+    execute_bounded_cancellable(execution, cancel_rx).await
+}
+
+pub async fn execute_bounded_cancellable(
+    execution: AuthorizedExecution,
+    mut cancel: watch::Receiver<bool>,
+) -> io::Result<BoundedProcessOutput> {
     let output_limit = execution.max_output_bytes();
     let deadline = Duration::from_millis(execution.deadline_ms());
     let mut command = Command::new(execution.executable());
@@ -59,11 +69,36 @@ pub async fn execute_bounded(execution: AuthorizedExecution) -> io::Result<Bound
     let stdout_task = tokio::spawn(read_capped(stdout, output_limit));
     let stderr_task = tokio::spawn(read_capped(stderr, output_limit));
 
-    let (exit_status, timed_out) = match timeout(deadline, child.wait()).await {
-        Ok(status) => (status?, false),
-        Err(_) => {
+    enum WaitOutcome {
+        Exited(io::Result<ExitStatus>),
+        TimedOut,
+        Cancelled,
+    }
+    let outcome = {
+        let child_wait = child.wait();
+        tokio::pin!(child_wait);
+        tokio::select! {
+            biased;
+            changed = cancel.changed() => {
+                if changed.is_ok() && *cancel.borrow() {
+                    WaitOutcome::Cancelled
+                } else {
+                    WaitOutcome::Exited(child_wait.await)
+                }
+            }
+            _ = sleep(deadline) => WaitOutcome::TimedOut,
+            status = &mut child_wait => WaitOutcome::Exited(status),
+        }
+    };
+    let (exit_status, timed_out, cancelled) = match outcome {
+        WaitOutcome::Exited(status) => (status?, false, false),
+        WaitOutcome::TimedOut => {
             child.start_kill()?;
-            (child.wait().await?, true)
+            (child.wait().await?, true, false)
+        }
+        WaitOutcome::Cancelled => {
+            child.start_kill()?;
+            (child.wait().await?, false, true)
         }
     };
     let stdout = join_capture(stdout_task).await?;
@@ -74,6 +109,7 @@ pub async fn execute_bounded(execution: AuthorizedExecution) -> io::Result<Bound
         stdout,
         stderr,
         timed_out,
+        cancelled,
     })
 }
 

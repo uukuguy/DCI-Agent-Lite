@@ -499,9 +499,21 @@ hypotheses:
   expected_lift: +1 concurrent service boundary
   cost_h: 1.0
   ranking: 0.7
-  status: pending
+  status: confirmed
   created_at: '2026-07-12T21:57:42+08:00'
-  results: []
+  results:
+  - session: 2026-07-12-af-050-rust-executor
+    cycle: 24
+    run: 20260712-221841-dci-climb-af050h004
+    local: 4
+    local_per_task:
+      responsive_out_of_order: 1
+      duplicate_id_denial: 1
+      cancel_exactly_once: 1
+      safe_parse_error: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local executor acceptance
 - id: AF-050-H-005
   work_package_id: AF-050
   description: Document and verify the complete non-sandbox executor boundary across

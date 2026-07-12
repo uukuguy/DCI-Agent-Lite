@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-12 22:13 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-12 22:20 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-050
 
@@ -11,17 +11,18 @@ Active work package: AF-050
 - `AF-050-H-001` is confirmed: closed execute requests authorize only canonical executable/cwd, literal arguments, and policy-bounded limits.
 - `AF-050-H-002` is confirmed: direct Tokio execution preserves literal argv, clears environment, closes stdin, and uses canonical cwd.
 - `AF-050-H-003` is confirmed: stdout/stderr drain concurrently under independent caps and deadline paths kill/reap before return.
-- `AF-050-H-004` concurrent cancellation and JSONL service is now the highest-ranked pending hypothesis.
+- `AF-050-H-004` is confirmed: concurrent JSONL dispatch supports out-of-order results, duplicate denial, cancel ack plus one terminal result, and non-echoing parse errors.
+- `AF-050-H-005` operator entry point, documentation, and framework closure verification is the only pending hypothesis.
 
 ## Durable boundary
 
-- Branch: `main`; H-002 direct execution is committed at `910bd35`, while verified H-003 resource enforcement is the current uncommitted recovery boundary.
+- Branch: `main`; H-003 resources are committed at `92f9335`, while verified H-004 concurrent service work is the current uncommitted recovery boundary.
 - Parent repository functional files were clean before the live checkpoint; external `pi/` remains intentionally untouched and dirty.
 - No long-running child process is active.
 
 ## Immediate next action
 
-Write failing Rust tests for responsive concurrent execution, duplicate in-flight ID denial, cancel acknowledgement, exactly one terminal target result, and safe JSONL parse errors.
+Write failing acceptance tests for the operator policy/config entry point, graceful stdin EOF with in-flight completion, explicit non-sandbox documentation, and root verification commands.
 
 ## Guardrails
 
@@ -33,7 +34,7 @@ Write failing Rust tests for responsive concurrent execution, duplicate in-fligh
 ## Ready commands
 
 ```bash
-python3 tools/project_scope_check.py --climb-hypothesis AF-050-H-004
+python3 tools/project_scope_check.py --climb-hypothesis AF-050-H-005
 cargo test --manifest-path packages/rust/executor/Cargo.toml
 cargo fmt --manifest-path packages/rust/executor/Cargo.toml --check
 cargo clippy --manifest-path packages/rust/executor/Cargo.toml --all-targets -- -D warnings

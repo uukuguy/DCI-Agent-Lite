@@ -108,7 +108,9 @@ fn deserializes_closed_execute_wire_request() {
     });
 
     let parsed: ExecutorRequest = serde_json::from_value(wire.clone()).expect("request");
-    let ExecutorRequest::Execute(request) = parsed;
+    let ExecutorRequest::Execute(request) = parsed else {
+        panic!("execute fixture parsed as cancel");
+    };
     assert_eq!(request.program_id, "fixture");
 
     let mut unknown = wire;

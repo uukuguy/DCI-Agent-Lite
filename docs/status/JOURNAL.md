@@ -157,3 +157,6 @@
 - 22:09 Rust direct process 边界已提交，literal argv 与无 ambient env 成为后续资源控制基础。[910bd35]
 - 22:12 AF-050-H-003 confirmed 4/4; executor acceptance recorded.
 - 22:13 AF-050-H-003 通过 14 Rust、48 Python tests、fmt、Clippy、Ruff、shell 与范围门。
+- 22:14 Rust bounded output/deadline 边界已提交，service 可复用 kill/reap 与双流 drain。[92f9335]
+- 22:18 AF-050-H-004 confirmed 4/4; executor acceptance recorded.
+- 22:20 AF-050-H-004 通过 18 Rust、50 Python tests、fmt、Clippy、Ruff、shell 与范围门。
