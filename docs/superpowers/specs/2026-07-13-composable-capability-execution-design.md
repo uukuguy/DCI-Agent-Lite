@@ -1,6 +1,6 @@
 # Composable Capability Execution Design
 
-> Status: approved in discussion; awaiting written-spec review before implementation planning.
+> Status: approved, including the AF-110/AF-120 split discovered during plan review.
 >
 > Governance parent: AF-100 successor transition. Proposed successor: AF-110.
 
@@ -72,7 +72,6 @@ The slice includes:
 - normalized event and artifact validation at package boundaries;
 - a DCI-owned local-corpus research implementation outside
   `src/dci/benchmark/`;
-- a generic `asterion run <assembly>` application entry point;
 - provider-backed Pi integration and credential-free Claude fixture parity;
 - an external baseline comparison that invokes, but never imports or wraps,
   the existing `dci-agent-lite` command.
@@ -146,23 +145,32 @@ The existing `dci-agent-lite` command remains unchanged and serves only as an
 external behavioral baseline. Shared questions and corpora are allowed;
 shared benchmark execution code is not.
 
-## Application entry point
+## Explicit application host
 
-Add a generic Asterion command shaped as:
+AF-110 verifies execution through an explicit Python composition root owned by
+the test/reference application host. The host constructs the package
+implementation mapping directly and passes it to the Asterion runner. Asterion
+core does not import DCI, and the package manifest does not name an executable
+Python module.
 
-```text
-asterion run <assembly>
-```
+This explicit host is an architectural seam, not the final distribution or
+operator interface. It proves that an application can bind independently owned
+capability implementations without making Asterion core depend on them.
 
-The application host loads explicit catalog roots, resolves the named assembly,
-constructs an explicitly configured runtime adapter, supplies the explicitly
-registered package implementations and host services, and invokes the runner.
+## Deferred AF-120 application binding
 
-AF-110 does not add automatic provider selection, implicit service discovery,
-automatic service startup, package installation, remote registries, dynamic
-imports, or a DCI-specific executable. Normal runtime configuration remains on
-the repository `.env` surface or explicit CLI overrides, without persisting or
-printing credentials.
+The generic `asterion run <assembly>` command is deferred to AF-120 because a
+generic process cannot obtain independently distributed implementation objects
+without an explicit and security-reviewed binding mechanism. AF-120 will decide
+how installed applications supply implementation registries, considering
+installation-time entry points, explicit host modules, or signed bundles without
+silently introducing arbitrary dynamic imports.
+
+AF-110 therefore adds no CLI, automatic provider selection, implicit service
+discovery, automatic service startup, package installation, remote registry,
+dynamic import, or DCI-specific executable. Normal runtime configuration remains
+on the repository `.env` surface or explicit test-host arguments, without
+persisting or printing credentials.
 
 ## Cancellation and failures
 
@@ -231,8 +239,8 @@ Tests must prove:
 - later packages do not start after failure or cancellation;
 - errors redact application, corpus, provider, credential, tool, and service
   content;
-- `asterion run <assembly>` executes the selected application without importing
-  or modifying the baseline runner;
+- an explicit application-host composition root executes the selected
+  application without Asterion importing or modifying the baseline runner;
 - Asterion and capability implementation sources do not import
   `dci.benchmark`;
 - the existing `dci-agent-lite` command and example scripts remain unchanged;
@@ -256,9 +264,11 @@ answer quality, and observable lifecycle boundaries.
 - The same capability implementation is reusable across application contexts.
 - The original DCI benchmark implementation and CLI remain unchanged and
   independent as the baseline.
-- The generic Asterion entry point runs the reference application without
-  workflow-engine, registry, automatic service, persistence, or control-plane
-  scope.
+- An explicit application-host composition root runs the reference application
+  without workflow-engine, registry, dynamic-import, automatic service,
+  persistence, or control-plane scope.
+- Generic installed-application binding and `asterion run <assembly>` remain a
+  separately governed AF-120 concern.
 
 ## Revalidation triggers
 
