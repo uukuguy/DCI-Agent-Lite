@@ -388,3 +388,25 @@ hypotheses:
     online: null
     verdict: confirmed 4/4
     decision_reason: deterministic local setup-policy acceptance
+- id: H-019
+  description: After a correlated prompt receives agent_settled, verify get_state
+    reports no streaming, compaction, or pending messages within its deadline.
+  parent_paradigm: rpc-settlement-postcondition
+  expected_lift: +1 Pi runtime settlement-validation dimension
+  cost_h: 0.3
+  ranking: 0.88
+  status: confirmed
+  created_at: '2026-07-12T19:39:00+08:00'
+  results:
+  - session: 2026-07-12-pi-revision
+    cycle: 19
+    run: 20260712-194209-dci-climb-h019
+    local: 4
+    local_per_task:
+      idle_postcondition: 1
+      non_idle_rejection: 1
+      legacy_compatibility: 1
+      adapter_integration: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local setup-policy acceptance

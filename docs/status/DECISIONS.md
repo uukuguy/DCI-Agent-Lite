@@ -134,3 +134,12 @@
 - Evidence: OpenAI documents 30-day application-state retention for Responses by default or with `store=true`; H-018 verifies default opt-out, the deliberate opt-in path, cache identity separation, environment loading, and a field-free compatible request.
 - Rationale: DCI judges may send questions, gold answers, and predictions. Local artifact minimization is incomplete when the official response endpoint stores that request by default.
 - Boundary: `store=false` does not alter ordinary abuse-monitoring controls, and the exact-endpoint scope avoids adding an unsupported field to nominally compatible providers.
+
+## D-016 — Verify Pi idle state after settlement
+
+- Status: ✅ accepted and implemented decision
+- Decided: 2026-07-12
+- Decision: after receiving `agent_settled` for a prompt, issue a correlated `get_state` probe within the remaining prompt deadline and reject a streaming, compacting, or pending-message state.
+- Evidence: Pi exposes stable idle fields through `get_state`; H-019 verifies the successful postcondition, rejection of queued work, deadline-bound probing, and legacy `agent_end` fallback compatibility.
+- Rationale: a settlement event is a useful lifecycle signal but an independently validated idle state detects protocol drift before a run artifact is treated as final.
+- Boundary: the additional probe applies only after `agent_settled`; legacy Pi versions that signal completion with an `agent_end` lacking `willRetry` retain the prior fallback behavior.

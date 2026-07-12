@@ -626,6 +626,12 @@ class ClimbToolTests(unittest.TestCase):
         self.assertIn("H-018", train_script)
         self.assertIn("tests.test_judge", train_script)
 
+    def test_h019_train_checks_rpc_settlement_postcondition(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+
+        self.assertIn("H-019", train_script)
+        self.assertIn("tests.test_pi_rpc_runner", train_script)
+
 
 if __name__ == "__main__":
     unittest.main()

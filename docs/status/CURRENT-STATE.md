@@ -8,7 +8,7 @@
 
 ## Current Architecture
 
-- Python CLI/orchestration: `dci-agent-lite` launches the external Pi coding agent in RPC or terminal mode, waits for session-level `agent_settled`, applies a configurable wall-clock deadline, and records run artifacts; a model-free `get_state` preflight detects basic RPC drift.
+- Python CLI/orchestration: `dci-agent-lite` launches the external Pi coding agent in RPC or terminal mode, waits for session-level `agent_settled`, confirms the resulting Pi state is idle within the same wall-clock deadline, and records run artifacts; a model-free `get_state` preflight detects basic RPC drift.
 - External runtime: Pi is resolved through `DCI_PI_DIR`, preferring `./pi` with a legacy `./pi-mono` fallback.
 - Corpus interaction: the agent searches local raw corpora directly with terminal tools; there is no required embedding index or retrieval service.
 - Evaluation: a shared judge transport supports OpenAI Responses and compatible Chat Completions backends; `make check-judge` sends one trivial request through that same path, `make check-judge-config` exposes its effective safe configuration without a request, and Responses can opt into strict verdict schema output. Official Responses requests disable response storage by default while compatible payloads remain field-free. Result reuse requires a safe full-request fingerprint and a completed boolean verdict; persisted results exclude raw provider responses and duplicated evaluated inputs.

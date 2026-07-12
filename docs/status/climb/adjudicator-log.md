@@ -60,3 +60,11 @@ Append-only decision-gate record.
 - Multi-AI adapter: Gemini and OpenCode remain unavailable; the local stub returned PUSH and is not independent evidence.
 - Ranked candidate: H-018 official Responses storage opt-out (rank 0.90).
 - Decision: send `store=false` by default only to the exact official OpenAI Responses endpoint, permit an explicit opt-in, and omit the field entirely for compatible endpoints.
+
+## 2026-07-12 Knowledge Layer after H-018
+
+- External reference: the Pi upstream settlement discussion identifies session-level `agent_settled` as ambiguous for overlapping lifecycle requests and calls request-scoped correlation necessary.
+- Local evidence: DCI correlates its prompt acknowledgement and waits for `agent_settled`, but returns immediately without checking Pi's independently available `get_state` idle fields.
+- Multi-AI adapter: Gemini and OpenCode remain unavailable; the local stub returned PUSH and is not independent evidence.
+- Ranked candidate: H-019 RPC settlement postcondition (rank 0.88).
+- Decision: after an `agent_settled` event only, issue a bounded correlated `get_state` probe and reject streaming, compaction, or queued messages without weakening the legacy `agent_end` fallback.

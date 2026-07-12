@@ -1320,6 +1320,7 @@ class PiRpcClient:
         prompt_ack = False
         seen_turns = 0
         sent_turn_limit_abort = False
+        agent_settled = False
         deadline = time.monotonic() + timeout_seconds if timeout_seconds is not None and timeout_seconds > 0 else None
 
         while True:
@@ -1397,7 +1398,26 @@ class PiRpcClient:
             if event_type == "agent_settled":
                 if not prompt_ack:
                     raise RuntimeError("Received agent_settled before prompt acknowledgement")
+                agent_settled = True
                 break
+
+        if agent_settled:
+            probe_timeout_seconds = 10.0
+            if deadline is not None:
+                probe_timeout_seconds = deadline - time.monotonic()
+                if probe_timeout_seconds <= 0:
+                    raise RuntimeError(
+                        f"RPC prompt timed out after {timeout_seconds:g} seconds"
+                    )
+            state = self.probe_protocol(timeout_seconds=probe_timeout_seconds)
+            if (
+                state["isStreaming"]
+                or state["isCompacting"]
+                or state["pendingMessageCount"] != 0
+            ):
+                raise RuntimeError(
+                    "Pi RPC agent_settled postcondition failed: session is not idle"
+                )
 
         return "".join(text_parts)
 

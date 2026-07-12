@@ -6,7 +6,7 @@ if [ "$#" -ne 1 ]; then
     exit 2
 fi
 case "$1" in
-    H-001|H-002|H-003|H-004|H-005|H-006|H-007|H-008|H-009|H-010|H-011|H-012|H-013|H-014|H-015|H-016|H-017|H-018) ;;
+    H-001|H-002|H-003|H-004|H-005|H-006|H-007|H-008|H-009|H-010|H-011|H-012|H-013|H-014|H-015|H-016|H-017|H-018|H-019) ;;
     *)
         echo "ERROR: train adapter has no acceptance suite for $1." >&2
         exit 2
@@ -50,6 +50,8 @@ elif [ "$1" = "H-017" ]; then
     paradigm="judge-redirect-containment"
 elif [ "$1" = "H-018" ]; then
     paradigm="official-responses-retention"
+elif [ "$1" = "H-019" ]; then
+    paradigm="rpc-settlement-postcondition"
 fi
 
 cat >"$run_dir/manifest.json" <<EOF
@@ -156,6 +158,11 @@ elif [ "$1" = "H-017" ]; then
 elif [ "$1" = "H-018" ]; then
     if ! uv run python -m unittest tests.test_judge -v >"$run_dir/train.log" 2>&1; then
         echo "ERROR: H-018 official Responses retention acceptance failed; see $run_dir/train.log" >&2
+        exit 1
+    fi
+elif [ "$1" = "H-019" ]; then
+    if ! uv run python -m unittest tests.test_pi_rpc_runner -v >"$run_dir/train.log" 2>&1; then
+        echo "ERROR: H-019 RPC settlement acceptance failed; see $run_dir/train.log" >&2
         exit 1
     fi
 elif ! uv run python -m unittest tests.test_setup_pi -v >"$run_dir/train.log" 2>&1; then

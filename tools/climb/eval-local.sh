@@ -210,6 +210,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_judge.JudgeTransportTests.test_compatible_responses_request_omits_storage_control"
         override_test="tests.test_climb_tools.ClimbToolTests.test_h018_train_checks_official_responses_retention"
         ;;
+    H-019)
+        first_dimension="idle_postcondition"
+        second_dimension="non_idle_rejection"
+        third_dimension="legacy_compatibility"
+        fourth_dimension="adapter_integration"
+        immutable_test="tests.test_pi_rpc_runner.PiRpcLifecycleTests.test_agent_settled_requires_an_idle_state_postcondition"
+        repeat_test="tests.test_pi_rpc_runner.PiRpcLifecycleTests.test_agent_settled_rejects_non_idle_state"
+        dirty_test="tests.test_pi_rpc_runner.PiRpcLifecycleTests.test_legacy_agent_end_without_will_retry_is_supported"
+        override_test="tests.test_climb_tools.ClimbToolTests.test_h019_train_checks_rpc_settlement_postcondition"
+        ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2
         exit 2

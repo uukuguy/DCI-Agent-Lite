@@ -227,12 +227,65 @@ class PiRpcLifecycleTests(unittest.TestCase):
         with (
             patch.object(client, "_send") as send,
             patch.object(client, "_read_json_line", side_effect=events),
+            patch.object(
+                client,
+                "probe_protocol",
+                return_value={
+                    "isStreaming": False,
+                    "isCompacting": False,
+                    "messageCount": 2,
+                    "pendingMessageCount": 0,
+                },
+            ),
             patch("sys.stdout", new=io.StringIO()),
         ):
             result = client.prompt_and_wait("question", timeout_seconds=30)
 
         self.assertEqual(result, "final")
         send.assert_called_once_with({"id": "py-1", "type": "prompt", "message": "question"})
+
+    def test_agent_settled_requires_an_idle_state_postcondition(self) -> None:
+        client = make_client()
+        events = [
+            {"type": "response", "id": "py-1", "success": True},
+            {"type": "agent_settled"},
+        ]
+        idle_state = {
+            "isStreaming": False,
+            "isCompacting": False,
+            "messageCount": 1,
+            "pendingMessageCount": 0,
+        }
+
+        with (
+            patch.object(client, "_send"),
+            patch.object(client, "_read_json_line", side_effect=events),
+            patch.object(client, "probe_protocol", return_value=idle_state) as probe,
+        ):
+            client.prompt_and_wait("question", timeout_seconds=30)
+
+        probe.assert_called_once()
+
+    def test_agent_settled_rejects_non_idle_state(self) -> None:
+        client = make_client()
+        events = [
+            {"type": "response", "id": "py-1", "success": True},
+            {"type": "agent_settled"},
+        ]
+        active_state = {
+            "isStreaming": False,
+            "isCompacting": False,
+            "messageCount": 1,
+            "pendingMessageCount": 1,
+        }
+
+        with (
+            patch.object(client, "_send"),
+            patch.object(client, "_read_json_line", side_effect=events),
+            patch.object(client, "probe_protocol", return_value=active_state),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "not idle"):
+                client.prompt_and_wait("question", timeout_seconds=30)
 
     def test_retry_discards_failed_run_text(self) -> None:
         client = make_client()
@@ -256,6 +309,16 @@ class PiRpcLifecycleTests(unittest.TestCase):
         with (
             patch.object(client, "_send"),
             patch.object(client, "_read_json_line", side_effect=events),
+            patch.object(
+                client,
+                "probe_protocol",
+                return_value={
+                    "isStreaming": False,
+                    "isCompacting": False,
+                    "messageCount": 2,
+                    "pendingMessageCount": 0,
+                },
+            ),
             patch("sys.stdout", new=io.StringIO()),
         ):
             result = client.prompt_and_wait("question", timeout_seconds=30)
@@ -315,6 +378,16 @@ class PiRpcLifecycleTests(unittest.TestCase):
         with (
             patch.object(client, "_send") as send,
             patch.object(client, "_read_json_line", side_effect=events),
+            patch.object(
+                client,
+                "probe_protocol",
+                return_value={
+                    "isStreaming": False,
+                    "isCompacting": False,
+                    "messageCount": 1,
+                    "pendingMessageCount": 0,
+                },
+            ),
             patch("sys.stderr", new=io.StringIO()),
         ):
             client.prompt_and_wait("question", max_turns=1, timeout_seconds=30)
