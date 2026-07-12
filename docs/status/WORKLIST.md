@@ -105,10 +105,20 @@
 
 ## AF-100 — Application runner vertical slice
 
-- Status: in_progress
-- Parent objective: Agent Application Framework
+- Status: pending
+- Parent objective: Asterion Agent Application Framework
 - Scope: execute one resolved DCI application plan through an explicitly supplied runtime client and host services, returning normalized immutable events/artifacts without a general workflow engine.
-- Dependencies: AF-020, AF-030, AF-090
+- Dependencies: AF-020, AF-030, AF-090, AF-095
 - Acceptance: Pi and Claude fixture runtimes satisfy the same plan-driven runner contract; runtime/service mismatch, cancellation, malformed streams, and unsafe errors fail closed before accidental execution.
 - Design: `docs/superpowers/specs/2026-07-13-application-runner-vertical-slice-design.md`
+- Plan: pending written-spec approval
+
+## AF-095 — Asterion framework identity and extraction
+
+- Status: in_progress
+- Parent objective: Asterion Agent Application Framework
+- Scope: establish Asterion as the independent top-level framework, extract generic Python modules from `dci`, and preserve existing DCI imports, CLI, examples, and wire literals through compatibility boundaries.
+- Dependencies: AF-090
+- Acceptance: Asterion owns the sole generic implementation; DCI depends on it as a capability/application; both verified DCI examples and all cross-language gates remain compatible.
+- Design: `docs/superpowers/specs/2026-07-13-asterion-framework-extraction-design.md`
 - Plan: pending written-spec approval

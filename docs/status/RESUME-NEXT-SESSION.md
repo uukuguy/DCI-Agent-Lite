@@ -1,8 +1,8 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13 01:56 +0800. **AF-090 is closed; AF-100 design awaits written-spec review.**
+> Updated: 2026-07-13 02:08 +0800. **AF-095 Asterion extraction awaits written-spec review; AF-100 follows it.**
 
-Active work package: AF-100
+Active work package: AF-095
 
 ## TL;DR
 
@@ -33,6 +33,9 @@ Active work package: AF-100
 - `AF-090-H-003` and `AF-090-H-004` are confirmed 4/4; TypeScript parity, documentation, and full closure are green.
 - Fresh closure evidence: 237 Python, 11 Node, and 19 Rust tests plus compile, Ruff, clean npm install, fmt, Clippy, shell, scope, and diff gates.
 - AF-090 is completed; AF-100 is active under the approved minimal plan-driven runner direction.
+- Product name Asterion and gradual top-level extraction are approved; DCI is explicitly a capability/reference application.
+- Exact PyPI and npm `asterion` probes returned 404; the product, distribution, import root, and working namespace are unified as Asterion/`asterion`.
+- Registry reservation is deliberately deferred and does not block AF-095 extraction.
 
 ## Durable boundary
 
@@ -46,7 +49,7 @@ Active work package: AF-100
 
 ## Immediate next action
 
-Review the written AF-100 specification; after approval invoke writing-plans before any implementation.
+Review the written AF-095 specification; after approval invoke writing-plans before any extraction implementation.
 
 ## Guardrails
 
@@ -58,5 +61,5 @@ Review the written AF-100 specification; after approval invoke writing-plans bef
 
 ```bash
 python3 tools/project_scope_check.py
-sed -n '1,260p' docs/superpowers/specs/2026-07-13-application-runner-vertical-slice-design.md
+sed -n '1,300p' docs/superpowers/specs/2026-07-13-asterion-framework-extraction-design.md
 ```

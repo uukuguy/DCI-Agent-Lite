@@ -2,11 +2,11 @@
 
 ## Project Snapshot
 
-- Project: DCI-Agent-Lite — evolving from a Pi-based DCI benchmark harness into an agent-application framework.
+- Project: Asterion framework under development in the DCI-Agent-Lite repository; DCI remains the first capability and reference application.
 - Current branch: `main`
-- Theme-level focus: Minimal plan-driven application execution through explicit runtime and host-service boundaries.
+- Theme-level focus: Extract Asterion as the independent framework before adding its application runner.
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: `AF-100` — application runner vertical slice.
+- Active work package: `AF-095` — Asterion framework identity and extraction.
 
 ## Current Architecture
 
@@ -32,7 +32,7 @@
 ## Open Problems (theme-level)
 
 - Provider-backed acceptance of the first non-Pi runtime when credentials or a compatible gateway become available.
-- Complete written-spec review and implementation planning for the minimal AF-100 application runner vertical slice.
+- Complete written-spec review and implementation planning for AF-095, preserving both verified DCI example entry paths.
 
 ## Key Files
 
@@ -68,6 +68,7 @@
 - `docs/architecture/local-package-catalog.md` — explicit-root discovery, exact selection, filesystem trust, and non-execution guide.
 - `docs/architecture/static-application-assembly.md` — exact runtime/catalog/service binding, language ownership, safe failure, and non-execution guide.
 - `docs/superpowers/specs/2026-07-13-application-runner-vertical-slice-design.md` — approved AF-100 scope and execution/security boundaries.
+- `docs/superpowers/specs/2026-07-13-asterion-framework-extraction-design.md` — Asterion naming, directory ownership, compatibility, and migration boundaries.
 - `scripts/bcplus_eval/run_bcplus_eval.py` — DCI reference benchmark harness.
 - `tools/climb/` — autonomous-work adapter; future cycles require a work-package parent.
 

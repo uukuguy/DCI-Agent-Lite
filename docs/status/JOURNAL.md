@@ -242,6 +242,13 @@
 - 01:52 static assembly acceptance 已提交，为 successor design 建立稳定边界。[d02351e]
 - 01:54 AF-100 minimal application runner 方向获批；显式 runtime/service injection，不建 scheduler/control plane。
 - 01:56 AF-090 完成；AF-100 接管 active package，书面 spec 进入 review gate。
+- 01:57 AF-100 runner spec 已提交，锁定最小执行与安全边界。[d117156]
+- 02:02 用户确认 Asterism 为框架名，并批准顶层渐进抽离与 DCI compatibility 方案。
+- 02:08 PyPI `asterism` 已被占用；产品名保留，发行/import 改用 `asterism-agent`/`asterism_agent`。
+- 02:08 AF-095 接管 active package；AF-100 等待 Asterism 权威目录建立。
+- 02:20 🔴 superseded: Asterism 仅为命名过渡历史，不得作为框架或包名继续使用。
+- 02:20 Asterion 定名；PyPI/npm 精确查询均为 404，统一使用 `asterion` namespace。
+- 02:23 registry 抢注降为非阻塞待办，AF-095 先完成目录与权威边界。
 - 01:36 AF-090-H-001 confirmed 4/4; package acceptance recorded.
 - 01:40 AF-090-H-002 confirmed 4/4; package acceptance recorded.
 - 01:47 AF-090-H-003 confirmed 4/4; package acceptance recorded.

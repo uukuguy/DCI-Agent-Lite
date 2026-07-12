@@ -1,8 +1,8 @@
-# Agent Application Framework
+# Asterion Agent Application Framework
 
 ## Product objective
 
-Build a multi-runtime, multi-language agent-application framework. DCI is a reference capability and benchmark, not the product boundary.
+Build Asterion as a multi-runtime, multi-language agent-application framework. DCI is a reference capability and benchmark, not the product boundary.
 
 ## Layers
 

@@ -238,3 +238,13 @@
 - Rationale: AF-090 proves static application identity and boundaries; the smallest next product proof is one end-to-end DCI run through those contracts, not a scheduler or registry.
 - Boundary: no package interpreter, general workflow engine, automatic service startup, provider/model selection, retry engine, persistence, registry, API server, tenancy, or control plane.
 - Revalidation trigger: add scheduling only when a second executable application cannot be represented by one runtime invocation; add distribution only for a real remote source.
+
+## D-027 — Asterion is the framework; DCI is a capability
+
+- Status: ✅ accepted decision
+- Decided: 2026-07-13
+- Decision: name the independent framework Asterion and extract its sole generic implementation to `src/asterion/`; retain DCI as a dependent capability, benchmark, CLI, and reference application.
+- Rationale: keeping framework modules under `src/dci/framework/` reverses the intended dependency direction and would make AF-100 reinforce the wrong product boundary.
+- Packaging: use the bare `asterion` distribution/import name; exact PyPI and npm registry probes returned 404 on 2026-07-13, though publication remains out of scope.
+- Compatibility: preserve `dci-agent-lite`, both `scripts/examples/` entry paths, `dci.framework.*` re-exports, and current `dci.*` protocol literals during extraction.
+- Revalidation trigger: rename protocol literals only through a separate versioned compatibility decision; remove old imports only after downstream usage is measured.

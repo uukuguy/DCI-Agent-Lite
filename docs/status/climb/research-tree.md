@@ -7,15 +7,19 @@
 
 - Phase: design-review
 - Last cycle: 42
-- Next hypothesis: AF-100-H-001
+- Next hypothesis: AF-095-H-001
 - In flight: none
-- Next action: Complete written-spec review, then write the AF-100 implementation plan.
+- Next action: Complete written-spec review, then write the AF-095 implementation plan.
 
 ## Active hypotheses
 
 - **AF-100-H-001** (pending, rank 1.00): Extend immutable assembly plans with explicit runtime and host-service capability ownership.
+- **AF-095-H-001** (pending, rank 1.00): Establish the Asterion Python package and one-way dependency boundary with compatibility re-exports.
 - **AF-100-H-002** (pending, rank 0.90): Run one DCI application through an explicit runtime client into immutable normalized results.
+- **AF-095-H-002** (pending, rank 0.90): Move generic package assembly and protocol modules without duplicated implementations or wire changes.
 - **AF-100-H-003** (pending, rank 0.80): Prove runtime parity cancellation safe failures and missing-service preflight behavior.
+- **AF-095-H-003** (pending, rank 0.80): Reorganize declarative capability application schema and cross-language roots while preserving identities.
+- **AF-095-H-004** (pending, rank 0.70): Prove DCI CLI examples packaging compatibility and full Asterion extraction closure.
 - **AF-100-H-004** (pending, rank 0.60): Document and close the minimal runner without scheduler registry or automatic service startup.
 
 ## Run ladder

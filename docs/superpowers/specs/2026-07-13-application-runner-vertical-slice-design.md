@@ -1,6 +1,6 @@
 # Application Runner Vertical Slice Design
 
-> Status: approved direction; written specification pending final review.
+> Status: approved direction; blocked on AF-095 Asterion extraction and written-spec revision.
 
 ## Goal
 
@@ -12,7 +12,8 @@ control plane.
 
 ## Chosen approach
 
-Add a small Python application runner over existing public contracts.
+Add a small Python application runner under `src/asterion/runner/` over
+existing public contracts.
 
 1. **Plan-driven runner — selected.** It consumes an `AssemblyPlan`, runtime
    client, application input, and an explicit host-service mapping. This is the
@@ -35,7 +36,7 @@ starting the Rust sidecar is outside AF-100.
 
 ## Public Python API
 
-Add `src/dci/framework/application_runner.py` with an asynchronous boundary:
+Add `src/asterion/runner/application.py` with an asynchronous boundary:
 
 ```python
 @dataclass(frozen=True)
@@ -114,8 +115,10 @@ application data, or expose a remote API.
 
 ## Language boundary
 
-Python owns the first runner because it owns orchestration and the reference
-runtime adapters. TypeScript retains schema/type validation and runtime-client
+Python Asterion owns the first runner because it owns orchestration and the
+reference runtime adapters. DCI supplies the first capability integration and
+existing `dci-agent-lite` execution baseline; the runner must not recreate DCI
+research behavior. TypeScript retains schema/type validation and runtime-client
 contracts but does not gain a second runner in AF-100. Rust remains an explicitly
 provided controlled-execution service and is not started by the runner.
 
