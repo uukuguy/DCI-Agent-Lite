@@ -117,3 +117,9 @@
 - 20:52 Pi RunRecorder 已生成隔离协议 attempts，成功/失败/resume 均通过 conformance。[b7926bb]
 - 20:53 AF-020 通过 116 tests 与真实 runtime-example；45 events、7 对 tools、judge verdict=true。
 - 20:53 Claude Code 2.1.199 被选为 AF-030 独立 runtime；设计与计划已固化。
+- 20:54 AF-030 已成为唯一活跃包，Claude Code 适配范围通过审计。[d95a33c]
+- 20:56 Claude stream-json 要求 `--verbose`；本机未登录，provider-backed AF-030 暂不可验收。
+- 20:56 Claude SDK 稳定消息 translator 已以 sanitized fixtures 测试提交。[8d6809c]
+- 21:00 受限 Claude Code subprocess runtime 已测试提交；危险权限与会话持久化禁用。[0f6c712]
+- 21:02 AF-030 本地 121 tests、编译、Ruff、范围审计通过；两次 live probe 均因 Claude 未登录失败。
+- 21:02 Claude 认证失败流已实测安全；AF-030 保持 in_progress 并在外部认证门暂停。

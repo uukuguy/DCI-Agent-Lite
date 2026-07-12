@@ -41,6 +41,7 @@
 - Acceptance: cross-runtime DCI acceptance proves shared events and artifacts.
 - Design: `docs/superpowers/specs/2026-07-12-claude-code-protocol-adapter-design.md`
 - Plan: `docs/superpowers/plans/2026-07-12-claude-code-protocol-adapter.md`
+- Blocker: Claude Code 2.1.199 is installed but not authenticated; two live probes returned the safe authentication failure path.
 
 ## AF-040 — Python and TypeScript host boundaries
 
