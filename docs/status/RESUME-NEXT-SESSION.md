@@ -1,6 +1,6 @@
 # Recovered Session Checkpoint
 
-> Updated: 2026-07-12 17:10 +0800. **Active H-006 credential-block checkpoint — session remains active, not a final handoff.**
+> Updated: 2026-07-12 17:16 +0800. **Active H-006 credential-block checkpoint — session remains active, not a final handoff.**
 
 ## TL;DR
 
@@ -12,6 +12,7 @@
 - The live request reached the selected DeepSeek endpoint but returned HTTP 401. The configured indirect key exists but is rejected by the provider; a new valid credential is required before H-006 can be confirmed.
 - Shared judge HTTP errors now retain endpoint/status while suppressing provider response bodies, preventing provider-side credential echoes from entering stderr or batch artifacts.
 - A repeat against the actual endpoint confirmed the redacted error path; no API key, request prompt, or provider response body was emitted.
+- A user-requested retry at 17:16 reproduced the same redacted HTTP 401, confirming that the external credential has not yet changed.
 
 ## Committed state
 
