@@ -1,10 +1,10 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13 04:26 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-13 06:40 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-120
 
-Package state: AF-110 accepted and completed; AF-120 design discussion is next.
+Package state: AF-120 design and implementation plan approved; execution mode confirmation is next.
 
 ## TL;DR
 
@@ -16,6 +16,7 @@ Package state: AF-110 accepted and completed; AF-120 design discussion is next.
 - `fc5ab82`, `a679e0f`, and `3b44940` complete immutable plan declarations, exact implementation contracts, and deterministic composed execution.
 - `762ba85`, `41811ec`, `cbdceae`, and `30c2914` add the independent DCI implementation, independent Pi runtime, explicit application host, reuse proof, and architecture guide.
 - AF-110 closure passes 311 Python, 11 Node, and 19 Rust tests plus compile, lint, shell, scope, and diff gates. The provider-backed Asterion probe passed; the independent baseline example completed but scored false at its turn limit.
+- AF-120 is specified through `356c508` and planned at `58a7131`: split Asterion core, DCI capability, DCI application, and enhanced baseline distributions; freeze baseline-owned `dci.framework.*`; then add selected-only installed providers and generic CLI.
 
 ## Where things stand
 
@@ -37,13 +38,13 @@ Package state: AF-110 accepted and completed; AF-120 design discussion is next.
 
 ## Next steps (immediate)
 
-1. Brainstorm AF-120's secure installed-application binding contract before implementation.
-2. Compare installation-time entry points, explicit host modules, and signed bundle/index approaches against the no-arbitrary-import boundary.
-3. Approve the smallest design that can support generic `asterion run <assembly>` without Asterion core depending on DCI.
+1. Confirm inline or explicitly authorized subagent-driven execution for `docs/superpowers/plans/2026-07-13-installed-application-binding.md`.
+2. Begin Task 1 with failing four-distribution wheel/import-boundary tests.
+3. Split Asterion core from the enhanced baseline while preserving baseline benchmark behavior and commands.
 
 ## Open questions
 
-- Which binding authority should map an application identity to exact implementation objects without executable paths in portable manifests?
+- Which approved plan execution mode should be used?
 
 ## Don't go down these paths again
 
