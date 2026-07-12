@@ -652,3 +652,43 @@ hypotheses:
     online: null
     verdict: confirmed 4/4
     decision_reason: deterministic local package acceptance
+- id: AF-070-H-001
+  work_package_id: AF-070
+  description: Define the portable controlled-code policy workflow observability evaluation manifests.
+  parent_paradigm: controlled-code-package-graph
+  expected_lift: +1 second portable graph
+  cost_h: 0.5
+  ranking: 0.9
+  status: pending
+  created_at: '2026-07-12T23:05:00+08:00'
+  results: []
+- id: AF-070-H-002
+  work_package_id: AF-070
+  description: Prove cross-host parity, deterministic ordering, portable outputs, and every missing boundary.
+  parent_paradigm: controlled-code-graph-boundaries
+  expected_lift: +1 cross-host graph confidence
+  cost_h: 0.6
+  ranking: 0.8
+  status: pending
+  created_at: '2026-07-12T23:05:00+08:00'
+  results: []
+- id: AF-070-H-003
+  work_package_id: AF-070
+  description: Validate every checked-in reference manifest through the TypeScript host without a second composer.
+  parent_paradigm: typescript-reference-manifest-parity
+  expected_lift: +1 cross-language graph confidence
+  cost_h: 0.4
+  ranking: 0.7
+  status: pending
+  created_at: '2026-07-12T23:05:00+08:00'
+  results: []
+- id: AF-070-H-004
+  work_package_id: AF-070
+  description: Document the second static graph and close AF-070 through full framework gates.
+  parent_paradigm: controlled-code-framework-acceptance
+  expected_lift: +1 AF-070 closure confidence
+  cost_h: 0.4
+  ranking: 0.6
+  status: pending
+  created_at: '2026-07-12T23:05:00+08:00'
+  results: []

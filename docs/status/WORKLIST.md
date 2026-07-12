@@ -65,10 +65,20 @@
 
 ## AF-060 — Composable workflow and enterprise packages
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Agent Application Framework
 - Scope: workflow, memory, governance, observability, evaluation, and enterprise application packages.
 - Dependencies: AF-020, AF-030
 - Acceptance: packages compose through declared capabilities and policy boundaries.
 - Design: `docs/superpowers/specs/2026-07-12-composable-framework-packages-design.md`
 - Plan: `docs/superpowers/plans/2026-07-12-composable-framework-packages.md`
+
+## AF-070 — Controlled code validation packages
+
+- Status: in_progress
+- Parent objective: Agent Application Framework
+- Scope: prove a second portable policy/workflow/observability/evaluation graph against normalized runtimes plus the shared controlled-executor host service.
+- Dependencies: AF-050, AF-060
+- Acceptance: the controlled-code graph composes deterministically across Pi and Claude Code normalized edges, rejects every missing boundary, and remains static composition rather than execution.
+- Design: `docs/superpowers/specs/2026-07-12-controlled-code-validation-packages-design.md`
+- Plan: `docs/superpowers/plans/2026-07-12-controlled-code-validation-packages.md`

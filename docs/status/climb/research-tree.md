@@ -5,14 +5,18 @@
 
 ## In-flight / session state
 
-- Phase: knowledge
+- Phase: implementation
 - Last cycle: 30
-- Next hypothesis: None
+- Next hypothesis: AF-070-H-001
 - In flight: none
-- Next action: Select and govern the next framework work package before closing AF-060.
+- Next action: Start AF-070-H-001.
 
 ## Active hypotheses
 
+- **AF-070-H-001** (pending, rank 0.90): Define the portable controlled-code policy workflow observability evaluation manifests.
+- **AF-070-H-002** (pending, rank 0.80): Prove cross-host parity, deterministic ordering, portable outputs, and every missing boundary.
+- **AF-070-H-003** (pending, rank 0.70): Validate every checked-in reference manifest through the TypeScript host without a second composer.
+- **AF-070-H-004** (pending, rank 0.60): Document the second static graph and close AF-070 through full framework gates.
 
 ## Run ladder
 

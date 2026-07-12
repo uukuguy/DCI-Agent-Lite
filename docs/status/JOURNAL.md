@@ -183,3 +183,5 @@
 - 22:56 package composition closure 已提交，为下一治理包提供稳定基线。[4f398bc]
 - 22:50 AF-060-H-004 confirmed 4/4; package acceptance recorded.
 - 22:54 AF-060-H-005 confirmed 4/4; package acceptance recorded.
+- 23:00 controlled-code second graph design 已提交，为 AF-070 固定静态组合边界。[76e937e]
+- 23:05 AF-060 完成；AF-070 受控代码验证设计、计划与四个 climb hypotheses 接管主线。

@@ -1,8 +1,8 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-12 22:55 +0800. **Session remains active — autonomous climb continues.**
+> Updated: 2026-07-12 23:05 +0800. **Session remains active — autonomous climb continues.**
 
-Active work package: AF-060
+Active work package: AF-070
 
 ## TL;DR
 
@@ -13,7 +13,8 @@ Active work package: AF-060
 - `AF-060-H-003` is confirmed: Pi and Claude Code compose the same policy/research/evaluation/observability graph.
 - `AF-060-H-004` is confirmed: TypeScript exports portable package types and validates the canonical schema/fixtures without a second composer.
 - `AF-060-H-005` is confirmed: the static boundary/extension guide and full framework closure gate pass.
-- AF-060 remains active only until the knowledge layer selects and records the next governed package.
+- AF-060 is complete with all five hypotheses confirmed and full framework closure evidence.
+- AF-070 is active under the approved controlled-code validation design and implementation plan.
 
 ## Durable boundary
 
@@ -27,17 +28,17 @@ Active work package: AF-060
 
 ## Immediate next action
 
-Commit H005 documentation/closure evidence, then run the knowledge layer and atomically transition AF-060 to the next governed work package.
+Start AF-070-H-001 with failing tests for the four controlled-code package manifests and stable graph order.
 
 ## Guardrails
 
 - Static composition precedes workflow execution.
 - Do not put prompts, credentials, executable paths, commands, mutable state, or adapter-private types in package manifests.
-- Do not build persistent memory, multi-tenant administration, or a general workflow scheduler in AF-060.
+- Do not execute commands, add automatic repair, persistent memory, a registry, or a workflow scheduler in AF-070.
 
 ## Ready commands
 
 ```bash
-git status --short
-python3 tools/project_scope_check.py
+python3 tools/project_scope_check.py --climb-hypothesis AF-070-H-001
+uv run python -m unittest tests.test_package_composition -v
 ```

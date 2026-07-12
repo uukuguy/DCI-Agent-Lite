@@ -4,9 +4,9 @@
 
 - Project: DCI-Agent-Lite — evolving from a Pi-based DCI benchmark harness into an agent-application framework.
 - Current branch: `main`
-- Theme-level focus: Portable package composition across capabilities, policies, artifacts, and observability.
+- Theme-level focus: A second portable package graph for controlled local code validation.
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: `AF-060` — composable workflow and enterprise packages.
+- Active work package: `AF-070` — controlled code validation packages.
 
 ## Current Architecture
 
@@ -23,11 +23,9 @@
 
 ## Open Problems (theme-level)
 
-- Agent Runtime Protocol contract, capability manifest, and conformance semantics.
 - Provider-backed acceptance of the first non-Pi runtime when credentials or a compatible gateway become available.
-- Controlled Rust execution/isolation boundary without duplicating orchestration or runtime-adapter responsibilities.
-- Portable package manifest and deterministic capability/policy composition semantics.
-- DCI research/policy/observability/evaluation reference graph across both runtime capability sets.
+- Prove a second independent graph using the workflow kind and the shared controlled-executor host capability.
+- Revalidate whether static package composition remains sufficient before considering any execution engine.
 
 ## Key Files
 
@@ -55,6 +53,7 @@
 - `src/dci/framework/executor_protocol.py` — Python reference validator for `dci.executor/v1`.
 - `packages/rust/executor/` — runnable Rust controlled-executor sidecar and library with complete AF-050 policy/process/resource/service acceptance.
 - `docs/superpowers/specs/2026-07-12-composable-framework-packages-design.md` — active AF-060 package contract and non-goals.
+- `docs/superpowers/specs/2026-07-12-controlled-code-validation-packages-design.md` — active AF-070 second-graph contract and non-goals.
 - `docs/architecture/composable-packages.md` — package authoring, static composition, extension, and security boundary guide.
 - `scripts/bcplus_eval/run_bcplus_eval.py` — DCI reference benchmark harness.
 - `tools/climb/` — autonomous-work adapter; future cycles require a work-package parent.

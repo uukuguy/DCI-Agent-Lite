@@ -196,3 +196,12 @@
 - Boundary: AF-060 does not implement scheduling, persistent memory storage, multi-tenant administration, or adapter-specific package variants.
 - Revalidation trigger: add an execution engine only after two independently useful package graphs cannot be expressed or validated by the static contract.
 - Implemented evidence: the manifest contract (H-001), deterministic composer (H-002), one identical Pi/Claude DCI reference graph (H-003), and TypeScript canonical schema/fixture parity without a second composer (H-004) are confirmed.
+
+## D-023 — Challenge composition with controlled code validation
+
+- Status: ✅ accepted decision
+- Decided: 2026-07-12
+- Decision: AF-070 will model controlled local code validation as a second portable policy/workflow/observability/evaluation graph before adding execution or registry infrastructure.
+- Rationale: the graph exercises a different dependency shape, the unused `workflow` kind, and the existing Rust executor boundary as a shared host capability without conflating static validation with scheduling.
+- Boundary: `executor.controlled` comes from the shared host service, not from Pi or Claude Code natively; AF-070 does not execute commands, repair code, add persistent memory, or build a registry/control plane.
+- Revalidation trigger: consider an execution layer only if this second graph cannot be expressed through the existing package, policy, event, and artifact edges.
