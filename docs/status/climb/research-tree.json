@@ -1,29 +1,18 @@
 {
-  "run_count": 4,
+  "run_count": 5,
   "session": {
     "session": "2026-07-12-pi-revision",
     "phase": "implementation",
-    "last_cycle": 4,
-    "next_hypothesis": "H-005",
+    "last_cycle": 5,
+    "next_hypothesis": "H-006",
     "in_flight": null,
-    "next_action": "Start H-005.",
+    "next_action": "Start H-006.",
     "falsified_routes": [
       "duplicate the authoritative Pi commit across setup.sh and .env.template",
       "convert the independent Pi checkout to vendored or submodule ownership"
     ]
   },
   "active": [
-    {
-      "id": "H-005",
-      "description": "Warn before a run when Pi HEAD does not match the tracked default lock.",
-      "parent_paradigm": "run-provenance",
-      "expected_lift": "+1 early-diagnosis dimension",
-      "cost_h": 0.3,
-      "ranking": 0.75,
-      "status": "pending",
-      "created_at": "2026-07-12T09:31:00+08:00",
-      "results": []
-    },
     {
       "id": "H-006",
       "description": "Add a cheap live structured-output preflight for compatible judge backends.",
@@ -144,6 +133,33 @@
           "decision_reason": "deterministic local setup-policy acceptance"
         }
       ]
+    },
+    {
+      "id": "H-005",
+      "description": "Warn before a run when Pi HEAD does not match the tracked default lock.",
+      "parent_paradigm": "run-provenance",
+      "expected_lift": "+1 early-diagnosis dimension",
+      "cost_h": 0.3,
+      "ranking": 0.75,
+      "status": "confirmed",
+      "created_at": "2026-07-12T09:31:00+08:00",
+      "results": [
+        {
+          "session": "2026-07-12-pi-revision",
+          "cycle": 5,
+          "run": "20260712-161133-dci-climb-h005",
+          "local": 4,
+          "local_per_task": {
+            "immutable_resolution": 1,
+            "repeat_validation": 1,
+            "dirty_checkout_safety": 1,
+            "override_compatibility": 1
+          },
+          "online": null,
+          "verdict": "confirmed 4/4",
+          "decision_reason": "deterministic local setup-policy acceptance"
+        }
+      ]
     }
   ],
   "falsified": [],
@@ -235,6 +251,28 @@
       "verdict": "confirmed 4/4",
       "train_cost_h": "0.01",
       "manifest_path": "runs/climb/20260712-160332-dci-climb-h004/manifest.json"
+    },
+    {
+      "run_id": "20260712-161133-dci-climb-h005",
+      "cycle": "5",
+      "session": "2026-07-12-pi-revision",
+      "hypothesis_id": "H-005",
+      "paradigm": "run-provenance",
+      "parent_run": "",
+      "pushed_at": "2026-07-12T16:11:33+08:00",
+      "lb_landed_at": "",
+      "local_score": "4",
+      "immutable_resolution": "1",
+      "repeat_validation": "1",
+      "dirty_checkout_safety": "1",
+      "override_compatibility": "1",
+      "online_score": "",
+      "gap": "",
+      "push_decision": "PUSH",
+      "decision_reason": "cheap deterministic local acceptance",
+      "verdict": "confirmed 4/4",
+      "train_cost_h": "0.01",
+      "manifest_path": "runs/climb/20260712-161133-dci-climb-h005/manifest.json"
     }
   ],
   "calibration": {

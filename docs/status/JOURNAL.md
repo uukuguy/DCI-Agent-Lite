@@ -39,3 +39,6 @@
 - 16:04 H-004 confirmed 4/4; setup-policy acceptance recorded.
 - 16:06 correction: H-004 第二条为同 run replay；未提交结构化重复已归一化，recorder 现幂等。
 - 16:08 H-004 provenance 4/4；45 tests 与真实 runtime artifact 断言通过。
+- 16:09 H-004 run provenance 与幂等 climb recorder 已提交。[09d677d]
+- 16:12 H-005 pre-run mismatch warning 4/4；48 tests 全通过。
+- 16:11 H-005 confirmed 4/4; setup-policy acceptance recorded.

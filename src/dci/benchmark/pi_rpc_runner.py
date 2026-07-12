@@ -322,7 +322,12 @@ def evaluate_run_output(
     return eval_result
 
 
-def collect_pi_source_provenance(*, package_dir: Path, lock_file: Path) -> Dict[str, Any]:
+def collect_pi_source_provenance(
+    *,
+    package_dir: Path,
+    lock_file: Path,
+    revision_override: Optional[str] = None,
+) -> Dict[str, Any]:
     """Describe the Git source backing a Pi coding-agent package."""
 
     def git_output(*args: str) -> Optional[str]:
@@ -346,6 +351,8 @@ def collect_pi_source_provenance(*, package_dir: Path, lock_file: Path) -> Dict[
     commit = git_output("rev-parse", "HEAD") if repo_dir else None
     status = git_output("status", "--porcelain") if repo_dir else None
     origin_url = git_output("remote", "get-url", "origin") if repo_dir else None
+    expected_revision = revision_override or lock_revision
+    expected_revision_source = "DCI_PI_REVISION" if revision_override else "pi-revision.txt"
     return {
         "managed_git_checkout": repo_dir is not None,
         "repo_dir": repo_dir,
@@ -355,7 +362,36 @@ def collect_pi_source_provenance(*, package_dir: Path, lock_file: Path) -> Dict[
         "lock_file": str(lock_file),
         "lock_revision": lock_revision,
         "lock_match": commit == lock_revision if commit and lock_revision else None,
+        "expected_revision": expected_revision,
+        "expected_revision_source": expected_revision_source,
+        "expected_match": (
+            commit == expected_revision if commit and expected_revision else None
+        ),
     }
+
+
+def format_pi_source_warning(provenance: Dict[str, Any]) -> Optional[str]:
+    """Return a non-blocking pre-run warning for an expected revision mismatch."""
+
+    if provenance.get("expected_match") is not False:
+        return None
+    return (
+        "Pi source warning: actual commit "
+        f"{provenance.get('commit')} does not match expected revision "
+        f"{provenance.get('expected_revision')} from "
+        f"{provenance.get('expected_revision_source')}; continuing with recorded provenance."
+    )
+
+
+def emit_pi_source_warning(recorder: Any, *, stream: Any = sys.stderr) -> Optional[str]:
+    """Emit and persist a non-blocking source mismatch warning."""
+
+    warning = format_pi_source_warning(recorder.pi_source)
+    if warning is None:
+        return None
+    recorder.add_note(warning)
+    print(f"[runner] WARNING: {warning}", file=stream)
+    return warning
 
 
 class ConversationFeatures:
@@ -446,6 +482,7 @@ class RunRecorder:
         self.pi_source = collect_pi_source_provenance(
             package_dir=package_dir,
             lock_file=REPO_ROOT / "pi-revision.txt",
+            revision_override=os.environ.get("DCI_PI_REVISION") or None,
         )
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self._pending_tool_call_starts: Dict[str, str] = {}
@@ -1843,6 +1880,8 @@ def main() -> int:
     except RuntimeError as exc:
         print(str(exc), file=sys.stderr)
         return 2
+
+    emit_pi_source_warning(recorder)
 
     client = PiRpcClient(
         package_dir=args.package_dir.resolve(),

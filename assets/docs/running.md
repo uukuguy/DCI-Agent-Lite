@@ -12,6 +12,8 @@ uv run dci-agent-lite
 
 The runner reads `DCI_PI_DIR` from the repository-root `.env`. Without an explicit value it prefers an existing `./pi` checkout and falls back to the legacy `./pi-mono` path. `--package-dir` and `--agent-dir` remain available as one-off overrides. `setup.sh` pins new and clean existing checkouts to the full commit in `pi-revision.txt`; `DCI_PI_REVISION` is an explicit override for deliberate revision tests.
 
+Before sending a prompt, the RPC runner compares the actual Pi commit with the expected revision (`DCI_PI_REVISION` when set, otherwise `pi-revision.txt`). A mismatch emits a non-blocking warning and is preserved in `pi_source`; custom experiments may continue intentionally.
+
 `dci-run-pi-rpc` remains available as a legacy alias.
 
 By default:

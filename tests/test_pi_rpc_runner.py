@@ -29,6 +29,39 @@ def make_client() -> PiRpcClient:
 
 
 class PiRpcLifecycleTests(unittest.TestCase):
+    def test_pi_source_warning_reports_expected_revision_mismatch(self) -> None:
+        formatter = getattr(rpc_runner, "format_pi_source_warning", None)
+        self.assertIsNotNone(formatter)
+
+        warning = formatter(
+            {
+                "commit": "actual",
+                "expected_revision": "expected",
+                "expected_revision_source": "pi-revision.txt",
+                "expected_match": False,
+            }
+        )
+
+        self.assertIn("actual", warning)
+        self.assertIn("expected", warning)
+        self.assertIsNone(formatter({"expected_match": True}))
+
+    def test_pi_source_warning_is_emitted_and_added_to_run_notes(self) -> None:
+        emitter = getattr(rpc_runner, "emit_pi_source_warning", None)
+        self.assertIsNotNone(emitter)
+        recorder = MagicMock()
+        recorder.pi_source = {
+            "commit": "actual",
+            "expected_revision": "expected",
+            "expected_revision_source": "pi-revision.txt",
+            "expected_match": False,
+        }
+        stream = io.StringIO()
+
+        warning = emitter(recorder, stream=stream)
+
+        recorder.add_note.assert_called_once_with(warning)
+        self.assertIn("WARNING", stream.getvalue())
     def test_run_artifacts_include_pi_source_provenance(self) -> None:
         provenance = {"commit": "abc123", "dirty": True, "lock_match": False}
         features = rpc_runner.ConversationFeatures(
@@ -76,6 +109,7 @@ class PiRpcLifecycleTests(unittest.TestCase):
 
         self.assertIn("pi_source", artifacts_doc)
         self.assertIn("lock_match", artifacts_doc)
+        self.assertIn("expected_revision", artifacts_doc)
 
     def test_pi_source_provenance_records_commit_lock_and_dirty_state(self) -> None:
         collect = getattr(rpc_runner, "collect_pi_source_provenance", None)
@@ -108,12 +142,19 @@ class PiRpcLifecycleTests(unittest.TestCase):
             lock_file.write_text(f"{revision}\n")
 
             clean = collect(package_dir=package_dir, lock_file=lock_file)
+            override = collect(
+                package_dir=package_dir,
+                lock_file=lock_file,
+                revision_override=revision,
+            )
             marker.write_text("dirty\n")
             dirty = collect(package_dir=package_dir, lock_file=lock_file)
 
         self.assertEqual(clean["commit"], revision)
         self.assertTrue(clean["lock_match"])
         self.assertFalse(clean["dirty"])
+        self.assertTrue(override["expected_match"])
+        self.assertEqual(override["expected_revision_source"], "DCI_PI_REVISION")
         self.assertTrue(dirty["dirty"])
 
     def test_protocol_probe_script_exposes_model_free_check(self) -> None:

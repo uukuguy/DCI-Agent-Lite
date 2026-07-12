@@ -48,3 +48,11 @@
 - Evidence fields: detected Git root/origin, exact commit, dirty boolean, tracked lock revision, and `lock_match`; custom non-Git package directories use nullable Git fields.
 - Rationale: an immutable setup default is insufficient if benchmark artifacts cannot prove which external source and local modification state produced the answer.
 - Privacy boundary: artifacts record only the dirty boolean, never the external checkout's diff or credential contents.
+
+## D-006 — Warn on Pi revision mismatch without blocking custom runs
+
+- Status: ✅ accepted and implemented decision
+- Decided: 2026-07-12
+- Decision: before starting RPC, compare the actual Pi commit with `DCI_PI_REVISION` when explicitly set, otherwise `pi-revision.txt`; emit and persist a warning when they differ.
+- Rationale: mismatch should be visible before model spend, but package-dir/fork experiments remain legitimate and must not be forcibly blocked.
+- Artifact behavior: the warning is added to run notes, and `pi_source.expected_revision_source` distinguishes an explicit override from the tracked default.

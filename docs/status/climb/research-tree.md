@@ -1,19 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (4 runs).
+> Deterministic summary generated from tracked state (5 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 4
-- Next hypothesis: H-005
+- Last cycle: 5
+- Next hypothesis: H-006
 - In flight: none
-- Next action: Start H-005.
+- Next action: Start H-006.
 
 ## Active hypotheses
 
-- **H-005** (pending, rank 0.75): Warn before a run when Pi HEAD does not match the tracked default lock.
 - **H-006** (pending, rank 0.60): Add a cheap live structured-output preflight for compatible judge backends.
 
 ## Run ladder
@@ -24,6 +23,7 @@
 | 20260712-085134-dci-climb-h002 | H-002 | 4 | confirmed 4/4 |
 | 20260712-092803-dci-climb-h003 | H-003 | 4 | confirmed 4/4 |
 | 20260712-160332-dci-climb-h004 | H-004 | 4 | confirmed 4/4 |
+| 20260712-161133-dci-climb-h005 | H-005 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

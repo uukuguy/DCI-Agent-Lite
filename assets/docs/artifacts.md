@@ -20,6 +20,7 @@ outputs/runs/<timestamp>/
 - `commit` and `dirty` — exact `HEAD` plus whether tracked/untracked local changes were present
 - `lock_file` and `lock_revision` — the DCI default pin used for comparison
 - `lock_match` — whether the run used that default commit (`null` for a non-Git/custom package directory)
+- `expected_revision`, `expected_revision_source`, and `expected_match` — compare against an explicit `DCI_PI_REVISION` when set, otherwise the tracked lock
 
 Local modifications are reported as a boolean; their contents are never copied into artifacts.
 
