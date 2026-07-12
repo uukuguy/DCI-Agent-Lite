@@ -79,6 +79,8 @@
 - 19:07 correction: H-014 commit was amended; current implementation commit is 9a41a34.
 - 19:10 H-015 URL credential/query/fragment rejection passes focused judge tests; adapter cycle remains pending.
 - 19:20 H-015 confirmed 4/4; URL-secret ingress rejection and 85-test verification ready to commit.
+- 19:20 Unsafe judge URL rejection committed. [3872029]
+- 19:22 Final handoff state recorded; no run or judge processes remain.
 - 18:52 H-012 confirmed 4/4; setup-policy acceptance recorded.
 - 18:54 H-013 confirmed 4/4; setup-policy acceptance recorded.
 - 19:06 H-014 confirmed 4/4; setup-policy acceptance recorded.
