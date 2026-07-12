@@ -110,6 +110,18 @@ hypotheses:
   expected_lift: +1 batch-failure-prevention dimension
   cost_h: 0.7
   ranking: 0.6
-  status: pending
+  status: confirmed
   created_at: '2026-07-12T09:31:00+08:00'
-  results: []
+  results:
+  - session: 2026-07-12-pi-revision
+    cycle: 6
+    run: 20260712-171944-dci-climb-h006
+    local: 4
+    local_per_task:
+      shared_transport: 1
+      missing_key_safety: 1
+      safe_output: 1
+      make_and_adapter: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local setup-policy acceptance

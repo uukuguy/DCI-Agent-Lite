@@ -56,3 +56,12 @@
 - Decision: before starting RPC, compare the actual Pi commit with `DCI_PI_REVISION` when explicitly set, otherwise `pi-revision.txt`; emit and persist a warning when they differ.
 - Rationale: mismatch should be visible before model spend, but package-dir/fork experiments remain legitimate and must not be forcibly blocked.
 - Artifact behavior: the warning is added to run notes, and `pi_source.expected_revision_source` distinguishes an explicit override from the tracked default.
+
+## D-007 — Preflight the configured judge through its production transport
+
+- Status: ✅ accepted and implemented decision
+- Decided: 2026-07-12
+- Decision: `make check-judge` sends one fixed trivial grading request through `JudgeConfig` and `judge_answer_sync`, requiring a boolean `is_correct` before a user starts a costly batch evaluation.
+- Rationale: a model-free Pi probe cannot detect judge credential, endpoint, request-shaping, or structured-output failures. Reusing the production transport prevents a second, misleading compatibility path.
+- Boundary: the preflight is opt-in and does not run automatically before batches. It prints safe configuration, verdict, usage, and cost only; shared HTTP errors retain endpoint/status but never provider response bodies.
+- Configuration note: normal project loading intentionally preserves already-exported process variables over `.env`; a user who rotates only `.env` must start without a stale exported judge key until provenance reporting is added.

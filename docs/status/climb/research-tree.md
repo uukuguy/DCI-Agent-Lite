@@ -1,19 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (5 runs).
+> Deterministic summary generated from tracked state (6 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
-- Phase: context-hard-pause
-- Last cycle: 5
-- Next hypothesis: H-006
+- Phase: implementation
+- Last cycle: 6
+- Next hypothesis: None
 - In flight: none
-- Next action: Resume H-006 with a failing live judge structured-output preflight test.
+- Next action: Trigger Knowledge Layer.
 
 ## Active hypotheses
 
-- **H-006** (pending, rank 0.60): Add a cheap live structured-output preflight for compatible judge backends.
 
 ## Run ladder
 
@@ -24,6 +23,7 @@
 | 20260712-092803-dci-climb-h003 | H-003 | 4 | confirmed 4/4 |
 | 20260712-160332-dci-climb-h004 | H-004 | 4 | confirmed 4/4 |
 | 20260712-161133-dci-climb-h005 | H-005 | 4 | confirmed 4/4 |
+| 20260712-171944-dci-climb-h006 | H-006 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

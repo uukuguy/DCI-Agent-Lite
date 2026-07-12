@@ -263,6 +263,93 @@ class ClimbToolTests(unittest.TestCase):
             self.assertEqual(session["next_hypothesis"], "H-002")
             self.assertIn("H-001 confirmed 4/4", journal.read_text())
 
+    def test_record_cycle_recovers_hypothesis_specific_partial_write(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            state_dir = root / "climb"
+            shutil.copytree(REPO_ROOT / "docs/status/climb", state_dir)
+            hypothesis_path = state_dir / "hypotheses.yaml"
+            state = yaml.safe_load(hypothesis_path.read_text())
+            state["hypotheses"] = [
+                hypothesis
+                for hypothesis in state["hypotheses"]
+                if hypothesis["id"] == "H-006"
+            ]
+            h006 = state["hypotheses"][0]
+            h006["status"] = "confirmed"
+            h006["results"] = [
+                {
+                    "session": "2026-07-12-pi-revision",
+                    "cycle": 6,
+                    "run": "dci-climb-h006-test",
+                    "local": 4,
+                    "local_per_task": {
+                        "shared_transport": 1,
+                        "missing_key_safety": 1,
+                        "safe_output": 1,
+                        "make_and_adapter": 1,
+                    },
+                    "online": None,
+                    "verdict": "confirmed 4/4",
+                    "decision_reason": "deterministic local setup-policy acceptance",
+                }
+            ]
+            hypothesis_path.write_text(
+                yaml.safe_dump(state, sort_keys=False, allow_unicode=True)
+            )
+            journal = root / "JOURNAL.md"
+            journal.write_text("# Test Journal\n\n## 2026-07-12\n")
+            run_dir = root / "run-h006"
+            run_dir.mkdir()
+            (run_dir / "local-eval.json").write_text(
+                json.dumps(
+                    {
+                        "total": 4,
+                        "per_task": {
+                            "shared_transport": 1,
+                            "missing_key_safety": 1,
+                            "safe_output": 1,
+                            "make_and_adapter": 1,
+                        },
+                    }
+                )
+            )
+
+            result = subprocess.run(
+                [
+                    "python3",
+                    "tools/climb/record-cycle.py",
+                    "--state-dir",
+                    str(state_dir),
+                    "--journal",
+                    str(journal),
+                    "--hypothesis-id",
+                    "H-006",
+                    "--run-id",
+                    "dci-climb-h006-test",
+                    "--run-dir",
+                    str(run_dir),
+                    "--cycle",
+                    "6",
+                ],
+                cwd=REPO_ROOT,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            recovered = yaml.safe_load(hypothesis_path.read_text())["hypotheses"][0]
+            self.assertEqual(len(recovered["results"]), 1)
+            with (state_dir / "runs.csv").open(newline="") as handle:
+                rows = list(csv.DictReader(handle))
+            row = rows[-1]
+            self.assertEqual(row["hypothesis_id"], "H-006")
+            self.assertEqual(row["local_score"], "4")
+            self.assertEqual(row["immutable_resolution"], "")
+            self.assertEqual(row["repeat_validation"], "")
+            self.assertEqual(row["dirty_checkout_safety"], "")
+            self.assertEqual(row["override_compatibility"], "")
+
     def test_cycle_adapter_shell_scripts_pass_syntax_validation(self) -> None:
         scripts = [
             "tools/climb/train.sh",

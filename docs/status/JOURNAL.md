@@ -54,3 +54,5 @@
 - 17:09 H-006 live request reached DeepSeek but 401 rejected configured key; provider bodies are now redacted. Await credential rotation.
 - 17:10 repeated live preflight confirms the 401 is safely redacted; H-006 remains pending on credential rotation.
 - 17:16 user-requested retry again reached DeepSeek and returned redacted HTTP 401; credential remains invalid.
+- 17:21 H-006 confirmed 4/4; setup-policy acceptance recorded.
+- 17:23 Recorder now recovers hypothesis-specific partial writes; H-006 state is synchronized and fully verified.

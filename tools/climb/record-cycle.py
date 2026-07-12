@@ -12,6 +12,14 @@ from pathlib import Path
 import yaml
 
 
+LEGACY_DIMENSIONS = (
+    "immutable_resolution",
+    "repeat_validation",
+    "dirty_checkout_safety",
+    "override_compatibility",
+)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--state-dir", type=Path, required=True)
@@ -28,6 +36,8 @@ def main() -> None:
     evaluation = json.loads((args.run_dir / "local-eval.json").read_text())
     total = int(evaluation["total"])
     per_task = evaluation["per_task"]
+    if not isinstance(per_task, dict):
+        raise RuntimeError("local-eval.json per_task must be an object")
     verdict = "confirmed 4/4" if total == 4 else f"falsified {total}/4"
     status = "confirmed" if total == 4 else "falsified"
     now = datetime.now().astimezone()
@@ -57,19 +67,32 @@ def main() -> None:
     hypothesis_state = yaml.safe_load(hypotheses_path.read_text())
     hypotheses = hypothesis_state["hypotheses"]
     hypothesis = next(item for item in hypotheses if item["id"] == args.hypothesis_id)
-    hypothesis["status"] = status
-    hypothesis["results"].append(
-        {
-            "session": "2026-07-12-pi-revision",
-            "cycle": args.cycle,
-            "run": args.run_id,
-            "local": total,
-            "local_per_task": per_task,
-            "online": None,
-            "verdict": verdict,
-            "decision_reason": "deterministic local setup-policy acceptance",
-        }
+    existing_result = next(
+        (result for result in hypothesis["results"] if result["run"] == args.run_id),
+        None,
     )
+    if existing_result is not None:
+        if (
+            existing_result.get("local") != total
+            or existing_result.get("local_per_task") != per_task
+        ):
+            raise RuntimeError(
+                f"Existing hypothesis result for {args.run_id} conflicts with local evaluation"
+            )
+    else:
+        hypothesis["status"] = status
+        hypothesis["results"].append(
+            {
+                "session": "2026-07-12-pi-revision",
+                "cycle": args.cycle,
+                "run": args.run_id,
+                "local": total,
+                "local_per_task": per_task,
+                "online": None,
+                "verdict": verdict,
+                "decision_reason": "deterministic local setup-policy acceptance",
+            }
+        )
     hypotheses_path.write_text(
         yaml.safe_dump(hypothesis_state, sort_keys=False, allow_unicode=True)
     )
@@ -84,10 +107,7 @@ def main() -> None:
             "paradigm": hypothesis["parent_paradigm"],
             "pushed_at": timestamp,
             "local_score": total,
-            "immutable_resolution": per_task["immutable_resolution"],
-            "repeat_validation": per_task["repeat_validation"],
-            "dirty_checkout_safety": per_task["dirty_checkout_safety"],
-            "override_compatibility": per_task["override_compatibility"],
+            **{dimension: per_task.get(dimension, "") for dimension in LEGACY_DIMENSIONS},
             "push_decision": "PUSH",
             "decision_reason": "cheap deterministic local acceptance",
             "verdict": verdict,

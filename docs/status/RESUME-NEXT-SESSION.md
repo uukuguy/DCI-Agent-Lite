@@ -1,18 +1,17 @@
 # Recovered Session Checkpoint
 
-> Updated: 2026-07-12 17:16 +0800. **Active H-006 credential-block checkpoint — session remains active, not a final handoff.**
+> Updated: 2026-07-12 17:23 +0800. **Active post-H-006 Knowledge Layer checkpoint — session remains active, not a final handoff.**
 
 ## TL;DR
 
 - Autonomous climb confirmed and committed H-001 through H-005 at 4/4 each: immutable Pi lock, read-only pin review, model-free RPC preflight, run provenance, and pre-run revision warning.
 - The exact Pi default is `8479bd84743e8889f728acb21a62794102db0529`; the independent dirty `pi/` checkout was never modified.
-- The final Journal entry and commit `9a046d7` were newer than the former baton, so this recovery checkpoint supersedes it. H-006 remains the only next action: a cheap live structured-output preflight for the configured judge backend.
+- H-006 is confirmed 4/4 against the real configured DeepSeek backend after using the new `.env` key without the stale inherited process value. The pool is empty, so Knowledge Layer is active.
 - H-006 scope and a test-first inline plan are committed; work proceeds in the clean shared checkout without touching the independent `pi/` repository.
-- The implementation is locally verified: the safe standalone preflight, Make target, documentation, and four-dimension climb adapter are ready for one live configured judge request.
-- The live request reached the selected DeepSeek endpoint but returned HTTP 401. The configured indirect key exists but is rejected by the provider; a new valid credential is required before H-006 can be confirmed.
+- The safe standalone preflight, Make target, documentation, and four-dimension climb adapter are fully verified and H-006 is recorded as cycle 6.
+- The earlier HTTP 401 was caused by a stale exported `DEEPSEEK_API_KEY` overriding the rotated `.env` value; `load_project_env` deliberately uses `override=False`.
 - Shared judge HTTP errors now retain endpoint/status while suppressing provider response bodies, preventing provider-side credential echoes from entering stderr or batch artifacts.
-- A repeat against the actual endpoint confirmed the redacted error path; no API key, request prompt, or provider response body was emitted.
-- A user-requested retry at 17:16 reproduced the same redacted HTTP 401, confirming that the external credential has not yet changed.
+- A real preflight with `env -u DEEPSEEK_API_KEY make check-judge` passed, returning `is_correct: true`; no API key, request prompt, or provider response body was emitted.
 
 ## Committed state
 
@@ -31,7 +30,7 @@
 
 ## Next action
 
-1. After rotating the key named by `DCI_EVAL_JUDGE_API_KEY_ENV`, run `make check-judge`, then `bash tools/climb/cycle.sh H-006` to record the credentialed evidence.
+1. Continue Knowledge Layer with the new H-007 hypothesis: safely expose whether the active judge key came from the process environment or `.env`, preventing stale-key confusion before the preflight spends a request.
 2. Prefer reusing `JudgeConfig`/`judge_answer_sync`; do not introduce a second request-shaping path.
 3. Keep credentials out of artifacts/output, add a Make target and docs, then run the climb cycle and full verification.
 4. If the pool empties after H-006, trigger Knowledge Layer again rather than stopping.
@@ -41,7 +40,7 @@
 - No duplicated authoritative Pi pin, submodule/vendor ownership, destructive dirty-checkout reconciliation, or blocking custom-package runs.
 - Do not treat the unavailable Gemini/OpenCode consult stub as independent evidence.
 - Do not replace `make runtime-example` with the model-free RPC probe; they cover different contracts.
-- Do not treat the local H-006 suite as live backend acceptance; HTTP 401 is a credential failure, not structured-output evidence.
+- Do not change `.env` precedence globally: exported process variables intentionally win. Address the observed confusion with safe provenance reporting rather than silently overriding caller configuration.
 
 ## Boundary and exceptions
 
