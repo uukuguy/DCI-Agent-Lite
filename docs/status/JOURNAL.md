@@ -46,3 +46,4 @@
 - 16:15 context hard pause：H-001..H-005 均 4/4；H-006 judge preflight 为唯一续点。
 - 16:16 live checkpoint 已提交；fresh session 直接从 H-006 RED 继续。[ed600cd]
 - 16:18 handoff 边界已核验：无残留进程，H-006 明确为 pending；临时计划已清理，外部 dirty `pi/` 保持排除，状态与协作记忆可从 `project-state resume` 恢复。
+- 16:18 final handoff baton 已提交，固化 H-006 续点与恢复边界。[9f335ec]
