@@ -21,6 +21,15 @@ from dci.config import load_project_env
 
 
 class JudgeConfigTests(unittest.TestCase):
+    def test_base_url_rejects_embedded_credentials_or_query_data(self) -> None:
+        for base_url in (
+            "https://api-key@example.test/v1",
+            "https://example.test/v1?api_key=exposed-secret",
+            "https://example.test/v1#exposed-secret",
+        ):
+            with self.assertRaisesRegex(ValueError, "must not include credentials"):
+                JudgeConfig(base_url=base_url)
+
     def test_deepseek_config_is_loaded_from_environment(self) -> None:
         environment = {
             "DEEPSEEK_API_KEY": "secret-key",

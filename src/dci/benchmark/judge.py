@@ -8,6 +8,7 @@ import os
 import re
 import urllib.error
 import urllib.request
+import urllib.parse
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -111,6 +112,16 @@ class JudgeConfig:
         thinking = self.thinking.strip().lower()
         if not base_url:
             raise ValueError("Judge base URL must not be empty")
+        parsed_base_url = urllib.parse.urlsplit(base_url)
+        if (
+            parsed_base_url.username
+            or parsed_base_url.password
+            or parsed_base_url.query
+            or parsed_base_url.fragment
+        ):
+            raise ValueError(
+                "Judge base URL must not include credentials, query data, or fragments"
+            )
         if not model:
             raise ValueError("Judge model must not be empty")
         if self.timeout_seconds <= 0:

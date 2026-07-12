@@ -1,35 +1,31 @@
-# Live Session Checkpoint
+# Next-Session Handoff
 
-> Updated: 2026-07-12 19:06 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-12 19:20 +0800 end of session.
 
 ## TL;DR
 
-- H-010 through H-014 are locally confirmed at 4/4. Evaluation-result reuse now keys off a safe SHA-256 fingerprint of public judge configuration, endpoint, and the fully shaped request.
-- Judge failures no longer echo malformed provider response bodies, and successful evaluation artifacts no longer retain raw provider responses.
-- The climb pool is empty again. No process is running; the next action is another Knowledge Layer pass for a grounded cache or transport invariant.
+- H-010 through H-015 are confirmed at 4/4. Judge evaluation caching now uses a complete safe request fingerprint and requires a final verdict; artifacts and errors exclude raw provider and duplicate input data.
+- H-015 rejects URL userinfo, query data, and fragments before they can leak through judge configuration or transport errors.
+- The tracked climb pool is empty, no process is running, and the parent worktree is ready for the final H-015 commit.
 
 ## Where things stand
 
-- H-010 treats legacy result files without `judge_request_fingerprint` as non-reusable once. The digest includes `JudgeConfig.public_dict()` to preserve D-009's strict-schema isolation even for Chat Completions.
-- H-011 removes `response_excerpt` and other provider-derived response fields from terminal invalid-JSON errors, preventing the async batch wrapper from persisting them as failure strings.
-- H-012 removes `raw_response_text` and `raw_response` from successful judge result dictionaries; parsed verdict data, usage, cost, and safe configuration remain.
-- H-013 rejects a matching-fingerprint cache artifact unless it also contains a final boolean `is_correct` verdict.
-- H-014 removes duplicated question, gold-answer, and prediction fields from `eval_result.json`; the run's primary artifacts retain their own source data.
-- Commit `706f3c0` contains the H-010–H-013 implementation, state updates, and fresh verification evidence (82 unit tests, Python compilation, Ruff, touched-Bash syntax, `git diff --check`, and the live model-free Pi RPC probe). Commit `ffbbfd5` adds H-014's duplicate-input minimization; its focused suite, compilation, Ruff, Bash syntax, and diff check passed.
+- Latest verification: 85 unit tests, Python compilation, Ruff, touched-Bash syntax, and `git diff --check` passed. No live judge preflight was needed because request shaping and credentials were unchanged.
+- Prior commits: `706f3c0` (cache/privacy H-010–H-013), `9a41a34` (input minimization H-014), and `c5e4a39` (journal correction).
+- H-015 code, tests, generated climb state, and durable state updates are staged only after this handoff write; commit them together before new research.
 
-## Immediate next action
+## Next steps
 
-1. Commit the pending journal/checkpoint update, then trigger Knowledge Layer only from another grounded cache, artifact, or transport invariant.
-2. If continuing privacy work, first decide whether duplicate `question`/`gold_answer`/`predicted_answer` fields in `eval_result.json` are needed beyond their existing run artifacts; preserve reproducibility if they are.
+1. Commit the clean H-015 configuration-safety cycle and journal its hash.
+2. Start Knowledge Layer only from a new grounded Pi protocol, judge transport, cache, or artifact invariant.
 
 ## Guardrails
 
-- Do not run a live judge preflight merely for these local-only changes; no request-shape or credential behavior changed.
-- Keep judge keys, prompts, and provider bodies out of output and artifacts.
-- Do not touch the independent `pi/` checkout.
+- Never put keys in base URLs; use `DCI_EVAL_JUDGE_API_KEY` or the configured key environment variable.
+- Do not touch or commit the independent `pi/` checkout.
 
 ```bash
+project-state resume
 uv run python -m unittest discover -v
 make check-pi-rpc
-uv run ruff check src/dci/benchmark/judge.py src/dci/benchmark/pi_rpc_runner.py tests/test_judge.py tests/test_climb_tools.py
 ```

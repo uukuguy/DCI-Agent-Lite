@@ -300,3 +300,25 @@ hypotheses:
     online: null
     verdict: confirmed 4/4
     decision_reason: deterministic local setup-policy acceptance
+- id: H-015
+  description: Reject judge base URLs containing embedded credentials, query data,
+    or fragments before they reach safe metadata or errors.
+  parent_paradigm: judge-url-safety
+  expected_lift: +1 configuration-secret-containment dimension
+  cost_h: 0.1
+  ranking: 0.8
+  status: confirmed
+  created_at: '2026-07-12T19:12:00+08:00'
+  results:
+  - session: 2026-07-12-pi-revision
+    cycle: 15
+    run: 20260712-192055-dci-climb-h015
+    local: 4
+    local_per_task:
+      credential_rejection: 1
+      query_rejection: 1
+      fragment_rejection: 1
+      adapter_integration: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local setup-policy acceptance

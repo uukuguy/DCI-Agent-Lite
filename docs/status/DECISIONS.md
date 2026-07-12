@@ -99,3 +99,11 @@
 - Decision: malformed structured-output failures contain only generic diagnostics, and successful judge results persist only parsed verdict fields, usage, cost, and safe configuration.
 - Rationale: the same transport feeds preflight stderr and asynchronous evaluation artifacts; retaining provider bodies in either success or failure paths can expose unnecessary untrusted content.
 - Boundary: retry behavior and parsed verdict observability remain unchanged; raw provider response text and payloads are intentionally unavailable after the call returns.
+
+## D-012 — Reject credential-bearing judge URLs at configuration ingress
+
+- Status: ✅ accepted and implemented decision
+- Decided: 2026-07-12
+- Decision: reject judge base URLs containing userinfo, query data, or fragments before they reach request construction, public configuration, cache identity, or error text.
+- Rationale: these URL components may carry secrets; sanitizing downstream output is weaker than preventing unsafe configuration from entering the transport.
+- Boundary: normal scheme/host/path compatible endpoints remain supported; API keys continue to use configured environment variables.
