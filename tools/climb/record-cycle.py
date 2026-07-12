@@ -74,6 +74,7 @@ def main() -> None:
     acceptance_kind = {
         "AF-050": "executor",
         "AF-060": "package",
+        "AF-070": "package",
     }.get(work_package_id, "setup-policy")
     decision_reason = f"deterministic local {acceptance_kind} acceptance"
     existing_result = next(

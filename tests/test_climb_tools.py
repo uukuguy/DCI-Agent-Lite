@@ -607,6 +607,72 @@ class ClimbToolTests(unittest.TestCase):
             session = json.loads((state_dir / "session-state.json").read_text())
             self.assertEqual(session["next_hypothesis"], "AF-050-H-002")
 
+    def test_record_cycle_classifies_af070_as_package_acceptance(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            state_dir = root / "climb"
+            shutil.copytree(REPO_ROOT / "docs/status/climb", state_dir)
+            hypothesis_path = state_dir / "hypotheses.yaml"
+            state = yaml.safe_load(hypothesis_path.read_text())
+            state["hypotheses"] = [
+                hypothesis
+                for hypothesis in state["hypotheses"]
+                if hypothesis["id"] == "AF-070-H-001"
+            ]
+            hypothesis = state["hypotheses"][0]
+            hypothesis["results"] = []
+            hypothesis["status"] = "in-flight"
+            hypothesis_path.write_text(
+                yaml.safe_dump(state, sort_keys=False, allow_unicode=True)
+            )
+            journal = root / "JOURNAL.md"
+            journal.write_text("# Test Journal\n\n## 2026-07-12\n")
+            run_dir = root / "run-af070-h001"
+            run_dir.mkdir()
+            (run_dir / "local-eval.json").write_text(
+                json.dumps(
+                    {
+                        "total": 4,
+                        "per_task": {
+                            "portable_manifests": 1,
+                            "workflow_kind": 1,
+                            "stable_graph": 1,
+                            "forbidden_fields": 1,
+                        },
+                    }
+                )
+            )
+
+            result = subprocess.run(
+                [
+                    "python3",
+                    "tools/climb/record-cycle.py",
+                    "--state-dir",
+                    str(state_dir),
+                    "--journal",
+                    str(journal),
+                    "--hypothesis-id",
+                    "AF-070-H-001",
+                    "--run-id",
+                    "dci-climb-af070-h001-test",
+                    "--run-dir",
+                    str(run_dir),
+                    "--cycle",
+                    "31",
+                ],
+                cwd=REPO_ROOT,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            recorded = yaml.safe_load(hypothesis_path.read_text())["hypotheses"][0]
+            self.assertEqual(
+                recorded["results"][-1]["decision_reason"],
+                "deterministic local package acceptance",
+            )
+            self.assertIn("package acceptance recorded", journal.read_text())
+
     def test_cycle_adapter_shell_scripts_pass_syntax_validation(self) -> None:
         scripts = [
             "tools/climb/train.sh",
@@ -1076,6 +1142,40 @@ class ClimbToolTests(unittest.TestCase):
                     "manifest_example",
                     "composer_example",
                     "extension_security",
+                },
+            )
+
+    def test_af070_h001_train_runs_controlled_code_manifest_suite(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+
+        self.assertIn("AF-070-H-001", train_script)
+        self.assertIn("ControlledCodePackageTests", train_script)
+
+    def test_af070_h001_eval_reports_four_manifest_dimensions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            env = os.environ.copy()
+            env["DCI_CLIMB_HYPOTHESIS_ID"] = "AF-070-H-001"
+
+            result = subprocess.run(
+                ["bash", "tools/climb/eval-local.sh", str(run_dir)],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            evaluation = json.loads((run_dir / "local-eval.json").read_text())
+            self.assertEqual(evaluation["hypothesis_id"], "AF-070-H-001")
+            self.assertEqual(evaluation["total"], 4)
+            self.assertEqual(
+                set(evaluation["per_task"]),
+                {
+                    "portable_manifests",
+                    "workflow_kind",
+                    "stable_graph",
+                    "forbidden_fields",
                 },
             )
 

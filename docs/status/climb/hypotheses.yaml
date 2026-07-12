@@ -654,17 +654,31 @@ hypotheses:
     decision_reason: deterministic local package acceptance
 - id: AF-070-H-001
   work_package_id: AF-070
-  description: Define the portable controlled-code policy workflow observability evaluation manifests.
+  description: Define the portable controlled-code policy workflow observability evaluation
+    manifests.
   parent_paradigm: controlled-code-package-graph
   expected_lift: +1 second portable graph
   cost_h: 0.5
   ranking: 0.9
-  status: pending
+  status: confirmed
   created_at: '2026-07-12T23:05:00+08:00'
-  results: []
+  results:
+  - session: 2026-07-12-af-070-controlled-code-validation
+    cycle: 31
+    run: 20260712-231802-dci-climb-af070h001
+    local: 4
+    local_per_task:
+      portable_manifests: 1
+      workflow_kind: 1
+      stable_graph: 1
+      forbidden_fields: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-070-H-002
   work_package_id: AF-070
-  description: Prove cross-host parity, deterministic ordering, portable outputs, and every missing boundary.
+  description: Prove cross-host parity, deterministic ordering, portable outputs,
+    and every missing boundary.
   parent_paradigm: controlled-code-graph-boundaries
   expected_lift: +1 cross-host graph confidence
   cost_h: 0.6
@@ -674,7 +688,8 @@ hypotheses:
   results: []
 - id: AF-070-H-003
   work_package_id: AF-070
-  description: Validate every checked-in reference manifest through the TypeScript host without a second composer.
+  description: Validate every checked-in reference manifest through the TypeScript
+    host without a second composer.
   parent_paradigm: typescript-reference-manifest-parity
   expected_lift: +1 cross-language graph confidence
   cost_h: 0.4
@@ -684,7 +699,8 @@ hypotheses:
   results: []
 - id: AF-070-H-004
   work_package_id: AF-070
-  description: Document the second static graph and close AF-070 through full framework gates.
+  description: Document the second static graph and close AF-070 through full framework
+    gates.
   parent_paradigm: controlled-code-framework-acceptance
   expected_lift: +1 AF-070 closure confidence
   cost_h: 0.4

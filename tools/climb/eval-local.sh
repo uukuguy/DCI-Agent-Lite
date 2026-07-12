@@ -201,6 +201,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_package_composition.PackageDocumentationTests.test_guide_contains_a_reference_composer_example"
         override_test="tests.test_package_composition.PackageDocumentationTests.test_guide_defines_extension_and_security_boundaries"
         ;;
+    AF-070-H-001)
+        first_dimension="portable_manifests"
+        second_dimension="workflow_kind"
+        third_dimension="stable_graph"
+        fourth_dimension="forbidden_fields"
+        immutable_test="tests.test_package_composition.ControlledCodePackageTests.test_controlled_code_manifests_are_portable"
+        repeat_test="tests.test_package_composition.ControlledCodePackageTests.test_controlled_code_graph_uses_workflow_kind"
+        dirty_test="tests.test_package_composition.ControlledCodePackageTests.test_controlled_code_graph_has_stable_order"
+        override_test="tests.test_package_composition.ControlledCodePackageTests.test_controlled_code_manifests_exclude_runtime_fields"
+        ;;
     H-001)
         first_dimension="immutable_resolution"
         second_dimension="repeat_validation"

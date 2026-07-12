@@ -217,6 +217,70 @@ class DciReferencePackageTests(unittest.TestCase):
             self.compose_for({"filesystem.read"})
 
 
+class ControlledCodePackageTests(unittest.TestCase):
+    manifest_names = (
+        "controlled-code-policy.json",
+        "code-quality-workflow.json",
+        "code-quality-evaluation.json",
+        "execution-audit-observability.json",
+    )
+
+    def manifests(self) -> list[dict[str, object]]:
+        return [
+            json.loads((MANIFEST_DIR / name).read_text())
+            for name in self.manifest_names
+        ]
+
+    def composition(self):
+        return compose_packages(
+            self.manifests(),
+            host_capabilities={"executor.controlled", "filesystem.read"},
+            host_events={"run.started", "tool.result"},
+            host_artifacts={"text/x-source"},
+        )
+
+    def test_controlled_code_manifests_are_portable(self) -> None:
+        for manifest in self.manifests():
+            with self.subTest(package=manifest["package_id"]):
+                validate_package_manifest(manifest)
+
+    def test_controlled_code_graph_uses_workflow_kind(self) -> None:
+        kinds = {
+            manifest["package_id"]: manifest["kind"]
+            for manifest in self.manifests()
+        }
+
+        self.assertEqual(kinds["workflow.code-quality"], "workflow")
+
+    def test_controlled_code_graph_has_stable_order(self) -> None:
+        self.assertEqual(
+            self.composition().package_ids,
+            (
+                "policy.controlled-code-check",
+                "workflow.code-quality",
+                "evaluation.code-quality",
+                "observability.execution-audit",
+            ),
+        )
+
+    def test_controlled_code_manifests_exclude_runtime_fields(self) -> None:
+        forbidden = {
+            "arguments",
+            "command",
+            "credentials",
+            "environment",
+            "executable_path",
+            "prompt",
+            "provider",
+            "runtime_id",
+            "workspace",
+        }
+
+        for manifest in self.manifests():
+            with self.subTest(package=manifest["package_id"]):
+                self.assertTrue(forbidden.isdisjoint(manifest))
+
+
 class PackageDocumentationTests(unittest.TestCase):
     def guide(self) -> str:
         return PACKAGE_GUIDE.read_text()

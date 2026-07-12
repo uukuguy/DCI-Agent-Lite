@@ -185,3 +185,7 @@
 - 22:54 AF-060-H-005 confirmed 4/4; package acceptance recorded.
 - 23:00 controlled-code second graph design 已提交，为 AF-070 固定静态组合边界。[76e937e]
 - 23:05 AF-060 完成；AF-070 受控代码验证设计、计划与四个 climb hypotheses 接管主线。
+- 23:06 AF-070 治理切换已提交，第二独立 graph 进入受范围门控制的实现。[f2a532a]
+- 23:18 AF-070-H-001 confirmed 4/4; setup-policy acceptance recorded.
+- 23:20 Correction: AF-070-H-001 是 package acceptance；recorder 的新 work-package 分类已修复。
+- 23:21 AF-070-H-001 通过 87 focused tests、compile、Ruff、shell、scope 与 diff。
