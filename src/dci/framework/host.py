@@ -2,6 +2,7 @@
 
 from asterion.runtime.host import (
     AgentRuntimeClient,
+    CancellationSignal,
     RunEvent,
     RunRequest,
     RuntimeManifest,
@@ -10,6 +11,7 @@ from asterion.runtime.host import (
 
 __all__ = (
     "AgentRuntimeClient",
+    "CancellationSignal",
     "RunEvent",
     "RunRequest",
     "RuntimeManifest",

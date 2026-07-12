@@ -1,6 +1,6 @@
 # Recovered Session Checkpoint
 
-> Updated: 2026-07-13 02:50 +0800. **The prior session missed final handoff; this session remains active.**
+> Updated: 2026-07-13 02:54 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-100
 
@@ -9,7 +9,8 @@ Active work package: AF-100
 - AF-095 is complete at `04a1f4a`; Asterion owns the generic framework implementation and DCI remains compatible.
 - AF-100 is the sole active package; scope preflight passes and all dependencies are complete.
 - The approved runner design now makes Python cancellation explicit, matching the existing TypeScript signal boundary.
-- The AF-100 implementation plan is written; execution begins with explicit capability ownership in `AssemblyPlan`.
+- `AF-100-H-001` is confirmed 4/4 at `7f51f2c`; `AssemblyPlan` now records explicit immutable runtime/host capability ownership.
+- Execution continues with the minimal plan-driven runner under `AF-100-H-002`.
 
 ## Durable boundary
 
@@ -20,7 +21,7 @@ Active work package: AF-100
 
 ## Immediate next action
 
-Execute `AF-100-H-001`: add immutable `runtime_capabilities` and `host_capabilities` to resolved plans, then run its focused acceptance cycle.
+Execute `AF-100-H-002`: add the public cancellation/client boundary and minimal runner with immutable normalized results.
 
 ## Guardrails
 
@@ -35,5 +36,5 @@ Execute `AF-100-H-001`: add immutable `runtime_capabilities` and `host_capabilit
 ```bash
 python3 tools/project_scope_check.py
 sed -n '1,260p' docs/superpowers/plans/2026-07-13-application-runner-vertical-slice.md
-uv run python -m unittest tests.test_application_assembly -v
+uv run python -m unittest tests.test_application_runner -v
 ```

@@ -275,3 +275,5 @@
 - 02:36 AF-095-H-003 confirmed 4/4; package acceptance recorded.
 - 02:39 AF-095-H-004 confirmed 4/4; package acceptance recorded.
 - 02:53 AF-100-H-001 confirmed 4/4; package acceptance recorded.
+- 02:54 AssemblyPlan 显式记录 runtime/host capability ownership，为 runner preflight 提供边界。[7f51f2c]
+- 02:57 AF-100-H-002 confirmed 4/4; package acceptance recorded.

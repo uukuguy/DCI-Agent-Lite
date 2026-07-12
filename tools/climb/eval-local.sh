@@ -398,6 +398,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_application_assembly.AssemblyResolverTests.test_capability_ownership_is_immutable"
         override_test="tests.test_application_assembly.AssemblyResolverTests.test_capability_ownership_is_not_inferred_from_names"
         ;;
+    AF-100-H-002)
+        first_dimension="portable_request"
+        second_dimension="runtime_invocation"
+        third_dimension="immutable_events"
+        fourth_dimension="artifact_projection"
+        immutable_test="tests.test_application_runner.ApplicationRunnerTests.test_plan_runtime_capabilities_become_portable_request"
+        repeat_test="tests.test_application_runner.ApplicationRunnerTests.test_explicit_runtime_is_invoked_once"
+        dirty_test="tests.test_application_runner.ApplicationRunnerTests.test_successful_result_is_deeply_immutable"
+        override_test="tests.test_application_runner.ApplicationRunnerTests.test_artifact_events_are_projected_without_provider_output"
+        ;;
     H-001)
         first_dimension="immutable_resolution"
         second_dimension="repeat_validation"

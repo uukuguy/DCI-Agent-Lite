@@ -112,4 +112,16 @@ class AgentRuntimeClient(Protocol):
     @property
     def manifest(self) -> RuntimeManifest: ...
 
-    def run(self, request: RunRequest) -> AsyncIterator[RunEvent]: ...
+    def run(
+        self,
+        request: RunRequest,
+        *,
+        signal: CancellationSignal | None = None,
+    ) -> AsyncIterator[RunEvent]: ...
+
+
+class CancellationSignal(Protocol):
+    """Read-only cancellation state owned by the runtime caller."""
+
+    @property
+    def cancelled(self) -> bool: ...

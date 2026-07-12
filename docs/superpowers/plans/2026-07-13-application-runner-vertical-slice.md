@@ -98,23 +98,23 @@ Commit message: `feat: record application capability ownership`
 - Extends: `AgentRuntimeClient.run(request, *, signal=None)` without changing wire data.
 - Produces: frozen `ApplicationRunResult` and `run_application(...)`.
 
-- [ ] **Step 1: Write RED success and public-contract tests**
+- [x] **Step 1: Write RED success and public-contract tests**
 
 Use an async fixture client that records the `RunRequest` and yields `RunEvent` values. Assert runtime identity, run ID, input, requested runtime capabilities, event order, artifact projection, and frozen nested mappings. Assert Asterion runner source contains no adapter-private imports.
 
-- [ ] **Step 2: Run the RED runner suite**
+- [x] **Step 2: Run the RED runner suite**
 
 Run: `uv run python -m unittest tests.test_application_runner -v`
 
 Expected: import failure for missing `asterion.runner`.
 
-- [ ] **Step 3: Implement the minimal boundary**
+- [x] **Step 3: Implement the minimal boundary**
 
 Preflight the plan, runtime manifest, input, run ID, host services, and pre-cancel state before calling `runtime.run`. Consume the async iterator completely, convert events to mappings, validate with `validate_event_stream`, project `artifact.created` payloads, and recursively freeze mappings/lists before returning.
 
 Wrap protocol, type, and runtime exceptions as content-free `ApplicationRunError`; never return partial events as success.
 
-- [ ] **Step 4: Run focused GREEN and compatibility checks**
+- [x] **Step 4: Run focused GREEN and compatibility checks**
 
 ```bash
 uv run python -m unittest tests.test_application_runner tests.test_python_runtime_host tests.test_application_assembly tests.test_asterion_structure -v
@@ -123,11 +123,11 @@ uv run ruff check src/asterion src/dci/framework tests/test_application_runner.p
 git diff --check
 ```
 
-- [ ] **Step 5: Add and execute AF-100-H-002**
+- [x] **Step 5: Add and execute AF-100-H-002**
 
 Dimensions: `portable_request`, `runtime_invocation`, `immutable_events`, `artifact_projection`.
 
-- [ ] **Step 6: Commit the verified slice**
+- [x] **Step 6: Commit the verified slice**
 
 Commit message: `feat: run resolved Asterion applications`
 
