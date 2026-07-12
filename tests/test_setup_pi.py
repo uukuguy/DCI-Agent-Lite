@@ -151,6 +151,18 @@ class PiSetupTests(unittest.TestCase):
         self.assertIn("40-character", result.stderr)
         self.assertFalse(self.pi_dir.exists())
 
+    def test_repository_docs_use_the_canonical_revision_lock(self) -> None:
+        env_template = (REPO_ROOT / ".env.template").read_text()
+        readme = (REPO_ROOT / "README.md").read_text()
+        setup_doc = (REPO_ROOT / "assets/docs/setup.md").read_text()
+        locked_revision = (REPO_ROOT / "pi-revision.txt").read_text().strip()
+
+        self.assertRegex(locked_revision, r"^[0-9a-f]{40}$")
+        self.assertNotIn("DCI_PI_REVISION=main", env_template)
+        self.assertIn("pi-revision.txt", env_template)
+        self.assertIn('checkout --detach "$(cat pi-revision.txt)"', readme)
+        self.assertIn('checkout --detach "$(cat pi-revision.txt)"', setup_doc)
+
 
 if __name__ == "__main__":
     unittest.main()

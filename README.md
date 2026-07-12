@@ -96,8 +96,9 @@ Quick manual path:
 # 1. Install uv + ripgrep, then sync Python deps
 uv sync
 
-# 2. Clone and build Pi (the path is configured by DCI_PI_DIR in .env.template)
-git clone https://github.com/earendil-works/pi.git pi
+# 2. Clone the verified Pi revision, then build it
+git clone --no-checkout https://github.com/earendil-works/pi.git pi
+git -C pi checkout --detach "$(cat pi-revision.txt)"
 cd pi && npm install && npm run build && cd ..
 
 # 3. Configure API keys (copy template, edit .env, auto-loaded by setup.sh)

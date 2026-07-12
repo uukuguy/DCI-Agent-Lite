@@ -37,12 +37,12 @@ uv sync
 
 ### 3. Get and build customized Pi locally
 
-This repo does not vendor the full npm workspace. The default `.env.template` places the external Pi checkout at `./pi` through `DCI_PI_DIR`.
+This repo does not vendor the full npm workspace. The default `.env.template` places the external Pi checkout at `./pi` through `DCI_PI_DIR`. `pi-revision.txt` is the single tracked source of truth for the verified default commit.
 
 ```bash
-git clone https://github.com/earendil-works/pi.git pi
+git clone --no-checkout https://github.com/earendil-works/pi.git pi
+git -C pi checkout --detach "$(cat pi-revision.txt)"
 cd pi
-git checkout main
 npm install
 npm run build
 cd ..
@@ -53,6 +53,8 @@ Verify the CLI exists:
 ```bash
 node pi/packages/coding-agent/dist/cli.js --version
 ```
+
+`setup.sh` performs the same revision check on every run, even when the CLI is already built. A clean checkout at another revision is moved to the lock; a dirty mismatch fails without resetting, cleaning, stashing, or pulling. To test a deliberate fork revision, set `DCI_PI_REVISION` to a full commit SHA. To change the project default, update `pi-revision.txt` in a reviewed commit and rerun verification.
 
 ### 4. Configure model access
 

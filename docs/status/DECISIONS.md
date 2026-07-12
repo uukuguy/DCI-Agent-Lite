@@ -18,4 +18,14 @@
 - Decision: the parent repository tracks Pi resolution/setup configuration, not files from the Pi repository itself.
 - Implementation: `DCI_PI_DIR` normally points to `./pi`; `./pi-mono` is a legacy fallback/compatibility name; both checkout paths remain ignored by the parent Git repository.
 - Boundary: never include local `pi/` changes in DCI-Agent-Lite commits unless a task explicitly scopes a coordinated Pi change.
-- Open follow-up: replace `DCI_PI_REVISION=main` with a reproducible revision/distribution policy after choosing the exact upstream or fork commit.
+- Resolved follow-up: D-003 defines the reproducible revision policy and pins the verified fork commit.
+
+## D-003 — Pin Pi through one tracked revision lock
+
+- Status: ✅ accepted and implemented decision
+- Decided: 2026-07-12
+- Decision: `pi-revision.txt` is the sole default Pi revision source and contains a full immutable commit; `DCI_PI_REVISION` remains an explicit override.
+- Initial pin: `8479bd84743e8889f728acb21a62794102db0529`, the fork commit used by the verified runtime acceptance run.
+- Rationale: a single lock avoids moving-branch nondeterminism and duplicated configuration truth while preserving mirrors, forks, and deliberate upgrade tests.
+- Safety boundary: setup may switch a clean mismatched checkout but must fail before changing a dirty mismatch; it never resets, cleans, stashes, or pulls the independent repository.
+- Upgrade rule: change the lock in a reviewed commit, run setup-policy regressions plus runtime verification, and record the result before accepting the new baseline.

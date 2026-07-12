@@ -17,7 +17,6 @@
 
 ## Open Problems (theme-level)
 
-- Reproducible version pinning and distribution of the external Pi checkout.
 - Protocol compatibility as the external Pi checkout evolves independently.
 - Structured-output variability across nominally OpenAI-compatible judge backends.
 
