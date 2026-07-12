@@ -21,3 +21,4 @@
 - 08:19 Pi 精确 revision lock 设计完成，避免 moving-main 漂移。[db62f20]
 - 08:23 测试优先实施计划完成，覆盖安全 checkout 与 climb 验证。[d6ae990]
 - 08:27 DCI climb adapter 已建立；research-tree 生成回归通过。[63531e4]
+- 08:29 active climb 恢复边界已 checkpoint，H-001 测试优先继续。[e65da92]

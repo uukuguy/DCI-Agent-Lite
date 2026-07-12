@@ -66,30 +66,9 @@ if [ "$(_node_major)" -lt 20 ] 2>/dev/null; then
     echo "==> Now using Node $(node --version)"
 fi
 
-# 4. Clone and build Pi monorepo if CLI is not present
-PI_DIR="${DCI_PI_DIR:-pi}"
-PI_REPO_URL="${DCI_PI_REPO_URL:-https://github.com/earendil-works/pi.git}"
-PI_REVISION="${DCI_PI_REVISION:-main}"
-PI_CLI="$PI_DIR/packages/coding-agent/dist/cli.js"
-if [ ! -f "$PI_CLI" ]; then
-    if [ ! -d "$PI_DIR" ]; then
-        echo "==> Cloning Pi into $PI_DIR..."
-        git clone "$PI_REPO_URL" "$PI_DIR"
-    fi
-    (
-        cd "$PI_DIR"
-        git checkout "$PI_REVISION"
-        echo "==> Installing Pi dependencies (npm install)..."
-        npm install
-        echo "==> Building Pi (coding-agent and its deps only)..."
-        (cd packages/tui && npm run build)
-        (cd packages/ai && npm run build)
-        (cd packages/agent && npm run build)
-        (cd packages/coding-agent && npm run build)
-    )
-else
-    echo "==> Pi CLI already built, skipping."
-fi
+# 4. Resolve the pinned external Pi revision and build it when needed.
+echo "==> Ensuring pinned Pi checkout..."
+bash scripts/setup_pi.sh
 
 # 5. Download datasets from HuggingFace
 
