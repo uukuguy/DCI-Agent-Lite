@@ -271,3 +271,13 @@
 - Delivery boundary: AF-110 adds explicit exact implementation binding and sequential execution. Secure installed-application binding and the generic `asterion run <assembly>` command are deferred to AF-120 because core cannot safely discover independently owned executable code without a reviewed binding mechanism.
 - Revalidation trigger: add scheduling only for a measured multi-branch execution need; add dynamic discovery only with an explicit distribution and authorization contract.
 - Implemented evidence: AF-110 adds immutable selected manifests, exact implementation bindings, declared output validation, deterministic sequential execution, an independently packaged DCI research implementation, an independent Pi runtime client, and an explicit application composition root. The same DCI implementation runs in two application graphs without Asterion importing DCI or the baseline.
+
+## D-030 — Ship one Asterion wheel and keep DCI as a source baseline
+
+- Status: ✅ accepted decision
+- Decided: 2026-07-13
+- Decision: Asterion is the only buildable Python distribution. Framework core, modular DCI capability code, the DCI application provider, and canonical resources ship in the single `asterion` wheel.
+- Rationale: capability and application boundaries are architectural interfaces, not reasons to force operators to manage several first-party wheels. One product wheel preserves composition while minimizing packaging and installation complexity.
+- Baseline boundary: `src/dci` keeps the verified `.env`, Pi/Judge, CLI, evaluation, and security extensions as a repository-only runnable comparison baseline. It is excluded from every wheel, is not published, and neither imports nor is imported by Asterion.
+- Extension boundary: the versioned installed-provider contract remains for future independently installed third-party applications, but first-party DCI does not require a separate entry-point distribution.
+- Revalidation trigger: split a capability into its own distribution only when an independently versioned external consumer or deployment requirement justifies the additional artifact.

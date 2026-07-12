@@ -129,11 +129,11 @@
 
 - Status: in_progress
 - Parent objective: Asterion Agent Application Framework
-- Scope: define a security-reviewed mechanism for installed applications to supply implementation registries, then expose the generic `asterion run <assembly>` entry point without making Asterion core depend on capability implementations.
+- Scope: ship one self-contained Asterion distribution containing modular capability/application implementations, define a security-reviewed provider boundary for built-in and future external applications, expose the generic `asterion run <assembly>` entry point, and keep `src/dci` as a repository-only runnable baseline excluded from all wheels.
 - Dependencies: AF-110
-- Acceptance: one independently owned application binds exact implementations through the approved distribution contract and runs from the generic entry point without arbitrary dynamic imports, implicit service discovery, or baseline coupling.
-- Design: pending AF-110 acceptance
-- Plan: pending design approval
+- Acceptance: the single Asterion wheel runs its DCI application through exact provider bindings without arbitrary dynamic imports, implicit service discovery, or baseline coupling; canonical resources are included once; `src/dci` remains runnable in-repository and produces no wheel.
+- Design: `docs/superpowers/specs/2026-07-13-installed-application-binding-design.md`
+- Plan: pending revision for the approved single-wheel architecture
 
 ## AF-095 — Asterion framework identity and extraction
 

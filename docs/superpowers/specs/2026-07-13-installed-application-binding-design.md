@@ -1,19 +1,19 @@
 # Installed Application Binding and Generic Entry Point Design
 
-> Status: approved, including independent Asterion/core/capability/application distributions, canonical resource migration, and frozen baseline-owned `dci.framework.*` implementations.
+> Status: approved, including one self-contained Asterion distribution and a repository-only runnable DCI baseline.
 >
 > Active package: AF-120.
 
 ## Goal
 
-Let independently installed applications supply exact Asterion capability
-implementations to a generic `asterion` command without making Asterion core
-depend on DCI, embedding executable module paths in portable manifests, or
-silently importing arbitrary modules.
+Let Asterion bind exact capability implementations to a generic `asterion`
+command without embedding executable module paths in portable manifests or
+silently importing arbitrary modules. The first-party DCI capability and
+application ship inside the single Asterion product distribution; the provider
+contract remains available for future explicitly installed external extensions.
 
-Prove the contract with the independently owned DCI research application while
-leaving `src/dci/benchmark/`, `dci-agent-lite`, and both baseline example scripts
-unchanged.
+Prove the contract with the Asterion-owned DCI research application while
+leaving `src/dci/benchmark/` and its established baseline behavior unchanged.
 
 ## Trust model
 
@@ -117,8 +117,9 @@ service discovery, or service startup.
 
 ## CLI contract
 
-Add an independent `asterion` console script while preserving every existing
-DCI console script.
+Add the `asterion` console script as the sole installed product entry point.
+Repository-only baseline commands remain available through source-oriented
+development wrappers; they are not installed by the Asterion wheel.
 
 The first public commands are:
 
@@ -152,8 +153,8 @@ No provider or runtime starts before steps 1–5 complete.
 
 ## DCI provider
 
-The DCI research capability distribution registers the first
-`asterion.applications` provider under `dci-agent-lite`. Its provider object
+The Asterion distribution registers its built-in DCI application provider under
+`dci-agent-lite`. Its provider object
 binds the checked-in `dci.research-capability@1.0.0` application to:
 
 - `applications/dci-agent-lite/assemblies/dci-research-capability.json`;
@@ -161,57 +162,55 @@ binds the checked-in `dci.research-capability@1.0.0` application to:
 - `dci.research@1.0.0 -> DciLocalResearchImplementation`;
 - compatible runtime ID `pi.reference`.
 
-The provider implementation lives with the DCI capability/application product,
-not in `src/asterion/` and not in `src/dci/benchmark/`. Asterion core must work
-with a synthetic independently installed provider in tests and contain no DCI
-import or hard-coded DCI identity.
+The provider and capability implementation live in explicit modules beneath the
+`asterion` namespace, not in `src/dci/benchmark/`. Generic provider discovery,
+validation, and execution modules must work with a synthetic external provider
+in tests and contain no hard-coded DCI identity. The built-in provider is wired
+at the Asterion distribution boundary rather than imported by generic core code.
 
 ## Distribution and canonical resource layout
 
-AF-120 makes Asterion core, the DCI capability, and the DCI application
-independently buildable Python distributions. No Asterion distribution contains
-`src/dci`.
-
-The Asterion core distribution is rooted at `packages/python/asterion-core/` and
-owns the sole `asterion` Python implementation. The current `src/asterion/`
-files move there without leaving a second implementation.
-
-The capability distribution is rooted at `capabilities/dci-research/`:
+AF-120 produces exactly one buildable Python distribution: `asterion`. It is
+rooted at `packages/python/asterion-core/`, contains only the `asterion` import
+namespace, and is independently installable outside this repository. It
+contains the framework contracts, runtime adapters, generic application binding,
+the modular DCI research capability, the DCI reference application, and their
+canonical resources:
 
 ```text
-capabilities/dci-research/
+packages/python/asterion-core/
   pyproject.toml
-  src/asterion_dci_research/
-    implementation.py
-    manifests/*.json
+  src/asterion/
+    applications/
+      provider.py
+      discovery.py
+      dci_agent_lite/
+        provider.py
+        assemblies/*.json
+    capabilities/
+      dci_research/
+        implementation.py
+        manifests/*.json
 ```
 
-The application distribution is rooted at `applications/dci-agent-lite/`:
-
-```text
-applications/dci-agent-lite/
-  pyproject.toml
-  src/asterion_dci_application/
-    provider.py
-    assemblies/*.json
-```
+Logical modules remain independently testable and communicate through the
+public provider/package contracts, but they do not require separate wheels.
+The former `asterion-dci-research` nested project is folded into this namespace;
+no capability or application wheel is built.
 
 These package-owned resource directories are the sole authoritative copies.
-The current top-level `capabilities/dci-research/manifests/` and
-`applications/dci-agent-lite/assemblies/` files move into them; AF-120 does not
-leave duplicate compatibility JSON documents. Catalog, assembly, tests,
-documentation, and reference-host paths update atomically.
+Catalog, assembly, tests, documentation, and reference-host paths update
+atomically. `importlib.resources.files("asterion")` supplies the installed
+resource root, which is canonicalized before provider validation.
 
-The DCI application distribution depends on the DCI research capability
-distribution and Asterion public contracts. The capability distribution depends
-only on Asterion public contracts. Asterion core has no dependency on either DCI
-distribution or the baseline.
-
-The repository-root `dci` distribution remains the runnable comparison
-baseline. It preserves the already verified Pi/Judge reliability work, `.env`
-configuration extensions, CLI behavior, scripts, evaluation support, and prior
-security hardening. “Baseline” means an independent stable comparison path, not
-a byte-identical upstream checkout.
+`src/dci` is a repository-only runnable comparison baseline. It is excluded
+from every wheel and from Asterion runtime dependencies. It preserves the
+already verified Pi/Judge reliability work, `.env` configuration extensions,
+CLI behavior, scripts, evaluation support, and security hardening. “Baseline”
+means an independent stable comparison path, not a byte-identical upstream
+checkout. The repository development environment exposes source-oriented
+commands or wrappers for it; installing Asterion does not install `dci` or its
+console scripts.
 
 AF-120 converts `dci.framework.*` from compatibility re-exports into frozen
 baseline-owned implementations so `src/dci/benchmark/` and its established
@@ -219,18 +218,17 @@ imports remain unchanged. The baseline protocol/adapter code no longer follows
 future Asterion implementation changes. Product framework tests/callers use
 `asterion.*`; baseline tests continue to exercise `dci.framework.*` independently.
 The baseline retains no dependency on Asterion and Asterion retains no dependency
-on the baseline. Existing baseline commands (`dci-agent-lite`,
-`dci-run-pi-rpc`, exports, and system-prompt helper) remain runnable.
+on the baseline. Existing baseline modules and workflows remain runnable from
+the repository without turning the baseline into a publishable distribution.
 
 This deliberately creates two independent implementations of the stable wire
 contract: one frozen in the comparison baseline and one evolving in Asterion.
 Shared JSON fixtures may test conformance, but Python object identity and
 implementation sharing are no longer acceptance requirements.
 
-Resource lookup uses `importlib.resources` from the owning installed package,
-then canonicalizes the resulting filesystem path for the provider contract.
-Wheel/sdist tests must prove that manifests and assemblies are included exactly
-once and remain usable outside the source checkout.
+Wheel/sdist tests must prove that the Asterion-owned manifests and assemblies
+are included exactly once and remain usable outside the source checkout, and
+that no `dci` package is present.
 
 ## Failures and privacy
 
@@ -280,10 +278,10 @@ Tests must prove:
 - a synthetic independent provider runs without any DCI import in Asterion;
 - the DCI installed provider executes the research application through the
   generic command and AF-110 composed runner;
-- application provider and capability implementation can be packaged and
-  imported independently from Asterion core;
-- independent capability/application wheels contain their canonical manifests
-  and assemblies exactly once and work outside the repository checkout;
+- application provider and capability implementation remain separate logical
+  modules inside the Asterion namespace and use public contracts;
+- the single Asterion wheel contains canonical manifests and assemblies exactly
+  once and works outside the repository checkout;
 - no duplicate compatibility JSON copies remain at the former resource paths;
 - provider/import/runtime/input/tool sentinels never appear in public errors or
   normalized CLI output;
@@ -292,8 +290,8 @@ Tests must prove:
   reliability extensions;
 - `dci.framework.*` modules contain frozen baseline-owned behavior rather than
   Asterion re-exports, and no baseline module imports Asterion;
-- the Asterion core wheel contains no `dci` package and the baseline wheel
-  contains no `asterion` package;
+- Asterion is the only buildable wheel and contains no `dci` package;
+- the repository root and `src/dci` do not produce a baseline wheel;
 - all Python, TypeScript, Rust, compilation, lint, shell, scope, and diff gates
   pass.
 
