@@ -252,6 +252,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_package_catalog.PackageDiscoveryTests.test_discovered_manifests_pass_canonical_validation"
         override_test="tests.test_package_catalog.PackageDiscoveryTests.test_discovery_ignores_non_json_and_nested_files"
         ;;
+    AF-080-H-002)
+        first_dimension="root_boundary"
+        second_dimension="document_boundary"
+        third_dimension="symlink_boundary"
+        fourth_dimension="duplicate_identity"
+        immutable_test="tests.test_package_catalog.PackageCatalogBoundaryTests.test_invalid_symlink_and_duplicate_roots_are_rejected"
+        repeat_test="tests.test_package_catalog.PackageCatalogBoundaryTests.test_invalid_documents_fail_with_content_free_errors"
+        dirty_test="tests.test_package_catalog.PackageCatalogBoundaryTests.test_symlink_manifest_files_are_rejected"
+        override_test="tests.test_package_catalog.PackageCatalogBoundaryTests.test_duplicate_exact_identity_is_rejected"
+        ;;
     H-001)
         first_dimension="immutable_resolution"
         second_dimension="repeat_validation"

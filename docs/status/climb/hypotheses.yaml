@@ -775,9 +775,21 @@ hypotheses:
   expected_lift: +1 filesystem trust boundary
   cost_h: 0.7
   ranking: 0.8
-  status: pending
+  status: confirmed
   created_at: '2026-07-13T00:10:00+08:00'
-  results: []
+  results:
+  - session: 2026-07-13-af-080-local-package-catalog
+    cycle: 36
+    run: 20260713-011934-dci-climb-af080h002
+    local: 4
+    local_per_task:
+      root_boundary: 1
+      document_boundary: 1
+      symlink_boundary: 1
+      duplicate_identity: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-080-H-003
   work_package_id: AF-080
   description: Select exact fresh manifests and compose both checked-in reference

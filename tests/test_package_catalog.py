@@ -4,8 +4,13 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from dci.framework.package_catalog import PackageRef, discover_packages
+from dci.framework.package_catalog import (
+    PackageCatalogError,
+    PackageRef,
+    discover_packages,
+)
 from dci.framework.package_protocol import validate_package_manifest
 
 
@@ -99,6 +104,94 @@ class PackageDiscoveryTests(unittest.TestCase):
                 tuple(entry.ref for entry in catalog.entries),
                 (PackageRef("catalog.direct", "1.0.0"),),
             )
+
+
+class PackageCatalogBoundaryTests(unittest.TestCase):
+    def manifest(self, package_id: str) -> dict[str, object]:
+        return PackageDiscoveryTests().manifest(package_id)
+
+    def test_invalid_symlink_and_duplicate_roots_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            parent = Path(temp_dir)
+            directory = parent / "catalog"
+            directory.mkdir()
+            file_root = parent / "file.json"
+            file_root.write_text("{}")
+            symlink_root = parent / "catalog-link"
+            symlink_root.symlink_to(directory, target_is_directory=True)
+
+            cases = (
+                [parent / "missing"],
+                [file_root],
+                [symlink_root],
+                [directory, directory / "."],
+            )
+            for roots in cases:
+                with self.subTest(roots=roots), self.assertRaises(
+                    PackageCatalogError
+                ):
+                    discover_packages(roots)
+
+    def test_invalid_documents_fail_with_content_free_errors(self) -> None:
+        sentinel = "SECRET-DOCUMENT-CONTENT"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            cases = (
+                ("malformed.json", f"{{{sentinel}"),
+                ("array.json", "[]"),
+                ("invalid.json", json.dumps({"protocol": sentinel})),
+            )
+            for filename, contents in cases:
+                path = root / filename
+                path.write_text(contents)
+                with self.subTest(filename=filename):
+                    with self.assertRaises(PackageCatalogError) as raised:
+                        discover_packages([root])
+                    self.assertNotIn(sentinel, str(raised.exception))
+                path.unlink()
+
+            unreadable = root / "unreadable.json"
+            unreadable.write_text("{}")
+            original_read_text = Path.read_text
+
+            def fail_target(path: Path, *args, **kwargs):
+                if path.resolve() == unreadable.resolve():
+                    raise OSError(sentinel)
+                return original_read_text(path, *args, **kwargs)
+
+            with patch.object(Path, "read_text", fail_target), self.assertRaises(
+                PackageCatalogError
+            ) as raised:
+                discover_packages([root])
+            self.assertNotIn(sentinel, str(raised.exception))
+
+    def test_symlink_manifest_files_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            parent = Path(temp_dir)
+            root = parent / "catalog"
+            root.mkdir()
+            target = parent / "target.json"
+            target.write_text(json.dumps(self.manifest("catalog.symlink")))
+            (root / "package.json").symlink_to(target)
+
+            with self.assertRaises(PackageCatalogError):
+                discover_packages([root])
+
+    def test_duplicate_exact_identity_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            parent = Path(temp_dir)
+            first = parent / "first"
+            second = parent / "second"
+            first.mkdir()
+            second.mkdir()
+            contents = json.dumps(self.manifest("catalog.duplicate"))
+            (first / "one.json").write_text(contents)
+            (second / "two.json").write_text(contents)
+
+            with self.assertRaisesRegex(
+                PackageCatalogError, "duplicate package identity"
+            ):
+                discover_packages([first, second])
 
 
 if __name__ == "__main__":

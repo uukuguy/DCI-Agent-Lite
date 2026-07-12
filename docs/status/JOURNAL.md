@@ -205,9 +205,13 @@
 - 00:11 AF-080 治理切换已提交，local catalog 进入显式 scope/trust 控制。[37cd9fb]
 - 01:16 AF-080-H-001 confirmed 4/4; package acceptance recorded.
 - 01:17 AF-080-H-001 通过 78 focused tests、compile、Ruff、shell、scope 与 diff。
+- 01:18 deterministic local discovery 已提交，filesystem/identity hardening 可继续。[219acd8]
+- 01:19 AF-080-H-002 confirmed 4/4; package acceptance recorded.
+- 01:20 AF-080-H-002 通过 84 focused tests、compile、Ruff、shell、scope 与 diff。
 - 23:22 AF-070-H-002 confirmed 4/4; package acceptance recorded.
 - 23:25 AF-070-H-003 confirmed 4/4; package acceptance recorded.
 - 23:28 AF-070-H-004 confirmed 4/4; package acceptance recorded.
 
 ## 2026-07-13
 - 01:16 AF-080-H-001 confirmed 4/4; package acceptance recorded.
+- 01:19 AF-080-H-002 confirmed 4/4; package acceptance recorded.

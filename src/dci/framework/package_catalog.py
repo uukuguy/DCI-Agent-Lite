@@ -7,7 +7,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
-from dci.framework.package_protocol import validate_package_manifest
+from dci.framework.package_protocol import PackageProtocolError, validate_package_manifest
 
 
 class PackageCatalogError(ValueError):
@@ -35,26 +35,71 @@ class PackageCatalog:
 def discover_packages(roots: Iterable[Path]) -> PackageCatalog:
     """Discover validated direct JSON children under explicit local roots."""
 
-    canonical_roots = sorted(Path(root).resolve(strict=True) for root in roots)
+    canonical_roots = _canonicalize_roots(roots)
     entries: list[CatalogEntry] = []
+    identities: set[PackageRef] = set()
     for root in canonical_roots:
-        for source in sorted(root.iterdir()):
-            if source.suffix != ".json" or not source.is_file():
+        try:
+            children = sorted(root.iterdir())
+        except OSError as error:
+            raise PackageCatalogError(f"catalog root is invalid: {root}") from error
+        for source in children:
+            if source.suffix != ".json":
                 continue
-            manifest = json.loads(source.read_text())
+            if source.is_symlink():
+                raise PackageCatalogError(f"package document is a symlink: {source}")
+            if not source.is_file():
+                continue
+            try:
+                manifest = json.loads(source.read_text())
+            except (OSError, json.JSONDecodeError) as error:
+                raise PackageCatalogError(
+                    f"package document is invalid: {source}"
+                ) from error
             if not isinstance(manifest, dict):
-                raise PackageCatalogError("package document must be an object")
-            validate_package_manifest(manifest)
+                raise PackageCatalogError(f"package document is invalid: {source}")
+            try:
+                validate_package_manifest(manifest)
+            except PackageProtocolError as error:
+                raise PackageCatalogError(
+                    f"package document is invalid: {source}"
+                ) from error
             package_id = manifest["package_id"]
             version = manifest["version"]
             assert isinstance(package_id, str) and isinstance(version, str)
+            ref = PackageRef(package_id, version)
+            if ref in identities:
+                raise PackageCatalogError(
+                    f"duplicate package identity: {package_id}@{version}"
+                )
+            identities.add(ref)
             entries.append(
                 CatalogEntry(
-                    ref=PackageRef(package_id, version),
-                    source=source.resolve(),
+                    ref=ref,
+                    source=source.resolve(strict=True),
                     manifest=manifest,
                 )
             )
     return PackageCatalog(
         entries=tuple(sorted(entries, key=lambda entry: (entry.ref, str(entry.source))))
     )
+
+
+def _canonicalize_roots(roots: Iterable[Path]) -> list[Path]:
+    canonical: list[Path] = []
+    seen: set[Path] = set()
+    for value in roots:
+        root = Path(value)
+        if root.is_symlink():
+            raise PackageCatalogError(f"catalog root is a symlink: {root}")
+        try:
+            resolved = root.resolve(strict=True)
+        except OSError as error:
+            raise PackageCatalogError(f"catalog root is invalid: {root}") from error
+        if not resolved.is_dir():
+            raise PackageCatalogError(f"catalog root is invalid: {root}")
+        if resolved in seen:
+            raise PackageCatalogError(f"duplicate catalog root: {resolved}")
+        seen.add(resolved)
+        canonical.append(resolved)
+    return sorted(canonical)
