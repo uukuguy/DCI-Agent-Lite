@@ -107,7 +107,7 @@ class AsterionStructureTests(unittest.TestCase):
             ).is_file()
         )
         package_ids = set()
-        for path in capabilities.glob("*/manifests/*.json"):
+        for path in capabilities.rglob("manifests/*.json"):
             import json
 
             package_ids.add(json.loads(path.read_text())["package_id"])

@@ -32,7 +32,7 @@ from dci.framework.packages import compose_packages
 
 catalog = discover_packages(
     [
-        Path("capabilities/dci-research/manifests"),
+        Path("capabilities/dci-research/src/asterion_dci_research/manifests"),
         Path("capabilities/controlled-code/manifests"),
     ]
 )

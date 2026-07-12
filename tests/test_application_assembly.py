@@ -18,7 +18,7 @@ from dci.framework.package_catalog import PackageRef, discover_packages
 FIXTURES = Path(__file__).parent / "fixtures/assembly/v1"
 ROOT = Path(__file__).resolve().parents[1]
 MANIFESTS = (
-    ROOT / "capabilities/dci-research/manifests",
+    ROOT / "capabilities/dci-research/src/asterion_dci_research/manifests",
     ROOT / "capabilities/controlled-code/manifests",
 )
 ASSEMBLIES = ROOT / "applications/dci-agent-lite/assemblies"

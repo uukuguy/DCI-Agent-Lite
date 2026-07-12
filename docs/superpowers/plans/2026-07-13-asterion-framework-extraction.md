@@ -198,7 +198,7 @@ git commit -m "refactor: extract Asterion composition contracts"
 ### Task 3: Separate capability and application assets
 
 **Files:**
-- Create: `capabilities/dci-research/manifests/*.json`
+- Create: `capabilities/dci-research/src/asterion_dci_research/manifests/*.json`
 - Create: `capabilities/controlled-code/manifests/*.json`
 - Create: `applications/dci-agent-lite/assemblies/*.json`
 - Modify: `src/asterion/packages/catalog.py` only if a named explicit-root helper is required

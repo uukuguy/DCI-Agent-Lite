@@ -14,6 +14,7 @@ resolution-markers = [
 [manifest]
 members = [
     "asterion",
+    "asterion-dci-research",
     "dci",
 ]
 
@@ -214,6 +215,17 @@ wheels = [
 name = "asterion"
 version = "0.1.0"
 source = { editable = "packages/python/asterion-core" }
+
+[[package]]
+name = "asterion-dci-research"
+version = "0.1.0"
+source = { editable = "capabilities/dci-research" }
+dependencies = [
+    { name = "asterion" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "asterion", editable = "packages/python/asterion-core" }]
 
 [[package]]
 name = "async-timeout"
@@ -586,6 +598,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "asterion" },
+    { name = "asterion-dci-research" },
 ]
 
 [package.metadata]
@@ -603,7 +616,10 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "asterion", editable = "packages/python/asterion-core" }]
+dev = [
+    { name = "asterion", editable = "packages/python/asterion-core" },
+    { name = "asterion-dci-research", editable = "capabilities/dci-research" },
+]
 
 [[package]]
 name = "dill"

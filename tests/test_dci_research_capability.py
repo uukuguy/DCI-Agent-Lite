@@ -12,7 +12,7 @@ from asterion_dci_research import DciLocalResearchImplementation
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MANIFEST_PATH = ROOT / "capabilities/dci-research/manifests/dci-research.json"
+MANIFEST_PATH = ROOT / "capabilities/dci-research/src/asterion_dci_research/manifests/dci-research.json"
 
 
 class FixtureRuntime:
@@ -125,7 +125,7 @@ class DciResearchCapabilityTests(unittest.IsolatedAsyncioTestCase):
 class DciResearchCapabilityBoundaryTests(unittest.TestCase):
     def test_asterion_and_capability_sources_do_not_import_dci_benchmark(self) -> None:
         roots = (
-            ROOT / "src/asterion",
+            ROOT / "packages/python/asterion-core/src/asterion",
             ROOT / "capabilities/dci-research/src",
         )
         source = "\n".join(

@@ -22,13 +22,14 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["asterion"]
+dev = ["asterion", "asterion-dci-research"]
 
 [tool.uv.sources]
 asterion = { workspace = true }
+asterion-dci-research = { workspace = true }
 
 [tool.uv.workspace]
-members = ["packages/python/asterion-core"]
+members = ["packages/python/asterion-core", "capabilities/dci-research"]
 
 [project.scripts]
 dci-export-bc-plus-docs = "dci.benchmark.export_bc_plus_docs:main"

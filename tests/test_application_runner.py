@@ -17,7 +17,7 @@ from asterion.runtime.host import RunEvent, RunRequest, RuntimeManifest
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_ROOTS = (
-    ROOT / "capabilities/dci-research/manifests",
+    ROOT / "capabilities/dci-research/src/asterion_dci_research/manifests",
     ROOT / "capabilities/controlled-code/manifests",
 )
 ASSEMBLY = ROOT / "applications/dci-agent-lite/assemblies/dci-local-research.json"
@@ -256,7 +256,10 @@ class ApplicationRunnerTests(unittest.IsolatedAsyncioTestCase):
         )
 
     def test_runner_has_no_adapter_or_process_imports(self) -> None:
-        source = (ROOT / "src/asterion/runner/application.py").read_text()
+        source = (
+            ROOT
+            / "packages/python/asterion-core/src/asterion/runner/application.py"
+        ).read_text()
 
         self.assertNotIn("asterion.adapters", source)
         self.assertNotIn("asterion.runtimes", source)
@@ -378,7 +381,10 @@ class ApplicationRunnerDocumentationTests(unittest.TestCase):
         self.assertIn("does not authorize", guide)
 
     def test_runner_boundary_excludes_control_plane_and_process_ownership(self) -> None:
-        source = (ROOT / "src/asterion/runner/application.py").read_text()
+        source = (
+            ROOT
+            / "packages/python/asterion-core/src/asterion/runner/application.py"
+        ).read_text()
         typescript_sources = "\n".join(
             path.read_text()
             for path in (ROOT / "packages/typescript/asterion-runtime/src").glob("*.ts")
@@ -390,7 +396,12 @@ class ApplicationRunnerDocumentationTests(unittest.TestCase):
         self.assertNotIn("runApplication", typescript_sources)
 
     def test_runner_is_python_owned_without_dci_or_typescript_duplicate(self) -> None:
-        self.assertTrue((ROOT / "src/asterion/runner/application.py").is_file())
+        self.assertTrue(
+            (
+                ROOT
+                / "packages/python/asterion-core/src/asterion/runner/application.py"
+            ).is_file()
+        )
         self.assertFalse((ROOT / "src/dci/framework/runner.py").exists())
         typescript_sources = "\n".join(
             path.read_text()

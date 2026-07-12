@@ -82,5 +82,60 @@ class BuiltDistributionBoundaryTests(unittest.TestCase):
             return archive.read(metadata_path).decode()
 
 
+class DciCapabilityDistributionTests(unittest.TestCase):
+    def test_capability_owns_its_project_and_canonical_manifest_resources(self) -> None:
+        project = ROOT / "capabilities/dci-research"
+        package = project / "src/asterion_dci_research"
+        self.assertTrue((project / "pyproject.toml").is_file())
+        self.assertTrue((package / "manifests").is_dir())
+        self.assertFalse((project / "manifests").exists())
+        self.assertEqual(
+            {path.name for path in (package / "manifests").glob("*.json")},
+            {
+                "dci-evaluation.json",
+                "dci-research.json",
+                "local-corpus-policy.json",
+                "protocol-observability.json",
+            },
+        )
+
+    def test_capability_distribution_depends_only_on_asterion(self) -> None:
+        pyproject = (ROOT / "capabilities/dci-research/pyproject.toml").read_text()
+        self.assertIn('dependencies = ["asterion>=0.1.0"]', pyproject)
+        self.assertNotIn('"dci', pyproject)
+
+    def test_capability_wheel_contains_each_manifest_once(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            subprocess.run(
+                [
+                    "uv",
+                    "build",
+                    "--package",
+                    "asterion-dci-research",
+                    "--out-dir",
+                    temp_dir,
+                ],
+                cwd=ROOT,
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+            wheel = next(Path(temp_dir).glob("*.whl"))
+            with zipfile.ZipFile(wheel) as archive:
+                manifests = [
+                    name for name in archive.namelist() if "/manifests/" in name
+                ]
+                metadata_path = next(
+                    name
+                    for name in archive.namelist()
+                    if name.endswith(".dist-info/METADATA")
+                )
+                metadata = archive.read(metadata_path).decode()
+            self.assertEqual(len(manifests), 4)
+            self.assertEqual(len(manifests), len(set(manifests)))
+            self.assertIn("Requires-Dist: asterion>=0.1.0", metadata)
+            self.assertNotIn("Requires-Dist: dci", metadata)
+
+
 if __name__ == "__main__":
     unittest.main()
