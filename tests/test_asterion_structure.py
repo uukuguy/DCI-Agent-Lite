@@ -12,17 +12,17 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class AsterionStructureTests(unittest.TestCase):
-    def test_runtime_objects_are_authoritative_and_compatible(self) -> None:
+    def test_runtime_objects_are_independent_and_wire_compatible(self) -> None:
         from asterion.runtime.host import AgentRuntimeClient as NewClient
         from asterion.runtime.protocol import PROTOCOL_VERSION as new_version
         from dci.framework.host import AgentRuntimeClient as OldClient
         from dci.framework.protocol import PROTOCOL_VERSION as old_version
 
         self.assertEqual(new_version, "dci.agent-runtime/v1")
-        self.assertIs(OldClient, NewClient)
+        self.assertIsNot(OldClient, NewClient)
         self.assertEqual(old_version, new_version)
 
-    def test_runtime_adapters_are_authoritative_and_compatible(self) -> None:
+    def test_runtime_adapters_are_independent_and_capability_compatible(self) -> None:
         from asterion.adapters.claude_code import (
             ClaudeCodeProtocolAdapter as NewClaudeAdapter,
         )
@@ -34,26 +34,31 @@ class AsterionStructureTests(unittest.TestCase):
         from dci.framework.adapters.pi import PiProtocolAdapter as OldPiAdapter
         from dci.framework.runtimes.claude_code import run_claude_code as old_run
 
-        self.assertIs(OldPiAdapter, NewPiAdapter)
-        self.assertIs(OldClaudeAdapter, NewClaudeAdapter)
-        self.assertIs(old_run, new_run)
+        self.assertIsNot(OldPiAdapter, NewPiAdapter)
+        self.assertIsNot(OldClaudeAdapter, NewClaudeAdapter)
+        self.assertIsNot(old_run, new_run)
+        self.assertEqual(
+            OldPiAdapter.__module__, "dci.framework.adapters.pi"
+        )
+        self.assertEqual(
+            NewPiAdapter.__module__, "asterion.adapters.pi"
+        )
 
     def test_asterion_never_imports_dci(self) -> None:
-        source_root = ROOT / "src/asterion"
+        source_root = ROOT / "packages/python/asterion-core/src/asterion"
         self.assertTrue(source_root.is_dir())
         source = "\n".join(path.read_text() for path in source_root.rglob("*.py"))
         self.assertNotRegex(source, r"(?:from|import)\s+dci(?:\.|\s|$)")
 
-    def test_wheel_contains_framework_baseline_and_capability_packages(self) -> None:
-        pyproject = (ROOT / "pyproject.toml").read_text()
-        for package in (
-            '"src/asterion"',
-            '"src/dci"',
-            '"capabilities/dci-research/src/asterion_dci_research"',
-        ):
-            self.assertIn(package, pyproject)
+    def test_core_and_baseline_have_independent_wheel_roots(self) -> None:
+        baseline = (ROOT / "pyproject.toml").read_text()
+        core = (ROOT / "packages/python/asterion-core/pyproject.toml").read_text()
+        self.assertIn('packages = ["src/dci"]', baseline)
+        self.assertNotIn('"src/asterion"', baseline)
+        self.assertIn('packages = ["src/asterion"]', core)
+        self.assertNotIn('"src/dci"', core)
 
-    def test_package_and_assembly_objects_are_compatibility_aliases(self) -> None:
+    def test_package_and_assembly_objects_are_independent_wire_implementations(self) -> None:
         from asterion.assembly.protocol import AssemblyPlan as NewPlan
         from asterion.packages.catalog import PackageCatalog as NewCatalog
         from asterion.packages.composition import PackageComposition as NewComposition
@@ -63,24 +68,19 @@ class AsterionStructureTests(unittest.TestCase):
         from dci.framework.package_catalog import PackageCatalog as OldCatalog
         from dci.framework.packages import PackageComposition as OldComposition
 
-        self.assertIs(OldPlan, NewPlan)
-        self.assertIs(OldCatalog, NewCatalog)
-        self.assertIs(OldComposition, NewComposition)
-        self.assertIs(OldError, NewError)
+        self.assertIsNot(OldPlan, NewPlan)
+        self.assertIsNot(OldCatalog, NewCatalog)
+        self.assertIsNot(OldComposition, NewComposition)
+        self.assertIsNot(OldError, NewError)
 
-    def test_dci_framework_compatibility_modules_define_no_behavior(self) -> None:
-        import ast
-
-        for path in (ROOT / "src/dci/framework").glob("*.py"):
-            if path.name == "__init__.py":
-                continue
-            tree = ast.parse(path.read_text())
-            definitions = [
-                node
-                for node in tree.body
-                if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
-            ]
-            self.assertEqual(definitions, [], path)
+    def test_dci_framework_is_frozen_baseline_owned_behavior(self) -> None:
+        source = "\n".join(
+            path.read_text() for path in (ROOT / "src/dci/framework").rglob("*.py")
+        )
+        self.assertNotIn("Compatibility exports", source)
+        self.assertNotRegex(source, r"(?:from|import)\s+asterion(?:\.|\s|$)")
+        self.assertIn("class ProtocolError", source)
+        self.assertIn("class PiProtocolAdapter", source)
 
     def test_extracted_wire_protocol_literals_remain_stable(self) -> None:
         from asterion.assembly.protocol import ASSEMBLY_PROTOCOL_VERSION
