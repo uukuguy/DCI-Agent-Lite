@@ -1,22 +1,24 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-12 19:32 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-12 19:43 +0800. **Autonomous loop hard-paused — not a final handoff.**
 
 ## TL;DR
 
-- H-016 is confirmed at 4/4 and committed as `7db038f`: judge base URLs now require an absolute HTTP(S) origin before endpoint construction, safe metadata, cache identity, or transport setup.
-- The H-016 cycle ran its complete local acceptance path and regenerated the tracked climb state; the pool is empty again.
-- The next grounded direction is H-017: prevent automatic judge redirects from forwarding evaluated input or authorization headers beyond the configured origin.
+- H-016 through H-019 are confirmed at 4/4. The judge now confines configured URLs to HTTP(S) origins, rejects redirects, and disables official Responses storage by default; Pi runs verify idle state after `agent_settled`.
+- Recent commits: `7db038f` (URL origins), `91c0cfc` (redirect containment), `59d39f8` (official Responses storage), and `fd43fcc` (Pi idle postcondition).
+- The climb pool is empty and has reached a legitimate hard pause: no additional independent Pi/judge invariant is grounded by current local or upstream evidence.
 
 ## Where things stand
 
-- Fresh verification: 87 unit tests, Python compilation, Ruff on touched Python files, touched-Bash syntax, `git diff --check`, and `make check-pi-rpc` passed.
-- No live judge preflight ran: H-016 only validates configuration ingress and leaves request shape, credentials, and endpoint selection unchanged.
-- The parent worktree is clean after `7db038f`; the independent dirty `pi/` checkout remains deliberately excluded.
+- Latest verification: 96 unit tests, Python compilation, Ruff on touched Python files, touched-Bash syntax, `git diff --check`, and `make check-pi-rpc` passed.
+- No live judge preflight or runtime-example ran: H-016–H-018 did not exercise credentials, and H-019's new post-settlement command requires a provider-backed agent run to validate end-to-end.
+- Parent worktree was clean after `fd43fcc`; the independent dirty `pi/` checkout remains deliberately excluded.
 
-## Next step
+## Resume conditions
 
-1. Run the Knowledge Layer for H-017, add a failing redirect-containment transport test, then implement the smallest compatible no-redirect policy.
+1. A new Pi RPC protocol observation or upgrade failure.
+2. A judge-provider transport or structured-output failure.
+3. An explicit requirement to persist the validated settlement snapshot in artifacts.
 
 ## Guardrails
 
@@ -25,7 +27,6 @@
 - Do not touch or commit the independent `pi/` checkout.
 
 ```bash
-uv run python -m unittest tests.test_judge -v
 uv run python -m unittest discover -v
 make check-pi-rpc
 ```

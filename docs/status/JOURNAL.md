@@ -95,6 +95,8 @@
 - 19:36 Knowledge Layer promoted H-018: official Responses storage opt-out with compatible payload preservation.
 - 19:39 H-018 official Responses storage opt-out committed after full local verification. [59d39f8]
 - 19:39 Knowledge Layer promoted H-019: verify idle state after Pi agent_settled.
+- 19:43 H-019 idle postcondition committed after full local verification. [fd43fcc]
+- 19:43 Climb hard pause: immediate Pi/judge invariants are exhausted; artifact-schema expansion deferred.
 - 19:35 H-017 confirmed 4/4; setup-policy acceptance recorded.
 - 19:38 H-018 confirmed 4/4; setup-policy acceptance recorded.
 - 19:42 H-019 confirmed 4/4; setup-policy acceptance recorded.

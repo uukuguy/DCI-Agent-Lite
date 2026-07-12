@@ -5,11 +5,11 @@
 
 ## In-flight / session state
 
-- Phase: implementation
+- Phase: hard-pause
 - Last cycle: 19
 - Next hypothesis: None
 - In flight: none
-- Next action: Trigger Knowledge Layer.
+- Next action: Hard pause: await a new grounded Pi, judge, or artifact invariant.
 
 ## Active hypotheses
 

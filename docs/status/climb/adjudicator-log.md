@@ -68,3 +68,9 @@ Append-only decision-gate record.
 - Multi-AI adapter: Gemini and OpenCode remain unavailable; the local stub returned PUSH and is not independent evidence.
 - Ranked candidate: H-019 RPC settlement postcondition (rank 0.88).
 - Decision: after an `agent_settled` event only, issue a bounded correlated `get_state` probe and reject streaming, compaction, or queued messages without weakening the legacy `agent_end` fallback.
+
+## 2026-07-12 Knowledge Layer after H-019
+
+- Local review: validated settlement state is available during a run, but persisting it would expand artifacts rather than close an unverified runtime, protocol, or judge-transport invariant.
+- Ruled out: proxy policy needs an explicit deployment trust decision; broader Pi concurrency handling does not apply while DCI issues one lifecycle-changing prompt at a time; no additional compatible judge request field is independently justified.
+- Decision: hard-pause the autonomous loop. Resume only with a new Pi protocol observation, a judge-provider transport failure, or an explicit artifact-provenance requirement.
