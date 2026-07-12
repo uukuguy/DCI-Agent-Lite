@@ -293,3 +293,4 @@
 - 03:53 AF-100 完成并原子激活 AF-110；AF-120 接管安全应用绑定与通用 CLI。
 - 03:53 AF-110 治理切换已提交，scope preflight 确认唯一 active package。[b401140]
 - 03:56 AssemblyPlan 保留确定顺序的深度不可变 manifests，为 package executor 提供声明边界。[fc5ab82]
+- 04:00 exact implementation binding、不可变 invocation/result 与声明输出校验已提交。[a679e0f]
