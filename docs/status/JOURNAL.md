@@ -44,3 +44,4 @@
 - 16:13 H-005 non-blocking revision warning 已提交并推进 H-006。[b5b29b8]
 - 16:11 H-005 confirmed 4/4; setup-policy acceptance recorded.
 - 16:15 context hard pause：H-001..H-005 均 4/4；H-006 judge preflight 为唯一续点。
+- 16:16 live checkpoint 已提交；fresh session 直接从 H-006 RED 继续。[ed600cd]

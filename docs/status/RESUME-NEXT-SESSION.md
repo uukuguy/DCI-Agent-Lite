@@ -10,7 +10,7 @@
 
 ## Committed state
 
-- Branch: `main`, 16 commits ahead of `origin/main` before the final checkpoint commit; nothing has been pushed.
+- Branch: `main`, 18 commits ahead of `origin/main` after the checkpoint journal commit; nothing has been pushed.
 - Latest feature commit: `b5b29b8 feat: warn on Pi revision drift before RPC runs`.
 - Key earlier commits: `09d677d` run provenance, `e53822f` RPC probe, `862a51e` read-only pin check, `27a68a6` immutable setup lock.
 - `docs/status/climb/research-tree.md` contains five confirmed runs and H-006 pending.
