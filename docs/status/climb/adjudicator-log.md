@@ -34,3 +34,12 @@ Append-only decision-gate record.
 - Local evidence: the current generic Responses request relies on prompt-directed JSON and parser retries; no strict schema request shape exists.
 - Ranked pool: H-009 opt-in Responses strict schema (rank 0.60).
 - Decision: add an explicit default-off flag restricted to Responses and include it in cached evaluation identity.
+
+## 2026-07-12 Knowledge Layer after H-015
+
+- Local evidence: `JudgeConfig` accepts `file:`, `ftp:`, `mailto:`, relative, and hostless URLs, then exposes their derived endpoints through safe metadata and transport errors.
+- External references: Python documents that `urlsplit()` does not validate inputs and that `urllib.request` installs file and FTP handlers by default; OpenAI documents that Responses are retained for 30 days unless storage is disabled.
+- Multi-AI adapter: Gemini and OpenCode remain unavailable; the local stub returned PUSH and is not independent evidence.
+- Ranked candidate: H-016 absolute HTTP(S) judge-origin validation (rank 0.95).
+- Held for the next Knowledge Layer: reject automatic judge redirects (H-017 candidate) and opt out of official Responses retention without changing generic-compatible request shapes (H-018 candidate).
+- Decision: advance H-016 first because it removes already-proven unsupported URL schemes before an authorization header or evaluated input can reach `urllib` handlers.

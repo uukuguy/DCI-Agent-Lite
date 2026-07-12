@@ -107,3 +107,12 @@
 - Decision: reject judge base URLs containing userinfo, query data, or fragments before they reach request construction, public configuration, cache identity, or error text.
 - Rationale: these URL components may carry secrets; sanitizing downstream output is weaker than preventing unsafe configuration from entering the transport.
 - Boundary: normal scheme/host/path compatible endpoints remain supported; API keys continue to use configured environment variables.
+
+## D-013 — Require absolute HTTP(S) judge origins
+
+- Status: ✅ accepted and implemented decision
+- Decided: 2026-07-12
+- Decision: reject judge base URLs unless they have an `http` or `https` scheme and a host, before endpoint construction, safe configuration, cache identity, or transport setup.
+- Evidence: `urlsplit()` accepts unsupported and relative URL forms, while `urllib.request` installs file and FTP handlers by default; H-016's focused tests prove those forms are rejected and normal remote/local HTTP(S) endpoints retain their request paths.
+- Rationale: URL parsing alone is not transport validation. A configured judge should never route the authorization header or evaluated input to a non-HTTP handler, a relative path, or an empty authority.
+- Boundary: this does not change support for HTTPS hosts, explicitly configured local HTTP judges, path prefixes such as `/v1`, or H-015's credential/query/fragment rejection.

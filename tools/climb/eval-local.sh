@@ -180,6 +180,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_judge.JudgeConfigTests.test_base_url_rejects_embedded_credentials_or_query_data"
         override_test="tests.test_climb_tools.ClimbToolTests.test_cycle_adapter_shell_scripts_pass_syntax_validation"
         ;;
+    H-016)
+        first_dimension="origin_rejection"
+        second_dimension="existing_url_safety"
+        third_dimension="compatible_http_origins"
+        fourth_dimension="adapter_integration"
+        immutable_test="tests.test_judge.JudgeConfigTests.test_base_url_requires_an_absolute_http_origin"
+        repeat_test="tests.test_judge.JudgeConfigTests.test_base_url_rejects_embedded_credentials_or_query_data"
+        dirty_test="tests.test_judge.JudgeConfigTests.test_base_url_requires_an_absolute_http_origin"
+        override_test="tests.test_climb_tools.ClimbToolTests.test_h016_train_checks_judge_origin_validation"
+        ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2
         exit 2

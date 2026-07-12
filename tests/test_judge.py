@@ -30,6 +30,28 @@ class JudgeConfigTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "must not include credentials"):
                 JudgeConfig(base_url=base_url)
 
+    def test_base_url_requires_an_absolute_http_origin(self) -> None:
+        for base_url in (
+            "file:///tmp/judge",
+            "ftp://example.test/v1",
+            "mailto:judge@example.test",
+            "/v1",
+            "https:///v1",
+            "http://",
+        ):
+            with self.subTest(base_url=base_url):
+                with self.assertRaisesRegex(ValueError, "absolute HTTP\\(S\\) URL"):
+                    JudgeConfig(base_url=base_url)
+
+        self.assertEqual(
+            JudgeConfig(base_url="https://judge.example.test/v1").endpoint,
+            "https://judge.example.test/v1/responses",
+        )
+        self.assertEqual(
+            JudgeConfig(base_url="http://127.0.0.1:8000/v1").endpoint,
+            "http://127.0.0.1:8000/v1/responses",
+        )
+
     def test_deepseek_config_is_loaded_from_environment(self) -> None:
         environment = {
             "DEEPSEEK_API_KEY": "secret-key",

@@ -12,7 +12,7 @@
 - External runtime: Pi is resolved through `DCI_PI_DIR`, preferring `./pi` with a legacy `./pi-mono` fallback.
 - Corpus interaction: the agent searches local raw corpora directly with terminal tools; there is no required embedding index or retrieval service.
 - Evaluation: a shared judge transport supports OpenAI Responses and compatible Chat Completions backends; `make check-judge` sends one trivial request through that same path, `make check-judge-config` exposes its effective safe configuration without a request, and Responses can opt into strict verdict schema output. Result reuse requires a safe full-request fingerprint and a completed boolean verdict; persisted results exclude raw provider responses and duplicated evaluated inputs.
-- Configuration/artifacts: repository-root `.env` controls agent, Pi, and judge settings; judge base URLs reject embedded credentials, query data, and fragments before they can enter safe metadata or errors; run outputs under `outputs/` record the actual Pi commit, dirty state, and lock match.
+- Configuration/artifacts: repository-root `.env` controls agent, Pi, and judge settings; judge base URLs must be absolute HTTP(S) origins and reject embedded credentials, query data, and fragments before they can enter safe metadata or errors; run outputs under `outputs/` record the actual Pi commit, dirty state, and lock match.
 - Autonomous research: tracked climb state under `docs/status/climb/` ranks dependency/runtime hypotheses; `research-tree.md` is the resume-load summary and `tools/climb/` provides deterministic synchronization.
 
 ## Open Problems (theme-level)

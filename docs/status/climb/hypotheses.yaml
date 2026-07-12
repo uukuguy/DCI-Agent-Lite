@@ -322,3 +322,25 @@ hypotheses:
     online: null
     verdict: confirmed 4/4
     decision_reason: deterministic local setup-policy acceptance
+- id: H-016
+  description: Require each judge base URL to be an absolute HTTP(S) origin before
+    endpoint construction, metadata, or cache identity can use it.
+  parent_paradigm: judge-url-origin-validation
+  expected_lift: +1 judge transport origin-containment dimension
+  cost_h: 0.1
+  ranking: 0.95
+  status: confirmed
+  created_at: '2026-07-12T19:28:00+08:00'
+  results:
+  - session: 2026-07-12-pi-revision
+    cycle: 16
+    run: 20260712-193042-dci-climb-h016
+    local: 4
+    local_per_task:
+      origin_rejection: 1
+      existing_url_safety: 1
+      compatible_http_origins: 1
+      adapter_integration: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local setup-policy acceptance

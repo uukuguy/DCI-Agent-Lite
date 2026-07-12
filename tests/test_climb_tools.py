@@ -608,6 +608,12 @@ class ClimbToolTests(unittest.TestCase):
         self.assertIn("H-014", train_script)
         self.assertIn("tests.test_judge", train_script)
 
+    def test_h016_train_checks_judge_origin_validation(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+
+        self.assertIn("H-016", train_script)
+        self.assertIn("tests.test_judge", train_script)
+
 
 if __name__ == "__main__":
     unittest.main()

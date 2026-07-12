@@ -131,7 +131,8 @@ Common variables:
 - `DCI_PROVIDER` and `DCI_MODEL` select the agent used by environment-driven example scripts.
 - `DCI_EVAL_JUDGE_BASE_URL`, `DCI_EVAL_JUDGE_API`, `DCI_EVAL_JUDGE_MODEL`, and
   `DCI_EVAL_JUDGE_API_KEY_ENV` select the eval judge backend. See `.env.template` for DeepSeek,
-  OpenAI, and local-compatible examples.
+  OpenAI, and local-compatible examples. The base URL must be an absolute HTTP(S) origin without
+  credentials, query data, or a fragment.
 
 Before a costly batch evaluation, run `make check-judge` to make one small request through the
 configured judge transport and verify that it returns the required structured verdict. The command

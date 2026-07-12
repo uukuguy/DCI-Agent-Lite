@@ -85,3 +85,5 @@
 - 18:54 H-013 confirmed 4/4; setup-policy acceptance recorded.
 - 19:06 H-014 confirmed 4/4; setup-policy acceptance recorded.
 - 19:20 H-015 confirmed 4/4; setup-policy acceptance recorded.
+- 19:28 Knowledge Layer grounded H-016 absolute HTTP(S) judge-origin validation; redirect and Responses-retention candidates queued.
+- 19:30 H-016 confirmed 4/4; setup-policy acceptance recorded.

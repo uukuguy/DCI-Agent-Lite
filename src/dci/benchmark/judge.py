@@ -113,6 +113,17 @@ class JudgeConfig:
         if not base_url:
             raise ValueError("Judge base URL must not be empty")
         parsed_base_url = urllib.parse.urlsplit(base_url)
+        try:
+            parsed_base_url.port
+        except ValueError as exc:
+            raise ValueError(
+                "Judge base URL must be an absolute HTTP(S) URL with a host"
+            ) from exc
+        if (
+            parsed_base_url.scheme not in {"http", "https"}
+            or parsed_base_url.hostname is None
+        ):
+            raise ValueError("Judge base URL must be an absolute HTTP(S) URL with a host")
         if (
             parsed_base_url.username
             or parsed_base_url.password
