@@ -44,9 +44,14 @@ class AsterionStructureTests(unittest.TestCase):
         source = "\n".join(path.read_text() for path in source_root.rglob("*.py"))
         self.assertNotRegex(source, r"(?:from|import)\s+dci(?:\.|\s|$)")
 
-    def test_wheel_contains_both_transition_packages(self) -> None:
+    def test_wheel_contains_framework_baseline_and_capability_packages(self) -> None:
         pyproject = (ROOT / "pyproject.toml").read_text()
-        self.assertIn('packages = ["src/asterion", "src/dci"]', pyproject)
+        for package in (
+            '"src/asterion"',
+            '"src/dci"',
+            '"capabilities/dci-research/src/asterion_dci_research"',
+        ):
+            self.assertIn(package, pyproject)
 
     def test_package_and_assembly_objects_are_compatibility_aliases(self) -> None:
         from asterion.assembly.protocol import AssemblyPlan as NewPlan

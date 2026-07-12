@@ -1,0 +1,141 @@
+from __future__ import annotations
+
+import json
+import unittest
+from collections.abc import AsyncIterator
+from pathlib import Path
+
+from asterion.packages.catalog import PackageRef
+from asterion.packages.execution import PackageExecutionError, PackageInvocation
+from asterion.runtime.host import RunEvent, RunRequest, RuntimeManifest
+from asterion_dci_research import DciLocalResearchImplementation
+
+
+ROOT = Path(__file__).resolve().parents[1]
+MANIFEST_PATH = ROOT / "capabilities/dci-research/manifests/dci-research.json"
+
+
+class FixtureRuntime:
+    def __init__(self, runtime_id: str = "pi.reference") -> None:
+        self.manifest = RuntimeManifest(
+            runtime_id=runtime_id,
+            capabilities=("filesystem.read", "shell"),
+        )
+        self.requests: list[RunRequest] = []
+        self.signals: list[object | None] = []
+
+    async def run(
+        self,
+        request: RunRequest,
+        *,
+        signal: object | None = None,
+    ) -> AsyncIterator[RunEvent]:
+        self.requests.append(request)
+        self.signals.append(signal)
+        yield RunEvent(request.run_id, 1, "run.started", {"capabilities": []})
+        yield RunEvent(
+            request.run_id,
+            2,
+            "artifact.created",
+            {
+                "artifact": {
+                    "artifact_id": "answer",
+                    "kind": "answer",
+                    "media_type": "text/plain",
+                    "uri": "final.txt",
+                }
+            },
+        )
+        yield RunEvent(request.run_id, 3, "run.completed", {"status": "completed"})
+
+
+class FailingRuntime(FixtureRuntime):
+    async def run(
+        self,
+        request: RunRequest,
+        *,
+        signal: object | None = None,
+    ) -> AsyncIterator[RunEvent]:
+        del request, signal
+        if False:
+            yield RunEvent("", 0, "", {})
+        raise RuntimeError("SECRET-PROVIDER-PAYLOAD")
+
+
+def invocation(runtime: FixtureRuntime, *, signal: object | None = None):
+    return PackageInvocation(
+        package_ref=PackageRef("dci.research", "1.0.0"),
+        manifest=json.loads(MANIFEST_PATH.read_text()),
+        run_id="research-run",
+        input_text="SECRET-APPLICATION-INPUT",
+        upstream_artifacts=({
+            "artifact_id": "question",
+            "media_type": "text/plain",
+            "value": {"text": "Read the corpus"},
+        },),
+        runtime=runtime,
+        host_services={},
+        signal=signal,
+    )
+
+
+class DciResearchCapabilityTests(unittest.IsolatedAsyncioTestCase):
+    async def test_executes_one_runtime_neutral_research_request(self) -> None:
+        runtime = FixtureRuntime()
+        signal = object()
+
+        result = await DciLocalResearchImplementation().execute(
+            invocation(runtime, signal=signal)
+        )
+
+        self.assertEqual(len(runtime.requests), 1)
+        self.assertEqual(runtime.requests[0].input_text, "SECRET-APPLICATION-INPUT")
+        self.assertEqual(
+            runtime.requests[0].requested_capabilities,
+            ("filesystem.read", "shell"),
+        )
+        self.assertIs(runtime.signals[0], signal)
+        self.assertEqual(result.events[0]["type"], "research.completed")
+        self.assertEqual(
+            result.artifacts[0]["media_type"],
+            "application/vnd.dci.research+json",
+        )
+        self.assertEqual(
+            result.artifacts[0]["value"]["answer_artifact_uri"], "final.txt"
+        )
+
+    async def test_pi_and_claude_fixtures_share_the_same_package_behavior(self) -> None:
+        results = []
+        for runtime_id in ("pi.reference", "claude-code.reference"):
+            results.append(
+                await DciLocalResearchImplementation().execute(
+                    invocation(FixtureRuntime(runtime_id))
+                )
+            )
+        self.assertEqual(results[0], results[1])
+
+    async def test_runtime_failures_are_redacted(self) -> None:
+        with self.assertRaises(PackageExecutionError) as raised:
+            await DciLocalResearchImplementation().execute(invocation(FailingRuntime()))
+        message = str(raised.exception)
+        self.assertNotIn("SECRET-APPLICATION-INPUT", message)
+        self.assertNotIn("SECRET-PROVIDER-PAYLOAD", message)
+
+
+class DciResearchCapabilityBoundaryTests(unittest.TestCase):
+    def test_asterion_and_capability_sources_do_not_import_dci_benchmark(self) -> None:
+        roots = (
+            ROOT / "src/asterion",
+            ROOT / "capabilities/dci-research/src",
+        )
+        source = "\n".join(
+            path.read_text()
+            for root in roots
+            if root.exists()
+            for path in root.rglob("*.py")
+        )
+        self.assertNotIn("dci.benchmark", source)
+
+
+if __name__ == "__main__":
+    unittest.main()
