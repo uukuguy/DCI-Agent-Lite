@@ -51,6 +51,23 @@ def write_assembly(root: Path, *, application_id: str = "example.research") -> P
 def provider(root: Path) -> InstalledApplicationProvider:
     catalog = root / "manifests"
     catalog.mkdir(exist_ok=True)
+    (catalog / "research.json").write_text(
+        json.dumps(
+            {
+                "protocol": "dci.package/v1",
+                "package_id": "example.research",
+                "version": "1.0.0",
+                "kind": "capability",
+                "provides_capabilities": [],
+                "requires_capabilities": [],
+                "requires_policies": [],
+                "emits_events": [],
+                "consumes_events": [],
+                "produces_artifacts": [],
+                "consumes_artifacts": [],
+            }
+        )
+    )
     return InstalledApplicationProvider(
         protocol=APPLICATION_PROVIDER_PROTOCOL,
         provider_id="example-app",

@@ -8,5 +8,8 @@ version = "0.1.0"
 description = "Composable multi-runtime agent application framework"
 requires-python = ">=3.10"
 
+[project.scripts]
+asterion = "asterion.cli:main"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/asterion"]
