@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+CHECK_ONLY=0
+if [ "$#" -gt 1 ] || { [ "$#" -eq 1 ] && [ "$1" != "--check" ]; }; then
+    echo "Usage: $0 [--check]" >&2
+    exit 2
+fi
+if [ "$#" -eq 1 ]; then
+    CHECK_ONLY=1
+fi
+
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PI_REPO_URL="${DCI_PI_REPO_URL:-https://github.com/earendil-works/pi.git}"
 PI_DIR="${DCI_PI_DIR:-$PROJECT_ROOT/pi}"
@@ -31,6 +40,10 @@ fi
 
 source_changed=0
 cloned=0
+if [ "$CHECK_ONLY" -eq 1 ] && [ ! -e "$PI_DIR" ]; then
+    echo "ERROR: Pi checkout does not exist for read-only verification: $PI_DIR" >&2
+    exit 4
+fi
 if [ ! -e "$PI_DIR" ]; then
     echo "==> Cloning Pi into $PI_DIR without selecting a moving branch..."
     mkdir -p "$(dirname "$PI_DIR")"
@@ -45,6 +58,10 @@ desired_commit="$(
     git -C "$PI_DIR" rev-parse --verify "$PI_REVISION^{commit}" 2>/dev/null || true
 )"
 if [ -z "$desired_commit" ]; then
+    if [ "$CHECK_ONLY" -eq 1 ]; then
+        echo "ERROR: Pi revision $PI_REVISION is not available locally; read-only check will not fetch." >&2
+        exit 4
+    fi
     echo "==> Fetching requested Pi revision $PI_REVISION..."
     if ! git -C "$PI_DIR" fetch --no-tags origin "$PI_REVISION"; then
         echo "ERROR: Cannot fetch Pi revision $PI_REVISION from $PI_REPO_URL." >&2
@@ -60,6 +77,17 @@ if [ -z "$desired_commit" ]; then
 fi
 
 current_commit="$(git -C "$PI_DIR" rev-parse --verify HEAD 2>/dev/null || true)"
+if [ "$CHECK_ONLY" -eq 1 ]; then
+    if [ "$current_commit" != "$desired_commit" ]; then
+        echo "ERROR: Pi HEAD $current_commit does not match requested commit $desired_commit." >&2
+        exit 4
+    fi
+    if [ -n "$(git -C "$PI_DIR" status --porcelain)" ]; then
+        echo "WARN: Pi is at the requested commit but contains local changes; read-only check accepts the source revision only." >&2
+    fi
+    echo "==> Pi checkout verified at $desired_commit (read-only check)."
+    exit 0
+fi
 if [ "$cloned" -eq 1 ]; then
     git -C "$PI_DIR" checkout --detach "$desired_commit"
     source_changed=1

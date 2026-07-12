@@ -27,7 +27,8 @@ _sync_state() {
 
 cycle="$(python3 -c 'import json; print(json.load(open("docs/status/climb/session-state.json"))["last_cycle"] + 1)' )"
 run_dir="$(bash "$ROOT/tools/climb/train.sh" "$HYPOTHESIS_ID")"
-bash "$ROOT/tools/climb/eval-local.sh" "$run_dir" >/dev/null
+DCI_CLIMB_HYPOTHESIS_ID="$HYPOTHESIS_ID" \
+    bash "$ROOT/tools/climb/eval-local.sh" "$run_dir" >/dev/null
 python3 "$ROOT/tools/climb/decision-gate.py" \
     --local-eval-json "$run_dir/local-eval.json" >"$run_dir/decision.json"
 decision="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["decision"])' "$run_dir/decision.json")"

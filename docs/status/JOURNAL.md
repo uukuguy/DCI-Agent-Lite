@@ -27,3 +27,6 @@
 - 08:40 H-001 climb train/eval/record/sync adapter 回归完成。[79e91cb]
 - 08:40 H-001 confirmed 4/4; setup-policy acceptance recorded.
 - 08:44 H-001 全量 31 tests + runtime-example 正确；外部 Pi 状态未变。
+- 08:45 H-001 4/4 evidence 与可移植 climb state 已提交。[c9f60c7]
+- 08:53 H-002 read-only gate 4/4；35 tests 通过，真实 Pi 状态未变。
+- 08:51 H-002 confirmed 4/4; setup-policy acceptance recorded.

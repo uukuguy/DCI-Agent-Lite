@@ -1,10 +1,10 @@
 {
   "session": "2026-07-12-pi-revision",
   "phase": "implementation",
-  "last_cycle": 1,
-  "next_hypothesis": "H-002",
+  "last_cycle": 2,
+  "next_hypothesis": "H-003",
   "in_flight": null,
-  "next_action": "Start H-002.",
+  "next_action": "Start H-003.",
   "falsified_routes": [
     "duplicate the authoritative Pi commit across setup.sh and .env.template",
     "convert the independent Pi checkout to vendored or submodule ownership"

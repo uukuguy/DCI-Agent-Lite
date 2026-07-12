@@ -71,7 +71,7 @@ class PiSetupTests(unittest.TestCase):
         return target
 
     def run_setup(
-        self, *, revision: str | None = None
+        self, *, revision: str | None = None, check_only: bool = False
     ) -> subprocess.CompletedProcess[str]:
         env = os.environ.copy()
         env.update(
@@ -86,7 +86,11 @@ class PiSetupTests(unittest.TestCase):
         else:
             env["DCI_PI_REVISION"] = revision
         return subprocess.run(
-            ["bash", str(self.install_script_under_test())],
+            [
+                "bash",
+                str(self.install_script_under_test()),
+                *(["--check"] if check_only else []),
+            ],
             cwd=self.project,
             env=env,
             text=True,
@@ -142,6 +146,39 @@ class PiSetupTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.git("rev-parse", "HEAD", cwd=self.pi_dir), self.commit_b)
 
+    def test_check_mode_rejects_mismatch_without_mutation(self) -> None:
+        self.clone_at(self.commit_b)
+        before_head = self.git("rev-parse", "HEAD", cwd=self.pi_dir)
+
+        result = self.run_setup(check_only=True)
+
+        self.assertEqual(result.returncode, 4)
+        self.assertIn("does not match", result.stderr)
+        self.assertEqual(self.git("rev-parse", "HEAD", cwd=self.pi_dir), before_head)
+        self.assertFalse(self.npm_log.exists())
+
+    def test_check_mode_does_not_clone_missing_checkout(self) -> None:
+        result = self.run_setup(check_only=True)
+
+        self.assertEqual(result.returncode, 4)
+        self.assertIn("does not exist", result.stderr)
+        self.assertFalse(self.pi_dir.exists())
+        self.assertFalse(self.npm_log.exists())
+
+    def test_check_mode_accepts_matching_dirty_checkout_without_mutation(self) -> None:
+        self.clone_at(self.commit_a)
+        marker = self.pi_dir / "local-change.txt"
+        marker.write_text("keep me\n")
+        before_head = self.git("rev-parse", "HEAD", cwd=self.pi_dir)
+
+        result = self.run_setup(check_only=True)
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("contains local changes", result.stderr)
+        self.assertEqual(self.git("rev-parse", "HEAD", cwd=self.pi_dir), before_head)
+        self.assertEqual(marker.read_text(), "keep me\n")
+        self.assertFalse(self.npm_log.exists())
+
     def test_malformed_default_lock_fails_before_clone(self) -> None:
         (self.project / "pi-revision.txt").write_text("main\n")
 
@@ -162,6 +199,7 @@ class PiSetupTests(unittest.TestCase):
         self.assertIn("pi-revision.txt", env_template)
         self.assertIn('checkout --detach "$(cat pi-revision.txt)"', readme)
         self.assertIn('checkout --detach "$(cat pi-revision.txt)"', setup_doc)
+        self.assertIn("scripts/setup_pi.sh --check", setup_doc)
 
 
 if __name__ == "__main__":

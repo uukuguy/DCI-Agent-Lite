@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 import shutil
 import subprocess
 import tempfile
@@ -66,11 +67,41 @@ class ClimbToolTests(unittest.TestCase):
                 },
             )
 
+    def test_h002_local_eval_identifies_read_only_upgrade_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            env = os.environ.copy()
+            env["DCI_CLIMB_HYPOTHESIS_ID"] = "H-002"
+            result = subprocess.run(
+                ["bash", "tools/climb/eval-local.sh", str(run_dir)],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            evaluation = json.loads((run_dir / "local-eval.json").read_text())
+            self.assertEqual(evaluation.get("hypothesis_id"), "H-002")
+            self.assertEqual(evaluation["total"], 4)
+
     def test_record_cycle_confirms_four_of_four_and_advances(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             state_dir = root / "climb"
             shutil.copytree(REPO_ROOT / "docs/status/climb", state_dir)
+            hypothesis_path = state_dir / "hypotheses.yaml"
+            isolated_hypotheses = yaml.safe_load(hypothesis_path.read_text())
+            for hypothesis in isolated_hypotheses["hypotheses"]:
+                hypothesis["results"] = []
+                hypothesis["status"] = (
+                    "in-flight" if hypothesis["id"] == "H-001" else "pending"
+                )
+            hypothesis_path.write_text(
+                yaml.safe_dump(
+                    isolated_hypotheses, sort_keys=False, allow_unicode=True
+                )
+            )
             journal = root / "JOURNAL.md"
             journal.write_text("# Test Journal\n\n## 2026-07-12\n")
             run_dir = root / "run-h001"

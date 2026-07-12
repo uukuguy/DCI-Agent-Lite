@@ -56,6 +56,14 @@ node pi/packages/coding-agent/dist/cli.js --version
 
 `setup.sh` performs the same revision check on every run, even when the CLI is already built. A clean checkout at another revision is moved to the lock; a dirty mismatch fails without resetting, cleaning, stashing, or pulling. To test a deliberate fork revision, set `DCI_PI_REVISION` to a full commit SHA. To change the project default, update `pi-revision.txt` in a reviewed commit and rerun verification.
 
+Before reviewing or committing a pin change, run the read-only check. It never clones, fetches, checks out, or builds:
+
+```bash
+bash scripts/setup_pi.sh --check
+```
+
+The command succeeds when local `HEAD` matches the requested commit. Local file changes are reported but preserved; a missing checkout, unavailable commit, or revision mismatch exits nonzero without mutation.
+
 ### 4. Configure model access
 
 The easiest way is to copy `.env.template` to `.env` and fill in your keys:

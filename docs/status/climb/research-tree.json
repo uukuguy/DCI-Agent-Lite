@@ -1,29 +1,18 @@
 {
-  "run_count": 1,
+  "run_count": 2,
   "session": {
     "session": "2026-07-12-pi-revision",
     "phase": "implementation",
-    "last_cycle": 1,
-    "next_hypothesis": "H-002",
+    "last_cycle": 2,
+    "next_hypothesis": "H-003",
     "in_flight": null,
-    "next_action": "Start H-002.",
+    "next_action": "Start H-003.",
     "falsified_routes": [
       "duplicate the authoritative Pi commit across setup.sh and .env.template",
       "convert the independent Pi checkout to vendored or submodule ownership"
     ]
   },
   "active": [
-    {
-      "id": "H-002",
-      "description": "Make deliberate Pi pin upgrades independently verifiable and reviewable.",
-      "parent_paradigm": "external-git-lock",
-      "expected_lift": "+1 upgrade-safety dimension",
-      "cost_h": 0.3,
-      "ranking": 0.7,
-      "status": "pending",
-      "created_at": "2026-07-12T08:24:00+08:00",
-      "results": []
-    },
     {
       "id": "H-003",
       "description": "Detect Pi RPC protocol incompatibility before benchmark execution.",
@@ -63,6 +52,33 @@
           "decision_reason": "deterministic local setup-policy acceptance"
         }
       ]
+    },
+    {
+      "id": "H-002",
+      "description": "Make deliberate Pi pin upgrades independently verifiable and reviewable.",
+      "parent_paradigm": "external-git-lock",
+      "expected_lift": "+1 upgrade-safety dimension",
+      "cost_h": 0.3,
+      "ranking": 0.7,
+      "status": "confirmed",
+      "created_at": "2026-07-12T08:24:00+08:00",
+      "results": [
+        {
+          "session": "2026-07-12-pi-revision",
+          "cycle": 2,
+          "run": "20260712-085134-dci-climb-h002",
+          "local": 4,
+          "local_per_task": {
+            "immutable_resolution": 1,
+            "repeat_validation": 1,
+            "dirty_checkout_safety": 1,
+            "override_compatibility": 1
+          },
+          "online": null,
+          "verdict": "confirmed 4/4",
+          "decision_reason": "deterministic local setup-policy acceptance"
+        }
+      ]
     }
   ],
   "falsified": [],
@@ -88,6 +104,28 @@
       "verdict": "confirmed 4/4",
       "train_cost_h": "0.01",
       "manifest_path": "runs/climb/20260712-084042-dci-climb-h001/manifest.json"
+    },
+    {
+      "run_id": "20260712-085134-dci-climb-h002",
+      "cycle": "2",
+      "session": "2026-07-12-pi-revision",
+      "hypothesis_id": "H-002",
+      "paradigm": "external-git-lock",
+      "parent_run": "",
+      "pushed_at": "2026-07-12T08:51:36+08:00",
+      "lb_landed_at": "",
+      "local_score": "4",
+      "immutable_resolution": "1",
+      "repeat_validation": "1",
+      "dirty_checkout_safety": "1",
+      "override_compatibility": "1",
+      "online_score": "",
+      "gap": "",
+      "push_decision": "PUSH",
+      "decision_reason": "cheap deterministic local acceptance",
+      "verdict": "confirmed 4/4",
+      "train_cost_h": "0.01",
+      "manifest_path": "runs/climb/20260712-085134-dci-climb-h002/manifest.json"
     }
   ],
   "calibration": {
