@@ -31,5 +31,11 @@
 - 08:53 H-002 read-only gate 4/4；35 tests 通过，真实 Pi 状态未变。
 - 08:54 H-002 read-only pin verification 已提交并推进 H-003。[862a51e]
 - 09:28 H-003 model-free RPC probe 4/4；40 tests 与真实 handshake 通过。
+- 09:29 H-003 RPC compatibility preflight 已提交；pool 进入 Knowledge Layer。[e53822f]
+- 09:31 Knowledge Layer 生成 H-004/005/006；优先补齐 run-level Pi provenance。
 - 08:51 H-002 confirmed 4/4; setup-policy acceptance recorded.
 - 09:28 H-003 confirmed 4/4; setup-policy acceptance recorded.
+- 16:04 H-004 confirmed 4/4; setup-policy acceptance recorded.
+- 16:04 H-004 confirmed 4/4; setup-policy acceptance recorded.
+- 16:06 correction: H-004 第二条为同 run replay；未提交结构化重复已归一化，recorder 现幂等。
+- 16:08 H-004 provenance 4/4；45 tests 与真实 runtime artifact 断言通过。

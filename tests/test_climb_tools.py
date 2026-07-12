@@ -103,6 +103,24 @@ class ClimbToolTests(unittest.TestCase):
             self.assertEqual(evaluation.get("hypothesis_id"), "H-003")
             self.assertEqual(evaluation["total"], 4)
 
+    def test_h004_local_eval_identifies_run_provenance_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            env = os.environ.copy()
+            env["DCI_CLIMB_HYPOTHESIS_ID"] = "H-004"
+            result = subprocess.run(
+                ["bash", "tools/climb/eval-local.sh", str(run_dir)],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            evaluation = json.loads((run_dir / "local-eval.json").read_text())
+            self.assertEqual(evaluation.get("hypothesis_id"), "H-004")
+            self.assertEqual(evaluation["total"], 4)
+
     def test_record_cycle_confirms_four_of_four_and_advances(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
@@ -110,6 +128,11 @@ class ClimbToolTests(unittest.TestCase):
             shutil.copytree(REPO_ROOT / "docs/status/climb", state_dir)
             hypothesis_path = state_dir / "hypotheses.yaml"
             isolated_hypotheses = yaml.safe_load(hypothesis_path.read_text())
+            isolated_hypotheses["hypotheses"] = [
+                hypothesis
+                for hypothesis in isolated_hypotheses["hypotheses"]
+                if hypothesis["id"] in {"H-001", "H-002", "H-003"}
+            ]
             for hypothesis in isolated_hypotheses["hypotheses"]:
                 hypothesis["results"] = []
                 hypothesis["status"] = (
@@ -138,37 +161,55 @@ class ClimbToolTests(unittest.TestCase):
                 )
             )
 
+            command = [
+                "python3",
+                "tools/climb/record-cycle.py",
+                "--state-dir",
+                str(state_dir),
+                "--journal",
+                str(journal),
+                "--hypothesis-id",
+                "H-001",
+                "--run-id",
+                "dci-climb-h001-test",
+                "--run-dir",
+                str(run_dir),
+                "--cycle",
+                "1",
+            ]
             result = subprocess.run(
-                [
-                    "python3",
-                    "tools/climb/record-cycle.py",
-                    "--state-dir",
-                    str(state_dir),
-                    "--journal",
-                    str(journal),
-                    "--hypothesis-id",
-                    "H-001",
-                    "--run-id",
-                    "dci-climb-h001-test",
-                    "--run-dir",
-                    str(run_dir),
-                    "--cycle",
-                    "1",
-                ],
+                command,
+                cwd=REPO_ROOT,
+                text=True,
+                capture_output=True,
+            )
+            replay = subprocess.run(
+                command,
                 cwd=REPO_ROOT,
                 text=True,
                 capture_output=True,
             )
 
             self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(replay.returncode, 0, replay.stderr)
             state = yaml.safe_load((state_dir / "hypotheses.yaml").read_text())
             h001 = next(h for h in state["hypotheses"] if h["id"] == "H-001")
             self.assertEqual(h001["status"], "confirmed")
             self.assertEqual(h001["results"][-1]["local"], 4)
+            self.assertEqual(
+                sum(
+                    result["run"] == "dci-climb-h001-test"
+                    for result in h001["results"]
+                ),
+                1,
+            )
             runs_path = state_dir / "runs.csv"
             with runs_path.open(newline="") as handle:
                 rows = list(csv.DictReader(handle))
             self.assertEqual(rows[-1]["verdict"], "confirmed 4/4")
+            self.assertEqual(
+                sum(row["run_id"] == "dci-climb-h001-test" for row in rows), 1
+            )
             self.assertEqual(
                 rows[-1]["manifest_path"],
                 "runs/climb/dci-climb-h001-test/manifest.json",
@@ -201,6 +242,11 @@ class ClimbToolTests(unittest.TestCase):
 
         self.assertIn("scripts/check_pi_rpc.py", train_script)
         self.assertIn("uv run python", train_script)
+
+    def test_h004_train_runs_runtime_acceptance(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+
+        self.assertIn("make runtime-example", train_script)
 
 
 if __name__ == "__main__":

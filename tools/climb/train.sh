@@ -6,7 +6,7 @@ if [ "$#" -ne 1 ]; then
     exit 2
 fi
 case "$1" in
-    H-001|H-002|H-003) ;;
+    H-001|H-002|H-003|H-004) ;;
     *)
         echo "ERROR: train adapter has no acceptance suite for $1." >&2
         exit 2
@@ -22,6 +22,8 @@ mkdir -p "$run_dir"
 paradigm="external-git-lock"
 if [ "$1" = "H-003" ]; then
     paradigm="rpc-contract-probe"
+elif [ "$1" = "H-004" ]; then
+    paradigm="run-provenance"
 fi
 
 cat >"$run_dir/manifest.json" <<EOF
@@ -39,6 +41,16 @@ if [ "$1" = "H-003" ]; then
         uv run python scripts/check_pi_rpc.py
     } >"$run_dir/train.log" 2>&1; then
         echo "ERROR: H-003 RPC compatibility probe failed; see $run_dir/train.log" >&2
+        exit 1
+    fi
+elif [ "$1" = "H-004" ]; then
+    if ! {
+        uv run python -m unittest tests.test_pi_rpc_runner -v
+        make runtime-example
+        latest_run="$(find outputs/runs -mindepth 1 -maxdepth 1 -type d | sort | tail -1)"
+        uv run python -c 'import json,sys; p=json.load(open(sys.argv[1]))["pi_source"]; assert p["commit"] and p["lock_match"] is True and isinstance(p["dirty"], bool)' "$latest_run/state.json"
+    } >"$run_dir/train.log" 2>&1; then
+        echo "ERROR: H-004 run-provenance acceptance failed; see $run_dir/train.log" >&2
         exit 1
     fi
 elif ! uv run python -m unittest tests.test_setup_pi -v >"$run_dir/train.log" 2>&1; then

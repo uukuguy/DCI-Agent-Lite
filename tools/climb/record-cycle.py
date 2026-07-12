@@ -33,6 +33,26 @@ def main() -> None:
     now = datetime.now().astimezone()
     timestamp = now.isoformat(timespec="seconds")
 
+    runs_path = args.state_dir / "runs.csv"
+    with runs_path.open(newline="") as handle:
+        reader = csv.DictReader(handle)
+        existing_runs = list(reader)
+        fieldnames = reader.fieldnames
+    if fieldnames is None:
+        raise RuntimeError(f"Missing runs.csv header: {runs_path}")
+    if any(row["run_id"] == args.run_id for row in existing_runs):
+        print(
+            json.dumps(
+                {
+                    "hypothesis": args.hypothesis_id,
+                    "run_id": args.run_id,
+                    "replayed": True,
+                    "action": "no-op",
+                }
+            )
+        )
+        return
+
     hypotheses_path = args.state_dir / "hypotheses.yaml"
     hypothesis_state = yaml.safe_load(hypotheses_path.read_text())
     hypotheses = hypothesis_state["hypotheses"]
@@ -54,9 +74,6 @@ def main() -> None:
         yaml.safe_dump(hypothesis_state, sort_keys=False, allow_unicode=True)
     )
 
-    runs_path = args.state_dir / "runs.csv"
-    with runs_path.open(newline="") as handle:
-        fieldnames = next(csv.reader(handle))
     row = {name: "" for name in fieldnames}
     row.update(
         {

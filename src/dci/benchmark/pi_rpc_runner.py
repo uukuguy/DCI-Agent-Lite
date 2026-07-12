@@ -322,6 +322,42 @@ def evaluate_run_output(
     return eval_result
 
 
+def collect_pi_source_provenance(*, package_dir: Path, lock_file: Path) -> Dict[str, Any]:
+    """Describe the Git source backing a Pi coding-agent package."""
+
+    def git_output(*args: str) -> Optional[str]:
+        result = subprocess.run(
+            ["git", "-C", str(package_dir), *args],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            return None
+        return result.stdout.strip()
+
+    lock_revision = None
+    if lock_file.is_file():
+        candidate = lock_file.read_text(encoding="utf-8").strip()
+        if candidate:
+            lock_revision = candidate
+
+    repo_dir = git_output("rev-parse", "--show-toplevel")
+    commit = git_output("rev-parse", "HEAD") if repo_dir else None
+    status = git_output("status", "--porcelain") if repo_dir else None
+    origin_url = git_output("remote", "get-url", "origin") if repo_dir else None
+    return {
+        "managed_git_checkout": repo_dir is not None,
+        "repo_dir": repo_dir,
+        "origin_url": origin_url,
+        "commit": commit,
+        "dirty": bool(status) if status is not None else None,
+        "lock_file": str(lock_file),
+        "lock_revision": lock_revision,
+        "lock_match": commit == lock_revision if commit and lock_revision else None,
+    }
+
+
 class ConversationFeatures:
     def __init__(
         self,
@@ -407,6 +443,10 @@ class RunRecorder:
         self.output_dir = output_dir
         self.resume = resume
         self.conversation_features = conversation_features
+        self.pi_source = collect_pi_source_provenance(
+            package_dir=package_dir,
+            lock_file=REPO_ROOT / "pi-revision.txt",
+        )
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self._pending_tool_call_starts: Dict[str, str] = {}
         self._completed_tool_call_timings: Dict[str, Dict[str, Any]] = {}
@@ -548,6 +588,9 @@ class RunRecorder:
                 "latest": None,
                 "error": None,
             }
+        self.state["pi_source"] = self.pi_source
+        self.conversation_full["pi_source"] = self.pi_source
+        self.latest_model_context["pi_source"] = self.pi_source
         self._restore_tool_call_timing_state()
         self._write_artifacts()
 

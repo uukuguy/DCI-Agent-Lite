@@ -14,6 +14,15 @@ outputs/runs/<timestamp>/
   question.txt              # question text used for the run
 ```
 
+`state.json`, `conversation_full.json`, and `latest_model_context.json` include a `pi_source` object so a result can identify its actual external runtime source:
+
+- `repo_dir` and `origin_url` — detected Git checkout and remote
+- `commit` and `dirty` — exact `HEAD` plus whether tracked/untracked local changes were present
+- `lock_file` and `lock_revision` — the DCI default pin used for comparison
+- `lock_match` — whether the run used that default commit (`null` for a non-Git/custom package directory)
+
+Local modifications are reported as a boolean; their contents are never copied into artifacts.
+
 If you pass `--system-prompt-file`, both `conversation_full.json` and `conversation.json` include a single `system` message built from that file and any appended system prompt file.
 
 ## Artifact-Only Transcript Compaction

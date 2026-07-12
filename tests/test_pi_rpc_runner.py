@@ -3,10 +3,12 @@ from __future__ import annotations
 import io
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 
+import dci.benchmark.pi_rpc_runner as rpc_runner
 from dci.benchmark.pi_rpc_runner import PiRpcClient, parse_args
 
 
@@ -27,6 +29,93 @@ def make_client() -> PiRpcClient:
 
 
 class PiRpcLifecycleTests(unittest.TestCase):
+    def test_run_artifacts_include_pi_source_provenance(self) -> None:
+        provenance = {"commit": "abc123", "dirty": True, "lock_match": False}
+        features = rpc_runner.ConversationFeatures(
+            clear_tool_results=False,
+            clear_tool_results_keep_last=3,
+            externalize_tool_results=False,
+            strip_thinking=False,
+            strip_usage=False,
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "run"
+            with patch.object(
+                rpc_runner,
+                "collect_pi_source_provenance",
+                return_value=provenance,
+            ):
+                recorder = rpc_runner.RunRecorder(
+                    output_dir=output_dir,
+                    question="question",
+                    package_dir=Path("pi/packages/coding-agent"),
+                    agent_dir=Path("pi/.pi/agent"),
+                    cwd=Path("."),
+                    provider="provider",
+                    model="model",
+                    tools="read,bash",
+                    max_turns=2,
+                    rpc_timeout_seconds=30,
+                    system_prompt_file=None,
+                    append_system_prompt_file=None,
+                    conversation_features=features,
+                    keep_session=False,
+                    resume=False,
+                )
+
+            self.assertEqual(recorder.state.get("pi_source"), provenance)
+            self.assertEqual(
+                recorder.conversation_full.get("pi_source"), provenance
+            )
+            self.assertEqual(
+                recorder.latest_model_context.get("pi_source"), provenance
+            )
+
+    def test_pi_source_provenance_is_documented(self) -> None:
+        artifacts_doc = Path("assets/docs/artifacts.md").read_text()
+
+        self.assertIn("pi_source", artifacts_doc)
+        self.assertIn("lock_match", artifacts_doc)
+
+    def test_pi_source_provenance_records_commit_lock_and_dirty_state(self) -> None:
+        collect = getattr(rpc_runner, "collect_pi_source_provenance", None)
+        self.assertIsNotNone(collect)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir) / "pi"
+            package_dir = repo / "packages/coding-agent"
+            package_dir.mkdir(parents=True)
+            subprocess.run(["git", "init", "-b", "main"], cwd=repo, check=True)
+            subprocess.run(
+                ["git", "config", "user.name", "DCI Test"], cwd=repo, check=True
+            )
+            subprocess.run(
+                ["git", "config", "user.email", "dci-test@example.invalid"],
+                cwd=repo,
+                check=True,
+            )
+            marker = package_dir / "marker.txt"
+            marker.write_text("clean\n")
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-m", "fixture"], cwd=repo, check=True)
+            revision = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=repo,
+                text=True,
+                capture_output=True,
+                check=True,
+            ).stdout.strip()
+            lock_file = Path(temp_dir) / "pi-revision.txt"
+            lock_file.write_text(f"{revision}\n")
+
+            clean = collect(package_dir=package_dir, lock_file=lock_file)
+            marker.write_text("dirty\n")
+            dirty = collect(package_dir=package_dir, lock_file=lock_file)
+
+        self.assertEqual(clean["commit"], revision)
+        self.assertTrue(clean["lock_match"])
+        self.assertFalse(clean["dirty"])
+        self.assertTrue(dirty["dirty"])
+
     def test_protocol_probe_script_exposes_model_free_check(self) -> None:
         script = Path("scripts/check_pi_rpc.py")
         self.assertTrue(script.exists())
