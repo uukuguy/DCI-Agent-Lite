@@ -17,6 +17,7 @@ Active work package: AF-060
 - Branch: `main`; AF-050 functional closure is committed at `ef8f898`.
 - AF-060 governance/design/climb transition is committed at `826ccb9`.
 - AF-060-H-001 package manifests are committed at `a4266ad`.
+- AF-060-H-002 deterministic composer is committed at `0e7c15b`.
 - No long-running process is active; external `pi/` remains intentionally untouched and dirty.
 
 ## Immediate next action
