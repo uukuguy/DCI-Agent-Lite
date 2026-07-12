@@ -174,3 +174,7 @@
 - 22:38 deterministic package composer 已提交，DCI reference graph 可在稳定 DAG 上继续。[0e7c15b]
 - 22:46 AF-060-H-003 confirmed 4/4; package acceptance recorded.
 - 22:47 AF-060-H-003 通过 72 focused tests、compile、Ruff、shell、scope 与 diff。
+- 22:49 DCI reference package graph 已提交，TypeScript 共享 schema/fixture parity 成为下一恢复边界。[fc9b9cd]
+- 22:51 AF-060-H-004 confirmed 4/4; TypeScript package acceptance recorded.
+- 22:52 AF-060-H-004 通过 5 Node tests、74 focused Python tests、compile、Ruff、shell、scope 与 diff。
+- 22:50 AF-060-H-004 confirmed 4/4; package acceptance recorded.

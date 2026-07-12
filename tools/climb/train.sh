@@ -6,7 +6,7 @@ if [ "$#" -ne 1 ]; then
     exit 2
 fi
 case "$1" in
-    H-001|H-002|H-003|H-004|H-005|H-006|H-007|H-008|H-009|H-010|H-011|H-012|H-013|H-014|H-015|H-016|H-017|H-018|H-019|AF-050-H-001|AF-050-H-002|AF-050-H-003|AF-050-H-004|AF-050-H-005|AF-060-H-001|AF-060-H-002|AF-060-H-003) ;;
+    H-001|H-002|H-003|H-004|H-005|H-006|H-007|H-008|H-009|H-010|H-011|H-012|H-013|H-014|H-015|H-016|H-017|H-018|H-019|AF-050-H-001|AF-050-H-002|AF-050-H-003|AF-050-H-004|AF-050-H-005|AF-060-H-001|AF-060-H-002|AF-060-H-003|AF-060-H-004) ;;
     *)
         echo "ERROR: train adapter has no acceptance suite for $1." >&2
         exit 2
@@ -36,6 +36,8 @@ elif [ "$1" = "AF-060-H-002" ]; then
     paradigm="python-package-composer"
 elif [ "$1" = "AF-060-H-003" ]; then
     paradigm="dci-package-vertical-slice"
+elif [ "$1" = "AF-060-H-004" ]; then
+    paradigm="typescript-package-parity"
 elif [ "$1" = "H-003" ]; then
     paradigm="rpc-contract-probe"
 elif [ "$1" = "H-004" ] || [ "$1" = "H-005" ]; then
@@ -121,6 +123,11 @@ elif [ "$1" = "AF-060-H-002" ]; then
 elif [ "$1" = "AF-060-H-003" ]; then
     if ! uv run python -m unittest tests.test_package_composition.DciReferencePackageTests -v >"$run_dir/train.log" 2>&1; then
         echo "ERROR: AF-060-H-003 DCI reference package graph failed; see $run_dir/train.log" >&2
+        exit 1
+    fi
+elif [ "$1" = "AF-060-H-004" ]; then
+    if ! npm --prefix packages/typescript/agent-runtime test >"$run_dir/train.log" 2>&1; then
+        echo "ERROR: AF-060-H-004 TypeScript package parity failed; see $run_dir/train.log" >&2
         exit 1
     fi
 elif [ "$1" = "H-003" ]; then

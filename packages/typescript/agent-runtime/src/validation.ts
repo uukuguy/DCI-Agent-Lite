@@ -6,7 +6,12 @@ import {
   type ValidateFunction,
 } from "ajv/dist/2020.js";
 
-import type { RunEvent, RunRequest, RuntimeManifest } from "./types.js";
+import type {
+  PackageManifest,
+  RunEvent,
+  RunRequest,
+  RuntimeManifest,
+} from "./types.js";
 
 function readSchema(name: string): object {
   return JSON.parse(
@@ -16,6 +21,9 @@ function readSchema(name: string): object {
 
 const ajv = new Ajv2020({ allErrors: true });
 const manifestValidator = ajv.compile(readSchema("runtime-manifest.schema.json"));
+const packageManifestValidator = ajv.compile(
+  readSchema("package-manifest.schema.json"),
+);
 const requestValidator = ajv.compile(readSchema("run-request.schema.json"));
 const eventValidator = ajv.compile(readSchema("event.schema.json"));
 
@@ -42,6 +50,31 @@ function requireValid<T>(
 
 export function validateRuntimeManifest(value: unknown): RuntimeManifest {
   return requireValid("runtime manifest", manifestValidator, value);
+}
+
+const packageEdgeFields = [
+  "provides_capabilities",
+  "requires_capabilities",
+  "requires_policies",
+  "emits_events",
+  "consumes_events",
+  "produces_artifacts",
+  "consumes_artifacts",
+] as const;
+
+export function validatePackageManifest(value: unknown): PackageManifest {
+  const manifest = requireValid<PackageManifest>(
+    "package manifest",
+    packageManifestValidator,
+    value,
+  );
+  for (const field of packageEdgeFields) {
+    const values = manifest[field];
+    if (values.some((entry, index) => index > 0 && values[index - 1]! >= entry)) {
+      throw new ProtocolValidationError(`package manifest ${field}`, null);
+    }
+  }
+  return manifest;
 }
 
 export function validateRunRequest(value: unknown): RunRequest {

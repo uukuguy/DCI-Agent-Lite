@@ -5,14 +5,23 @@ import test from "node:test";
 import {
   ProtocolValidationError,
   validateEventStream,
+  validatePackageManifest,
   validateRunRequest,
   validateRuntimeManifest,
 } from "../dist/src/index.js";
 
 const fixtures = new URL("../../../../tests/fixtures/agent_runtime/v1/", import.meta.url);
+const packageFixtures = new URL(
+  "../../../../tests/fixtures/packages/v1/",
+  import.meta.url,
+);
 
 async function readJson(name) {
   return JSON.parse(await readFile(new URL(name, fixtures), "utf8"));
+}
+
+async function readPackageJson(name) {
+  return JSON.parse(await readFile(new URL(name, packageFixtures), "utf8"));
 }
 
 async function readJsonl(name) {
@@ -59,4 +68,32 @@ test("validates shared requests and complete event streams", async () => {
     const events = await readJsonl(name);
     assert.throws(() => validateEventStream(events), ProtocolValidationError);
   }
+});
+
+test("validates the shared package manifest fixture", async () => {
+  const valid = await readPackageJson("valid-capability.json");
+
+  assert.deepEqual(validatePackageManifest(valid), valid);
+});
+
+test("rejects every shared invalid package manifest fixture", async () => {
+  for (const name of [
+    "invalid-unknown-field.json",
+    "invalid-duplicate-edge.json",
+    "invalid-package-id.json",
+    "invalid-forbidden-command.json",
+  ]) {
+    const invalid = await readPackageJson(name);
+    assert.throws(() => validatePackageManifest(invalid), ProtocolValidationError);
+  }
+});
+
+test("rejects package edge arrays that are not sorted", async () => {
+  const valid = await readPackageJson("valid-capability.json");
+  const unsorted = {
+    ...valid,
+    provides_capabilities: ["z.last", "a.first"],
+  };
+
+  assert.throws(() => validatePackageManifest(unsorted), ProtocolValidationError);
 });

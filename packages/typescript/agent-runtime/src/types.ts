@@ -1,6 +1,29 @@
 export const PROTOCOL_VERSION = "dci.agent-runtime/v1" as const;
+export const PACKAGE_PROTOCOL_VERSION = "dci.package/v1" as const;
 
 export type ProtocolVersion = typeof PROTOCOL_VERSION;
+export type PackageProtocolVersion = typeof PACKAGE_PROTOCOL_VERSION;
+export type PackageKind =
+  | "capability"
+  | "workflow"
+  | "policy"
+  | "memory"
+  | "observability"
+  | "evaluation";
+
+export interface PackageManifest {
+  readonly protocol: PackageProtocolVersion;
+  readonly package_id: string;
+  readonly version: string;
+  readonly kind: PackageKind;
+  readonly provides_capabilities: readonly string[];
+  readonly requires_capabilities: readonly string[];
+  readonly requires_policies: readonly string[];
+  readonly emits_events: readonly string[];
+  readonly consumes_events: readonly string[];
+  readonly produces_artifacts: readonly string[];
+  readonly consumes_artifacts: readonly string[];
+}
 
 export interface RuntimeManifest {
   readonly protocol: ProtocolVersion;

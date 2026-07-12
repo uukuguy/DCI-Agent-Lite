@@ -70,6 +70,25 @@ run_closure_dimension() {
     fi
 }
 
+run_typescript_dimension() {
+    name="$1"
+    test_name="$2"
+    if [ "$test_name" = "public_type_contract" ]; then
+        command=(npm --prefix packages/typescript/agent-runtime run build)
+    else
+        command=(
+            node --test --test-name-pattern "$test_name"
+            packages/typescript/agent-runtime/test/runtime.test.mjs
+        )
+    fi
+    if npm --prefix packages/typescript/agent-runtime run build >"$RUN_DIR/$name.log" 2>&1 \
+        && "${command[@]}" >>"$RUN_DIR/$name.log" 2>&1; then
+        printf '1'
+    else
+        printf '0'
+    fi
+}
+
 dimension_runner="run_dimension"
 rust_suite="authorization"
 case "$HYPOTHESIS_ID" in
@@ -160,6 +179,17 @@ case "$HYPOTHESIS_ID" in
         repeat_test="tests.test_package_composition.DciReferencePackageTests.test_pi_and_claude_compose_the_same_reference_graph"
         dirty_test="tests.test_package_composition.DciReferencePackageTests.test_reference_graph_exposes_research_and_audit_edges"
         override_test="tests.test_package_composition.DciReferencePackageTests.test_reference_graph_rejects_a_runtime_without_required_capabilities"
+        ;;
+    AF-060-H-004)
+        dimension_runner="run_typescript_dimension"
+        first_dimension="valid_fixture"
+        second_dimension="invalid_fixtures"
+        third_dimension="canonical_ordering"
+        fourth_dimension="public_type_contract"
+        immutable_test="validates the shared package manifest fixture"
+        repeat_test="rejects every shared invalid package manifest fixture"
+        dirty_test="rejects package edge arrays that are not sorted"
+        override_test="public_type_contract"
         ;;
     H-001)
         first_dimension="immutable_resolution"

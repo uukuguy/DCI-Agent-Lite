@@ -1,9 +1,24 @@
 import type {
   AgentRuntimeClient,
+  PackageManifest,
   RunEvent,
   RunRequest,
   RuntimeManifest,
 } from "../src/index.js";
+
+export const fixturePackage: PackageManifest = {
+  protocol: "dci.package/v1",
+  package_id: "dci.research",
+  version: "1.0.0",
+  kind: "capability",
+  provides_capabilities: ["research.local-corpus"],
+  requires_capabilities: ["filesystem.read"],
+  requires_policies: ["policy.local-corpus"],
+  emits_events: ["artifact.created"],
+  consumes_events: ["run.started"],
+  produces_artifacts: ["application/vnd.dci.research+json"],
+  consumes_artifacts: ["text/plain"],
+};
 
 export class FixtureClient implements AgentRuntimeClient {
   readonly manifest: RuntimeManifest = {
