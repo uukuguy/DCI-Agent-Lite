@@ -143,21 +143,21 @@ Commit message: `feat: run resolved Asterion applications`
 - Consumes: Task 2 runner and cancellation protocol.
 - Guarantees: every preflight failure occurs before runtime invocation; in-run cancellation is delegated unchanged; only a valid terminal stream succeeds.
 
-- [ ] **Step 1: Write RED failure-matrix tests**
+- [x] **Step 1: Write RED failure-matrix tests**
 
 Cover Pi/Claude fixture parity, runtime mismatch, each missing host capability, invalid input/run ID, pre-cancel, in-run cancellation, runtime exception, empty/malformed/incomplete/post-terminal streams, mismatched run IDs, and controlled-code without `executor.controlled`. Add sentinels to input, event payload, exception, and service objects and assert no public error contains them.
 
-- [ ] **Step 2: Run RED**
+- [x] **Step 2: Run RED**
 
 Run: `uv run python -m unittest tests.test_application_runner -v`
 
 Expected: new failure cases expose missing preflight or error normalization behavior.
 
-- [ ] **Step 3: Implement only the missing safety behavior**
+- [x] **Step 3: Implement only the missing safety behavior**
 
 Keep validation in `application.py`; do not add a retry loop, service registry, background task, or process control. Pass the same signal object to the runtime and require its stream to end in normalized `completed`, `cancelled`, or `failed` lifecycle semantics.
 
-- [ ] **Step 4: Run focused and protocol gates**
+- [x] **Step 4: Run focused and protocol gates**
 
 ```bash
 uv run python -m unittest tests.test_application_runner tests.test_agent_runtime_protocol tests.test_python_runtime_host tests.test_pi_protocol_adapter tests.test_claude_code_protocol_adapter -v
@@ -166,11 +166,11 @@ uv run ruff check src tests/test_application_runner.py
 git diff --check
 ```
 
-- [ ] **Step 5: Add and execute AF-100-H-003**
+- [x] **Step 5: Add and execute AF-100-H-003**
 
 Dimensions: `runtime_parity`, `cancellation`, `preflight_safety`, `error_redaction`.
 
-- [ ] **Step 6: Commit the verified slice**
+- [x] **Step 6: Commit the verified slice**
 
 Commit message: `test: harden application runner failures`
 

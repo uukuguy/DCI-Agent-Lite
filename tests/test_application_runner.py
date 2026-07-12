@@ -8,6 +8,7 @@ from pathlib import Path
 from asterion.assembly.protocol import AssemblyPlan, resolve_assembly
 from asterion.packages.catalog import discover_packages
 from asterion.runner.application import (
+    ApplicationRunError,
     ApplicationRunResult,
     run_application,
 )
@@ -15,15 +16,25 @@ from asterion.runtime.host import RunEvent, RunRequest, RuntimeManifest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MANIFEST_ROOTS = (ROOT / "capabilities/dci-research/manifests",)
+MANIFEST_ROOTS = (
+    ROOT / "capabilities/dci-research/manifests",
+    ROOT / "capabilities/controlled-code/manifests",
+)
 ASSEMBLY = ROOT / "applications/dci-agent-lite/assemblies/dci-local-research.json"
+CONTROLLED_ASSEMBLY = (
+    ROOT / "applications/dci-agent-lite/assemblies/controlled-code-validation.json"
+)
 
 
 class FixtureRuntimeClient:
-    def __init__(self, runtime_id: str = "pi.reference") -> None:
+    def __init__(
+        self,
+        runtime_id: str = "pi.reference",
+        capabilities: tuple[str, ...] = ("filesystem.read", "shell"),
+    ) -> None:
         self.manifest = RuntimeManifest(
             runtime_id=runtime_id,
-            capabilities=("filesystem.read", "shell"),
+            capabilities=capabilities,
         )
         self.requests: list[RunRequest] = []
         self.signals: list[object | None] = []
@@ -63,6 +74,65 @@ class FixtureRuntimeClient:
         )
 
 
+class MutableSignal:
+    def __init__(self, cancelled: bool = False) -> None:
+        self.cancelled = cancelled
+
+
+class CancellingRuntimeClient(FixtureRuntimeClient):
+    async def run(
+        self,
+        request: RunRequest,
+        *,
+        signal: object | None = None,
+    ) -> AsyncIterator[RunEvent]:
+        self.requests.append(request)
+        self.signals.append(signal)
+        assert isinstance(signal, MutableSignal)
+        yield RunEvent(
+            run_id=request.run_id,
+            sequence=1,
+            type="run.started",
+            payload={"capabilities": list(request.requested_capabilities)},
+        )
+        signal.cancelled = True
+        yield RunEvent(
+            run_id=request.run_id,
+            sequence=2,
+            type="run.completed",
+            payload={"status": "cancelled"},
+        )
+
+
+class FailingRuntimeClient(FixtureRuntimeClient):
+    async def run(
+        self,
+        request: RunRequest,
+        *,
+        signal: object | None = None,
+    ) -> AsyncIterator[RunEvent]:
+        del request, signal
+        if False:
+            yield RunEvent("", 0, "", {})
+        raise RuntimeError("SECRET-PROVIDER-PAYLOAD")
+
+
+class IncompleteRuntimeClient(FixtureRuntimeClient):
+    async def run(
+        self,
+        request: RunRequest,
+        *,
+        signal: object | None = None,
+    ) -> AsyncIterator[RunEvent]:
+        del signal
+        yield RunEvent(
+            run_id=request.run_id,
+            sequence=1,
+            type="run.started",
+            payload={"capabilities": ["SECRET-RAW-TOOL-OUTPUT"]},
+        )
+
+
 def resolve_dci_plan(runtime_id: str = "pi.reference") -> AssemblyPlan:
     assembly = json.loads(ASSEMBLY.read_text())
     assembly["runtime_id"] = runtime_id
@@ -73,6 +143,19 @@ def resolve_dci_plan(runtime_id: str = "pi.reference") -> AssemblyPlan:
             "protocol": "dci.agent-runtime/v1",
             "runtime_id": runtime_id,
             "capabilities": ["filesystem.read", "shell"],
+        },
+    )
+
+
+def resolve_controlled_plan() -> AssemblyPlan:
+    assembly = json.loads(CONTROLLED_ASSEMBLY.read_text())
+    return resolve_assembly(
+        assembly,
+        catalog=discover_packages(MANIFEST_ROOTS),
+        runtime_manifest={
+            "protocol": "dci.agent-runtime/v1",
+            "runtime_id": "pi.reference",
+            "capabilities": ["filesystem.read"],
         },
     )
 
@@ -177,6 +260,103 @@ class ApplicationRunnerTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("asterion.adapters", source)
         self.assertNotIn("asterion.runtimes", source)
         self.assertNotIn("subprocess", source)
+
+    async def test_pi_and_claude_fixture_runtimes_are_protocol_equivalent(self) -> None:
+        pi = await run_application(
+            resolve_dci_plan("pi.reference"),
+            runtime=FixtureRuntimeClient("pi.reference"),
+            run_id="parity-run",
+            input_text="Read the corpus",
+            host_services={},
+        )
+        claude = await run_application(
+            resolve_dci_plan("claude-code.reference"),
+            runtime=FixtureRuntimeClient("claude-code.reference"),
+            run_id="parity-run",
+            input_text="Read the corpus",
+            host_services={},
+        )
+
+        self.assertEqual(pi.events, claude.events)
+        self.assertEqual(pi.artifacts, claude.artifacts)
+
+    async def test_pre_run_and_in_run_cancellation_are_safe(self) -> None:
+        pre_cancelled_runtime = FixtureRuntimeClient()
+        with self.assertRaises(ApplicationRunError):
+            await run_application(
+                resolve_dci_plan(),
+                runtime=pre_cancelled_runtime,
+                run_id="pre-cancelled",
+                input_text="Read the corpus",
+                host_services={},
+                signal=MutableSignal(cancelled=True),
+            )
+        self.assertEqual(pre_cancelled_runtime.requests, [])
+
+        signal = MutableSignal()
+        runtime = CancellingRuntimeClient()
+        result = await run_application(
+            resolve_dci_plan(),
+            runtime=runtime,
+            run_id="cancelled-during-run",
+            input_text="Read the corpus",
+            host_services={},
+            signal=signal,
+        )
+        self.assertIs(runtime.signals[0], signal)
+        self.assertTrue(signal.cancelled)
+        self.assertEqual(result.events[-1]["payload"]["status"], "cancelled")
+
+    async def test_runtime_and_service_mismatches_fail_before_invocation(self) -> None:
+        mismatch = FixtureRuntimeClient("other.runtime")
+        with self.assertRaises(ApplicationRunError):
+            await run_application(
+                resolve_dci_plan(),
+                runtime=mismatch,
+                run_id="runtime-mismatch",
+                input_text="Read the corpus",
+                host_services={},
+            )
+        self.assertEqual(mismatch.requests, [])
+
+        missing_capability = FixtureRuntimeClient(capabilities=("filesystem.read",))
+        with self.assertRaises(ApplicationRunError):
+            await run_application(
+                resolve_dci_plan(),
+                runtime=missing_capability,
+                run_id="capability-mismatch",
+                input_text="Read the corpus",
+                host_services={},
+            )
+        self.assertEqual(missing_capability.requests, [])
+
+        missing_service = FixtureRuntimeClient(capabilities=("filesystem.read",))
+        with self.assertRaises(ApplicationRunError):
+            await run_application(
+                resolve_controlled_plan(),
+                runtime=missing_service,
+                run_id="service-mismatch",
+                input_text="Check the source",
+                host_services={},
+            )
+        self.assertEqual(missing_service.requests, [])
+
+    async def test_malformed_streams_and_runtime_errors_are_redacted(self) -> None:
+        for runtime in (FailingRuntimeClient(), IncompleteRuntimeClient()):
+            with self.subTest(runtime=type(runtime).__name__), self.assertRaises(
+                ApplicationRunError
+            ) as raised:
+                await run_application(
+                    resolve_dci_plan(),
+                    runtime=runtime,
+                    run_id="safe-error",
+                    input_text="SECRET-APPLICATION-INPUT",
+                    host_services={},
+                )
+            message = str(raised.exception)
+            self.assertNotIn("SECRET-APPLICATION-INPUT", message)
+            self.assertNotIn("SECRET-PROVIDER-PAYLOAD", message)
+            self.assertNotIn("SECRET-RAW-TOOL-OUTPUT", message)
 
 
 if __name__ == "__main__":

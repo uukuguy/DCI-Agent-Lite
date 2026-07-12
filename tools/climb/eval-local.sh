@@ -408,6 +408,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_application_runner.ApplicationRunnerTests.test_successful_result_is_deeply_immutable"
         override_test="tests.test_application_runner.ApplicationRunnerTests.test_artifact_events_are_projected_without_provider_output"
         ;;
+    AF-100-H-003)
+        first_dimension="runtime_parity"
+        second_dimension="cancellation"
+        third_dimension="preflight_safety"
+        fourth_dimension="error_redaction"
+        immutable_test="tests.test_application_runner.ApplicationRunnerTests.test_pi_and_claude_fixture_runtimes_are_protocol_equivalent"
+        repeat_test="tests.test_application_runner.ApplicationRunnerTests.test_pre_run_and_in_run_cancellation_are_safe"
+        dirty_test="tests.test_application_runner.ApplicationRunnerTests.test_runtime_and_service_mismatches_fail_before_invocation"
+        override_test="tests.test_application_runner.ApplicationRunnerTests.test_malformed_streams_and_runtime_errors_are_redacted"
+        ;;
     H-001)
         first_dimension="immutable_resolution"
         second_dimension="repeat_validation"

@@ -2,10 +2,10 @@
   "session": "2026-07-13-af-100-asterion-runner",
   "phase": "implementation",
   "work_package_id": "AF-100",
-  "last_cycle": 48,
-  "next_hypothesis": "AF-100-H-003",
+  "last_cycle": 49,
+  "next_hypothesis": "AF-100-H-004",
   "in_flight": null,
-  "next_action": "Start AF-100-H-003.",
+  "next_action": "Start AF-100-H-004.",
   "falsified_routes": [
     "duplicate the authoritative Pi commit across setup.sh and .env.template",
     "convert the independent Pi checkout to vendored or submodule ownership",

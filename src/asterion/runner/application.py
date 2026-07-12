@@ -41,6 +41,11 @@ async def run_application(
 
     if runtime.manifest.runtime_id != plan.runtime_id:
         raise ApplicationRunError("application runtime identity does not match")
+    if any(
+        capability not in runtime.manifest.capabilities
+        for capability in plan.runtime_capabilities
+    ):
+        raise ApplicationRunError("application runtime capability is unavailable")
     if any(capability not in host_services for capability in plan.host_capabilities):
         raise ApplicationRunError("application host service is unavailable")
     if signal is not None and signal.cancelled:

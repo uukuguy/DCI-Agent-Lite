@@ -1,6 +1,6 @@
 # Recovered Session Checkpoint
 
-> Updated: 2026-07-13 02:54 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-13 02:58 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-100
 
@@ -10,7 +10,8 @@ Active work package: AF-100
 - AF-100 is the sole active package; scope preflight passes and all dependencies are complete.
 - The approved runner design now makes Python cancellation explicit, matching the existing TypeScript signal boundary.
 - `AF-100-H-001` is confirmed 4/4 at `7f51f2c`; `AssemblyPlan` now records explicit immutable runtime/host capability ownership.
-- Execution continues with the minimal plan-driven runner under `AF-100-H-002`.
+- `AF-100-H-002` is confirmed 4/4 at `4ca5f8e`; the minimal runner performs one portable invocation and returns immutable normalized results.
+- Execution continues with the cancellation, mismatch, and safe-failure matrix under `AF-100-H-003`.
 
 ## Durable boundary
 
@@ -21,7 +22,7 @@ Active work package: AF-100
 
 ## Immediate next action
 
-Execute `AF-100-H-002`: add the public cancellation/client boundary and minimal runner with immutable normalized results.
+Execute `AF-100-H-003`: complete runtime parity, cancellation, preflight, malformed-stream, and error-redaction acceptance.
 
 ## Guardrails
 
