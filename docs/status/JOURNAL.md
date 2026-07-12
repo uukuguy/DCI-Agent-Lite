@@ -301,3 +301,5 @@
 - 04:25 AF-110 全量验收通过：311 Python、11 Node、19 Rust 及 compile/lint/shell/scope/diff gates。
 - 04:25 provider-backed Asterion DCI probe 产出 research event/artifact；baseline example 六轮后空答案，score=false。
 - 04:26 AF-110 完成并激活 AF-120，下一步设计安全 installed-application binding。
+- 04:27 AF-110 closure 与 AF-120 激活已提交，post-transition scope preflight 通过。[4c16033]
+- 06:26 AF-120 installed-provider 规格已提交，锁定 entry-point 选择、资源根与 runtime authority。[9c2a1d1]
