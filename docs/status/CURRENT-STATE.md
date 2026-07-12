@@ -13,6 +13,7 @@
 - Corpus interaction: the agent searches local raw corpora directly with terminal tools; there is no required embedding index or retrieval service.
 - Evaluation: a shared judge transport supports OpenAI Responses and compatible Chat Completions backends; batch evaluators reuse the same `.env` configuration.
 - Configuration/artifacts: repository-root `.env` controls agent, Pi, and judge settings; run outputs live under `outputs/`.
+- Autonomous research: tracked climb state under `docs/status/climb/` ranks dependency/runtime hypotheses; `research-tree.md` is the resume-load summary and `tools/climb/` provides deterministic synchronization.
 
 ## Open Problems (theme-level)
 
@@ -47,6 +48,8 @@
 - `tests/` — first-party configuration, judge transport, and Pi RPC lifecycle regressions.
 - `.env.template` — primary runtime, Pi, and judge configuration examples.
 - `setup.sh` — dependency, external Pi, corpus, and benchmark setup.
+- `docs/status/climb/research-tree.md` — generated climb summary for active hypotheses, run evidence, and the next autonomous action.
+- `tools/climb/` — project adapter and deterministic climb state tooling.
 
 ## Resume Instructions
 
