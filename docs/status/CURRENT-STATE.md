@@ -4,9 +4,9 @@
 
 - Project: DCI-Agent-Lite — evolving from a Pi-based DCI benchmark harness into an agent-application framework.
 - Current branch: `main`
-- Theme-level focus: Static portable application assembly across runtime, catalog, and host-service boundaries.
+- Theme-level focus: Minimal plan-driven application execution through explicit runtime and host-service boundaries.
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: `AF-090` — static application assembly.
+- Active work package: `AF-100` — application runner vertical slice.
 
 ## Current Architecture
 
@@ -32,7 +32,7 @@
 ## Open Problems (theme-level)
 
 - Provider-backed acceptance of the first non-Pi runtime when credentials or a compatible gateway become available.
-- Select and approve the next governed package before formally closing AF-090; the recommended direction is a minimal assembly-plan application runner vertical slice.
+- Complete written-spec review and implementation planning for the minimal AF-100 application runner vertical slice.
 
 ## Key Files
 
@@ -67,6 +67,7 @@
 - `docs/architecture/controlled-code-validation-packages.md` — second-graph, shared host-service, non-execution, and non-sandbox guide.
 - `docs/architecture/local-package-catalog.md` — explicit-root discovery, exact selection, filesystem trust, and non-execution guide.
 - `docs/architecture/static-application-assembly.md` — exact runtime/catalog/service binding, language ownership, safe failure, and non-execution guide.
+- `docs/superpowers/specs/2026-07-13-application-runner-vertical-slice-design.md` — approved AF-100 scope and execution/security boundaries.
 - `scripts/bcplus_eval/run_bcplus_eval.py` — DCI reference benchmark harness.
 - `tools/climb/` — autonomous-work adapter; future cycles require a work-package parent.
 

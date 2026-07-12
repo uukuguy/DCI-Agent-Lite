@@ -239,6 +239,9 @@
 - 01:47 AF-090-H-003 confirmed 4/4；reference plans 与 service separation 通过。
 - 01:50 AF-090-H-004 confirmed 4/4；TypeScript parity、docs 与 closure adapter 通过。
 - 01:51 AF-090 closure 通过 237 Python、11 Node、19 Rust 及全部门禁；等待 successor governance。
+- 01:52 static assembly acceptance 已提交，为 successor design 建立稳定边界。[d02351e]
+- 01:54 AF-100 minimal application runner 方向获批；显式 runtime/service injection，不建 scheduler/control plane。
+- 01:56 AF-090 完成；AF-100 接管 active package，书面 spec 进入 review gate。
 - 01:36 AF-090-H-001 confirmed 4/4; package acceptance recorded.
 - 01:40 AF-090-H-002 confirmed 4/4; package acceptance recorded.
 - 01:47 AF-090-H-003 confirmed 4/4; package acceptance recorded.

@@ -5,14 +5,18 @@
 
 ## In-flight / session state
 
-- Phase: implementation
+- Phase: design-review
 - Last cycle: 42
-- Next hypothesis: None
+- Next hypothesis: AF-100-H-001
 - In flight: none
-- Next action: Trigger Knowledge Layer.
+- Next action: Complete written-spec review, then write the AF-100 implementation plan.
 
 ## Active hypotheses
 
+- **AF-100-H-001** (pending, rank 1.00): Extend immutable assembly plans with explicit runtime and host-service capability ownership.
+- **AF-100-H-002** (pending, rank 0.90): Run one DCI application through an explicit runtime client into immutable normalized results.
+- **AF-100-H-003** (pending, rank 0.80): Prove runtime parity cancellation safe failures and missing-service preflight behavior.
+- **AF-100-H-004** (pending, rank 0.60): Document and close the minimal runner without scheduler registry or automatic service startup.
 
 ## Run ladder
 

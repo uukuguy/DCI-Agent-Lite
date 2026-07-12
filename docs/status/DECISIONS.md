@@ -229,3 +229,12 @@
 - Revalidation trigger: propose a runner only after static plans for both reference applications are portable, safe, and insufficient for a concrete execution use case.
 - Implemented evidence: H-001 confirms the closed protocol and canonical refs/edges; H-002 confirms immutable safe resolution; H-003 confirms both reference applications, runtime parity, and service separation; H-004 confirms TypeScript validation ownership, non-execution documentation, and full repository closure.
 - Closure evidence: 237 Python, 11 Node, and 19 Rust tests plus compile, Ruff, clean npm install, fmt, Clippy, shell, scope, and diff gates pass. Formal package closure waits only for an approved successor package.
+
+## D-026 — Execute resolved plans before adding workflow infrastructure
+
+- Status: ✅ accepted decision
+- Decided: 2026-07-13
+- Decision: AF-100 adds a minimal Python runner that consumes one resolved `AssemblyPlan`, an explicit runtime client, application input, and explicit host services.
+- Rationale: AF-090 proves static application identity and boundaries; the smallest next product proof is one end-to-end DCI run through those contracts, not a scheduler or registry.
+- Boundary: no package interpreter, general workflow engine, automatic service startup, provider/model selection, retry engine, persistence, registry, API server, tenancy, or control plane.
+- Revalidation trigger: add scheduling only when a second executable application cannot be represented by one runtime invocation; add distribution only for a real remote source.

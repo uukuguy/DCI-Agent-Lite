@@ -95,10 +95,20 @@
 
 ## AF-090 — Static application assembly
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Agent Application Framework
 - Scope: bind one runtime identity, exact catalog package refs, and explicit host-service edges into a deterministic auditable composition plan without execution.
 - Dependencies: AF-040, AF-080
 - Acceptance: both reference applications resolve through the shared runtime/catalog/composer contracts with cross-language validation and no execution side effects.
 - Design: `docs/superpowers/specs/2026-07-13-static-application-assembly-design.md`
 - Plan: `docs/superpowers/plans/2026-07-13-static-application-assembly.md`
+
+## AF-100 — Application runner vertical slice
+
+- Status: in_progress
+- Parent objective: Agent Application Framework
+- Scope: execute one resolved DCI application plan through an explicitly supplied runtime client and host services, returning normalized immutable events/artifacts without a general workflow engine.
+- Dependencies: AF-020, AF-030, AF-090
+- Acceptance: Pi and Claude fixture runtimes satisfy the same plan-driven runner contract; runtime/service mismatch, cancellation, malformed streams, and unsafe errors fail closed before accidental execution.
+- Design: `docs/superpowers/specs/2026-07-13-application-runner-vertical-slice-design.md`
+- Plan: pending written-spec approval

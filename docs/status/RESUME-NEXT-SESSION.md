@@ -1,8 +1,8 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13 01:51 +0800. **AF-090 is implementation-complete; package closure awaits the next governed design.**
+> Updated: 2026-07-13 01:56 +0800. **AF-090 is closed; AF-100 design awaits written-spec review.**
 
-Active work package: AF-090
+Active work package: AF-100
 
 ## TL;DR
 
@@ -32,6 +32,7 @@ Active work package: AF-090
 - AF-090-H-003 product evidence is green: both checked-in reference assemblies validate, DCI has Pi/Claude plan parity, and controlled execution stays host-owned.
 - `AF-090-H-003` and `AF-090-H-004` are confirmed 4/4; TypeScript parity, documentation, and full closure are green.
 - Fresh closure evidence: 237 Python, 11 Node, and 19 Rust tests plus compile, Ruff, clean npm install, fmt, Clippy, shell, scope, and diff gates.
+- AF-090 is completed; AF-100 is active under the approved minimal plan-driven runner direction.
 
 ## Durable boundary
 
@@ -45,7 +46,7 @@ Active work package: AF-090
 
 ## Immediate next action
 
-After strategic approval, write and commit the AF-100 minimal application-runner design, activate it in WORKLIST, and formally close AF-090.
+Review the written AF-100 specification; after approval invoke writing-plans before any implementation.
 
 ## Guardrails
 
@@ -56,6 +57,6 @@ After strategic approval, write and commit the AF-100 minimal application-runner
 ## Ready commands
 
 ```bash
-python3 tools/project_scope_check.py --climb-hypothesis AF-090-H-004
-uv run python -m unittest tests.test_application_assembly -v
+python3 tools/project_scope_check.py
+sed -n '1,260p' docs/superpowers/specs/2026-07-13-application-runner-vertical-slice-design.md
 ```
