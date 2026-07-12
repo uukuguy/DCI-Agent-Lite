@@ -308,3 +308,6 @@
 - 06:52 Asterion core 与 enhanced DCI baseline 已拆分为独立 wheel；benchmark 未改。[550e5c6]
 - 06:58 DCI research capability 独立 wheel 与单一 canonical manifests 已提交。[8c2c434]
 - 07:02 installed application provider v1 契约已提交，资源逃逸与 identity/binding 错配 fail closed。[1d0b71d]
+- 07:20 provider discovery 仅列 metadata、仅加载显式选择项，避免隐式执行相邻 provider。[88f6480]
+- 07:35 通用 `asterion list/run` 已提交，runtime 构造严格晚于 provider 与 binding preflight。[444efc3]
+- 07:54 AF-120 收敛为唯一 Asterion wheel；`src/dci` 仅保留仓库内可运行 baseline。[a0f0a7f]
