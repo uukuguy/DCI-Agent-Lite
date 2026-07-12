@@ -55,7 +55,7 @@
 
 ## AF-050 — Rust executor boundary
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Agent Application Framework
 - Scope: define a controlled Rust tool-execution or isolation-sidecar boundary without duplicating orchestration.
 - Dependencies: AF-010
@@ -65,10 +65,10 @@
 
 ## AF-060 — Composable workflow and enterprise packages
 
-- Status: pending
+- Status: in_progress
 - Parent objective: Agent Application Framework
 - Scope: workflow, memory, governance, observability, evaluation, and enterprise application packages.
 - Dependencies: AF-020, AF-030
 - Acceptance: packages compose through declared capabilities and policy boundaries.
-- Design: `docs/architecture/agent-framework.md`
-- Plan: not yet planned
+- Design: `docs/superpowers/specs/2026-07-12-composable-framework-packages-design.md`
+- Plan: `docs/superpowers/plans/2026-07-12-composable-framework-packages.md`

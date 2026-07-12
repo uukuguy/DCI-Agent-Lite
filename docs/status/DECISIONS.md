@@ -186,3 +186,12 @@
 - Rationale: a local child process can still use the network, open absolute paths, spawn descendants, and call platform syscalls unless a real platform/container boundary is installed. Honest capability naming prevents enterprise callers from relying on protections that do not exist.
 - Implemented evidence: `dci.executor/v1` schemas/reference validation plus the runnable Rust sidecar prove trusted policy, no-shell execution, capped stream draining, deadline/cancel kill-and-reap, duplicate-ID enforcement, responsive JSONL correlation, EOF completion, and documented operator boundaries.
 - Extension boundary: containers, remote workers, Linux namespace/seccomp/cgroup isolation, macOS sandbox profiles, or Windows job objects must be replaceable executor backends behind the same versioned contract.
+
+## D-022 — Establish package composition before workflow execution
+
+- Status: ✅ accepted decision
+- Decided: 2026-07-12
+- Decision: AF-060 first defines `dci.package/v1` manifests and a deterministic static capability/policy composer, then proves a DCI reference graph.
+- Rationale: a workflow engine or enterprise control plane built first would invent package, policy, event, and artifact semantics implicitly and couple them to one host.
+- Boundary: AF-060 does not implement scheduling, persistent memory storage, multi-tenant administration, or adapter-specific package variants.
+- Revalidation trigger: add an execution engine only after two independently useful package graphs cannot be expressed or validated by the static contract.

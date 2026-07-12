@@ -7,12 +7,17 @@
 
 - Phase: implementation
 - Last cycle: 25
-- Next hypothesis: None
+- Next hypothesis: AF-060-H-001
 - In flight: none
-- Next action: Trigger Knowledge Layer.
+- Next action: Write failing shared-fixture tests for the dci.package/v1 manifest contract.
 
 ## Active hypotheses
 
+- **AF-060-H-001** (pending, rank 1.00): Define closed portable dci.package/v1 manifests with shared positive and negative fixtures.
+- **AF-060-H-002** (pending, rank 0.90): Resolve package capability, policy, event, and artifact dependencies deterministically.
+- **AF-060-H-003** (pending, rank 0.80): Compose one DCI research policy observability evaluation graph for Pi and Claude Code capability sets.
+- **AF-060-H-004** (pending, rank 0.70): Validate shared package schemas and fixtures through the TypeScript host.
+- **AF-060-H-005** (pending, rank 0.60): Document the static composition boundary and close AF-060 through full framework gates.
 
 ## Run ladder
 
@@ -50,3 +55,5 @@
 - convert the independent Pi checkout to vendored or submodule ownership
 - describe the local policy executor as an operating-system sandbox
 - accept executable paths, environment variables, shells, or workspace roots from agent requests
+- build a workflow engine before portable package composition semantics
+- build an enterprise control plane before a reference package graph

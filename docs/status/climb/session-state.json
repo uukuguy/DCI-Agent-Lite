@@ -1,15 +1,17 @@
 {
-  "session": "2026-07-12-af-050-rust-executor",
+  "session": "2026-07-12-af-060-package-composition",
   "phase": "implementation",
-  "work_package_id": "AF-050",
+  "work_package_id": "AF-060",
   "last_cycle": 25,
-  "next_hypothesis": null,
+  "next_hypothesis": "AF-060-H-001",
   "in_flight": null,
-  "next_action": "Trigger Knowledge Layer.",
+  "next_action": "Write failing shared-fixture tests for the dci.package/v1 manifest contract.",
   "falsified_routes": [
     "duplicate the authoritative Pi commit across setup.sh and .env.template",
     "convert the independent Pi checkout to vendored or submodule ownership",
     "describe the local policy executor as an operating-system sandbox",
-    "accept executable paths, environment variables, shells, or workspace roots from agent requests"
+    "accept executable paths, environment variables, shells, or workspace roots from agent requests",
+    "build a workflow engine before portable package composition semantics",
+    "build an enterprise control plane before a reference package graph"
   ]
 }

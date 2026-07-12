@@ -4,9 +4,9 @@
 
 - Project: DCI-Agent-Lite — evolving from a Pi-based DCI benchmark harness into an agent-application framework.
 - Current branch: `main`
-- Theme-level focus: Agent Runtime Protocol foundation and governed multi-runtime framework delivery.
+- Theme-level focus: Portable package composition across capabilities, policies, artifacts, and observability.
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: `AF-050` — Rust controlled executor boundary.
+- Active work package: `AF-060` — composable workflow and enterprise packages.
 
 ## Current Architecture
 
@@ -19,13 +19,15 @@
 - Claude Code provider access: the adapter supports stored login and inherited environment-configured backends; provider-backed UAT is deferred while the local account is unavailable and does not block host-language work.
 - Host contracts: Python and TypeScript expose the same schema-backed runtime manifest, request, event, and asynchronous client boundary without adapter-private types.
 - Controlled execution: `dci.executor/v1` has a runnable concurrent Rust JSONL sidecar with trusted startup policy, direct execution, bounded dual-stream draining, deadline/cancel kill-and-reap, duplicate-ID denial, out-of-order correlation, safe parse errors, EOF draining, operator documentation, and root verification targets.
+- Package composition: AF-060 uses a package-first `dci.package/v1` contract and deterministic static resolver before any workflow engine or enterprise control plane.
 
 ## Open Problems (theme-level)
 
 - Agent Runtime Protocol contract, capability manifest, and conformance semantics.
 - Provider-backed acceptance of the first non-Pi runtime when credentials or a compatible gateway become available.
 - Controlled Rust execution/isolation boundary without duplicating orchestration or runtime-adapter responsibilities.
-- Enterprise policy, artifact, observability, and isolation boundaries after the reference vertical slice.
+- Portable package manifest and deterministic capability/policy composition semantics.
+- DCI research/policy/observability/evaluation reference graph across both runtime capability sets.
 
 ## Key Files
 
@@ -52,6 +54,7 @@
 - `packages/typescript/agent-runtime/` — public TypeScript host package and shared-fixture validator.
 - `src/dci/framework/executor_protocol.py` — Python reference validator for `dci.executor/v1`.
 - `packages/rust/executor/` — runnable Rust controlled-executor sidecar and library with complete AF-050 policy/process/resource/service acceptance.
+- `docs/superpowers/specs/2026-07-12-composable-framework-packages-design.md` — active AF-060 package contract and non-goals.
 - `scripts/bcplus_eval/run_bcplus_eval.py` — DCI reference benchmark harness.
 - `tools/climb/` — autonomous-work adapter; future cycles require a work-package parent.
 
