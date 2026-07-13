@@ -337,3 +337,5 @@
 - 09:32 独立 `controlled-code` provider 与 assembly 已加入唯一 Asterion wheel。[cf23ee0]
 - 09:36 caller-owned controlled-executor JSONL client 与显式 host composition 已提交。[d897aea]
 - 09:40 AF-140 closure 通过 352 Python、11 Node、19 Rust、isolated two-provider wheel 及全部门禁。
+- 09:44 AF-140 已关闭并激活 AF-150，operator lifecycle 成为单独安全边界。[9bd531f]
+- 09:50 AF-150 指定显式 binary/policy/validation config 的 managed stdio lifecycle。[7a3cd12]

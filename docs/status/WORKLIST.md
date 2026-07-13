@@ -166,7 +166,7 @@
 - Dependencies: AF-050, AF-140
 - Acceptance: one reviewed CLI/configuration flow establishes trusted policy, process ownership, readiness, injection, cancellation, and shutdown; failures are redacted and no agent/provider/manifest can select commands or silently start services.
 - Design: `docs/superpowers/specs/2026-07-13-controlled-executor-operator-lifecycle-design.md`
-- Plan: pending design approval
+- Plan: `docs/superpowers/plans/2026-07-13-controlled-executor-operator-lifecycle.md`
 
 ## AF-095 — Asterion framework identity and extraction
 
