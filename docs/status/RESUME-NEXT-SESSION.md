@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13 18:05. **Session remains active — not a final handoff.**
+> Updated: 2026-07-13 18:07. **Session remains active — not a final handoff.**
 
 Active work package: AF-180
 
@@ -17,11 +17,12 @@ Active work package: AF-180
 - AF-180 Climb now owns H-001 through H-004 and replaces the old AF-100 hard-pause only for current-session execution. H-001 is confirmed 4/4 (cycle 51): only `ASTERION_DCI_*` resolves product paths, legacy paths are never selected, process config retains precedence, and source boundaries remain closed.
 - H-002 is confirmed 4/4 (cycle 52): the Asterion-owned transport preserves direct Pi JSONL acknowledgement, retry/abort/idle checks, safe failures, and writes the AF-180 native artifact subset plus normalized protocol events.
 - H-003 is confirmed 4/4 (cycle 53): `asterion-dci run` and `system-prompt` are product-local; deferred resume/evaluation/benchmark behavior fails safely and generic `asterion` remains neutral.
+- H-004 is confirmed 4/4 (cycle 54): completed native runs project through an explicit, body-free capability seam. The current Climb hypothesis ladder is exhausted; the remaining AF-180 plan work is wheel/docs proof and closure verification.
 - No Pi, judge, or Claude provider request was sent.
 
 ## Next action
 
-1. Execute AF-180-H-004 through TDD: project completed native DCI runs to the declared capability result, with no answer or diagnostic body exposure.
+1. Execute AF-180 Task 5 through TDD: prove the one-wheel `asterion-dci` distribution boundary and document `ASTERION_DCI_*` setup and deferred functions.
 2. Before implementation, run `python3 tools/project_scope_check.py`; retain exactly one active package.
 3. Do not send Pi, judge, or Claude provider requests without the applicable operator authorization.
 

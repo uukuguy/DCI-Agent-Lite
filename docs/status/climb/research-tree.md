@@ -1,19 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (53 runs).
+> Deterministic summary generated from tracked state (54 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 53
-- Next hypothesis: AF-180-H-004
+- Last cycle: 54
+- Next hypothesis: None
 - In flight: none
-- Next action: Start AF-180-H-004.
+- Next action: Trigger Knowledge Layer.
 
 ## Active hypotheses
 
-- **AF-180-H-004** (pending, rank 0.70): Project completed native DCI runs into the declared capability result and prove the one-wheel product boundary.
 
 ## Run ladder
 
@@ -72,6 +71,7 @@
 | 20260713-175701-dci-climb-af180h001 | AF-180-H-001 | 4 | confirmed 4/4 |
 | 20260713-180208-dci-climb-af180h002 | AF-180-H-002 | 4 | confirmed 4/4 |
 | 20260713-180508-dci-climb-af180h003 | AF-180-H-003 | 4 | confirmed 4/4 |
+| 20260713-180718-dci-climb-af180h004 | AF-180-H-004 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

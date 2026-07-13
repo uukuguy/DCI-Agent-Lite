@@ -1189,6 +1189,18 @@ hypotheses:
   expected_lift: +1 complete capability-package execution confidence
   cost_h: 0.8
   ranking: 0.7
-  status: pending
+  status: confirmed
   created_at: '2026-07-13T17:20:00+08:00'
-  results: []
+  results:
+  - session: 2026-07-13-af-180-dci-execution
+    cycle: 54
+    run: 20260713-180718-dci-climb-af180h004
+    local: 4
+    local_per_task:
+      body_free_projection: 1
+      terminal_result_rejection: 1
+      native_projection_seam: 1
+      baseline_independence: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
