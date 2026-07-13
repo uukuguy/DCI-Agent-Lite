@@ -11,7 +11,7 @@ from unittest.mock import patch
 from asterion.cli import _parser
 from asterion.dci.cli import main
 from asterion.dci.evaluation import DciEvaluationError
-from asterion.dci.run import DciRunResult
+from asterion.dci.run import DciRunError, DciRunResult
 from asterion.runtime.host import RunEvent
 
 
@@ -291,6 +291,27 @@ class AsterionDciCliTests(unittest.TestCase):
             ),
             ("openai", "gpt-test", "read", 45.0, "level3", "high", 4096, True, ("--verbose",)),
         )
+
+    def test_benchmark_redacts_native_and_artifact_failures(self) -> None:
+        for failure in (
+            DciRunError("credential=synthetic-secret"),
+            DciEvaluationError("credential=synthetic-secret"),
+            OSError("credential=synthetic-secret"),
+        ):
+            with self.subTest(failure=type(failure).__name__):
+                with patch("asterion.dci.cli.run_benchmark", side_effect=failure):
+                    stdout = io.StringIO()
+                    stderr = io.StringIO()
+                    code = main(
+                        ["benchmark", "--dataset", "data.jsonl", "--output-root", "out"],
+                        stdout=stdout,
+                        stderr=stderr,
+                    )
+
+                self.assertEqual(code, 2)
+                self.assertEqual(stdout.getvalue(), "")
+                self.assertEqual(stderr.getvalue(), "DCI benchmark failed\n")
+                self.assertNotIn("synthetic-secret", stdout.getvalue() + stderr.getvalue())
 
     def test_cli_rejects_invalid_resume_without_calling_pi(self) -> None:
         stderr = io.StringIO()

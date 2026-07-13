@@ -129,7 +129,7 @@ def main(
                 ),
                 paths=paths,
             )
-        except (DciBenchmarkError, ValueError):
+        except (DciBenchmarkError, DciEvaluationError, DciRunError, OSError, ValueError):
             stderr.write("DCI benchmark failed\n")
             return 2
         stdout.write(f"output_root={result.output_root}\n")
