@@ -461,6 +461,8 @@
 - 01:38 AF-220 basic Asterion example stopped before Pi startup because this worktree lacks `corpus/wiki_corpus`; the native run state is failed with no events or stderr, and no model/Judge request occurred.
 - 01:46 AF-220 corpus-root repair allowed the basic real Pi example to complete with its native artifact schema; no Judge was used.
 - 01:48 AF-220 runtime-context example stopped before prompt: the current Pi CLI rejects Asterion’s unsupported `--context-management-level` flag. No model/Judge request or verdict occurred; application and benchmark acceptance remain unrun.
+- 01:56 AF-220 context compatibility repair let the runtime-context Pi-plus-Judge example complete with a boolean verdict and explicit unsupported-control state.
+- 01:58 AF-220 installed application reached a completed native Pi state with shared fields, but its public JSON projection was polluted by streamed Pi text on stdout; benchmark acceptance remains unrun.
 - 01:54 AF-220 examples now accept the documented `ASTERION_DCI_CORPUS_ROOT` read-only corpus-root override, default to the checkout `corpus/`, and reject a missing required child directory before launching Pi; 17 focused product CLI tests, shell syntax, scope, and diff checks pass without provider requests. [pending corpus-boundary commit]
 - 01:54 correction: corpus-root example boundary committed after focused no-provider verification. [8f47a19]
 - 02:00 AF-220 example corpus override now rejects relative paths before Pi; documentation no longer claims a read-only boundary. [pending review-fix commit]
