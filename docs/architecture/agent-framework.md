@@ -17,6 +17,7 @@ Build Asterion as a multi-runtime, multi-language agent-application framework. D
 - Define and test the runtime protocol before building additional adapters.
 - Keep the existing Pi JSONL RPC boundary as the first reference adapter.
 - Prove the protocol with a DCI research vertical slice across Pi and one independent runtime before expanding packages or language hosts.
+- Expose installed runtime factories by exact identity; constructing a factory is not provider authorization or a provider invocation.
 - Add enterprise policy, audit, artifact, and observability boundaries through the shared protocol rather than adapter-private behavior.
 
 ## Non-goals
