@@ -26,6 +26,7 @@ class ManagedControlledExecutor:
     def __init__(self, config: OperatorExecutorConfig) -> None:
         self._config = config
         self._process: asyncio.subprocess.Process | None = None
+        self._stderr_task: asyncio.Task[None] | None = None
 
     async def __aenter__(self) -> ControlledExecutorJsonlClient:
         try:
@@ -40,6 +41,8 @@ class ManagedControlledExecutor:
         except (OSError, ValueError):
             raise ControlledExecutorError("controlled executor failed to start") from None
         self._process = process
+        if process.stderr is not None:
+            self._stderr_task = asyncio.create_task(_discard_stderr(process.stderr))
         await asyncio.sleep(0)
         if (
             process.returncode is not None
@@ -62,6 +65,8 @@ class ManagedControlledExecutor:
     async def _shutdown(self) -> None:
         process = self._process
         self._process = None
+        stderr_task = self._stderr_task
+        self._stderr_task = None
         if process is None:
             return
         if process.stdin is not None:
@@ -75,11 +80,19 @@ class ManagedControlledExecutor:
             except TimeoutError:
                 process.kill()
                 await process.wait()
-        if process.stderr is not None:
+        if stderr_task is not None:
             try:
-                await asyncio.wait_for(process.stderr.read(), timeout=1)
-            except (TimeoutError, OSError):
-                pass
+                await asyncio.wait_for(stderr_task, timeout=1)
+            except TimeoutError:
+                stderr_task.cancel()
+                await asyncio.gather(stderr_task, return_exceptions=True)
+
+
+async def _discard_stderr(stream: asyncio.StreamReader) -> None:
+    """Drain diagnostics without retaining unbounded child output."""
+
+    while await stream.read(4096):
+        pass
 
 
 def load_operator_executor_config(

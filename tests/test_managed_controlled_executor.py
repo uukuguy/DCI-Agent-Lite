@@ -23,6 +23,16 @@ class FakePipe:
         self.closed = True
 
 
+class RecordingStderr:
+    def __init__(self) -> None:
+        self.read_sizes: list[int] = []
+        self._chunks = [b"diagnostic", b""]
+
+    async def read(self, size: int = -1) -> bytes:
+        self.read_sizes.append(size)
+        return self._chunks.pop(0)
+
+
 class FakeProcess:
     def __init__(self, *, returncode: int | None = None, wait_timeout: bool = False) -> None:
         self.returncode = returncode
@@ -136,6 +146,19 @@ class ManagedControlledExecutorTests(unittest.IsolatedAsyncioTestCase):
                 async with ManagedControlledExecutor(self.config()):
                     pass
         self.assertNotIn("trusted", str(caught.exception))
+
+    async def test_discards_stderr_in_bounded_chunks(self) -> None:
+        process = FakeProcess()
+        stderr = RecordingStderr()
+        process.stderr = stderr  # type: ignore[assignment]
+        with patch(
+            "asterion.services.managed_controlled_executor.asyncio.create_subprocess_exec",
+            new=AsyncMock(return_value=process),
+        ):
+            async with ManagedControlledExecutor(self.config()):
+                pass
+
+        self.assertEqual(stderr.read_sizes, [4096, 4096])
 
 
 if __name__ == "__main__":
