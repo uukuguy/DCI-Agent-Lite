@@ -457,3 +457,5 @@
 - 01:24 AF-220 local Climb closure repair committed with current hypothesis suites and truthful state. [aaf0d40]
 - 01:28 AF-220 bounded external acceptance stopped at the model-free Pi preflight: this worktree has no local `.env` or `pi/` checkout, so `make check-pi-rpc` failed before any Pi model or Judge request; AF-220 remains in_progress.
 - 01:30 AF-220 preflight block checkpointed so recovery preserves the safe stop boundary. [c74c040]
+- 01:36 correction: process-local shared `.env`, main Pi checkout, and worktree source path made both AF-220 prerequisites pass; no files were copied or linked.
+- 01:38 AF-220 basic Asterion example stopped before Pi startup because this worktree lacks `corpus/wiki_corpus`; the native run state is failed with no events or stderr, and no model/Judge request occurred.
