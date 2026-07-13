@@ -4,22 +4,23 @@
 
 - Project: Asterion framework under development in the DCI-Agent-Lite repository; DCI remains the first capability and reference application.
 - Current branch: `main`
-- Theme-level focus: Design explicit installed DCI compatibility with the Claude runtime.
+- Theme-level focus: establish Asterion DCI as the first complete capability-package reference product.
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: `AF-170` — installed DCI Claude compatibility.
+- Active work package: `AF-180` — complete DCI capability execution parity.
 
 ## Current Architecture
 
 - Product contract: a versioned Agent Runtime Protocol will normalize lifecycle, capabilities, events, artifacts, cancellation, and deadlines across adapters.
 - Reference runtime: the existing Python controller drives external Pi through a hardened JSONL RPC boundary; it is the first reference adapter, not the framework boundary.
-- Capability direction: DCI direct local-corpus research becomes the first reusable capability package; no embedding index is required by that capability.
+- Capability direction: Asterion DCI becomes the first complete reusable capability-package reference product. It will own the full original DCI workflow internally and expose it through capability contracts/application assemblies; no embedding index is required.
 - Language roles: Python owns research/evaluation/orchestration, TypeScript owns Node/service integration, and Rust is reserved for controlled execution infrastructure.
 - Governance: `docs/status/WORKLIST.md` is the sole active package ledger. A scope audit must pass before manager dispatch or climb execution.
 - Maintenance history: Pi/Judge reliability H-001 through H-019 is completed and remains available as reference-maintenance evidence; it is not an active roadmap stream.
 - Claude Code provider access: the adapter supports stored login and inherited environment-configured backends; provider-backed UAT is deferred while the local account is unavailable and does not block host-language work.
 - Installed DCI compatibility: the bundled DCI application declares exact Pi and Claude runtime identities through paired composition-equivalent canonical assemblies; generic application selection picks the unique matching assembly before runtime construction, and fixture-only CLI proof does not authorize or invoke Claude.
+- Complete DCI direction: `src/dci` remains an independent source-only legacy product and comparison baseline. AF-180 through AF-210 will transplant its complete run, durable/resume, evaluation/benchmark, and application/runtime semantics into an Asterion-owned DCI module without either product importing or launching the other. The single Asterion wheel remains unchanged; package-local DCI commands keep the generic framework CLI domain-neutral.
 - Host contracts: Python and TypeScript expose the same schema-backed runtime manifest, request, event, and asynchronous client boundary without adapter-private types.
 - Controlled execution: `dci.executor/v1` has a runnable concurrent Rust JSONL sidecar with trusted startup policy, direct execution, bounded dual-stream draining, deadline/cancel kill-and-reap, duplicate-ID denial, out-of-order correlation, safe parse errors, EOF draining, operator documentation, and root verification targets.
 - Package composition: `dci.package/v1` and the deterministic Python composer resolve a portable policy → DCI research → evaluation → observability graph identically for Pi and Claude Code capability mappings. The TypeScript host exports the same manifest types and validates the canonical schema/fixtures without implementing a second composer.
@@ -49,6 +50,7 @@
 
 - Provider-backed acceptance of the first non-Pi runtime when credentials or a compatible gateway become available.
 - Provider-backed Claude acceptance remains deferred because the local CLI is unauthenticated. AF-160 instead validates the installed runtime factory and existing command/fixture/redaction boundary without a provider request.
+- Full Asterion DCI Pi behavior, durable artifacts/resume, judge/cache/benchmark behavior, and authorized runtime semantic parity are staged under AF-180 through AF-210; no fixture-only Claude declaration constitutes full DCI parity.
 
 ## Key Files
 

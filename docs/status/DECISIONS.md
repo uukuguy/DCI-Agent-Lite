@@ -334,3 +334,13 @@
 - Rationale: `dci.assembly/v1` binds one exact runtime ID, so mutating or dynamically interpreting one assembly would obscure the selected product contract. A generic runtime-to-assembly selector preserves the established explicit selection boundary without coupling the CLI to DCI.
 - Boundary: the DCI provider owns its allowed runtime IDs; controlled-code remains Pi-only. Fixture verification must not authorize, invoke, or configure Claude. `src/dci/benchmark/` remains untouched and excluded from the wheel.
 - Revalidation trigger: revise the selection contract only if one application needs multiple canonical assemblies for the same runtime or runtime compatibility gains its own versioning policy.
+
+## D-036 — Make complete DCI the first Asterion capability-package reference product
+
+- Status: ✅ accepted decision
+- Decided: 2026-07-13
+- Decision: Asterion will own a complete DCI domain implementation inside its single wheel. The implementation is a capability package with an Asterion contract/application bridge and a package-local operator CLI. The old `src/dci` product remains unchanged, source-only, and independent; neither side is a runtime dependency of the other.
+- Rationale: the existing Asterion DCI vertical slice proves framework mechanics but does not provide the original product's full run, artifact, resume, judge, cache, or benchmark behavior. A behavior-preserving domain transplant makes DCI the first complete capability-package example without polluting generic framework code or rewriting mature research logic.
+- Delivery boundary: AF-180 through AF-210 separately accept interactive execution, durable/resume behavior, evaluation/benchmark behavior, and application/runtime semantic parity. Pi is the required original-DCI parity baseline. Claude fixture compatibility is not a full-DCI claim and real provider evidence remains operator-authorized.
+- Distribution boundary: D-030 remains in force. `asterion.dci` is independently owned code within the one `asterion` wheel; it is not a second first-party wheel. Its public configuration and output roots are separate from the old product.
+- Revalidation trigger: split the package only for a concrete separately versioned consumer/deployment need; alter native DCI artifact formats only with an explicit migration policy and parity test; claim a runtime-specific DCI semantic only with matching evidence.

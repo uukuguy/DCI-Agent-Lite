@@ -183,14 +183,54 @@
 
 ## AF-170 — Installed DCI Claude compatibility
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Asterion Agent Application Framework
 - Scope: design an explicit, fixture-verifiable `claude-code.reference` compatibility declaration for the installed DCI application while preserving Pi behavior and deferring real provider UAT.
 - Dependencies: AF-120, AF-160
 - Acceptance: approved design and plan define exact provider declaration, fixture-only generic CLI proof, Pi compatibility preservation, and the boundary for future real authorization.
 - Design: `docs/superpowers/specs/2026-07-13-installed-dci-claude-compatibility-design.md`
 - Plan: `docs/superpowers/plans/2026-07-13-installed-dci-claude-compatibility.md`
-- Implementation evidence: generic runtime-specific assembly selection, paired immutable DCI Pi/Claude assemblies, bundled fixture-only generic CLI proof, isolated-wheel resources, Python/Node/Rust closure, compile/lint/shell/scope/diff gates all pass without a Claude request. Formal package transition awaits governed successor selection; real provider-backed UAT remains externally authorized work.
+- Closure evidence: generic runtime-specific assembly selection, paired immutable DCI Pi/Claude assemblies, bundled fixture-only generic CLI proof, isolated-wheel resources, Python/Node/Rust closure, compile/lint/shell/scope/diff gates all pass without a Claude request. A real provider-backed Claude run is not implied by this fixture contract; it is re-scoped under AF-210 only after the complete DCI implementation exists and authorization is supplied.
+
+## AF-180 — Complete DCI capability execution parity
+
+- Status: in_progress
+- Parent objective: Asterion Agent Application Framework
+- Scope: establish the independently owned Asterion DCI domain module and package-local operator CLI, transplant the original DCI single-run/Pi RPC/system-prompt/corpus/tool/final-answer behavior, and prove interactive Pi run parity without importing or executing `src/dci`.
+- Dependencies: AF-110, AF-120, AF-170
+- Acceptance: the Asterion-owned DCI implementation has a deterministic single-run Pi parity matrix, separate `ASTERION_DCI_*` configuration/output ownership, package-local run CLI, safe native artifacts, capability-contract bridge, and no runtime dependency on the legacy DCI product.
+- Design: `docs/superpowers/specs/2026-07-13-complete-dci-capability-package-design.md`
+- Plan: pending written-spec review; implementation planning remains blocked.
+
+## AF-190 — Complete DCI durable run and resume parity
+
+- Status: planned
+- Parent objective: Asterion Agent Application Framework
+- Scope: transplant native run-directory, raw-event, transcript, final-answer, state, and resume semantics and map their durable evidence to Asterion artifacts/events.
+- Dependencies: AF-180
+- Acceptance: stable fixture comparisons prove native artifact and resume parity while retaining the generic framework privacy boundary.
+- Design: `docs/superpowers/specs/2026-07-13-complete-dci-capability-package-design.md`
+- Plan: deferred until AF-180 acceptance.
+
+## AF-200 — Complete DCI evaluation and benchmark parity
+
+- Status: planned
+- Parent objective: Asterion Agent Application Framework
+- Scope: transplant judge, cache identity, batch/dataset orchestration, result/export behavior, and package-local evaluation/benchmark entry points onto the Asterion DCI execution implementation.
+- Dependencies: AF-180, AF-190
+- Acceptance: focused fixture tests prove safe evaluation/cache behavior and batch paths reuse the Asterion DCI implementation rather than `src/dci`.
+- Design: `docs/superpowers/specs/2026-07-13-complete-dci-capability-package-design.md`
+- Plan: deferred until AF-190 acceptance.
+
+## AF-210 — Complete DCI application and runtime semantic parity
+
+- Status: planned
+- Parent objective: Asterion Agent Application Framework
+- Scope: run the full Asterion DCI package through application assemblies, complete the Pi parity matrix, and assess Claude semantic parity only with separately authorized provider-backed evidence.
+- Dependencies: AF-180, AF-190, AF-200
+- Acceptance: Asterion application execution and package-local operations share one full DCI implementation; Pi parity is complete and any Claude claim has matching authorized evidence.
+- Design: `docs/superpowers/specs/2026-07-13-complete-dci-capability-package-design.md`
+- Plan: deferred until AF-200 acceptance.
 
 ## AF-095 — Asterion framework identity and extraction
 
