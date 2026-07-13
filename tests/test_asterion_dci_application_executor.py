@@ -11,6 +11,47 @@ from asterion.dci.run import DciRunRequest
 
 
 class AsterionDciApplicationExecutorTests(unittest.TestCase):
+    def test_application_executor_applies_shared_options(self) -> None:
+        calls: list[tuple[object, DciRunRequest]] = []
+
+        def run_native(paths: object, request: DciRunRequest) -> object:
+            calls.append((paths, request))
+            return object()
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            executor = EnvironmentDciRunExecutor(
+                repo_root=Path(temporary_directory),
+                run_native=run_native,
+            )
+            with patch.dict(
+                os.environ,
+                {
+                    "DCI_PROVIDER": "openai",
+                    "DCI_MODEL": "gpt-test",
+                    "DCI_TOOLS": "read,bash",
+                    "DCI_RUNTIME_CONTEXT_LEVEL": "level3",
+                    "DCI_PI_THINKING_LEVEL": "high",
+                },
+                clear=True,
+            ):
+                executor.run(
+                    DciRunRequest(
+                        run_id="application-run",
+                        question="question",
+                        cwd=Path("ignored"),
+                    )
+                )
+
+        mapped = calls[0][1]
+        self.assertEqual(
+            (mapped.provider, mapped.model, mapped.tools),
+            ("openai", "gpt-test", "read,bash"),
+        )
+        self.assertEqual(
+            (mapped.runtime_context_level, mapped.thinking_level),
+            ("level3", "high"),
+        )
+
     def test_maps_runtime_cwd_and_native_paths_to_one_pi_run(self) -> None:
         calls: list[tuple[object, DciRunRequest]] = []
         expected = object()

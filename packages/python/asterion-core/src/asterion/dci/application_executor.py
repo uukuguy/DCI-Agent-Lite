@@ -4,11 +4,20 @@ from __future__ import annotations
 
 import os
 from collections.abc import Callable
-from dataclasses import replace
 from pathlib import Path
 
-from asterion.dci.config import DciPaths, load_asterion_dci_env, resolve_dci_paths
-from asterion.dci.run import DciRunRequest, DciRunResult, run_pi_research
+from asterion.dci.config import (
+    DciPaths,
+    load_asterion_dci_env,
+    resolve_dci_paths,
+    resolve_dci_runtime_options,
+)
+from asterion.dci.run import (
+    DciRunRequest,
+    DciRunResult,
+    request_from_runtime_options,
+    run_pi_research,
+)
 
 
 class EnvironmentDciRunExecutor:
@@ -27,7 +36,13 @@ class EnvironmentDciRunExecutor:
         root = self._repo_root.resolve()
         load_asterion_dci_env(root)
         cwd = Path(os.environ.get("ASTERION_RUNTIME_CWD", root)).resolve()
+        mapped = request_from_runtime_options(
+            resolve_dci_runtime_options(),
+            run_id=request.run_id,
+            question=request.question,
+            cwd=cwd,
+        )
         return self._run_native(
             resolve_dci_paths(root),
-            replace(request, cwd=cwd),
+            mapped,
         )

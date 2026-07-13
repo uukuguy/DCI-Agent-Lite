@@ -443,3 +443,4 @@
 - 00:49 Product CLI and deterministic benchmark now resolve one shared DCI runtime option set, support bounded sorted `--limit`, and run native evaluation with redacted failures; 18 focused tests and full Python discovery pass without external requests. [a9b7e5c]
 - 00:52 Benchmark command now redacts native-run, evaluation, and artifact I/O failures while preserving deterministic batch behavior; 19 focused tests pass. [a677139]
 - 00:55 Standalone evaluation now redacts artifact I/O errors at the product boundary; 20 focused CLI/benchmark tests pass. [7eb80e1]
+- 01:00 Installed Asterion DCI Pi applications now resolve shared runtime options at the provider boundary while the capability implementation keeps its minimal invocation request; focused application tests, compile, Ruff, scope, and diff checks pass without external requests. [pending Task 4 commit]
