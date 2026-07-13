@@ -413,3 +413,5 @@
 - 22:03 AF-210 plan, decision, and governed worklist link committed. [7ecd596]
 - 22:36 Fresh-worktree source baseline repair committed. [b1ee100]
 - 22:38 AF-210 Climb session registered with four local hypotheses. [4f85e15]
+- 22:44 Native DCI executor maps application cwd and isolated paths. [dfe3e43]
+- 22:50 Provider-bound Pi application dispatch now reaches the native DCI executor while Claude remains fixture-only; focused local tests passed with no provider requests. [pending H-002 commit]
