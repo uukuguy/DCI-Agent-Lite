@@ -116,6 +116,10 @@ class BuiltDistributionBoundaryTests(unittest.TestCase):
                 names = archive.namelist()
                 self.assertIn("asterion/dci/cli.py", names)
                 self.assertIn("asterion/dci/run.py", names)
+                self.assertIn("asterion/dci/application_executor.py", names)
+                self.assertIn(
+                    "asterion/applications/dci_agent_lite/provider.py", names
+                )
                 self.assertNotIn("dci/benchmark/pi_rpc_runner.py", names)
                 entry_points = archive.read(
                     next(name for name in names if name.endswith("entry_points.txt"))

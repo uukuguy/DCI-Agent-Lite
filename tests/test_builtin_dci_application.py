@@ -69,6 +69,8 @@ class BuiltinDciApplicationTests(unittest.TestCase):
         source = "\n".join(path.read_text() for path in generic_files)
         self.assertNotIn("dci-agent-lite", source)
         self.assertNotIn("dci.research", source)
+        self.assertNotIn("DciRunExecutor", source)
+        self.assertNotIn("answer_artifact_uri", source)
 
 
 if __name__ == "__main__":

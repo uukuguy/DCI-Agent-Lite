@@ -119,6 +119,15 @@ class DciNativeExecutor:
         )
 
 
+class FailingDciNativeExecutor:
+    def __init__(self) -> None:
+        self.requests: list[DciRunRequest] = []
+
+    def run(self, request: DciRunRequest) -> DciRunResult:
+        self.requests.append(request)
+        raise RuntimeError("SECRET-NATIVE-DIAGNOSTIC")
+
+
 class ControlledFixtureRuntime(FixtureRuntime):
     manifest = RuntimeManifest(
         runtime_id="pi.reference", capabilities=("filesystem.read", "shell")
@@ -510,6 +519,53 @@ class AsterionCliTests(unittest.TestCase):
         self.assertNotIn("SECRET-INPUT", stdout.getvalue())
         self.assertNotIn("SECRET-NATIVE-ANSWER", stdout.getvalue())
         self.assertNotIn("SECRET-INPUT", stderr.getvalue())
+
+    def test_bundled_dci_pi_native_failure_is_redacted(self) -> None:
+        runtime = DciPiFixtureRuntime()
+        native_executor = FailingDciNativeExecutor()
+        registry = RuntimeFactoryRegistry(
+            (
+                RuntimeFactoryBinding(
+                    runtime_id="pi.reference",
+                    capabilities=("filesystem.read", "shell"),
+                    factory=lambda context: runtime,
+                ),
+            )
+        )
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+
+        code = main(
+            [
+                "run",
+                "--provider",
+                "dci-agent-lite",
+                "--runtime",
+                "pi.reference",
+                "--application",
+                "dci.research-capability@1.0.0",
+                "--input",
+                "SECRET-INPUT",
+            ],
+            entry_points=(
+                FakeEntryPoint(
+                    name="dci-agent-lite",
+                    factory=lambda: create_dci_provider(
+                        native_executor=native_executor
+                    ),
+                ),
+            ),
+            runtime_factories=registry,
+            stdout=stdout,
+            stderr=stderr,
+        )
+
+        self.assertEqual(code, 2)
+        self.assertEqual(runtime.requests, [])
+        self.assertEqual(len(native_executor.requests), 1)
+        for output in (stdout.getvalue(), stderr.getvalue()):
+            self.assertNotIn("SECRET-INPUT", output)
+            self.assertNotIn("SECRET-NATIVE-DIAGNOSTIC", output)
 
     def test_conflicting_or_missing_selection_fails_before_provider_load(self) -> None:
         entry = FakeEntryPoint(name="example-app", factory=lambda: None)

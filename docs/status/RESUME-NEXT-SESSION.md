@@ -13,14 +13,14 @@ Active work package: AF-210
 
 ## Where things stand
 
-- Branch: `codex/af-210-application-parity`; commits `b1ee100`, `4f85e15`, and `dfe3e43` are ahead of main.
-- The working tree contains H-002 implementation, its tests, the current JOURNAL line, and this live checkpoint.
-- H-001 and H-002 are implemented but not yet recorded through `cycle.sh`; AF-210 adapters still need their deterministic test mappings before cycles can run.
+- Branch: `codex/af-210-application-parity`; commits through `c7c96cc` are ahead of main.
+- The working tree contains the post-commit JOURNAL line and this live checkpoint only.
+- H-001 through H-003 are implemented and locally verified but not yet recorded through `cycle.sh`; AF-210 adapters still need their deterministic test mappings before cycles can run.
 
 ## Next action
 
-1. Add the H-003 installed-projection/redaction integration test, then implement only any missing wiring.
-2. Extend the AF-210 Climb adapter and record H-001/H-002 cycles after deterministic mappings are available.
+1. Extend the AF-210 Climb adapter with deterministic H-001 through H-004 test mappings.
+2. Record the H-001 through H-004 cycles, then run the final closure matrix and update AF-210 documentation/worklist status.
 
 ## Guardrails
 

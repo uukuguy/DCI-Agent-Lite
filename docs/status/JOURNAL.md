@@ -415,3 +415,5 @@
 - 22:38 AF-210 Climb session registered with four local hypotheses. [4f85e15]
 - 22:44 Native DCI executor maps application cwd and isolated paths. [dfe3e43]
 - 22:50 Provider-bound Pi application dispatch now reaches the native DCI executor while Claude remains fixture-only; focused local tests passed with no provider requests. [pending H-002 commit]
+- 22:50 Native Pi dispatch is committed so the installed DCI application has one provider-bound execution path. [c7c96cc]
+- 22:51 Installed Pi application projection, native-failure redaction, generic-CLI neutrality, and wheel packaging all pass deterministically with no provider requests. [pending H-003 commit]
