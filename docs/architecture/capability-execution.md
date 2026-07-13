@@ -20,7 +20,7 @@ The application host resolves an assembly and supplies bindings directly:
 ```python
 from asterion.packages.catalog import PackageRef
 from asterion.runner import run_composed_application
-from asterion_dci_research import DciLocalResearchImplementation
+from asterion.capabilities.dci_research import DciLocalResearchImplementation
 
 result = await run_composed_application(
     plan,

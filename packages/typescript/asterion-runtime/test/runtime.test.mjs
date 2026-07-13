@@ -17,7 +17,7 @@ const packageFixtures = new URL(
   import.meta.url,
 );
 const referenceManifestRoots = [
-  new URL("../../../../capabilities/dci-research/src/asterion_dci_research/manifests/", import.meta.url),
+  new URL("../../../../packages/python/asterion-core/src/asterion/capabilities/dci_research/manifests/", import.meta.url),
   new URL("../../../../capabilities/controlled-code/manifests/", import.meta.url),
 ];
 const sourceDirectory = new URL("../src/", import.meta.url);

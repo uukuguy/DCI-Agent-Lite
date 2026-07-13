@@ -11,7 +11,7 @@ from asterion.packages.catalog import PackageRef, discover_packages
 from asterion.runner.application import ApplicationRunResult
 from asterion.runner.composed import run_composed_application
 from asterion.runtime.host import AgentRuntimeClient, CancellationSignal
-from asterion_dci_research import DciLocalResearchImplementation
+from asterion.capabilities.dci_research import DciLocalResearchImplementation
 
 
 async def run_dci_research_application(

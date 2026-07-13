@@ -82,11 +82,18 @@ class BuiltDistributionBoundaryTests(unittest.TestCase):
             self.assertEqual(len(wheels), 1)
             self.assertEqual(self.wheel_top_levels(wheels[0]), {"asterion"})
             self.assertNotIn("Requires-Dist: dci", self.metadata(wheels[0]))
+            with zipfile.ZipFile(wheels[0]) as archive:
+                manifests = [
+                    name for name in archive.namelist() if "/dci_research/manifests/" in name
+                ]
+            self.assertEqual(len(manifests), 4)
+            self.assertEqual(len(manifests), len(set(manifests)))
 
     def test_no_capability_or_baseline_project_remains(self) -> None:
         self.assertFalse((ROOT / "capabilities/dci-research/pyproject.toml").exists())
         pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text())
         self.assertNotEqual(pyproject["project"]["name"], "dci")
+        self.assertFalse((ROOT / "capabilities/dci-research/src").exists())
 
     def wheel_top_levels(self, wheel: Path) -> set[str]:
         with zipfile.ZipFile(wheel) as archive:
