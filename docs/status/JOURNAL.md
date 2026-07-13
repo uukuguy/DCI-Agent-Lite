@@ -385,3 +385,5 @@
 - 18:15 AF-180 closure state committed; AF-190 durable-resume planning begins.[8ddc109]
 - 18:18 AF-190 durable-resume TDD plan committed.[778363d]
 - 18:19 AF-190 Climb hypotheses registered for durable artifact and resume parity.[633c566]
+- 18:22 Asterion durable recorder now persists native transcript artifacts.[03c9ff2]
+- 18:51 AF-190-H-001 confirmed 4/4; package acceptance recorded.

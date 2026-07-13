@@ -6,7 +6,7 @@ if [ "$#" -ne 1 ]; then
     exit 2
 fi
 case "$1" in
-    H-001|H-002|H-003|H-004|H-005|H-006|H-007|H-008|H-009|H-010|H-011|H-012|H-013|H-014|H-015|H-016|H-017|H-018|H-019|AF-050-H-001|AF-050-H-002|AF-050-H-003|AF-050-H-004|AF-050-H-005|AF-060-H-001|AF-060-H-002|AF-060-H-003|AF-060-H-004|AF-060-H-005|AF-070-H-001|AF-070-H-002|AF-070-H-003|AF-070-H-004|AF-080-H-001|AF-080-H-002|AF-080-H-003|AF-080-H-004|AF-090-H-001|AF-090-H-002|AF-090-H-003|AF-090-H-004|AF-095-H-001|AF-095-H-002|AF-095-H-003|AF-095-H-004|AF-100-H-001|AF-100-H-002|AF-100-H-003|AF-100-H-004|AF-180-H-001|AF-180-H-002|AF-180-H-003|AF-180-H-004) ;;
+    H-001|H-002|H-003|H-004|H-005|H-006|H-007|H-008|H-009|H-010|H-011|H-012|H-013|H-014|H-015|H-016|H-017|H-018|H-019|AF-050-H-001|AF-050-H-002|AF-050-H-003|AF-050-H-004|AF-050-H-005|AF-060-H-001|AF-060-H-002|AF-060-H-003|AF-060-H-004|AF-060-H-005|AF-070-H-001|AF-070-H-002|AF-070-H-003|AF-070-H-004|AF-080-H-001|AF-080-H-002|AF-080-H-003|AF-080-H-004|AF-090-H-001|AF-090-H-002|AF-090-H-003|AF-090-H-004|AF-095-H-001|AF-095-H-002|AF-095-H-003|AF-095-H-004|AF-100-H-001|AF-100-H-002|AF-100-H-003|AF-100-H-004|AF-180-H-001|AF-180-H-002|AF-180-H-003|AF-180-H-004|AF-190-H-001) ;;
     *)
         echo "ERROR: train adapter has no acceptance suite for $1." >&2
         exit 2
@@ -88,6 +88,8 @@ elif [ "$1" = "AF-180-H-003" ]; then
     paradigm="dci-operator-surface"
 elif [ "$1" = "AF-180-H-004" ]; then
     paradigm="dci-capability-projection"
+elif [ "$1" = "AF-190-H-001" ]; then
+    paradigm="dci-durable-artifacts"
 elif [ "$1" = "H-003" ]; then
     paradigm="rpc-contract-probe"
 elif [ "$1" = "H-004" ] || [ "$1" = "H-005" ]; then
@@ -395,6 +397,11 @@ elif [ "$1" = "AF-180-H-003" ]; then
 elif [ "$1" = "AF-180-H-004" ]; then
     if ! uv run python -m unittest tests.test_asterion_dci_bridge tests.test_dci_research_capability -v >"$run_dir/train.log" 2>&1; then
         echo "ERROR: AF-180-H-004 DCI capability projection failed; see $run_dir/train.log" >&2
+        exit 1
+    fi
+elif [ "$1" = "AF-190-H-001" ]; then
+    if ! uv run python -m unittest tests.test_asterion_dci_artifacts -v >"$run_dir/train.log" 2>&1; then
+        echo "ERROR: AF-190-H-001 durable artifact suite failed; see $run_dir/train.log" >&2
         exit 1
     fi
 elif [ "$1" = "H-003" ]; then
