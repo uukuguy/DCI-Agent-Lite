@@ -400,3 +400,6 @@
 - 19:30 AF-200 Climb H-001 through H-004 registered for judge, cache, batch, and operator parity. [pending registration commit]
 - 19:21 AF-200-H-001 confirmed 4/4; package acceptance recorded.
 - 19:23 Asterion-owned judge now validates configuration, request fingerprints, structured verdicts, and redacted transport failures. [pending H-001 commit]
+- 19:22 AF-200 judge contract committed for cache-safe evaluation implementation. [dc08fac]
+- 19:24 Asterion evaluation now reuses exact judge fingerprints and persists safe native state summaries. [pending H-002 commit]
+- 19:23 AF-200-H-002 confirmed 4/4; package acceptance recorded.
