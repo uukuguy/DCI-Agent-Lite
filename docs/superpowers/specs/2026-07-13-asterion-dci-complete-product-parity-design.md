@@ -47,7 +47,7 @@ Asterion-owned entry point for every row.
 | Source behavior | Asterion product entry point | Required parity |
 |---|---|---|
 | Interactive RPC run, stdin/question-file input, provider/model/tools, deadline, system prompt, extra Pi arguments, session controls, terminal mode | `asterion-dci run` / `asterion-dci terminal` | Same effective Pi argv and lifecycle semantics, subject to Asterion-owned code. |
-| Context-management level, thinking level, Node heap, conversation processing controls | `asterion-dci run` and shared DCI runtime options | Equivalent Pi arguments/environment and native artifact controls. |
+| Context-management level, thinking level, Node heap, conversation processing controls | `asterion-dci run` and shared DCI runtime options | Use only controls advertised by the current Pi; record a requested but unavailable runtime-context level as an explicit native diagnostic, while thinking, heap, and conversation controls remain effective. |
 | Native run directory, raw events, transcript, final answer, state, stderr, provenance, compatible resume | `asterion-dci run` / `resume` | Schema-level comparison after normalizing timestamps, paths, and IDs. |
 | Explicit single-run judging and cache-safe reuse | `asterion-dci run --eval-*` / `evaluate` | Equivalent safe request shaping, cache identity, and result fields. |
 | BCPlus/QA/BRIGHT batches: limits, concurrency, IR mode, corpus hints, metrics, summaries, exports | `asterion-dci benchmark` and Asterion launchers | Equivalent dataset handling, resumable per-query results, aggregate outputs, and supported IR metrics. |

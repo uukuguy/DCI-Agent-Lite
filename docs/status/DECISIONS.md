@@ -363,3 +363,12 @@
 - Rationale: both products intentionally use the same external Pi and service credentials.  Separate mandatory configuration made the installed Asterion application unable to reproduce a normal source DCI run and obscured missing request forwarding.
 - Boundary: explicit package CLI options still override environment defaults; generic framework modules remain DCI-neutral; Asterion remains independently implemented and never imports or executes `src/dci`.
 - Revalidation trigger: introduce a separate Asterion runtime namespace only if the products need intentionally divergent credentials, Pi checkouts, or security policy, with a versioned migration and parity update.
+
+## D-039 — Treat runtime-context level as capability-gated, not a fabricated Pi flag
+
+- Status: ✅ accepted and implemented decision
+- Decided: 2026-07-14
+- Decision: Asterion forwards only controls exposed by the configured current Pi CLI. Pi currently exposes `--thinking`, session, tool, and Node controls but no runtime context-management level. A requested `DCI_RUNTIME_CONTEXT_LEVEL` or package `--runtime-context-level` remains in native state with an `unsupported` diagnostic and produces no Pi argv flag.
+- Rationale: Asterion's former `--context-management-level` mapping made the runtime-context example fail before its prompt. The source runtime-context example itself uses Pi's supported `--thinking` control, so mapping its level to an invented context flag is neither source-compatible nor safe.
+- Boundary: this does not change source DCI or external Pi. Thinking, session, heap, and conversation artifact controls remain effective. An operator may still pass arbitrary Pi arguments with explicit `--extra-arg`, whose validity remains Pi's responsibility.
+- Revalidation trigger: when the selected Pi version documents a runtime context-level control, add a capability test and an exact typed mapping before forwarding it.

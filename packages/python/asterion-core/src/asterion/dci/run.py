@@ -258,14 +258,28 @@ def _write_json(path: Path, value: dict[str, object]) -> None:
 
 
 def _pi_extra_args(request: DciRunRequest) -> tuple[str, ...]:
-    """Return typed Pi controls as literal flag/value argv pairs."""
+    """Return only typed controls advertised by the current Pi CLI."""
 
     values: list[str] = []
     if request.thinking_level:
         values.extend(["--thinking", request.thinking_level])
-    if request.runtime_context_level:
-        values.extend(["--context-management-level", request.runtime_context_level])
     return tuple(values)
+
+
+def _runtime_context_control(request: DciRunRequest) -> dict[str, object] | None:
+    """Record an explicit diagnostic for a legacy request Pi cannot implement.
+
+    Current Pi exposes no runtime context-level control.  Do not fabricate an
+    argv flag: the source runtime-context example controls Pi thinking instead.
+    """
+
+    if request.runtime_context_level is None:
+        return None
+    return {
+        "requested_level": request.runtime_context_level,
+        "effective_pi_control": None,
+        "status": "unsupported",
+    }
 
 
 def _append_jsonl(path: Path, value: dict[str, object]) -> None:
@@ -303,6 +317,7 @@ def _write_state(
             "tools": request.tools,
             "max_turns": request.max_turns,
             "runtime_context_level": request.runtime_context_level,
+            "runtime_context_control": _runtime_context_control(request),
             "thinking_level": request.thinking_level,
             "node_max_old_space_size_mb": request.node_max_old_space_size_mb,
             "keep_session": request.keep_session,

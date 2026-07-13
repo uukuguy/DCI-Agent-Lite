@@ -233,9 +233,10 @@ Common variables:
 - Normal `DCI_*` settings are shared by source DCI, `asterion-dci`, its benchmark,
   and installed Pi applications. In addition to `DCI_PROVIDER` and `DCI_MODEL`,
   this includes `DCI_PI_DIR`, `DCI_PI_PACKAGE_DIR`, `DCI_PI_AGENT_DIR`,
-  `DCI_TOOLS`, `DCI_RPC_TIMEOUT_SECONDS`, `DCI_RUNTIME_CONTEXT_LEVEL`,
-  `DCI_PI_THINKING_LEVEL`, `DCI_NODE_MAX_OLD_SPACE_SIZE_MB`, and
-  `DCI_EVAL_JUDGE_*`; explicit CLI options take precedence.
+  `DCI_TOOLS`, `DCI_RPC_TIMEOUT_SECONDS`, `DCI_PI_THINKING_LEVEL`,
+  `DCI_NODE_MAX_OLD_SPACE_SIZE_MB`, and `DCI_EVAL_JUDGE_*`; explicit CLI
+  options take precedence. `DCI_RUNTIME_CONTEXT_LEVEL` is retained only as a
+  recorded compatibility request: current Pi has no matching runtime control.
 - `DCI_EVAL_JUDGE_BASE_URL`, `DCI_EVAL_JUDGE_API`, `DCI_EVAL_JUDGE_MODEL`, and
   `DCI_EVAL_JUDGE_API_KEY_ENV` select the eval judge backend. See `.env.template` for DeepSeek,
   OpenAI, and local-compatible examples. The base URL must be an absolute HTTP(S) origin without
@@ -320,17 +321,13 @@ It uses three simple strategies:
 
 </details>
 
-The runtime levels move from no context management to more aggressive compression:
+The current Pi CLI does not expose a runtime context-management level. The
+source and Asterion runtime-context examples therefore use Pi's supported
+thinking control; Asterion records a legacy `DCI_RUNTIME_CONTEXT_LEVEL` or
+`--runtime-context-level` request in native state as `unsupported` and never
+fabricates a Pi argv flag.
 
-| Level | Behavior |
-|-------|----------|
-| `level0` | No context management. |
-| `level1` | Light truncation. |
-| `level2` | Stronger truncation. |
-| `level3` | Truncation and compaction. |
-| `level4` | Truncation, compaction, and summarization. |
-
-Pass a level through Pi with `--extra-arg`:
+Set Pi thinking explicitly:
 
 ```bash
 set -a; source .env 2>/dev/null; set +a
@@ -340,7 +337,6 @@ PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
   --model gpt-5.4-nano \
   --cwd "corpus/wiki_corpus" \
   --extra-arg="--thinking high" \
-  --extra-arg="--context-management-level level4" \
   "Answer the following question using only wiki_dump.jsonl in the current directory. Do not use web search. Use rg instead of grep for fast searching. Question: In which street did the Great Fire of London originate?"
 ```
 
@@ -348,7 +344,7 @@ PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
 <a name="running-experiments"></a>
 ## 🎯 Benchmark DCI-Agent-Lite 
 
-We benchmark DCI-Agent-Lite on the following benchmark suites using OpenAI `gpt-5.4-nano` with `--thinking high`, context management set to `level3`, and a maximum turn budget of 300.
+We benchmark DCI-Agent-Lite on the following benchmark suites using OpenAI `gpt-5.4-nano` with `--thinking high` and a maximum turn budget of 300.
 
 | Data | Data Size | Retrieval Corpus | Corpus Size | Avg. Corpus Len. (words) | Corpus Path |
 |------|-----------|------------------|-------------|--------------------------|-------------|

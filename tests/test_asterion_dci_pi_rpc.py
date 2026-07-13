@@ -54,10 +54,10 @@ class PiRpcCommandTests(unittest.TestCase):
         self.assertEqual(command[3], "rpc")
         self.assertEqual(command[-3:], ["--no-session", "--thinking", "high"])
 
-    def test_client_maps_context_thinking_and_session_to_pi(self) -> None:
+    def test_client_preserves_thinking_and_session_controls(self) -> None:
         client = make_client(
             keep_session=True,
-            extra_args=("--context-management-level level3", "--thinking high"),
+            extra_args=("--thinking high",),
         )
         with patch("asterion.dci.pi_rpc.ensure_built_pi_cli") as built:
             built.return_value = Path("/pi/packages/coding-agent/dist/cli.js")
@@ -65,8 +65,8 @@ class PiRpcCommandTests(unittest.TestCase):
 
         self.assertNotIn("--no-session", command)
         self.assertEqual(
-            command[-4:],
-            ["--context-management-level", "level3", "--thinking", "high"],
+            command[-2:],
+            ["--thinking", "high"],
         )
 
     def test_heap_option_preserves_existing_node_options(self) -> None:

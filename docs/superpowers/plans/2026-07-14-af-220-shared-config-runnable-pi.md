@@ -230,18 +230,18 @@ git commit -m "feat: share DCI runtime configuration"
 - [ ] **Step 1: Write failing transport tests**
 
 ~~~python
-def test_client_maps_context_thinking_and_session_to_pi(self) -> None:
+def test_client_preserves_thinking_and_session_controls(self) -> None:
     command = build_pi_command(
         package_dir=Path("/pi/packages/coding-agent"),
         mode="rpc", provider="p", model="m", tools="read,bash",
         no_session=False, system_prompt_file=None,
         append_system_prompt_file=None,
-        extra_args=["--context-management-level", "level3", "--thinking", "high"],
+        extra_args=["--thinking", "high"],
     )
     self.assertNotIn("--no-session", command)
     self.assertEqual(
-        command[-4:],
-        ["--context-management-level", "level3", "--thinking", "high"],
+        command[-2:],
+        ["--thinking", "high"],
     )
 
 def test_heap_option_preserves_existing_node_options(self) -> None:
@@ -275,10 +275,8 @@ def _pi_extra_args(request: DciRunRequest) -> tuple[str, ...]:
     values = list(request.extra_args)
     if request.thinking_level:
         values.append(f"--thinking {request.thinking_level}")
-    if request.runtime_context_level:
-        values.append(
-            f"--context-management-level {request.runtime_context_level}"
-        )
+    # Current Pi has no runtime-context-level flag. Record requested values
+    # in native state as unsupported; never fabricate an argv control.
     return tuple(values)
 
 def request_from_runtime_options(
@@ -504,7 +502,7 @@ asterion-dci run \
   "$QUESTION"
 ~~~
 
-The context launcher must use the existing BCPlus question/corpus plus --tools read,bash, --max-turns 6, --runtime-context-level "$level", and --eval-answer "Adaku". Add Make targets asterion-example and asterion-runtime-example. Correct README so normal DCI_* configuration is shared by source DCI, asterion-dci, benchmark, and installed Pi application.
+The context launcher must use the existing BCPlus question/corpus plus --tools read,bash, --max-turns 6, --thinking-level "$level", and --eval-answer "Adaku". Current Pi has no runtime-context-level flag, so a legacy request is recorded as unsupported rather than forwarded. Add Make targets asterion-example and asterion-runtime-example. Correct README so normal DCI_* configuration is shared by source DCI, asterion-dci, benchmark, and installed Pi application.
 
 - [ ] **Step 4: Verify and commit**
 

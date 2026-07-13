@@ -10,6 +10,7 @@ from asterion.dci.config import DciRuntimeOptions, resolve_dci_paths
 from asterion.dci.run import (
     DciRunError,
     DciRunRequest,
+    _pi_extra_args,
     request_from_runtime_options,
     resume_request_from_output_dir,
     run_pi_research,
@@ -48,6 +49,41 @@ class FailingPiClient(FixturePiClient):
 
 
 class AsterionDciRunTests(unittest.TestCase):
+    def test_runtime_context_request_is_recorded_without_fabricating_a_pi_flag(self) -> None:
+        request = DciRunRequest(
+            run_id="run-1",
+            question="question",
+            cwd=Path("/work"),
+            runtime_context_level="level3",
+            thinking_level="high",
+        )
+
+        self.assertEqual(_pi_extra_args(request), ("--thinking", "high"))
+
+    def test_runtime_context_request_records_current_pi_capability_diagnostic(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            paths = resolve_dci_paths(root)
+            request = DciRunRequest(
+                run_id="run-1",
+                question="question",
+                cwd=root,
+                runtime_context_level="level3",
+            )
+            with patch("asterion.dci.run.PiRpcClient", FixturePiClient):
+                result = run_pi_research(paths, request)
+
+            state = json.loads((result.output_dir / "state.json").read_text())
+
+        self.assertEqual(
+            state["runtime_context_control"],
+            {
+                "effective_pi_control": None,
+                "requested_level": "level3",
+                "status": "unsupported",
+            },
+        )
+
     def test_runtime_options_map_to_native_pi_request(self) -> None:
         options = DciRuntimeOptions(
             provider="provider",

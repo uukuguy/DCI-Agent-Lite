@@ -37,6 +37,6 @@ uv run asterion-dci run \
   --cwd "$CORPUS_DIR" \
   --tools read,bash \
   --max-turns 6 \
-  --runtime-context-level "$level" \
+  --thinking-level "$level" \
   --eval-answer "Adaku" \
   "$QUESTION"
