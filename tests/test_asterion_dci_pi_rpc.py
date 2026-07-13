@@ -15,6 +15,7 @@ def make_client(
     keep_session: bool = False,
     node_max_old_space_size_mb: int | None = None,
     extra_args: tuple[str, ...] = ("--thinking high",),
+    literal_extra_args: tuple[str, ...] = (),
 ) -> PiRpcClient:
     return PiRpcClient(
         package_dir=Path("pi/packages/coding-agent"),
@@ -27,6 +28,7 @@ def make_client(
         system_prompt_file=None,
         append_system_prompt_file=None,
         extra_args=extra_args,
+        literal_extra_args=literal_extra_args,
         keep_session=keep_session,
         node_max_old_space_size_mb=node_max_old_space_size_mb,
     )
@@ -76,6 +78,34 @@ class PiRpcCommandTests(unittest.TestCase):
             environment["NODE_OPTIONS"],
             "--trace-warnings --max-old-space-size=8192",
         )
+
+    def test_literal_runtime_controls_cannot_add_pi_flags(self) -> None:
+        client = make_client(
+            extra_args=("--custom value",),
+            literal_extra_args=(
+                "--thinking",
+                "high --model unexpected",
+                "--context-management-level",
+                "level3 --tools shell",
+            ),
+        )
+        with patch("asterion.dci.pi_rpc.ensure_built_pi_cli") as built:
+            built.return_value = Path("/pi/packages/coding-agent/dist/cli.js")
+            command = client._build_command()
+
+        self.assertEqual(
+            command[-6:],
+            [
+                "--custom",
+                "value",
+                "--thinking",
+                "high --model unexpected",
+                "--context-management-level",
+                "level3 --tools shell",
+            ],
+        )
+        self.assertEqual(command.count("--model"), 1)
+        self.assertEqual(command.count("--tools"), 1)
 
 
 class PiRpcLifecycleTests(unittest.TestCase):

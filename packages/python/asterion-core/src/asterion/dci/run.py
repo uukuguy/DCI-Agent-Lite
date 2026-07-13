@@ -193,7 +193,8 @@ def run_pi_research(
         show_tools=request.show_tools,
         system_prompt_file=request.system_prompt_file,
         append_system_prompt_file=request.append_system_prompt_file,
-        extra_args=_pi_extra_args(request),
+        extra_args=request.extra_args,
+        literal_extra_args=_pi_extra_args(request),
         keep_session=request.keep_session,
         node_max_old_space_size_mb=request.node_max_old_space_size_mb,
     )
@@ -257,13 +258,13 @@ def _write_json(path: Path, value: dict[str, object]) -> None:
 
 
 def _pi_extra_args(request: DciRunRequest) -> tuple[str, ...]:
-    """Add native Pi controls after caller-supplied direct argv fragments."""
+    """Return typed Pi controls as literal flag/value argv pairs."""
 
-    values = list(request.extra_args)
+    values: list[str] = []
     if request.thinking_level:
-        values.append(f"--thinking {request.thinking_level}")
+        values.extend(["--thinking", request.thinking_level])
     if request.runtime_context_level:
-        values.append(f"--context-management-level {request.runtime_context_level}")
+        values.extend(["--context-management-level", request.runtime_context_level])
     return tuple(values)
 
 

@@ -106,6 +106,7 @@ class PiRpcClient:
         system_prompt_file: Path | None,
         append_system_prompt_file: Path | None,
         extra_args: tuple[str, ...],
+        literal_extra_args: tuple[str, ...],
         keep_session: bool,
         node_max_old_space_size_mb: int | None,
     ) -> None:
@@ -119,6 +120,7 @@ class PiRpcClient:
         self.system_prompt_file = system_prompt_file
         self.append_system_prompt_file = append_system_prompt_file
         self.extra_args = tuple(extra_args)
+        self.literal_extra_args = tuple(literal_extra_args)
         self.keep_session = keep_session
         self.node_max_old_space_size_mb = node_max_old_space_size_mb
         self.proc: subprocess.Popen[bytes] | None = None
@@ -139,7 +141,7 @@ class PiRpcClient:
             no_session=not self.keep_session,
             system_prompt_file=self.system_prompt_file,
             append_system_prompt_file=self.append_system_prompt_file,
-            extra_args=expand_extra_args(self.extra_args),
+            extra_args=[*expand_extra_args(self.extra_args), *self.literal_extra_args],
         )
 
     def _child_environment(self) -> dict[str, str]:
