@@ -681,6 +681,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_asterion_dci_run.AsterionDciRunTests.test_completed_run_writes_native_artifacts_and_protocol_projection"
         override_test="tests.test_distribution_boundaries.SourceDistributionBoundaryTests.test_asterion_core_never_imports_the_dci_baseline"
         ;;
+    AF-190-H-002)
+        first_dimension="failed_run_reuse"
+        second_dimension="attempt_isolation"
+        third_dimension="immutable_input_rejection"
+        fourth_dimension="pre_client_failure"
+        immutable_test="tests.test_asterion_dci_run.AsterionDciRunTests.test_resume_reuses_failed_directory_and_creates_a_second_protocol_attempt"
+        repeat_test="tests.test_asterion_dci_run.AsterionDciRunTests.test_resume_reuses_failed_directory_and_creates_a_second_protocol_attempt"
+        dirty_test="tests.test_asterion_dci_run.AsterionDciRunTests.test_resume_rejects_completed_or_changed_immutable_inputs_before_client_start"
+        override_test="tests.test_asterion_dci_run.AsterionDciRunTests.test_resume_rejects_completed_or_changed_immutable_inputs_before_client_start"
+        ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2
         exit 2

@@ -35,6 +35,7 @@ class DciRunRequest:
     show_tools: bool = False
     system_prompt_file: Path | None = None
     append_system_prompt_file: Path | None = None
+    resume: bool = False
 
 
 @dataclass(frozen=True)
@@ -61,8 +62,16 @@ def run_pi_research(
 
     destination = Path(output_dir) if output_dir is not None else paths.output_root / request.run_id
     destination = destination.resolve()
+    existing_state: dict[str, object] | None = None
+    attempt = 1
     if destination.exists() and any(destination.iterdir()):
-        raise DciRunError("DCI output directory is not empty")
+        if not request.resume:
+            raise DciRunError("DCI output directory is not empty")
+        existing_state = _load_resume_state(destination)
+        _validate_resume_request(existing_state, request)
+        attempt = int(existing_state.get("resume_count", 0)) + 2
+    elif request.resume:
+        raise DciRunError("DCI resume validation failed")
     destination.mkdir(parents=True, exist_ok=True)
 
     question_path = destination / "question.txt"
@@ -72,14 +81,16 @@ def run_pi_research(
     state_path = destination / "state.json"
     protocol_dir = destination / "protocol"
     protocol_dir.mkdir(exist_ok=True)
-    protocol_request_path = protocol_dir / "attempt-0001.request.json"
-    protocol_events_path = protocol_dir / "attempt-0001.events.jsonl"
+    attempt_stem = f"attempt-{attempt:04d}"
+    protocol_request_path = protocol_dir / f"{attempt_stem}.request.json"
+    protocol_events_path = protocol_dir / f"{attempt_stem}.events.jsonl"
     question_path.write_text(f"{request.question}\n", encoding="utf-8")
-    events_path.write_text("", encoding="utf-8")
+    if not events_path.exists():
+        events_path.write_text("", encoding="utf-8")
     protocol_events_path.write_text("", encoding="utf-8")
 
     capabilities = map_pi_capabilities(request.tools)
-    protocol_run_id = f"{request.run_id}-attempt-0001"
+    protocol_run_id = f"{request.run_id}-{attempt_stem}"
     protocol_request: dict[str, object] = {
         "protocol": PROTOCOL_VERSION,
         "run_id": protocol_run_id,
@@ -142,7 +153,8 @@ def run_pi_research(
         validate_event_stream(normalized_events)
         _write_state(
             state_path,
-            request.run_id,
+            request,
+            attempt - 1,
             "completed",
             question_path,
             final_path,
@@ -163,7 +175,8 @@ def run_pi_research(
         _write_bounded(stderr_path, stderr_text)
         _write_state(
             state_path,
-            request.run_id,
+            request,
+            attempt - 1,
             "failed",
             question_path,
             final_path,
@@ -194,7 +207,8 @@ def _write_bounded(path: Path, stderr_text: str, *, limit: int = 16_384) -> None
 
 def _write_state(
     path: Path,
-    run_id: str,
+    request: DciRunRequest,
+    resume_count: int,
     status: str,
     question_path: Path,
     final_path: Path,
@@ -204,11 +218,44 @@ def _write_state(
     _write_json(
         path,
         {
-            "run_id": run_id,
+            "run_id": request.run_id,
             "status": status,
+            "question": request.question,
+            "cwd": str(request.cwd),
+            "provider": request.provider,
+            "model": request.model,
+            "tools": request.tools,
+            "max_turns": request.max_turns,
+            "resume_count": resume_count,
             "question_path": str(question_path),
             "final_path": str(final_path),
             "events_path": str(events_path),
             "stderr_path": str(stderr_path),
         },
     )
+
+
+def _load_resume_state(destination: Path) -> dict[str, object]:
+    try:
+        value = json.loads((destination / "state.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        raise DciRunError("DCI resume validation failed") from None
+    if not isinstance(value, dict):
+        raise DciRunError("DCI resume validation failed")
+    return value
+
+
+def _validate_resume_request(state: dict[str, object], request: DciRunRequest) -> None:
+    if state.get("status") == "completed":
+        raise DciRunError("DCI resume validation failed")
+    expected = {
+        "run_id": request.run_id,
+        "question": request.question,
+        "cwd": str(request.cwd),
+        "provider": request.provider,
+        "model": request.model,
+        "tools": request.tools,
+        "max_turns": request.max_turns,
+    }
+    if any(state.get(name) != value for name, value in expected.items()):
+        raise DciRunError("DCI resume validation failed")
