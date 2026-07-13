@@ -4,11 +4,11 @@
 
 - Project: Asterion framework under development in the DCI-Agent-Lite repository; DCI remains the first capability and reference application.
 - Current branch: `main`
-- Theme-level focus: Prove Asterion composition with a second executable controlled-code application.
+- Theme-level focus: Define explicit operator lifecycle for the controlled executor service.
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: `AF-140` — controlled-code executable application vertical slice.
+- Active work package: `AF-150` — controlled executor operator lifecycle.
 
 ## Current Architecture
 
@@ -40,12 +40,13 @@
 - AF-110 acceptance: reusable package implementations execute sequentially through exact bindings, declared artifact/event edges, explicit runtime/services, and safe cancellation/failure boundaries. The DCI research capability and Pi runtime are independent of `src/dci/benchmark/`; 311 Python, 11 Node, and 19 Rust tests plus all repository gates pass.
 - AF-120 acceptance: exactly one independently installable Asterion wheel contains the framework, modular DCI capability/application, canonical resources, selected-only provider binding, generic CLI, and explicit Pi runtime factory. `src/dci` is an unpackaged repository baseline; 335 Python, 11 Node, and 19 Rust tests plus isolated installation and every repository gate pass.
 - AF-130 acceptance: installed applications list and run by exact `application_id@version`; global listing stays metadata-only, selected listing loads one provider, explicit assembly modes remain compatible, and 342 Python, 11 Node, and 19 Rust tests plus isolated installation and all gates pass.
+- AF-140 acceptance: the second `controlled-code` provider executes declarative policy plus three exact implementations through an explicit executor host service; caller-owned JSONL transport never starts a process or persists output bodies. 352 Python, 11 Node, and 19 Rust tests plus isolated installation and all gates pass.
 - Reference assemblies: checked-in DCI and controlled-code application manifests validate and resolve; DCI composition is identical for Pi/Claude runtime identities and controlled execution remains an explicit host service.
 
 ## Open Problems (theme-level)
 
 - Provider-backed acceptance of the first non-Pi runtime when credentials or a compatible gateway become available.
-- Executable controlled-code package implementations and explicit executor host-service ownership without scheduler or sandbox overclaim.
+- Operator-authorized controlled-executor startup/connection, readiness, cancellation, and shutdown without implicit service discovery.
 
 ## Key Files
 

@@ -149,13 +149,24 @@
 
 ## AF-140 — Controlled-code executable application vertical slice
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Asterion Agent Application Framework
 - Scope: turn the existing controlled-code policy/workflow/evaluation/observability graph into a second executable bundled Asterion application using explicit package implementations and the existing controlled-executor host-service boundary.
 - Dependencies: AF-050, AF-070, AF-110, AF-130
 - Acceptance: the second installed application is discoverable by exact identity and executes through the same generic provider/runner contracts without DCI-specific coupling; executor authority remains explicit and no sandbox claim, automatic service startup, or workflow scheduler is introduced.
 - Design: `docs/superpowers/specs/2026-07-13-controlled-code-executable-application-design.md`
 - Plan: `docs/superpowers/plans/2026-07-13-controlled-code-executable-application.md`
+- Closure evidence: the separate `controlled-code` provider binds declarative policy plus exact workflow/evaluation/observability implementations; one logical target reaches one explicitly injected service and produces declared report/verdict/audit outputs. Caller-owned JSONL transport connects to the existing Rust sidecar without process startup or output-body persistence. Closure passes 352 Python, 11 Node, and 19 Rust tests plus compile, Ruff, shell, scope, diff, isolated wheel, two-provider listing, and no-baseline-import gates.
+
+## AF-150 — Controlled executor operator lifecycle
+
+- Status: in_progress
+- Parent objective: Asterion Agent Application Framework
+- Scope: define an explicit operator-authorized lifecycle for connecting or starting the controlled-executor service so the installed `controlled-code` application can run through the generic CLI without weakening host-owned policy.
+- Dependencies: AF-050, AF-140
+- Acceptance: one reviewed CLI/configuration flow establishes trusted policy, process ownership, readiness, injection, cancellation, and shutdown; failures are redacted and no agent/provider/manifest can select commands or silently start services.
+- Design: pending
+- Plan: pending design approval
 
 ## AF-095 — Asterion framework identity and extraction
 

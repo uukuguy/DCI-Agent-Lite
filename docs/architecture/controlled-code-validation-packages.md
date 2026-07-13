@@ -96,6 +96,20 @@ composer. It therefore does not trigger a workflow engine under D-022. A future
 execution proposal needs new evidence that independently useful graphs cannot be
 represented or safely validated by the static contract.
 
+## Executable Asterion application
+
+AF-140 adds that execution as a separate layer without changing the portable
+manifests or composer. The `controlled-code` installed provider binds exact
+workflow, evaluation, and observability implementations; the policy remains
+declarative. The workflow submits one logical relative target to an explicitly
+injected `executor.controlled` service. Trusted host configuration—not agent
+input—owns the program, arguments, workspace, deadline, and output limits.
+
+The JSONL client connects only to caller-owned streams for an already running
+Rust sidecar. It never starts a process and discards stdout/stderr bodies after
+deriving bounded metadata. The focused host composition lives at
+`applications/controlled-code/python/controlled_code_host.py`.
+
 ## Verification
 
 ```bash

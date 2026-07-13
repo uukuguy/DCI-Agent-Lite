@@ -332,3 +332,8 @@
 - 09:14 AF-140 TDD 计划已提交，先稳定 service contract 再执行第二应用。[634536d]
 - 09:17 controlled executor service values 已闭合且不保存输出正文。[5f83ae2]
 - 09:20 修正 AF-140：policy 保持声明式，仅 workflow/evaluation/observability 可执行，避免改变 DCI 语义。
+- 09:22 policy 声明边界修正已提交，避免扩大所有应用的 executable kinds。[67520bb]
+- 09:27 controlled-code 三个 implementations 完成单次 service call 与 report/verdict/audit 路由。[f0a2b7d]
+- 09:32 独立 `controlled-code` provider 与 assembly 已加入唯一 Asterion wheel。[cf23ee0]
+- 09:36 caller-owned controlled-executor JSONL client 与显式 host composition 已提交。[d897aea]
+- 09:40 AF-140 closure 通过 352 Python、11 Node、19 Rust、isolated two-provider wheel 及全部门禁。

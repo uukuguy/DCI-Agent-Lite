@@ -99,7 +99,15 @@ class AsterionStructureTests(unittest.TestCase):
         bundled = ROOT / "packages/python/asterion-core/src/asterion"
         self.assertEqual(
             {path.name for path in capabilities.iterdir()},
-            {"controlled-code"},
+            set(),
+        )
+        self.assertEqual(
+            {
+                path.name
+                for path in (bundled / "capabilities").iterdir()
+                if path.is_dir() and not path.name.startswith("__")
+            },
+            {"controlled_code", "dci_research"},
         )
         self.assertTrue(
             (

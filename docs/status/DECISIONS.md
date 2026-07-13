@@ -304,3 +304,4 @@
 - Process boundary: Asterion may provide a JSONL client for an already authorized Rust sidecar but does not automatically start it or claim operating-system sandboxing.
 - Revalidation trigger: add typed agent-proposed actions or generic CLI service startup only through separately reviewed authorization and lifecycle designs.
 - Policy-package boundary: `policy.controlled-code-check` remains declarative and is not added to the runner's executable package kinds. The resolved graph plus host service trusted policy enforce it; only workflow, evaluation, and observability receive implementations.
+- Implemented evidence: AF-140 ships the independent `controlled-code` provider, three exact implementations, closed logical service values, and a caller-owned JSONL client. One fixture execution produces report/verdict/audit outputs with one service call; the wheel lists both applications while excluding `dci`.

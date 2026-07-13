@@ -2,9 +2,9 @@
 
 > Updated: 2026-07-13 08:11 +0800. **Session remains active — not a final handoff.**
 
-Active work package: AF-140
+Active work package: AF-150
 
-Package state: AF-130 is fully verified and closed; AF-140 is active and requires design for the second executable controlled-code application.
+Package state: AF-140 is fully verified and closed; AF-150 is active and requires design for operator-authorized executor lifecycle.
 
 ## TL;DR
 
@@ -18,20 +18,21 @@ Package state: AF-130 is fully verified and closed; AF-140 is active and require
 - `f0581f9`, `648342a`, and `e765ec7` bundle the DCI provider/resources, preserve source baseline workflows, and configure the installed Pi runtime.
 - AF-120 closure passes 335 Python, 11 Node, 19 Rust, compile/lint/shell/scope/diff, and isolated wheel installation. `asterion list` reports `dci-agent-lite`; installed `import dci` fails as required.
 - AF-130 adds exact application selectors and selected-provider application listing through `22266fe` and `17d4375`; closure passes 342 Python, 11 Node, 19 Rust and isolated installed-wheel checks.
+- AF-140 adds controlled executor service values, three executable package implementations, independent provider, and caller-owned JSONL transport through `5f83ae2`, `f0a2b7d`, `cf23ee0`, and `d897aea`; closure passes 352 Python, 11 Node, 19 Rust and isolated two-provider checks.
 
 ## Where things stand
 
 - Branch: `main`; no long-running process or in-flight climb hypothesis is active.
 - No long-running process is active; nothing has been pushed in this session.
-- AF-140 is the sole active package; post-transition scope preflight must pass before design work.
+- AF-150 is the sole active package; post-transition scope preflight must pass before design work.
 - The interim root `dci` and `asterion-dci-research` build projects are removed. Application assemblies/provider still need to move into the Asterion wheel.
 - External `pi/` remains an independent checkout and was not modified.
 
 ## Next steps (immediate)
 
-1. Run post-transition scope preflight for AF-140.
-2. Brainstorm executable ownership for controlled-code policy/workflow/evaluation/observability packages and explicit executor service injection.
-3. Write and review the AF-140 design before implementation.
+1. Run post-transition scope preflight for AF-150.
+2. Brainstorm connect-only versus explicitly managed sidecar lifecycle, trusted policy input, readiness, cancellation, and shutdown.
+3. Write and review the AF-150 design before implementation.
 
 ## Open questions
 
