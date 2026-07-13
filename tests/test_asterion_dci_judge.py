@@ -46,6 +46,27 @@ class AsterionDciJudgeTests(unittest.TestCase):
             ("https://shared.example.test/v1", "shared-judge"),
         )
 
+    def test_judge_rejects_malformed_shared_or_alias_boolean(self) -> None:
+        for environment_name in (
+            "DCI_EVAL_JUDGE_JSON_MODE",
+            "ASTERION_DCI_JUDGE_JSON_MODE",
+        ):
+            with self.subTest(environment_name=environment_name):
+                with patch.dict(os.environ, {environment_name: "sometimes"}, clear=True):
+                    with self.assertRaises(ValueError):
+                        JudgeConfig.from_env()
+
+    def test_judge_rejects_nonfinite_price(self) -> None:
+        for value in ("nan", "inf", "-inf"):
+            with self.subTest(value=value):
+                with patch.dict(
+                    os.environ,
+                    {"DCI_EVAL_JUDGE_INPUT_PRICE_PER_1M": value},
+                    clear=True,
+                ):
+                    with self.assertRaises(ValueError):
+                        JudgeConfig.from_env()
+
     def test_fingerprint_changes_with_complete_request_shape(self) -> None:
         config = JudgeConfig(base_url="https://judge.example.test/v1", model="fixture")
         baseline = judge_request_fingerprint(

@@ -75,6 +75,17 @@ class AsterionDciConfigTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 resolve_dci_runtime_options()
 
+    def test_runtime_options_reject_nonfinite_timeout(self) -> None:
+        for value in ("nan", "inf", "-inf"):
+            with self.subTest(value=value):
+                with patch.dict(
+                    os.environ,
+                    {"DCI_RPC_TIMEOUT_SECONDS": value},
+                    clear=True,
+                ):
+                    with self.assertRaises(ValueError):
+                        resolve_dci_runtime_options()
+
     def test_defaults_never_select_legacy_dci_locations(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory).resolve()

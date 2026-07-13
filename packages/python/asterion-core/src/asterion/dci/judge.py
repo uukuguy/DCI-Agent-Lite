@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import re
 import urllib.error
@@ -64,12 +65,22 @@ class JudgeConfig:
             raise ValueError("Judge base URL must not include credentials, query data, or fragments")
         if not self.model.strip():
             raise ValueError("Judge model must not be empty")
-        if self.timeout_seconds <= 0 or self.max_output_tokens <= 0:
+        if (
+            not math.isfinite(self.timeout_seconds)
+            or not math.isfinite(self.max_output_tokens)
+            or self.timeout_seconds <= 0
+            or self.max_output_tokens <= 0
+        ):
             raise ValueError("Judge timeout and output token limit must be greater than zero")
         if self.thinking.strip().lower() not in {"auto", "enabled", "disabled", "omit"}:
             raise ValueError("Judge thinking mode is not recognized")
-        if min(self.input_price_per_1m, self.cached_input_price_per_1m, self.output_price_per_1m) < 0:
-            raise ValueError("Judge token prices must not be negative")
+        prices = (
+            self.input_price_per_1m,
+            self.cached_input_price_per_1m,
+            self.output_price_per_1m,
+        )
+        if not all(math.isfinite(price) for price in prices) or min(prices) < 0:
+            raise ValueError("Judge token prices must be finite and not negative")
         object.__setattr__(self, "base_url", base_url)
         object.__setattr__(self, "api", _normalize_api(self.api))
         object.__setattr__(self, "model", self.model.strip())
@@ -252,13 +263,21 @@ def _judge_env_int(name: str, default: int) -> int:
 
 def _judge_env_float(name: str, default: float) -> float:
     try:
-        return float(_judge_env(name, str(default)))
+        value = float(_judge_env(name, str(default)))
     except ValueError as error:
         raise ValueError(f"DCI_EVAL_JUDGE_{name} must be a number") from error
+    if not math.isfinite(value):
+        raise ValueError(f"DCI_EVAL_JUDGE_{name} must be a finite number")
+    return value
 
 
 def _judge_env_bool(name: str, default: bool) -> bool:
-    return _judge_env(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
+    value = _judge_env(name, str(default)).strip().lower()
+    if value in {"1", "true", "yes", "on"}:
+        return True
+    if value in {"0", "false", "no", "off"}:
+        return False
+    raise ValueError(f"DCI_EVAL_JUDGE_{name} must be a boolean")
 
 
 def _fingerprint(config: JudgeConfig, request_payload: dict[str, object]) -> str:

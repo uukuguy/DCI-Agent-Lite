@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -126,7 +127,7 @@ def _timeout_value(value: object) -> float | None:
         timeout_seconds = float(value)
     except (TypeError, ValueError) as error:
         raise ValueError("DCI RPC timeout must be a non-negative number") from error
-    if timeout_seconds < 0:
+    if not math.isfinite(timeout_seconds) or timeout_seconds < 0:
         raise ValueError("DCI RPC timeout must be a non-negative number")
     return timeout_seconds
 
