@@ -438,3 +438,4 @@
 - 00:24 AF-220 Climb registration committed to repair governance preflight. [f3299f1]
 - 00:29 Shared DCI runtime and Judge config resolve common environment with aliases, enabling Pi parity. [9b02030]
 - 00:34 Shared DCI parsing rejects malformed booleans and non-finite numbers, preserving safe runtime configuration. [49cf1b1]
+- 00:39 Native Pi receives persisted context, thinking, session, and heap controls for runtime parity. [7fcdadc]
