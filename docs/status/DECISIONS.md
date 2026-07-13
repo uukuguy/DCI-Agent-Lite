@@ -315,3 +315,4 @@
 - Ordering boundary: sidecar startup occurs only after provider, application, runtime compatibility, assembly/catalog, exact binding, and complete lifecycle-configuration preflight.
 - Security boundary: direct argv is `[binary, policy_path]`, the environment is minimal, no shell is used, and readiness means pipe/process availability rather than a false policy-health claim.
 - Revalidation trigger: add supervised connection, persistent reuse, or protocol health only for a concrete deployment through separately versioned lifecycle/protocol designs.
+- Implemented evidence: AF-150 validates all three operator inputs before runtime/child construction, starts exactly one direct-argv stdio sidecar with a minimal environment, injects it only into the controlled-code run, forwards correlated protocol cancellation, discards stderr in bounded chunks, and reaps on exit. The isolated wheel runs `code.quality@1.0.0` successfully against the Rust sidecar while excluding `dci`.

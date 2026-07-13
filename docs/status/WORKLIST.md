@@ -160,13 +160,24 @@
 
 ## AF-150 — Controlled executor operator lifecycle
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Asterion Agent Application Framework
 - Scope: define an explicit operator-authorized lifecycle for connecting or starting the controlled-executor service so the installed `controlled-code` application can run through the generic CLI without weakening host-owned policy.
 - Dependencies: AF-050, AF-140
 - Acceptance: one reviewed CLI/configuration flow establishes trusted policy, process ownership, readiness, injection, cancellation, and shutdown; failures are redacted and no agent/provider/manifest can select commands or silently start services.
 - Design: `docs/superpowers/specs/2026-07-13-controlled-executor-operator-lifecycle-design.md`
 - Plan: `docs/superpowers/plans/2026-07-13-controlled-executor-operator-lifecycle.md`
+- Closure evidence: explicit all-or-none binary/policy/validation configuration is validated before runtime or child construction; the CLI starts exactly one direct-argv, minimal-environment sidecar, injects it only for the selected controlled-code plan, forwards correlated cancellation, drains diagnostics in bounded chunks, and reaps on shutdown. Full closure passes 362 Python, 11 Node, and 19 Rust tests plus compile, Ruff, shell, scope, and diff gates. A fresh isolated wheel lists both providers, excludes `dci`, and completes `code.quality@1.0.0` with the Rust sidecar.
+
+## AF-160 — Deferred Claude provider-backed acceptance
+
+- Status: in_progress
+- Parent objective: Asterion Agent Application Framework
+- Scope: execute the previously deferred, small provider-backed Claude Code DCI research acceptance only when the locally configured Claude login or compatible gateway is available; preserve the existing adapter, environment boundary, and credential-redaction contract.
+- Dependencies: AF-030, AF-120
+- Acceptance: a tiny local-corpus Asterion research invocation through the existing Claude Code runtime produces protocol-conformant normalized evidence without persisting credentials or raw provider payloads; when no authorized backend is available, record one safe, content-free blocked probe and make no runtime/protocol change.
+- Design: `docs/superpowers/specs/2026-07-12-claude-code-protocol-adapter-design.md`
+- Plan: `docs/superpowers/plans/2026-07-12-claude-code-protocol-adapter.md`
 
 ## AF-095 — Asterion framework identity and extraction
 

@@ -339,3 +339,11 @@
 - 09:40 AF-140 closure 通过 352 Python、11 Node、19 Rust、isolated two-provider wheel 及全部门禁。
 - 09:44 AF-140 已关闭并激活 AF-150，operator lifecycle 成为单独安全边界。[9bd531f]
 - 09:50 AF-150 指定显式 binary/policy/validation config 的 managed stdio lifecycle。[7a3cd12]
+- 09:51 AF-150 实施计划锁定为 operator config、受管 sidecar、CLI 注入与安装产品验收。[2eb4834]
+- 09:53 显式 operator 三文件配置在启动前完成 canonical regular-file、JSON 与闭合 validation 校验。[51af290]
+- 09:57 受管 stdio sidecar 使用 direct argv、最小环境、readiness checkpoint 与关闭/reap 流程。[0002a7e]
+- 10:03 CLI 仅对需要 `executor.controlled` 的已选计划注入受管服务，其他应用拒绝 lifecycle 参数。[f37b0ac]
+- 10:06 `.env.template`、README 与受控代码指南记录三项 operator 配置及非沙箱边界。[4648d5]
+- 10:12 运行中取消现在向 sidecar 发送关联 cancel 并等待原执行终态，补齐 AF-150 lifecycle 取消边界。[e7ab64a]
+- 10:16 sidecar stderr 改为 4096-byte 分块丢弃，避免 shutdown 留存无界诊断输出。[e576122]
+- 10:25 AF-150 closure：362 Python、11 Node、19 Rust 与全部仓库门禁通过；fresh wheel 排除 `dci` 并成功运行 controlled-code Rust sidecar。[pending state commit]

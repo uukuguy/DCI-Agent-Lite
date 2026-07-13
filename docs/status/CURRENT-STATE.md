@@ -4,11 +4,11 @@
 
 - Project: Asterion framework under development in the DCI-Agent-Lite repository; DCI remains the first capability and reference application.
 - Current branch: `main`
-- Theme-level focus: Define explicit operator lifecycle for the controlled executor service.
+- Theme-level focus: Run the deferred Claude provider-backed acceptance only if an authorized backend is locally available.
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: `AF-150` — controlled executor operator lifecycle.
+- Active work package: `AF-160` — deferred Claude provider-backed acceptance.
 
 ## Current Architecture
 
@@ -41,12 +41,13 @@
 - AF-120 acceptance: exactly one independently installable Asterion wheel contains the framework, modular DCI capability/application, canonical resources, selected-only provider binding, generic CLI, and explicit Pi runtime factory. `src/dci` is an unpackaged repository baseline; 335 Python, 11 Node, and 19 Rust tests plus isolated installation and every repository gate pass.
 - AF-130 acceptance: installed applications list and run by exact `application_id@version`; global listing stays metadata-only, selected listing loads one provider, explicit assembly modes remain compatible, and 342 Python, 11 Node, and 19 Rust tests plus isolated installation and all gates pass.
 - AF-140 acceptance: the second `controlled-code` provider executes declarative policy plus three exact implementations through an explicit executor host service; caller-owned JSONL transport never starts a process or persists output bodies. 352 Python, 11 Node, and 19 Rust tests plus isolated installation and all gates pass.
+- AF-150 acceptance: the generic installed CLI starts one operator-authorized controlled-executor sidecar only after complete provider/application/assembly/binding/configuration preflight. It uses direct binary-plus-policy argv, a minimal environment, pipe-level readiness, explicit service injection, correlated protocol cancellation, bounded stderr discard, and deterministic reap. The final closure passes 362 Python, 11 Node, and 19 Rust tests plus all repository gates; a fresh wheel installation lists both providers, excludes `dci`, and successfully executes `code.quality@1.0.0` against the Rust sidecar.
 - Reference assemblies: checked-in DCI and controlled-code application manifests validate and resolve; DCI composition is identical for Pi/Claude runtime identities and controlled execution remains an explicit host service.
 
 ## Open Problems (theme-level)
 
 - Provider-backed acceptance of the first non-Pi runtime when credentials or a compatible gateway become available.
-- Operator-authorized controlled-executor startup/connection, readiness, cancellation, and shutdown without implicit service discovery.
+- Provider-backed acceptance of the first non-Pi runtime remains conditional on local Claude login or a compatible gateway; AF-160 may only perform the approved probe and must otherwise record a safe block.
 
 ## Key Files
 
