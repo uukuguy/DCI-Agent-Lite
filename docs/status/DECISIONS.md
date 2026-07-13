@@ -305,3 +305,13 @@
 - Revalidation trigger: add typed agent-proposed actions or generic CLI service startup only through separately reviewed authorization and lifecycle designs.
 - Policy-package boundary: `policy.controlled-code-check` remains declarative and is not added to the runner's executable package kinds. The resolved graph plus host service trusted policy enforce it; only workflow, evaluation, and observability receive implementations.
 - Implemented evidence: AF-140 ships the independent `controlled-code` provider, three exact implementations, closed logical service values, and a caller-owned JSONL client. One fixture execution produces report/verdict/audit outputs with one service call; the wheel lists both applications while excluding `dci`.
+
+## D-033 — Manage one explicit executor sidecar per CLI run
+
+- Status: ✅ accepted decision
+- Decided: 2026-07-13
+- Decision: a controlled-code CLI run may start exactly one stdio sidecar only when the operator explicitly supplies binary, Rust policy, and trusted validation configuration. Asterion owns readiness, injection, cancellation, shutdown, and reap for that invocation.
+- Rationale: connect-only transport requires a new supervised socket boundary, while accepting arbitrary wrapper commands or automatic discovery would weaken executable authority.
+- Ordering boundary: sidecar startup occurs only after provider, application, runtime compatibility, assembly/catalog, exact binding, and complete lifecycle-configuration preflight.
+- Security boundary: direct argv is `[binary, policy_path]`, the environment is minimal, no shell is used, and readiness means pipe/process availability rather than a false policy-health claim.
+- Revalidation trigger: add supervised connection, persistent reuse, or protocol health only for a concrete deployment through separately versioned lifecycle/protocol designs.

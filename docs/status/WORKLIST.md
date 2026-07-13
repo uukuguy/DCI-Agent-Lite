@@ -165,7 +165,7 @@
 - Scope: define an explicit operator-authorized lifecycle for connecting or starting the controlled-executor service so the installed `controlled-code` application can run through the generic CLI without weakening host-owned policy.
 - Dependencies: AF-050, AF-140
 - Acceptance: one reviewed CLI/configuration flow establishes trusted policy, process ownership, readiness, injection, cancellation, and shutdown; failures are redacted and no agent/provider/manifest can select commands or silently start services.
-- Design: pending
+- Design: `docs/superpowers/specs/2026-07-13-controlled-executor-operator-lifecycle-design.md`
 - Plan: pending design approval
 
 ## AF-095 — Asterion framework identity and extraction
