@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from asterion.adapters.pi import PiProtocolAdapter, map_pi_capabilities
 from asterion.dci.config import DciPaths
@@ -17,6 +17,9 @@ from asterion.runtime.protocol import (
     validate_event_stream,
     validate_run_request,
 )
+
+if TYPE_CHECKING:
+    from asterion.dci.config import DciRuntimeOptions
 
 
 @dataclass(frozen=True)
@@ -31,6 +34,10 @@ class DciRunRequest:
     tools: str = "read,bash"
     max_turns: int | None = None
     timeout_seconds: float | None = 3600.0
+    runtime_context_level: str | None = None
+    thinking_level: str | None = None
+    node_max_old_space_size_mb: int | None = None
+    keep_session: bool = False
     extra_args: tuple[str, ...] = ()
     show_tools: bool = False
     system_prompt_file: Path | None = None
@@ -52,6 +59,27 @@ class DciRunError(RuntimeError):
     """Safe public error for a failed Pi execution."""
 
 
+def request_from_runtime_options(
+    options: DciRuntimeOptions, *, run_id: str, question: str, cwd: Path
+) -> DciRunRequest:
+    """Convert resolved shared runtime settings into one immutable native request."""
+
+    return DciRunRequest(
+        run_id=run_id,
+        question=question,
+        cwd=cwd,
+        provider=options.provider,
+        model=options.model,
+        tools=options.tools,
+        timeout_seconds=options.timeout_seconds,
+        runtime_context_level=options.runtime_context_level,
+        thinking_level=options.thinking_level,
+        node_max_old_space_size_mb=options.node_max_old_space_size_mb,
+        keep_session=options.keep_session,
+        extra_args=options.extra_args,
+    )
+
+
 def resume_request_from_output_dir(output_dir: Path) -> DciRunRequest:
     """Reconstruct a safe immutable resume request from native run state."""
 
@@ -66,6 +94,10 @@ def resume_request_from_output_dir(output_dir: Path) -> DciRunRequest:
     model = _optional_string(state, "model")
     tools = _required_string(state, "tools")
     max_turns = _optional_int(state, "max_turns")
+    runtime_context_level = _optional_string(state, "runtime_context_level")
+    thinking_level = _optional_string(state, "thinking_level")
+    node_max_old_space_size_mb = _optional_positive_int(state, "node_max_old_space_size_mb")
+    keep_session = _required_bool(state, "keep_session")
     return DciRunRequest(
         run_id=run_id,
         question=question,
@@ -74,6 +106,10 @@ def resume_request_from_output_dir(output_dir: Path) -> DciRunRequest:
         model=model,
         tools=tools,
         max_turns=max_turns,
+        runtime_context_level=runtime_context_level,
+        thinking_level=thinking_level,
+        node_max_old_space_size_mb=node_max_old_space_size_mb,
+        keep_session=keep_session,
         resume=True,
     )
 
@@ -157,7 +193,9 @@ def run_pi_research(
         show_tools=request.show_tools,
         system_prompt_file=request.system_prompt_file,
         append_system_prompt_file=request.append_system_prompt_file,
-        extra_args=request.extra_args,
+        extra_args=_pi_extra_args(request),
+        keep_session=request.keep_session,
+        node_max_old_space_size_mb=request.node_max_old_space_size_mb,
     )
     try:
         client.start()
@@ -218,6 +256,17 @@ def _write_json(path: Path, value: dict[str, object]) -> None:
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def _pi_extra_args(request: DciRunRequest) -> tuple[str, ...]:
+    """Add native Pi controls after caller-supplied direct argv fragments."""
+
+    values = list(request.extra_args)
+    if request.thinking_level:
+        values.append(f"--thinking {request.thinking_level}")
+    if request.runtime_context_level:
+        values.append(f"--context-management-level {request.runtime_context_level}")
+    return tuple(values)
+
+
 def _append_jsonl(path: Path, value: dict[str, object]) -> None:
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(value, ensure_ascii=False) + "\n")
@@ -252,6 +301,10 @@ def _write_state(
             "model": request.model,
             "tools": request.tools,
             "max_turns": request.max_turns,
+            "runtime_context_level": request.runtime_context_level,
+            "thinking_level": request.thinking_level,
+            "node_max_old_space_size_mb": request.node_max_old_space_size_mb,
+            "keep_session": request.keep_session,
             "resume_count": resume_count,
             "question_path": str(question_path),
             "final_path": str(final_path),
@@ -282,6 +335,10 @@ def _validate_resume_request(state: dict[str, object], request: DciRunRequest) -
         "model": request.model,
         "tools": request.tools,
         "max_turns": request.max_turns,
+        "runtime_context_level": request.runtime_context_level,
+        "thinking_level": request.thinking_level,
+        "node_max_old_space_size_mb": request.node_max_old_space_size_mb,
+        "keep_session": request.keep_session,
     }
     if any(state.get(name) != value for name, value in expected.items()):
         raise DciRunError("DCI resume validation failed")
@@ -308,5 +365,19 @@ def _optional_int(state: dict[str, object], name: str) -> int | None:
     if value is None:
         return None
     if not isinstance(value, int) or isinstance(value, bool):
+        raise DciRunError("DCI resume validation failed")
+    return value
+
+
+def _optional_positive_int(state: dict[str, object], name: str) -> int | None:
+    value = _optional_int(state, name)
+    if value is not None and value <= 0:
+        raise DciRunError("DCI resume validation failed")
+    return value
+
+
+def _required_bool(state: dict[str, object], name: str) -> bool:
+    value = state.get(name)
+    if not isinstance(value, bool):
         raise DciRunError("DCI resume validation failed")
     return value

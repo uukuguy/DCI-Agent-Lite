@@ -106,6 +106,8 @@ class PiRpcClient:
         system_prompt_file: Path | None,
         append_system_prompt_file: Path | None,
         extra_args: tuple[str, ...],
+        keep_session: bool,
+        node_max_old_space_size_mb: int | None,
     ) -> None:
         self.package_dir = Path(package_dir)
         self.cwd = Path(cwd)
@@ -117,6 +119,8 @@ class PiRpcClient:
         self.system_prompt_file = system_prompt_file
         self.append_system_prompt_file = append_system_prompt_file
         self.extra_args = tuple(extra_args)
+        self.keep_session = keep_session
+        self.node_max_old_space_size_mb = node_max_old_space_size_mb
         self.proc: subprocess.Popen[bytes] | None = None
         self.command: list[str] | None = None
         self.stderr_chunks: list[str] = []
@@ -132,17 +136,29 @@ class PiRpcClient:
             provider=self.provider,
             model=self.model,
             tools=self.tools,
-            no_session=True,
+            no_session=not self.keep_session,
             system_prompt_file=self.system_prompt_file,
             append_system_prompt_file=self.append_system_prompt_file,
             extra_args=expand_extra_args(self.extra_args),
         )
 
+    def _child_environment(self) -> dict[str, str]:
+        """Build the Pi child environment without replacing inherited Node settings."""
+
+        environment = _node_env(os.environ)
+        environment["PI_CODING_AGENT_DIR"] = str(self.agent_dir)
+        if self.node_max_old_space_size_mb is not None:
+            heap_option = f"--max-old-space-size={self.node_max_old_space_size_mb}"
+            current_options = environment.get("NODE_OPTIONS", "").strip()
+            environment["NODE_OPTIONS"] = " ".join(
+                value for value in (current_options, heap_option) if value
+            )
+        return environment
+
     def start(self) -> None:
         if self.proc is not None:
             raise RuntimeError("RPC client already started")
-        environment = _node_env(os.environ)
-        environment["PI_CODING_AGENT_DIR"] = str(self.agent_dir)
+        environment = self._child_environment()
         self.command = self._build_command()
         self.proc = subprocess.Popen(
             self.command,

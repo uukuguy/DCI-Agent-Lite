@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import os
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -8,7 +9,13 @@ from unittest.mock import patch
 from asterion.dci.pi_rpc import PiRpcClient, build_pi_command, expand_extra_args
 
 
-def make_client(*, show_tools: bool = False) -> PiRpcClient:
+def make_client(
+    *,
+    show_tools: bool = False,
+    keep_session: bool = False,
+    node_max_old_space_size_mb: int | None = None,
+    extra_args: tuple[str, ...] = ("--thinking high",),
+) -> PiRpcClient:
     return PiRpcClient(
         package_dir=Path("pi/packages/coding-agent"),
         cwd=Path("."),
@@ -19,7 +26,9 @@ def make_client(*, show_tools: bool = False) -> PiRpcClient:
         show_tools=show_tools,
         system_prompt_file=None,
         append_system_prompt_file=None,
-        extra_args=("--thinking high",),
+        extra_args=extra_args,
+        keep_session=keep_session,
+        node_max_old_space_size_mb=node_max_old_space_size_mb,
     )
 
 
@@ -42,6 +51,31 @@ class PiRpcCommandTests(unittest.TestCase):
         self.assertEqual(command[1:3], ["/pi/packages/coding-agent/dist/cli.js", "--mode"])
         self.assertEqual(command[3], "rpc")
         self.assertEqual(command[-3:], ["--no-session", "--thinking", "high"])
+
+    def test_client_maps_context_thinking_and_session_to_pi(self) -> None:
+        client = make_client(
+            keep_session=True,
+            extra_args=("--context-management-level level3", "--thinking high"),
+        )
+        with patch("asterion.dci.pi_rpc.ensure_built_pi_cli") as built:
+            built.return_value = Path("/pi/packages/coding-agent/dist/cli.js")
+            command = client._build_command()
+
+        self.assertNotIn("--no-session", command)
+        self.assertEqual(
+            command[-4:],
+            ["--context-management-level", "level3", "--thinking", "high"],
+        )
+
+    def test_heap_option_preserves_existing_node_options(self) -> None:
+        client = make_client(node_max_old_space_size_mb=8192)
+        with patch.dict(os.environ, {"NODE_OPTIONS": "--trace-warnings"}, clear=True):
+            environment = client._child_environment()
+
+        self.assertEqual(
+            environment["NODE_OPTIONS"],
+            "--trace-warnings --max-old-space-size=8192",
+        )
 
 
 class PiRpcLifecycleTests(unittest.TestCase):

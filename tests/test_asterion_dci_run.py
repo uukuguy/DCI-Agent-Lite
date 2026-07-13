@@ -6,8 +6,14 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from asterion.dci.config import resolve_dci_paths
-from asterion.dci.run import DciRunError, DciRunRequest, run_pi_research
+from asterion.dci.config import DciRuntimeOptions, resolve_dci_paths
+from asterion.dci.run import (
+    DciRunError,
+    DciRunRequest,
+    request_from_runtime_options,
+    resume_request_from_output_dir,
+    run_pi_research,
+)
 from asterion.runtime.protocol import validate_event_stream
 
 
@@ -42,6 +48,31 @@ class FailingPiClient(FixturePiClient):
 
 
 class AsterionDciRunTests(unittest.TestCase):
+    def test_runtime_options_map_to_native_pi_request(self) -> None:
+        options = DciRuntimeOptions(
+            provider="provider",
+            model="model",
+            tools="read,bash",
+            timeout_seconds=90.0,
+            runtime_context_level="level3",
+            thinking_level="high",
+            node_max_old_space_size_mb=8192,
+            keep_session=True,
+            extra_args=("--custom option",),
+        )
+
+        request = request_from_runtime_options(
+            options, run_id="run-1", question="question", cwd=Path("/work")
+        )
+
+        self.assertEqual(request.provider, "provider")
+        self.assertEqual(request.model, "model")
+        self.assertEqual(request.runtime_context_level, "level3")
+        self.assertEqual(request.thinking_level, "high")
+        self.assertEqual(request.node_max_old_space_size_mb, 8192)
+        self.assertTrue(request.keep_session)
+        self.assertEqual(request.extra_args, ("--custom option",))
+
     def test_resume_reuses_failed_directory_and_creates_a_second_protocol_attempt(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -89,6 +120,45 @@ class AsterionDciRunTests(unittest.TestCase):
                     run_pi_research(paths, changed, output_dir=failed_dir)
             client.assert_not_called()
 
+    def test_resume_reconstructs_and_validates_runtime_controls_before_client_start(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            paths = resolve_dci_paths(root)
+            output_dir = root / "failed"
+            request = DciRunRequest(
+                run_id="run-1",
+                question="question",
+                cwd=root,
+                runtime_context_level="level3",
+                thinking_level="high",
+                node_max_old_space_size_mb=8192,
+                keep_session=True,
+            )
+            with patch("asterion.dci.run.PiRpcClient", FailingPiClient):
+                with self.assertRaises(DciRunError):
+                    run_pi_research(paths, request, output_dir=output_dir)
+
+            resumed = resume_request_from_output_dir(output_dir)
+            self.assertEqual(resumed.runtime_context_level, "level3")
+            self.assertEqual(resumed.thinking_level, "high")
+            self.assertEqual(resumed.node_max_old_space_size_mb, 8192)
+            self.assertTrue(resumed.keep_session)
+
+            changed = DciRunRequest(
+                run_id="run-1",
+                question="question",
+                cwd=root,
+                runtime_context_level="level2",
+                thinking_level="high",
+                node_max_old_space_size_mb=8192,
+                keep_session=True,
+                resume=True,
+            )
+            with patch("asterion.dci.run.PiRpcClient") as client:
+                with self.assertRaisesRegex(DciRunError, "resume validation failed"):
+                    run_pi_research(paths, changed, output_dir=output_dir)
+            client.assert_not_called()
+
     def test_completed_run_writes_native_artifacts_and_protocol_projection(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -119,6 +189,10 @@ class AsterionDciRunTests(unittest.TestCase):
                     "model",
                     "tools",
                     "max_turns",
+                    "runtime_context_level",
+                    "thinking_level",
+                    "node_max_old_space_size_mb",
+                    "keep_session",
                     "resume_count",
                 }.issubset(state)
             )
