@@ -1,12 +1,7 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
 [project]
-name = "dci"
+name = "asterion-workspace"
 version = "0.1.0"
-description = "High Resolution Corpus Interaction"
-readme = "README.md"
+description = "Development workspace for Asterion and the DCI source baseline"
 requires-python = ">=3.10"
 dependencies = [
     "anthropic>=0.91.0",
@@ -19,24 +14,17 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "scipy",
     "tqdm",
+    "asterion",
 ]
 
 [dependency-groups]
-dev = ["asterion", "asterion-dci-research"]
+dev = []
+
+[tool.uv]
+package = false
 
 [tool.uv.sources]
 asterion = { workspace = true }
-asterion-dci-research = { workspace = true }
 
 [tool.uv.workspace]
-members = ["packages/python/asterion-core", "capabilities/dci-research"]
-
-[project.scripts]
-dci-export-bc-plus-docs = "dci.benchmark.export_bc_plus_docs:main"
-dci-export-bright-docs = "dci.benchmark.export_bright_docs:main"
-dci-agent-lite = "dci.benchmark.pi_rpc_runner:main"
-dci-run-pi-rpc = "dci.benchmark.pi_rpc_runner:main"
-dci-print-pi-system-prompt = "dci.benchmark.pi_system_prompt:main"
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/dci"]
+members = ["packages/python/asterion-core"]

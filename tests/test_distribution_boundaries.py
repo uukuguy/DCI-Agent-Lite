@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import re
+import os
 import subprocess
 import tempfile
+import tomllib
 import unittest
 import zipfile
 from pathlib import Path
@@ -36,12 +38,15 @@ class SourceDistributionBoundaryTests(unittest.TestCase):
         source = python_source(BASELINE_SOURCE)
         self.assertNotRegex(source, r"(?:from|import)\s+asterion(?:\.|\s|$)")
 
-    def test_root_distribution_packages_only_the_dci_baseline(self) -> None:
-        pyproject = (ROOT / "pyproject.toml").read_text()
-        wheel_section = pyproject.split("[tool.hatch.build.targets.wheel]", 1)[1]
-        self.assertRegex(wheel_section, r'packages\s*=\s*\[\s*"src/dci"\s*\]')
-        self.assertNotIn('"src/asterion"', wheel_section)
-        self.assertNotIn("asterion_dci_research", wheel_section)
+    def test_root_is_a_non_buildable_workspace_with_one_member(self) -> None:
+        pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text())
+        self.assertNotIn("build-system", pyproject)
+        self.assertTrue(pyproject["tool"]["uv"]["package"] is False)
+        self.assertEqual(
+            pyproject["tool"]["uv"]["workspace"]["members"],
+            ["packages/python/asterion-core"],
+        )
+        self.assertNotIn("scripts", pyproject["project"])
 
     def test_baseline_framework_modules_are_not_compatibility_reexports(self) -> None:
         framework = python_source(BASELINE_SOURCE / "framework")
@@ -49,22 +54,39 @@ class SourceDistributionBoundaryTests(unittest.TestCase):
         self.assertNotRegex(framework, re.compile(r"(?:from|import)\s+asterion"))
 
 
+    def test_source_baseline_remains_runnable_without_installation(self) -> None:
+        environment = os.environ.copy()
+        environment["PYTHONPATH"] = str(ROOT / "src")
+        completed = subprocess.run(
+            ["uv", "run", "python", "-m", "dci.benchmark.pi_rpc_runner", "--help"],
+            cwd=ROOT,
+            env=environment,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+
+
 class BuiltDistributionBoundaryTests(unittest.TestCase):
-    def test_core_and_baseline_wheels_have_disjoint_top_level_packages(self) -> None:
+    def test_asterion_is_the_only_buildable_wheel(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            for package in ("asterion", "dci"):
-                subprocess.run(
-                    ["uv", "build", "--package", package, "--out-dir", temp_dir],
-                    cwd=ROOT,
-                    check=True,
-                    text=True,
-                    capture_output=True,
-                )
-            wheels = {path.name.split("-", 1)[0]: path for path in Path(temp_dir).glob("*.whl")}
-            self.assertEqual(self.wheel_top_levels(wheels["asterion"]), {"asterion"})
-            self.assertEqual(self.wheel_top_levels(wheels["dci"]), {"dci"})
-            self.assertNotIn("Requires-Dist: dci", self.metadata(wheels["asterion"]))
-            self.assertNotIn("Requires-Dist: asterion", self.metadata(wheels["dci"]))
+            subprocess.run(
+                ["uv", "build", "--package", "asterion", "--wheel", "--out-dir", temp_dir],
+                cwd=ROOT,
+                check=True,
+                text=True,
+                capture_output=True,
+            )
+            wheels = list(Path(temp_dir).glob("*.whl"))
+            self.assertEqual(len(wheels), 1)
+            self.assertEqual(self.wheel_top_levels(wheels[0]), {"asterion"})
+            self.assertNotIn("Requires-Dist: dci", self.metadata(wheels[0]))
+
+    def test_no_capability_or_baseline_project_remains(self) -> None:
+        self.assertFalse((ROOT / "capabilities/dci-research/pyproject.toml").exists())
+        pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text())
+        self.assertNotEqual(pyproject["project"]["name"], "dci")
 
     def wheel_top_levels(self, wheel: Path) -> set[str]:
         with zipfile.ZipFile(wheel) as archive:
@@ -80,61 +102,6 @@ class BuiltDistributionBoundaryTests(unittest.TestCase):
                 name for name in archive.namelist() if name.endswith(".dist-info/METADATA")
             )
             return archive.read(metadata_path).decode()
-
-
-class DciCapabilityDistributionTests(unittest.TestCase):
-    def test_capability_owns_its_project_and_canonical_manifest_resources(self) -> None:
-        project = ROOT / "capabilities/dci-research"
-        package = project / "src/asterion_dci_research"
-        self.assertTrue((project / "pyproject.toml").is_file())
-        self.assertTrue((package / "manifests").is_dir())
-        self.assertFalse((project / "manifests").exists())
-        self.assertEqual(
-            {path.name for path in (package / "manifests").glob("*.json")},
-            {
-                "dci-evaluation.json",
-                "dci-research.json",
-                "local-corpus-policy.json",
-                "protocol-observability.json",
-            },
-        )
-
-    def test_capability_distribution_depends_only_on_asterion(self) -> None:
-        pyproject = (ROOT / "capabilities/dci-research/pyproject.toml").read_text()
-        self.assertIn('dependencies = ["asterion>=0.1.0"]', pyproject)
-        self.assertNotIn('"dci', pyproject)
-
-    def test_capability_wheel_contains_each_manifest_once(self) -> None:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            subprocess.run(
-                [
-                    "uv",
-                    "build",
-                    "--package",
-                    "asterion-dci-research",
-                    "--out-dir",
-                    temp_dir,
-                ],
-                cwd=ROOT,
-                check=True,
-                text=True,
-                capture_output=True,
-            )
-            wheel = next(Path(temp_dir).glob("*.whl"))
-            with zipfile.ZipFile(wheel) as archive:
-                manifests = [
-                    name for name in archive.namelist() if "/manifests/" in name
-                ]
-                metadata_path = next(
-                    name
-                    for name in archive.namelist()
-                    if name.endswith(".dist-info/METADATA")
-                )
-                metadata = archive.read(metadata_path).decode()
-            self.assertEqual(len(manifests), 4)
-            self.assertEqual(len(manifests), len(set(manifests)))
-            self.assertIn("Requires-Dist: asterion>=0.1.0", metadata)
-            self.assertNotIn("Requires-Dist: dci", metadata)
 
 
 if __name__ == "__main__":
