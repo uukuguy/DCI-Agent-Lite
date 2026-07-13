@@ -52,6 +52,32 @@ class DciRunError(RuntimeError):
     """Safe public error for a failed Pi execution."""
 
 
+def resume_request_from_output_dir(output_dir: Path) -> DciRunRequest:
+    """Reconstruct a safe immutable resume request from native run state."""
+
+    state = _load_resume_state(Path(output_dir).resolve())
+    status = _required_string(state, "status")
+    if status not in {"failed", "incomplete", "running"}:
+        raise DciRunError("DCI resume validation failed")
+    run_id = _required_string(state, "run_id")
+    question = _required_string(state, "question")
+    cwd = Path(_required_string(state, "cwd"))
+    provider = _optional_string(state, "provider")
+    model = _optional_string(state, "model")
+    tools = _required_string(state, "tools")
+    max_turns = _optional_int(state, "max_turns")
+    return DciRunRequest(
+        run_id=run_id,
+        question=question,
+        cwd=cwd,
+        provider=provider,
+        model=model,
+        tools=tools,
+        max_turns=max_turns,
+        resume=True,
+    )
+
+
 def run_pi_research(
     paths: DciPaths,
     request: DciRunRequest,
@@ -259,3 +285,28 @@ def _validate_resume_request(state: dict[str, object], request: DciRunRequest) -
     }
     if any(state.get(name) != value for name, value in expected.items()):
         raise DciRunError("DCI resume validation failed")
+
+
+def _required_string(state: dict[str, object], name: str) -> str:
+    value = state.get(name)
+    if not isinstance(value, str) or not value:
+        raise DciRunError("DCI resume validation failed")
+    return value
+
+
+def _optional_string(state: dict[str, object], name: str) -> str | None:
+    value = state.get(name)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise DciRunError("DCI resume validation failed")
+    return value
+
+
+def _optional_int(state: dict[str, object], name: str) -> int | None:
+    value = state.get(name)
+    if value is None:
+        return None
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise DciRunError("DCI resume validation failed")
+    return value

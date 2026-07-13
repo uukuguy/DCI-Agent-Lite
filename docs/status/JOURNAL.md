@@ -389,3 +389,4 @@
 - 18:25 Asterion DCI resumes only compatible failed runs with isolated attempts.[pending H-002 commit]
 - 18:51 AF-190-H-001 confirmed 4/4; package acceptance recorded.
 - 19:05 AF-190-H-002 confirmed 4/4; package acceptance recorded.
+- 19:12 Package-local resume now reconstructs immutable native state safely for AF-190 operator parity. [pending H-003 commit]
