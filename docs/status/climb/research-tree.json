@@ -1,13 +1,13 @@
 {
   "run_count": 66,
   "session": {
-    "session": "2026-07-13-af-210-dci-application-runtime-parity",
-    "phase": "completed",
-    "work_package_id": "AF-210",
-    "last_cycle": 66,
-    "next_hypothesis": null,
+    "session": "2026-07-14-af-220-shared-config-runnable-pi",
+    "phase": "implementation",
+    "work_package_id": "AF-220",
+    "last_cycle": 67,
+    "next_hypothesis": "AF-220-H-001",
     "in_flight": null,
-    "next_action": "AF-210 complete; AF-220 must register a new Climb session before dispatch.",
+    "next_action": "Start AF-220-H-001.",
     "falsified_routes": [
       "duplicate the authoritative Pi commit across setup.sh and .env.template",
       "convert the independent Pi checkout to vendored or submodule ownership",
@@ -21,7 +21,60 @@
       "reuse the completed AF-200 session or its hypotheses under AF-210"
     ]
   },
-  "active": [],
+  "active": [
+    {
+      "id": "AF-220-H-001",
+      "work_package_id": "AF-220",
+      "description": "Resolve shared DCI environment and judge configuration with explicit values taking precedence over compatibility aliases.",
+      "parent_paradigm": "dci-shared-configuration",
+      "expected_lift": "+1 shared configuration parity boundary",
+      "cost_h": 0.8,
+      "ranking": 0.9,
+      "status": "pending",
+      "created_at": "2026-07-14T00:18:17+08:00",
+      "verification_command": "uv run python -m unittest -v tests.test_asterion_dci_config tests.test_asterion_dci_judge",
+      "results": []
+    },
+    {
+      "id": "AF-220-H-002",
+      "work_package_id": "AF-220",
+      "description": "Carry native Pi context, session, and resource controls through the typed Asterion DCI request boundary.",
+      "parent_paradigm": "dci-native-pi-controls",
+      "expected_lift": "+1 native Pi control parity boundary",
+      "cost_h": 0.9,
+      "ranking": 0.8,
+      "status": "pending",
+      "created_at": "2026-07-14T00:18:17+08:00",
+      "verification_command": "uv run python -m unittest -v tests.test_asterion_dci_pi_rpc tests.test_asterion_dci_run",
+      "results": []
+    },
+    {
+      "id": "AF-220-H-003",
+      "work_package_id": "AF-220",
+      "description": "Propagate resolved DCI runtime options through package CLI and batch execution without bypassing the native request construction path.",
+      "parent_paradigm": "dci-package-batch-propagation",
+      "expected_lift": "+1 product command and batch parity boundary",
+      "cost_h": 0.9,
+      "ranking": 0.7,
+      "status": "pending",
+      "created_at": "2026-07-14T00:18:17+08:00",
+      "verification_command": "uv run python -m unittest -v tests.test_asterion_dci_cli tests.test_asterion_dci_benchmark",
+      "results": []
+    },
+    {
+      "id": "AF-220-H-004",
+      "work_package_id": "AF-220",
+      "description": "Apply shared configuration at the installed Pi application boundary and prove its runnable Asterion example equivalence.",
+      "parent_paradigm": "dci-installed-application-example-parity",
+      "expected_lift": "+1 installed application and operator example parity boundary",
+      "cost_h": 1.0,
+      "ranking": 0.6,
+      "status": "pending",
+      "created_at": "2026-07-14T00:18:17+08:00",
+      "verification_command": "uv run python -m unittest -v tests.test_asterion_dci_application_executor tests.test_builtin_dci_application",
+      "results": []
+    }
+  ],
   "confirmed": [
     {
       "id": "H-001",

@@ -5,14 +5,18 @@
 
 ## In-flight / session state
 
-- Phase: completed
-- Last cycle: 66
-- Next hypothesis: None
+- Phase: implementation
+- Last cycle: 67
+- Next hypothesis: AF-220-H-001
 - In flight: none
-- Next action: AF-210 complete; AF-220 must register a new Climb session before dispatch.
+- Next action: Start AF-220-H-001.
 
 ## Active hypotheses
 
+- **AF-220-H-001** (pending, rank 0.90): Resolve shared DCI environment and judge configuration with explicit values taking precedence over compatibility aliases.
+- **AF-220-H-002** (pending, rank 0.80): Carry native Pi context, session, and resource controls through the typed Asterion DCI request boundary.
+- **AF-220-H-003** (pending, rank 0.70): Propagate resolved DCI runtime options through package CLI and batch execution without bypassing the native request construction path.
+- **AF-220-H-004** (pending, rank 0.60): Apply shared configuration at the installed Pi application boundary and prove its runnable Asterion example equivalence.
 
 ## Run ladder
 

@@ -1,11 +1,11 @@
 {
-  "session": "2026-07-13-af-210-dci-application-runtime-parity",
-  "phase": "completed",
-  "work_package_id": "AF-210",
-  "last_cycle": 66,
-  "next_hypothesis": null,
+  "session": "2026-07-14-af-220-shared-config-runnable-pi",
+  "phase": "implementation",
+  "work_package_id": "AF-220",
+  "last_cycle": 67,
+  "next_hypothesis": "AF-220-H-001",
   "in_flight": null,
-  "next_action": "AF-210 complete; AF-220 must register a new Climb session before dispatch.",
+  "next_action": "Start AF-220-H-001.",
   "falsified_routes": [
     "duplicate the authoritative Pi commit across setup.sh and .env.template",
     "convert the independent Pi checkout to vendored or submodule ownership",
