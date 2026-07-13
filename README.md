@@ -44,6 +44,28 @@ The installed Pi runtime reads `DCI_PI_DIR`, `DCI_PI_PACKAGE_DIR`,
 `DCI_PI_AGENT_DIR`, `ASTERION_RUNTIME_CWD`, `DCI_PROVIDER`, `DCI_MODEL`, and
 `DCI_TOOLS` from the caller environment or current-directory `.env`.
 
+### Independent Asterion DCI execution
+
+`asterion-dci` is the Asterion-owned DCI product command. It uses only
+`ASTERION_DCI_PI_DIR`, `ASTERION_DCI_PI_PACKAGE_DIR`,
+`ASTERION_DCI_PI_AGENT_DIR`, and `ASTERION_DCI_OUTPUT_ROOT`; it does not use
+the legacy DCI configuration namespace or run `src/dci`.
+
+```bash
+asterion-dci run \
+  --cwd "$PWD/corpus/wiki_corpus" \
+  --tools read,bash \
+  --extra-arg="--thinking high" \
+  "Answer using only the local corpus."
+```
+
+An AF-180 run writes `question.txt`, `events.jsonl`, `state.json`,
+`final.txt`, `stderr.txt`, and `protocol/` beneath the independent output
+root. Resume and durable recovery are deferred to AF-190; judge, evaluation,
+and benchmark functions are deferred to AF-200. Use `asterion-dci
+system-prompt` to print Pi's generated prompt without changing the generic
+`asterion` CLI.
+
 The installed registry also exposes `claude-code.reference`. Its factory uses
 `ASTERION_CLAUDE_EXECUTABLE` (default `claude`) and `ASTERION_RUNTIME_CWD`, but
 constructing it neither authenticates nor sends a provider request. The bundled

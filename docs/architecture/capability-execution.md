@@ -47,10 +47,12 @@ than authority.
 
 ## DCI capability and baseline isolation
 
-The DCI local-corpus implementation lives in the independently packaged
-`asterion_dci_research` module. It consumes only Asterion public contracts and
-an explicit runtime client. Neither it nor Asterion imports or modifies
-`src/dci/benchmark/`.
+The DCI local-corpus implementation and the independent `asterion-dci` product
+live in the one `asterion` wheel. `asterion.dci.run.DciRunResult` is converted
+only by `asterion.dci.bridge.project_dci_run`, which exposes native artifact
+references without answer, question, command, or stderr bodies. The generic
+Asterion CLI remains DCI-neutral; `asterion-dci` owns its product-specific
+arguments. Neither it nor Asterion imports or modifies `src/dci/benchmark/`.
 
 The existing `dci-agent-lite` command remains the external baseline. Asterion
 and baseline runs may share questions and corpora for comparison, but they do
