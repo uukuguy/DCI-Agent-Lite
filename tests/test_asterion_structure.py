@@ -195,7 +195,7 @@ class AsterionStructureTests(unittest.TestCase):
     def test_layout_guide_defines_framework_ownership(self) -> None:
         guide = (ROOT / "docs/architecture/asterion-framework-layout.md").read_text()
         self.assertIn("Asterion owns framework contracts", guide)
-        self.assertIn("Asterion must not import DCI", guide)
+        self.assertIn("Asterion must not import the DCI baseline", guide)
         self.assertIn("dci-agent-lite", guide)
         self.assertIn("dci.agent-runtime/v1", guide)
 

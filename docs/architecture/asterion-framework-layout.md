@@ -3,31 +3,43 @@
 ## Ownership
 
 **Asterion owns framework contracts.** Its authoritative Python implementation
-lives under `src/asterion/`: runtime protocol and hosts, normalized adapters,
+lives under `packages/python/asterion-core/src/asterion/`: runtime protocol and hosts, normalized adapters,
 package catalogs and composition, static assembly, and host-service contracts.
 
-**Asterion must not import DCI.** DCI is the first capability package, benchmark,
-and reference application built on Asterion. During the compatibility window,
-`dci.framework.*` directly re-exports Asterion objects so existing consumers keep
-working without a second implementation.
+**Asterion must not import the DCI baseline.** Its first-party DCI capability and
+application are modular Asterion namespaces. `src/dci` is a frozen, source-only
+comparison baseline with its own framework implementation.
 
 ```text
-src/asterion/                         framework implementation
-src/dci/                              DCI capability, benchmark, configuration
+packages/python/asterion-core/src/asterion/  sole product distribution
+src/dci/                              unpackaged benchmark baseline and configuration
 packages/python/asterion-core/src/asterion/capabilities/dci_research/  bundled DCI capability and manifests
+packages/python/asterion-core/src/asterion/applications/dci_agent_lite/ bundled provider and assemblies
 capabilities/controlled-code/         controlled-code declarative packages
-applications/dci-agent-lite/          DCI reference application assemblies
 packages/typescript/asterion-runtime/ TypeScript validation and host types
 packages/rust/controlled-executor/    explicit controlled-execution service
 ```
 
 ## Stable DCI product entry
 
-`dci-agent-lite` remains the user-facing DCI CLI. The verified
+The verified source-baseline
 `scripts/examples/dci_basic_example.sh` and
 `scripts/examples/dci_runtime_context_example.sh` continue loading repository
-`.env` configuration and invoking that CLI. Asterion extraction does not replace
-their provider/model configuration or duplicate their research behavior.
+`.env` configuration and invoke `dci.benchmark.pi_rpc_runner` through
+`PYTHONPATH=src`. The baseline is not installed by the Asterion wheel.
+
+The installed product uses exact application identity:
+
+```bash
+asterion list --provider dci-agent-lite
+asterion run --provider dci-agent-lite \
+  --application dci.research-capability@1.0.0 \
+  --runtime pi.reference
+```
+
+Plain `asterion list` remains metadata-only. Application listing loads only the
+explicitly selected provider. `--assembly PATH` remains an advanced explicit
+compatibility path.
 
 ## Wire compatibility
 
@@ -39,15 +51,15 @@ silent aliases.
 
 ## Boundaries
 
-- Asterion may be used without importing DCI.
-- DCI may import Asterion and remains responsible for benchmark and prompt logic.
+- Asterion never imports `src/dci` and its wheel contains no `dci` package.
+- The source baseline never imports Asterion.
 - Capability and application roots are declarative; they are not alternate
   Python import roots.
 - TypeScript validates canonical contracts but does not duplicate Python
   composition or resolution.
 - The Rust service is never started or authorized merely by importing Asterion.
-- Registry publication, workflow scheduling, automatic service discovery, and
-  the AF-100 application runner are outside AF-095.
+- Registry publication, workflow scheduling, automatic service discovery,
+  aliases, version ranges, and implicit latest selection remain out of scope.
 
 ## Verification
 

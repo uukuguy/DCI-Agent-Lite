@@ -26,6 +26,24 @@
 
 The repository also develops **Asterion**, the independent agent-application framework beneath DCI. Its minimal application runner consumes a resolved plan and an explicit runtime client without adding a scheduler, registry, or automatic service startup; see [`docs/architecture/application-runner.md`](docs/architecture/application-runner.md).
 
+Asterion is the repository's only buildable Python distribution. After
+installation, discover its providers and applications without locating internal
+resource files:
+
+```bash
+asterion list
+asterion list --provider dci-agent-lite
+asterion run \
+  --provider dci-agent-lite \
+  --application dci.research-capability@1.0.0 \
+  --runtime pi.reference \
+  --input "Research this corpus"
+```
+
+The installed Pi runtime reads `DCI_PI_DIR`, `DCI_PI_PACKAGE_DIR`,
+`DCI_PI_AGENT_DIR`, `ASTERION_RUNTIME_CWD`, `DCI_PROVIDER`, `DCI_MODEL`, and
+`DCI_TOOLS` from the caller environment or current-directory `.env`.
+
 <div align="center">
   <img src="assets/imgs/teaser.png" alt="OpenResearcher Teaser" width="100%" style="max-width: 850px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
 </div>
