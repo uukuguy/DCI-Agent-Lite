@@ -376,3 +376,5 @@
 - 17:57 AF-180-H-001 confirmed 4/4; package acceptance recorded.
 - 18:00 Asterion-owned Pi JSONL transport and native run artifacts added.[5e3c970]
 - 18:02 AF-180-H-002 confirmed 4/4; package acceptance recorded.
+- 18:04 Asterion DCI gained isolated run and system-prompt commands.[900ee1d]
+- 18:05 AF-180-H-003 confirmed 4/4; package acceptance recorded.

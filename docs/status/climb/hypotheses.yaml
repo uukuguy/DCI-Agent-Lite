@@ -1166,9 +1166,21 @@ hypotheses:
   expected_lift: +1 independent operator interface
   cost_h: 0.8
   ranking: 0.8
-  status: pending
+  status: confirmed
   created_at: '2026-07-13T17:20:00+08:00'
-  results: []
+  results:
+  - session: 2026-07-13-af-180-dci-execution
+    cycle: 53
+    run: 20260713-180508-dci-climb-af180h003
+    local: 4
+    local_per_task:
+      run_option_mapping: 1
+      deferred_feature_rejection: 1
+      generic_cli_neutrality: 1
+      safe_prompt_failure: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-180-H-004
   work_package_id: AF-180
   description: Project completed native DCI runs into the declared capability result
