@@ -188,8 +188,8 @@
 - Scope: design an explicit, fixture-verifiable `claude-code.reference` compatibility declaration for the installed DCI application while preserving Pi behavior and deferring real provider UAT.
 - Dependencies: AF-120, AF-160
 - Acceptance: approved design and plan define exact provider declaration, fixture-only generic CLI proof, Pi compatibility preservation, and the boundary for future real authorization.
-- Design: `docs/superpowers/specs/2026-07-13-installed-claude-runtime-interface-design.md`
-- Plan: `docs/superpowers/plans/2026-07-13-installed-claude-runtime-interface.md`
+- Design: `docs/superpowers/specs/2026-07-13-installed-dci-claude-compatibility-design.md`
+- Plan: pending written-spec review; do not implement or launch a climb cycle.
 
 ## AF-095 — Asterion framework identity and extraction
 

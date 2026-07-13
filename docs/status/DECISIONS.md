@@ -325,3 +325,12 @@
 - Rationale: installed-product runtime selection needs the same explicit, testable boundary as Pi, while unavailable authorization must not block protocol, command, environment, or redaction conformance.
 - Boundary: no bundled application is implicitly made Claude-compatible, and AF-160 does not automate login, configure credentials, attempt a prompt, add dynamic selection, or change the existing DCI provider runtime list.
 - Revalidation trigger: add a real provider-backed invocation only when an operator supplies authorization and an application explicitly declares `claude-code.reference`.
+
+## D-035 — Model DCI runtime compatibility as paired immutable assemblies
+
+- Status: ✅ accepted design decision
+- Decided: 2026-07-13
+- Decision: one installed DCI application may declare exact Pi and Claude runtime compatibility only through paired canonical assemblies whose immutable compositions match and whose runtime IDs differ.
+- Rationale: `dci.assembly/v1` binds one exact runtime ID, so mutating or dynamically interpreting one assembly would obscure the selected product contract. A generic runtime-to-assembly selector preserves the established explicit selection boundary without coupling the CLI to DCI.
+- Boundary: the DCI provider owns its allowed runtime IDs; controlled-code remains Pi-only. Fixture verification must not authorize, invoke, or configure Claude. `src/dci/benchmark/` remains untouched and excluded from the wheel.
+- Revalidation trigger: revise the selection contract only if one application needs multiple canonical assemblies for the same runtime or runtime compatibility gains its own versioning policy.

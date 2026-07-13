@@ -353,3 +353,4 @@
 - 10:44 AF-160 TDD plan 锁定 thin runtime client、exact factory、fixture-only wheel verification 与全量 closure。[pending plan commit]
 - 10:52 AF-160 client/factory fixture tests、full Python/Node/Rust gates与 isolated wheel factory check通过；未发送 Claude request。[4072971]
 - 11:00 AF-160 closed after complete account-free acceptance; AF-170 now owns installed DCI Claude compatibility design.[45eb3be]
+- 10:49 AF-170 paired Pi/Claude assembly design approved; written-spec review blocks implementation and climb cycles. [pending design commit]
