@@ -65,6 +65,18 @@ class AsterionDciBridgeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "completed"):
             project_dci_run(invalid)
 
+    def test_projection_adds_only_an_evaluation_artifact_reference(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output_dir = Path(temporary_directory) / "run"
+            output_dir.mkdir()
+            (output_dir / "eval_result.json").write_text('{"is_correct": true}')
+            projection = project_dci_run(fixture_result(output_dir))
+
+        self.assertEqual(
+            dict(projection.artifacts[0]["value"])["evaluation_artifact_uri"],
+            "eval_result.json",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

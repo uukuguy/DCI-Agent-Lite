@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Protocol
 
 from asterion.dci.run import DciRunRequest, DciRunResult
@@ -32,6 +34,16 @@ def project_dci_run(result: DciRunResult) -> PackageExecutionResult:
     )
     if not isinstance(final_artifact, dict) or final_artifact.get("uri") != "final.txt":
         raise ValueError("native DCI final artifact is invalid")
+    value = {
+        "answer_artifact_uri": "final.txt",
+        "conversation_artifact_uri": "conversation.json",
+        "events_artifact_uri": "events.jsonl",
+        "latest_model_context_artifact_uri": "latest_model_context.json",
+        "protocol_artifact_uri": "protocol/",
+        "state_artifact_uri": "state.json",
+    }
+    if _has_valid_evaluation(result.output_dir):
+        value["evaluation_artifact_uri"] = "eval_result.json"
     return PackageExecutionResult(
         events=(
             {"type": "research.completed", "payload": {"status": "completed"}},
@@ -40,14 +52,15 @@ def project_dci_run(result: DciRunResult) -> PackageExecutionResult:
             {
                 "artifact_id": "dci-research-result",
                 "media_type": "application/vnd.dci.research+json",
-                "value": {
-                    "answer_artifact_uri": "final.txt",
-                    "conversation_artifact_uri": "conversation.json",
-                    "events_artifact_uri": "events.jsonl",
-                    "latest_model_context_artifact_uri": "latest_model_context.json",
-                    "protocol_artifact_uri": "protocol/",
-                    "state_artifact_uri": "state.json",
-                },
+                "value": value,
             },
         ),
     )
+
+
+def _has_valid_evaluation(output_dir: Path) -> bool:
+    try:
+        value = json.loads((output_dir / "eval_result.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return False
+    return isinstance(value, dict) and isinstance(value.get("is_correct"), bool)

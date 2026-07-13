@@ -8,6 +8,9 @@ from pathlib import Path
 from typing import TextIO
 
 from asterion.dci.config import load_asterion_dci_env, resolve_dci_paths
+from asterion.dci.benchmark import BenchmarkRequest, DciBenchmarkError, run_benchmark
+from asterion.dci.evaluation import DciEvaluationError, evaluate_run_directory
+from asterion.dci.judge import JudgeConfig
 from asterion.dci.run import (
     DciRunError,
     DciRunRequest,
@@ -45,7 +48,14 @@ def _parser() -> argparse.ArgumentParser:
     prompt.add_argument("--cwd", type=Path, default=Path.cwd())
     prompt.add_argument("--tools")
     prompt.add_argument("--append-system-prompt-file", type=Path)
-    commands.add_parser("benchmark")
+    evaluate = commands.add_parser("evaluate")
+    evaluate.add_argument("--output-dir", type=Path, required=True)
+    evaluate.add_argument("--gold-answer", required=True)
+    evaluate.add_argument("--answer")
+    benchmark = commands.add_parser("benchmark")
+    benchmark.add_argument("--dataset", type=Path, required=True)
+    benchmark.add_argument("--output-root", type=Path, required=True)
+    benchmark.add_argument("--cwd", type=Path, default=Path.cwd())
     return parser
 
 
@@ -73,9 +83,38 @@ def main(
     root = Path.cwd() if repo_root is None else Path(repo_root)
     load_asterion_dci_env(root)
     paths = resolve_dci_paths(root)
+    if args.command == "evaluate":
+        try:
+            result = evaluate_run_directory(
+                args.output_dir,
+                gold_answer=args.gold_answer,
+                predicted_answer=args.answer,
+                judge_config=JudgeConfig.from_env(),
+            )
+        except (DciEvaluationError, ValueError):
+            stderr.write("DCI evaluation failed\n")
+            return 2
+        stdout.write(f"output_dir={args.output_dir}\n")
+        stdout.write(f"is_correct={result['is_correct']}\n")
+        stdout.write("evaluation_uri=eval_result.json\n")
+        return 0
     if args.command == "benchmark":
-        stderr.write("benchmark is not available until AF-200\n")
-        return 2
+        try:
+            result = run_benchmark(
+                BenchmarkRequest(
+                    dataset=args.dataset,
+                    output_root=args.output_root,
+                    cwd=args.cwd,
+                    judge_config=JudgeConfig.from_env(),
+                ),
+                paths=paths,
+            )
+        except (DciBenchmarkError, ValueError):
+            stderr.write("DCI benchmark failed\n")
+            return 2
+        stdout.write(f"output_root={result.output_root}\n")
+        stdout.write(f"total={result.counts['total']}\n")
+        return 0
     if args.command == "system-prompt":
         try:
             stdout.write(
