@@ -97,10 +97,8 @@ class AsterionStructureTests(unittest.TestCase):
     def test_declarative_assets_have_product_level_owners(self) -> None:
         capabilities = ROOT / "capabilities"
         bundled = ROOT / "packages/python/asterion-core/src/asterion"
-        self.assertEqual(
-            {path.name for path in capabilities.iterdir()},
-            set(),
-        )
+        if capabilities.exists():
+            self.assertEqual({path.name for path in capabilities.iterdir()}, set())
         self.assertEqual(
             {
                 path.name

@@ -1,6 +1,6 @@
 # Climb Session Target
 
-This session advances only `AF-190` under the approved complete Asterion DCI capability-package design and the AF-190 durable-resume TDD plan. AF-180, legacy Pi/Judge, and AF-100 hypotheses remain closed.
+This session advances only `AF-210` under the approved DCI application-runtime-parity design and TDD plan. AF-200 and every prior Climb session remain closed; this session must not send Pi, judge, or Claude provider requests.
 
 <!-- TARGET-BEGIN (machine-readable, check-target.py reads) -->
 target_metric: local

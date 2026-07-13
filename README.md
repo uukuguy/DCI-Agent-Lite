@@ -44,6 +44,12 @@ The installed Pi runtime reads `DCI_PI_DIR`, `DCI_PI_PACKAGE_DIR`,
 `DCI_PI_AGENT_DIR`, `ASTERION_RUNTIME_CWD`, `DCI_PROVIDER`, `DCI_MODEL`, and
 `DCI_TOOLS` from the caller environment or current-directory `.env`.
 
+For `pi.reference`, the installed DCI application delegates to the same
+Asterion-owned native DCI workflow as `asterion-dci run`, so its durable run,
+resume, evaluation, and benchmark artifacts retain one implementation. The
+generic `asterion` CLI remains an application selector and does not expose DCI
+arguments or artifact formats.
+
 ### Independent Asterion DCI execution
 
 `asterion-dci` is the Asterion-owned DCI product command. It uses only
@@ -74,8 +80,7 @@ asterion-dci resume --output-dir path/to/asterion-dci-run
 
 The command reconstructs the request from `state.json`, rejects completed or
 invalid runs before starting Pi, and retains previous evidence while creating a
-new protocol attempt. The generic `asterion` CLI remains domain-neutral. Judge,
-evaluation, and benchmark functions remain deferred to AF-200. Use
+new protocol attempt. The generic `asterion` CLI remains domain-neutral. Use
 `asterion-dci system-prompt` to print Pi's generated prompt.
 
 Evaluate a completed native run with an explicitly configured Asterion judge:
@@ -88,8 +93,9 @@ asterion-dci benchmark --dataset dataset.jsonl --output-root outputs/eval --cwd 
 Evaluation reuses only an exact fingerprint of the public judge configuration and
 fully shaped request. Batch rows must contain unique `query_id`, `query`, and
 `answer` fields. Both commands are product-local and require operator
-authorization before a real judge or Pi request; AF-210 retains application and
-authorized runtime-semantic parity.
+authorization before a real judge or Pi request. Installed `pi.reference`
+applications share this native Asterion DCI implementation; any Claude
+semantic-parity claim remains separately authorization-gated.
 
 The installed registry also exposes `claude-code.reference`. Its factory uses
 `ASTERION_CLAUDE_EXECUTABLE` (default `claude`) and `ASTERION_RUNTIME_CWD`, but

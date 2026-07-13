@@ -8,6 +8,7 @@ from asterion.applications.discovery import (
     list_application_providers,
     load_application_provider,
 )
+from asterion.applications.dci_agent_lite.provider import create_provider
 from asterion.packages.catalog import PackageRef
 
 
@@ -16,6 +17,14 @@ ASTERION = ROOT / "packages/python/asterion-core/src/asterion"
 
 
 class BuiltinDciApplicationTests(unittest.TestCase):
+    def test_provider_binds_the_supplied_native_executor(self) -> None:
+        native_executor = object()
+
+        provider = create_provider(native_executor=native_executor)
+
+        implementation = provider.applications[0].implementations[0][1]
+        self.assertIs(implementation._native_executor, native_executor)
+
     def test_distribution_registers_the_builtin_dci_provider(self) -> None:
         entries = tuple(metadata.entry_points(group="asterion.applications"))
         metadata_values = list_application_providers(entry_points=entries)
@@ -60,6 +69,8 @@ class BuiltinDciApplicationTests(unittest.TestCase):
         source = "\n".join(path.read_text() for path in generic_files)
         self.assertNotIn("dci-agent-lite", source)
         self.assertNotIn("dci.research", source)
+        self.assertNotIn("DciRunExecutor", source)
+        self.assertNotIn("answer_artifact_uri", source)
 
 
 if __name__ == "__main__":

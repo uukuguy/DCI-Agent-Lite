@@ -1,38 +1,37 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13 22:03. **Session remains active — not a final handoff.**
+> Updated: 2026-07-13 23:00. **AF-210 is complete; this is a live post-closure checkpoint, not a final handoff.**
 
-Active work package: AF-210
+Active work package: none
 
 ## TL;DR
 
-- The approved AF-210 design binds the first-party DCI capability to a private native Pi executor. Generic CLI/runner code stays DCI-neutral; Claude remains fixture-only without provider authorization.
-- The approved AF-210 TDD/Climb plan is committed at `7ecd596`; the worklist, structural state, and D-037 decision record point to it.
-- No provider request has been sent. The next durable action is to register the AF-210 Climb session, then begin Task 1 with a failing executor test.
+- AF-210 Climb H-001 through H-004 are confirmed 4/4 with deterministic local evidence.
+- `EnvironmentDciRunExecutor` now maps `ASTERION_RUNTIME_CWD` and `ASTERION_DCI_*` paths into one native DCI invocation, verified with a fake runner and no provider request.
+- The first-party DCI provider now binds that executor only for `pi.reference`; the installed application CLI test confirms native dispatch and body-free references, while the Claude fixture path remains unchanged.
+- A clean-worktree baseline repair makes `scripts/check_pi_rpc.py --help` source-runnable and removes a test dependency on an untracked empty directory.
 
 ## Where things stand
 
-- Commits: `7628d53` defines the AF-210 provider-bound integration; `7ecd596` records its plan and governance state.
-- Working tree contains this JOURNAL update and the active-session checkpoint only.
-- The completed AF-200 Climb session must not be reused. `session-target.md` still names AF-190 and requires replacement during AF-210 registration.
+- Branch: `codex/af-210-application-parity`; commits through `a423008` are ahead of main.
+- The working tree contains only this post-commit JOURNAL/checkpoint update; carry it into the next approved integration or successor-work commit.
+- H-001 through H-004 are all confirmed 4/4; no provider request occurred.
 
 ## Next action
 
-1. Register AF-210 H-001 through H-004 in `docs/status/climb/`, update the session target/state, and regenerate the research tree.
-2. Follow Task 1 in `docs/superpowers/plans/2026-07-13-dci-application-runtime-parity.md`: add the failing native-executor test before production code.
-3. Run `python3 tools/project_scope_check.py --climb-hypothesis AF-210-H-001` before the first Climb cycle.
+1. Run the final repository verification matrix, then commit the AF-210 closure evidence.
+2. Select a new governed work package before starting any successor implementation; Claude provider-backed parity remains outside the closed AF-210 local scope.
 
 ## Guardrails
 
-- Do not modify or import `src/dci`, add DCI behavior to the generic CLI, or create a generic host-service protocol.
-- Do not send Pi, judge, or Claude provider requests; Claude fixture behavior is not semantic-parity evidence.
+- Do not modify/import `src/dci` or add DCI parsing to generic CLI/runner modules.
+- Do not send Pi, judge, or Claude provider requests; Claude remains fixture-only.
 
 ## Ready-to-paste commands
 
 ```bash
-python3 tools/project_scope_check.py
-sed -n '1,360p' docs/superpowers/plans/2026-07-13-dci-application-runtime-parity.md
-sed -n '1,240p' docs/status/climb/session-state.json
-python3 tools/climb/regen-tree.py
+uv run python -m unittest discover -v
+npm --prefix packages/typescript/asterion-runtime test
+make test-rust-executor
 git status --short
 ```

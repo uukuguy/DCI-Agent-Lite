@@ -9,11 +9,13 @@ import os
 import sys
 from pathlib import Path
 
-from dci.benchmark.pi_rpc_runner import PiRpcClient
-from dci.config import load_project_env, resolve_pi_paths
-
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
+SOURCE_ROOT = REPO_ROOT / "src"
+if str(SOURCE_ROOT) not in sys.path:
+    sys.path.insert(0, str(SOURCE_ROOT))
+
+from dci.benchmark.pi_rpc_runner import PiRpcClient  # noqa: E402
+from dci.config import load_project_env, resolve_pi_paths  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:

@@ -227,13 +227,14 @@
 
 ## AF-210 — Complete DCI application and runtime semantic parity
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Asterion Agent Application Framework
 - Scope: run the full Asterion DCI package through application assemblies, complete the Pi parity matrix, and assess Claude semantic parity only with separately authorized provider-backed evidence.
 - Dependencies: AF-180, AF-190, AF-200
-- Acceptance: Asterion application execution and package-local operations share one full DCI implementation; Pi parity is complete and any Claude claim has matching authorized evidence.
+- Acceptance: Asterion application execution and package-local operations share one full DCI implementation; Pi parity is complete, while Claude remains explicitly fixture-only until separately authorized provider-backed evidence exists.
 - Design: `docs/superpowers/specs/2026-07-13-dci-application-runtime-parity-design.md`
 - Plan: `docs/superpowers/plans/2026-07-13-dci-application-runtime-parity.md`
+- Closure evidence: AF-210-H-001 through H-004 are confirmed 4/4. The first-party DCI provider binds native Pi execution without generic CLI/runner coupling; installed Pi applications produce body-free native references, redact native failures, and ship the executor/provider in the Asterion wheel. Full Python product tests, compile/Ruff/shell checks, TypeScript tests, Rust checks, scope audit, and diff check pass without Pi, judge, or Claude provider requests. Claude remains a fixture-only protocol path, not a semantic-parity claim.
 
 ## AF-095 — Asterion framework identity and extraction
 

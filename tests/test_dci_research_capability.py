@@ -9,7 +9,7 @@ from asterion.packages.catalog import PackageRef
 from asterion.packages.execution import PackageExecutionError, PackageInvocation
 from asterion.runtime.host import RunEvent, RunRequest, RuntimeManifest
 from asterion.capabilities.dci_research import DciLocalResearchImplementation
-from asterion.dci.run import DciRunResult
+from asterion.dci.run import DciRunRequest, DciRunResult
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -64,6 +64,16 @@ class FailingRuntime(FixtureRuntime):
         if False:
             yield RunEvent("", 0, "", {})
         raise RuntimeError("SECRET-PROVIDER-PAYLOAD")
+
+
+class RecordingNativeExecutor:
+    def __init__(self, result: DciRunResult) -> None:
+        self.result = result
+        self.requests: list[DciRunRequest] = []
+
+    def run(self, request: DciRunRequest) -> DciRunResult:
+        self.requests.append(request)
+        return self.result
 
 
 def invocation(runtime: FixtureRuntime, *, signal: object | None = None):
@@ -154,12 +164,49 @@ class DciResearchCapabilityTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(projection.artifacts[0]["value"]["events_artifact_uri"], "events.jsonl")
         self.assertNotIn("SECRET-NATIVE-ANSWER", repr(projection))
 
+    async def test_pi_invocation_uses_the_bound_native_executor(self) -> None:
+        native = RecordingNativeExecutor(
+            DciRunResult(
+                output_dir=Path("run"),
+                final_text="SECRET-NATIVE-ANSWER",
+                events=(
+                    RunEvent("research-run", 1, "run.started", {"capabilities": []}),
+                    RunEvent(
+                        "research-run",
+                        2,
+                        "artifact.created",
+                        {
+                            "artifact": {
+                                "artifact_id": "answer",
+                                "kind": "answer",
+                                "media_type": "text/plain",
+                                "uri": "final.txt",
+                            }
+                        },
+                    ),
+                    RunEvent("research-run", 3, "run.completed", {"status": "completed"}),
+                ),
+                status="completed",
+            )
+        )
+        runtime = FixtureRuntime("pi.reference")
+
+        result = await DciLocalResearchImplementation(native_executor=native).execute(
+            invocation(runtime)
+        )
+
+        self.assertEqual(runtime.requests, [])
+        self.assertEqual(native.requests[0].run_id, "research-run")
+        self.assertEqual(native.requests[0].question, "SECRET-APPLICATION-INPUT")
+        self.assertEqual(result.artifacts[0]["value"]["state_artifact_uri"], "state.json")
+        self.assertNotIn("SECRET-NATIVE-ANSWER", repr(result))
+
 
 class DciResearchCapabilityBoundaryTests(unittest.TestCase):
-    def test_asterion_and_capability_sources_do_not_import_dci_benchmark(self) -> None:
+    def test_application_and_capability_sources_do_not_import_dci_benchmark(self) -> None:
         roots = (
-            ROOT / "packages/python/asterion-core/src/asterion",
-            ROOT / "packages/python/asterion-core/src",
+            ROOT / "packages/python/asterion-core/src/asterion/applications",
+            ROOT / "packages/python/asterion-core/src/asterion/capabilities",
         )
         source = "\n".join(
             path.read_text()

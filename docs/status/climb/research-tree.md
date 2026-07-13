@@ -1,15 +1,15 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (62 runs).
+> Deterministic summary generated from tracked state (66 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
-- Phase: completed
-- Last cycle: 62
+- Phase: implementation
+- Last cycle: 66
 - Next hypothesis: None
 - In flight: none
-- Next action: AF-200 closed; register a new AF-210 Climb session before another cycle.
+- Next action: Trigger Knowledge Layer.
 
 ## Active hypotheses
 
@@ -80,6 +80,10 @@
 | 20260713-192301-dci-climb-af200h002 | AF-200-H-002 | 4 | confirmed 4/4 |
 | 20260713-192440-dci-climb-af200h003 | AF-200-H-003 | 4 | confirmed 4/4 |
 | 20260713-192620-dci-climb-af200h004 | AF-200-H-004 | 4 | confirmed 4/4 |
+| 20260713-225521-dci-climb-af210h001 | AF-210-H-001 | 4 | confirmed 4/4 |
+| 20260713-225526-dci-climb-af210h002 | AF-210-H-002 | 4 | confirmed 4/4 |
+| 20260713-225530-dci-climb-af210h003 | AF-210-H-003 | 4 | confirmed 4/4 |
+| 20260713-225730-dci-climb-af210h004 | AF-210-H-004 | 4 | confirmed 4/4 |
 
 ## Negative cache
 
@@ -92,3 +96,4 @@
 - reuse the AF-100 Climb session or its hypotheses under AF-180
 - reuse the completed AF-180 session or its hypotheses under AF-190
 - reuse the completed AF-190 session or its hypotheses under AF-200
+- reuse the completed AF-200 session or its hypotheses under AF-210

@@ -8,6 +8,7 @@ from asterion.dci.config import (
 )
 from asterion.dci.run import DciRunError, DciRunRequest, DciRunResult, run_pi_research
 from asterion.dci.bridge import DciRunExecutor, project_dci_run
+from asterion.dci.application_executor import EnvironmentDciRunExecutor
 
 __all__ = [
     "DciPaths",
@@ -19,5 +20,6 @@ __all__ = [
     "DciRunResult",
     "run_pi_research",
     "DciRunExecutor",
+    "EnvironmentDciRunExecutor",
     "project_dci_run",
 ]

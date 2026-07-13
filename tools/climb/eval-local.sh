@@ -94,6 +94,18 @@ run_closure_dimension() {
         runner_closure)
             command=(uv run python -m unittest tests.test_climb_tools.ClimbToolTests.test_af100_h004_train_runs_full_framework_closure_gate -v)
             ;;
+        application_python)
+            command=(bash -c 'modules=(); for path in tests/test_*.py; do [ "${path##*/}" = "test_climb_tools.py" ] && continue; modules+=("${path%.py}"); done; uv run python -m unittest "${modules[@]//\//.}" -v && uv run python -m unittest tests.test_climb_tools.ClimbToolTests.test_af210_train_registers_every_application_parity_hypothesis -v')
+            ;;
+        application_quality)
+            command=(bash -c 'uv run python -m compileall -q src tests tools && uv run ruff check src tests tools && bash -n tools/climb/train.sh tools/climb/eval-local.sh tools/climb/cycle.sh')
+            ;;
+        application_typescript)
+            command=(npm --prefix packages/typescript/asterion-runtime test)
+            ;;
+        application_system)
+            command=(bash -c 'make test-rust-executor && make check-rust-executor && python3 tools/project_scope_check.py --climb-hypothesis AF-210-H-004 && git diff --check')
+            ;;
         *)
             echo "ERROR: unknown closure check $check" >&2
             return 2
@@ -750,6 +762,47 @@ case "$HYPOTHESIS_ID" in
         repeat_test="tests.test_asterion_dci_cli.AsterionDciCliTests.test_benchmark_maps_explicit_dataset_without_generic_cli_changes"
         dirty_test="tests.test_asterion_dci_bridge.AsterionDciBridgeTests.test_projection_adds_only_an_evaluation_artifact_reference"
         override_test="tests.test_asterion_dci_cli.AsterionDciCliTests.test_product_help_is_separate_from_the_generic_cli"
+        ;;
+    AF-210-H-001)
+        first_dimension="native_executor"
+        second_dimension="configuration_namespace"
+        third_dimension="default_isolation"
+        fourth_dimension="dotenv_precedence"
+        immutable_test="tests.test_asterion_dci_application_executor.AsterionDciApplicationExecutorTests.test_maps_runtime_cwd_and_native_paths_to_one_pi_run"
+        repeat_test="tests.test_asterion_dci_config.AsterionDciConfigTests.test_uses_only_asterion_dci_path_namespace"
+        dirty_test="tests.test_asterion_dci_config.AsterionDciConfigTests.test_defaults_never_select_legacy_dci_locations"
+        override_test="tests.test_asterion_dci_config.AsterionDciConfigTests.test_loads_the_new_product_env_without_overriding_process_values"
+        ;;
+    AF-210-H-002)
+        first_dimension="pi_native_dispatch"
+        second_dimension="claude_fixture_scope"
+        third_dimension="native_failure_redaction"
+        fourth_dimension="body_free_projection"
+        immutable_test="tests.test_dci_research_capability.DciResearchCapabilityTests.test_pi_invocation_uses_the_bound_native_executor"
+        repeat_test="tests.test_dci_research_capability.DciResearchCapabilityTests.test_pi_and_claude_fixtures_share_the_same_package_behavior"
+        dirty_test="tests.test_dci_research_capability.DciResearchCapabilityTests.test_runtime_failures_are_redacted"
+        override_test="tests.test_asterion_dci_bridge.AsterionDciBridgeTests.test_projection_preserves_native_references_without_answer_body"
+        ;;
+    AF-210-H-003)
+        first_dimension="installed_native_dispatch"
+        second_dimension="installed_failure_redaction"
+        third_dimension="generic_cli_neutrality"
+        fourth_dimension="wheel_installation"
+        immutable_test="tests.test_asterion_cli.AsterionCliTests.test_bundled_dci_pi_application_uses_provider_native_executor"
+        repeat_test="tests.test_asterion_cli.AsterionCliTests.test_bundled_dci_pi_native_failure_is_redacted"
+        dirty_test="tests.test_builtin_dci_application.BuiltinDciApplicationTests.test_generic_application_modules_do_not_name_dci"
+        override_test="tests.test_distribution_boundaries.BuiltDistributionBoundaryTests.test_asterion_is_the_only_buildable_wheel"
+        ;;
+    AF-210-H-004)
+        dimension_runner="run_closure_dimension"
+        first_dimension="full_python_suite"
+        second_dimension="python_quality_and_shell"
+        third_dimension="typescript_runtime"
+        fourth_dimension="rust_scope_and_diff"
+        immutable_test="application_python"
+        repeat_test="application_quality"
+        dirty_test="application_typescript"
+        override_test="application_system"
         ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2

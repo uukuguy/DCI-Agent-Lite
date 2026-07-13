@@ -411,3 +411,16 @@
 - 19:40 AF-200 closure committed as `d5d5d08`; AF-210 baton prepared with no live processes or provider requests.
 - 21:34 AF-210 provider-bound Pi application parity design committed. [7628d53]
 - 22:03 AF-210 plan, decision, and governed worklist link committed. [7ecd596]
+- 22:36 Fresh-worktree source baseline repair committed. [b1ee100]
+- 22:38 AF-210 Climb session registered with four local hypotheses. [4f85e15]
+- 22:44 Native DCI executor maps application cwd and isolated paths. [dfe3e43]
+- 22:50 Provider-bound Pi application dispatch now reaches the native DCI executor while Claude remains fixture-only; focused local tests passed with no provider requests. [pending H-002 commit]
+- 22:50 Native Pi dispatch is committed so the installed DCI application has one provider-bound execution path. [c7c96cc]
+- 22:51 Installed Pi application projection, native-failure redaction, generic-CLI neutrality, and wheel packaging all pass deterministically with no provider requests. [pending H-003 commit]
+- 22:51 Installed application parity tests are committed to preserve projection, redaction, neutrality, and wheel-boundary evidence. [6412d17]
+- 22:55 AF-210-H-001 confirmed 4/4; package acceptance recorded.
+- 22:55 AF-210-H-002 confirmed 4/4; package acceptance recorded.
+- 22:55 AF-210-H-003 confirmed 4/4; package acceptance recorded.
+- 22:58 AF-210-H-004 confirmed 4/4; package acceptance recorded.
+- 23:01 AF-210 closed: native Pi application parity, body-free projection, failure redaction, wheel inclusion, and full local closure pass without provider requests. [pending closure commit]
+- 23:01 AF-210 closure evidence is committed so the governed worklist, Climb record, and operator documentation agree. [a423008]

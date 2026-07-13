@@ -8,7 +8,7 @@
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: `AF-210` — complete DCI application and runtime semantic parity.
+- Active work package: none — AF-210 is complete; select a governed successor before starting new implementation work.
 
 ## Current Architecture
 
@@ -20,7 +20,7 @@
 - Maintenance history: Pi/Judge reliability H-001 through H-019 is completed and remains available as reference-maintenance evidence; it is not an active roadmap stream.
 - Claude Code provider access: the adapter supports stored login and inherited environment-configured backends; provider-backed UAT is deferred while the local account is unavailable and does not block host-language work.
 - Installed DCI compatibility: the bundled DCI application declares exact Pi and Claude runtime identities through paired composition-equivalent canonical assemblies; generic application selection picks the unique matching assembly before runtime construction, and fixture-only CLI proof does not authorize or invoke Claude.
-- Complete DCI direction: `src/dci` remains an independent source-only legacy product and comparison baseline. AF-180 through AF-200 are complete: the one Asterion wheel owns isolated configuration, direct Pi transport, durable native evidence, package-local run/resume/evaluate/benchmark commands, exact judge-cache identity, and body-free projections without either product importing or launching the other. AF-210 binds Pi application execution to a provider-owned native executor while generic framework code stays DCI-neutral; Claude remains fixture-only pending separate authorization.
+- Complete DCI direction: `src/dci` remains an independent source-only legacy product and comparison baseline. AF-180 through AF-210 are complete: the one Asterion wheel owns isolated configuration, direct Pi transport, durable native evidence, package-local run/resume/evaluate/benchmark commands, exact judge-cache identity, and body-free projections without either product importing or launching the other. AF-210 binds installed Pi application execution to the provider-owned native executor while generic framework code stays DCI-neutral; Claude remains fixture-only pending separate authorization.
 - Host contracts: Python and TypeScript expose the same schema-backed runtime manifest, request, event, and asynchronous client boundary without adapter-private types.
 - Controlled execution: `dci.executor/v1` has a runnable concurrent Rust JSONL sidecar with trusted startup policy, direct execution, bounded dual-stream draining, deadline/cancel kill-and-reap, duplicate-ID denial, out-of-order correlation, safe parse errors, EOF draining, operator documentation, and root verification targets.
 - Package composition: `dci.package/v1` and the deterministic Python composer resolve a portable policy → DCI research → evaluation → observability graph identically for Pi and Claude Code capability mappings. The TypeScript host exports the same manifest types and validates the canonical schema/fixtures without implementing a second composer.
@@ -48,12 +48,13 @@
 - AF-180 acceptance: all four Climb hypotheses are confirmed 4/4. The independent Asterion DCI module passes focused parity, full Python, compile/Ruff, TypeScript, Rust, shell, installed-command, wheel, scope, and diff gates without a provider request.
 - AF-190 acceptance: all four Climb hypotheses are confirmed 4/4. Asterion DCI persists original-style transcript/context/tool-result references and state/protocol evidence, resumes only compatible failed/incomplete runs through `asterion-dci resume`, and projects durable references without bodies. Full Python, compile/Ruff, TypeScript, Rust, shell, workspace command-help, scope, wheel, and diff gates pass without a provider request.
 - AF-200 acceptance: all four Climb hypotheses are confirmed 4/4. Asterion owns judge request shaping/fingerprints, exact cache-safe native evaluation, deterministic JSONL benchmark orchestration, product-local evaluation/benchmark commands, and conditional body-free evaluation references. Full local closure passes without a provider request.
+- AF-210 acceptance: all four Climb hypotheses are confirmed 4/4. The installed DCI Pi application now shares the package-local native executor and durable body-free projection; native failures are redacted, the executor/provider ship in the wheel, and generic framework modules remain DCI-neutral. Full Python, compile/Ruff/shell, TypeScript, Rust, scope, and diff gates pass without a provider request. Claude remains a fixture-only protocol boundary rather than a semantic-parity claim.
 
 ## Open Problems (theme-level)
 
 - Provider-backed acceptance of the first non-Pi runtime when credentials or a compatible gateway become available.
 - Provider-backed Claude acceptance remains deferred because the local CLI is unauthenticated. AF-160 instead validates the installed runtime factory and existing command/fixture/redaction boundary without a provider request.
-- Authorized runtime semantic parity is staged under AF-210; no fixture-only Claude declaration constitutes full DCI parity.
+- A future provider-backed Claude parity claim requires separate operator authorization and evidence; fixture-only compatibility remains insufficient.
 
 ## Key Files
 
