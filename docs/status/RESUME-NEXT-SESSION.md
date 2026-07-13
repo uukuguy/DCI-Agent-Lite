@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13 17:19. **Session remains active — not a final handoff.**
+> Updated: 2026-07-13 17:53. **Session remains active — not a final handoff.**
 
 Active work package: AF-180
 
@@ -14,11 +14,11 @@ Active work package: AF-180
 
 - AF-170 repository closure gates previously passed: Python full suite, Python compilation/Ruff, TypeScript tests, Rust tests, shell syntax, scope audit, diff check, and isolated-wheel resource verification.
 - D-030 remains authoritative: one Asterion wheel, with an independently owned DCI module inside it. Old `src/dci` stays excluded and must not become a shim, import, or subprocess dependency.
-- Old Climb state is an AF-100 hard-pause. It cannot run under AF-180. Register any AF-180 hypothesis only after its written spec, plan, and scope audit permit it.
+- AF-180 Climb now owns H-001 through H-004 and replaces the old AF-100 hard-pause only for current-session execution. Scope preflight and the complete Python baseline pass; no provider request was sent.
 
 ## Next action
 
-1. Start AF-180 task execution only after the user selects subagent-driven or inline execution for the approved plan.
+1. Execute AF-180-H-001 through TDD: create its failing independent-configuration tests, then implement only the smallest passing Asterion DCI configuration module.
 2. Before implementation, run `python3 tools/project_scope_check.py`; retain exactly one active package.
 3. Do not send Pi, judge, or Claude provider requests without the applicable operator authorization.
 

@@ -370,3 +370,4 @@
 - 17:10 完整 DCI 能力包设计与治理切换已提交，建立独立迁移路径。[564575e]
 - 2026-07-13 AF-180 书面规格获用户批准；执行计划将单次 Pi 对照与后续 resume/evaluation/runtime 语义分包。[pending plan commit]
 - 17:19 AF-180 Pi 执行对照计划已提交，锁定 TDD 与独立边界。[cc9031e]
+- 17:53 AF-180 Climb 已注册 H-001 至 H-004；scope 与完整 Python 基线通过，旧 AF-100 loop 保持历史。[pending climb registration commit]

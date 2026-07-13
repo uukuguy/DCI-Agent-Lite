@@ -1112,3 +1112,43 @@ hypotheses:
     online: null
     verdict: confirmed 4/4
     decision_reason: deterministic local package acceptance
+- id: AF-180-H-001
+  work_package_id: AF-180
+  description: Establish an Asterion-owned DCI configuration namespace and resolved Pi/output paths without any legacy DCI configuration fallback.
+  parent_paradigm: dci-configuration-isolation
+  expected_lift: +1 independent product configuration boundary
+  cost_h: 0.3
+  ranking: 1.0
+  status: pending
+  created_at: '2026-07-13T17:20:00+08:00'
+  results: []
+- id: AF-180-H-002
+  work_package_id: AF-180
+  description: Transplant single-run Pi JSONL lifecycle and minimal Asterion-native artifacts while preserving safe failure behavior.
+  parent_paradigm: dci-pi-execution-parity
+  expected_lift: +1 independent interactive execution boundary
+  cost_h: 1.2
+  ranking: 0.9
+  status: pending
+  created_at: '2026-07-13T17:20:00+08:00'
+  results: []
+- id: AF-180-H-003
+  work_package_id: AF-180
+  description: Expose the independent execution package through a package-local CLI and Pi system-prompt surface without changing the generic Asterion CLI.
+  parent_paradigm: dci-operator-surface
+  expected_lift: +1 independent operator interface
+  cost_h: 0.8
+  ranking: 0.8
+  status: pending
+  created_at: '2026-07-13T17:20:00+08:00'
+  results: []
+- id: AF-180-H-004
+  work_package_id: AF-180
+  description: Project completed native DCI runs into the declared capability result and prove the one-wheel product boundary.
+  parent_paradigm: dci-capability-projection
+  expected_lift: +1 complete capability-package execution confidence
+  cost_h: 0.8
+  ranking: 0.7
+  status: pending
+  created_at: '2026-07-13T17:20:00+08:00'
+  results: []

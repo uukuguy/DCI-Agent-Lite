@@ -5,14 +5,18 @@
 
 ## In-flight / session state
 
-- Phase: hard-pause
+- Phase: implementation
 - Last cycle: 50
-- Next hypothesis: None
+- Next hypothesis: AF-180-H-001
 - In flight: none
-- Next action: Select and record the governed successor package, then close AF-100.
+- Next action: Execute AF-180-H-001: establish isolated Asterion DCI configuration through TDD.
 
 ## Active hypotheses
 
+- **AF-180-H-001** (pending, rank 1.00): Establish an Asterion-owned DCI configuration namespace and resolved Pi/output paths without any legacy DCI configuration fallback.
+- **AF-180-H-002** (pending, rank 0.90): Transplant single-run Pi JSONL lifecycle and minimal Asterion-native artifacts while preserving safe failure behavior.
+- **AF-180-H-003** (pending, rank 0.80): Expose the independent execution package through a package-local CLI and Pi system-prompt surface without changing the generic Asterion CLI.
+- **AF-180-H-004** (pending, rank 0.70): Project completed native DCI runs into the declared capability result and prove the one-wheel product boundary.
 
 ## Run ladder
 
@@ -77,3 +81,4 @@
 - accept executable paths, environment variables, shells, or workspace roots from agent requests
 - build a workflow engine before portable package composition semantics
 - build an enterprise control plane before a reference package graph
+- reuse the AF-100 Climb session or its hypotheses under AF-180

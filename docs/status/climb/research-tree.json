@@ -1,23 +1,73 @@
 {
   "run_count": 50,
   "session": {
-    "session": "2026-07-13-af-100-asterion-runner",
-    "phase": "hard-pause",
-    "work_package_id": "AF-100",
+    "session": "2026-07-13-af-180-dci-execution",
+    "phase": "implementation",
+    "work_package_id": "AF-180",
     "last_cycle": 50,
-    "next_hypothesis": null,
+    "next_hypothesis": "AF-180-H-001",
     "in_flight": null,
-    "next_action": "Select and record the governed successor package, then close AF-100.",
+    "next_action": "Execute AF-180-H-001: establish isolated Asterion DCI configuration through TDD.",
     "falsified_routes": [
       "duplicate the authoritative Pi commit across setup.sh and .env.template",
       "convert the independent Pi checkout to vendored or submodule ownership",
       "describe the local policy executor as an operating-system sandbox",
       "accept executable paths, environment variables, shells, or workspace roots from agent requests",
       "build a workflow engine before portable package composition semantics",
-      "build an enterprise control plane before a reference package graph"
+      "build an enterprise control plane before a reference package graph",
+      "reuse the AF-100 Climb session or its hypotheses under AF-180"
     ]
   },
-  "active": [],
+  "active": [
+    {
+      "id": "AF-180-H-001",
+      "work_package_id": "AF-180",
+      "description": "Establish an Asterion-owned DCI configuration namespace and resolved Pi/output paths without any legacy DCI configuration fallback.",
+      "parent_paradigm": "dci-configuration-isolation",
+      "expected_lift": "+1 independent product configuration boundary",
+      "cost_h": 0.3,
+      "ranking": 1.0,
+      "status": "pending",
+      "created_at": "2026-07-13T17:20:00+08:00",
+      "results": []
+    },
+    {
+      "id": "AF-180-H-002",
+      "work_package_id": "AF-180",
+      "description": "Transplant single-run Pi JSONL lifecycle and minimal Asterion-native artifacts while preserving safe failure behavior.",
+      "parent_paradigm": "dci-pi-execution-parity",
+      "expected_lift": "+1 independent interactive execution boundary",
+      "cost_h": 1.2,
+      "ranking": 0.9,
+      "status": "pending",
+      "created_at": "2026-07-13T17:20:00+08:00",
+      "results": []
+    },
+    {
+      "id": "AF-180-H-003",
+      "work_package_id": "AF-180",
+      "description": "Expose the independent execution package through a package-local CLI and Pi system-prompt surface without changing the generic Asterion CLI.",
+      "parent_paradigm": "dci-operator-surface",
+      "expected_lift": "+1 independent operator interface",
+      "cost_h": 0.8,
+      "ranking": 0.8,
+      "status": "pending",
+      "created_at": "2026-07-13T17:20:00+08:00",
+      "results": []
+    },
+    {
+      "id": "AF-180-H-004",
+      "work_package_id": "AF-180",
+      "description": "Project completed native DCI runs into the declared capability result and prove the one-wheel product boundary.",
+      "parent_paradigm": "dci-capability-projection",
+      "expected_lift": "+1 complete capability-package execution confidence",
+      "cost_h": 0.8,
+      "ranking": 0.7,
+      "status": "pending",
+      "created_at": "2026-07-13T17:20:00+08:00",
+      "results": []
+    }
+  ],
   "confirmed": [
     {
       "id": "H-001",
