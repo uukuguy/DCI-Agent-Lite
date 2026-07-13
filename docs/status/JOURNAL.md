@@ -423,3 +423,4 @@
 - 22:55 AF-210-H-003 confirmed 4/4; package acceptance recorded.
 - 22:58 AF-210-H-004 confirmed 4/4; package acceptance recorded.
 - 23:01 AF-210 closed: native Pi application parity, body-free projection, failure redaction, wheel inclusion, and full local closure pass without provider requests. [pending closure commit]
+- 23:01 AF-210 closure evidence is committed so the governed worklist, Climb record, and operator documentation agree. [a423008]

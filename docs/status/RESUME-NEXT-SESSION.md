@@ -13,8 +13,8 @@ Active work package: none
 
 ## Where things stand
 
-- Branch: `codex/af-210-application-parity`; commits through `6412d17` are ahead of main, with AF-210 closure changes pending commit.
-- The working tree contains closure documentation, deterministic Climb records, adapter mappings, the current JOURNAL lines, and this live checkpoint.
+- Branch: `codex/af-210-application-parity`; commits through `a423008` are ahead of main.
+- The working tree contains only this post-commit JOURNAL/checkpoint update; carry it into the next approved integration or successor-work commit.
 - H-001 through H-004 are all confirmed 4/4; no provider request occurred.
 
 ## Next action
