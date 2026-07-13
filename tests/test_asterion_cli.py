@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from asterion.cli import _parser, main
+from asterion.applications.dci_agent_lite.provider import create_provider as create_dci_provider
 from asterion.applications.provider import InstalledApplication, InstalledApplicationProvider
 from asterion.runtime.factory import RuntimeFactoryBinding, RuntimeFactoryRegistry
 from asterion.runtime.host import RunEvent, RunRequest, RuntimeManifest
@@ -34,6 +35,36 @@ class FixtureRuntime:
 
 class ClaudeFixtureRuntime(FixtureRuntime):
     manifest = RuntimeManifest(runtime_id="claude-code.reference", capabilities=())
+
+
+class DciClaudeFixtureRuntime:
+    manifest = RuntimeManifest(
+        runtime_id="claude-code.reference",
+        capabilities=("filesystem.read", "shell"),
+    )
+
+    async def run(
+        self,
+        request: RunRequest,
+        *,
+        signal: object | None = None,
+    ) -> AsyncIterator[RunEvent]:
+        del signal
+        yield RunEvent(request.run_id, 1, "run.started", {"capabilities": []})
+        yield RunEvent(
+            request.run_id,
+            2,
+            "artifact.created",
+            {
+                "artifact": {
+                    "artifact_id": "answer",
+                    "kind": "answer",
+                    "media_type": "text/plain",
+                    "uri": "fixture-answer.txt",
+                }
+            },
+        )
+        yield RunEvent(request.run_id, 3, "run.completed", {"status": "completed"})
 
 
 class ControlledFixtureRuntime(FixtureRuntime):
@@ -326,6 +357,53 @@ class AsterionCliTests(unittest.TestCase):
 
         self.assertEqual(code, 2)
         self.assertEqual(contexts, [])
+
+    def test_bundled_dci_runs_with_claude_fixture(self) -> None:
+        contexts = []
+        registry = RuntimeFactoryRegistry(
+            (
+                RuntimeFactoryBinding(
+                    runtime_id="claude-code.reference",
+                    capabilities=("filesystem.read", "shell"),
+                    factory=lambda context: contexts.append(context)
+                    or DciClaudeFixtureRuntime(),
+                ),
+            )
+        )
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+
+        code = main(
+            [
+                "run",
+                "--provider",
+                "dci-agent-lite",
+                "--runtime",
+                "claude-code.reference",
+                "--application",
+                "dci.research-capability@1.0.0",
+                "--input",
+                "SECRET-INPUT",
+            ],
+            entry_points=(
+                FakeEntryPoint(name="dci-agent-lite", factory=create_dci_provider),
+            ),
+            runtime_factories=registry,
+            stdout=stdout,
+            stderr=stderr,
+        )
+
+        self.assertEqual(code, 0, stderr.getvalue())
+        self.assertEqual(len(contexts), 1)
+        self.assertEqual(
+            contexts[0].assembly_path.name,
+            "dci-research-capability-claude.json",
+        )
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["application_id"], "dci.research-capability")
+        self.assertEqual(payload["runtime_id"], "claude-code.reference")
+        self.assertNotIn("SECRET-INPUT", stdout.getvalue())
+        self.assertNotIn("SECRET-INPUT", stderr.getvalue())
 
     def test_conflicting_or_missing_selection_fails_before_provider_load(self) -> None:
         entry = FakeEntryPoint(name="example-app", factory=lambda: None)

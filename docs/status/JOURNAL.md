@@ -360,3 +360,5 @@
 - 10:59 correction: this is Task 1 test evidence; no AF-170 Climb hypothesis or cycle is registered yet.
 - 11:00 correction: Task 1 generic runtime assembly selection committed. [ac96286]
 - 11:01 AF-170 paired DCI Pi/Claude assemblies pass provider and composition parity. [pending implementation commit]
+- 11:02 correction: paired DCI assembly declaration committed. [3dafba9]
+- 11:02 AF-170 generic CLI executes bundled DCI with an injected Claude fixture; no provider request. [pending test commit]
