@@ -1848,6 +1848,65 @@ class ClimbToolTests(unittest.TestCase):
                 self.assertEqual(evaluation["total"], 4)
                 self.assertEqual(set(evaluation["per_task"]), dimensions)
 
+    def test_af220_train_registers_every_shared_product_parity_hypothesis(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+
+        for hypothesis_id, suite in (
+            ("AF-220-H-001", "tests.test_asterion_dci_judge"),
+            ("AF-220-H-002", "tests.test_asterion_dci_pi_rpc"),
+            ("AF-220-H-003", "tests.test_asterion_dci_benchmark"),
+            ("AF-220-H-004", "tests.test_asterion_dci_application_executor"),
+        ):
+            with self.subTest(hypothesis_id=hypothesis_id):
+                self.assertIn(hypothesis_id, train_script)
+                self.assertIn(suite, train_script)
+
+    def test_af220_local_eval_reports_shared_product_parity_dimensions(self) -> None:
+        expected_dimensions = {
+            "AF-220-H-001": {
+                "shared_path_precedence",
+                "runtime_option_precedence",
+                "shared_judge_precedence",
+                "invalid_shared_values",
+            },
+            "AF-220-H-002": {
+                "typed_request_mapping",
+                "pi_context_controls",
+                "node_heap_preservation",
+                "literal_control_safety",
+            },
+            "AF-220-H-003": {
+                "cli_shared_defaults",
+                "cli_explicit_override",
+                "batch_runtime_propagation",
+                "bounded_sorted_limit",
+            },
+            "AF-220-H-004": {
+                "application_shared_options",
+                "installed_provider_boundary",
+                "example_shared_configuration",
+                "example_preflight_safety",
+            },
+        }
+        for hypothesis_id, dimensions in expected_dimensions.items():
+            with self.subTest(hypothesis_id=hypothesis_id), tempfile.TemporaryDirectory() as temp_dir:
+                run_dir = Path(temp_dir)
+                env = os.environ.copy()
+                env["DCI_CLIMB_HYPOTHESIS_ID"] = hypothesis_id
+                result = subprocess.run(
+                    ["bash", "tools/climb/eval-local.sh", str(run_dir)],
+                    cwd=REPO_ROOT,
+                    env=env,
+                    text=True,
+                    capture_output=True,
+                )
+
+                self.assertEqual(result.returncode, 0, result.stderr)
+                evaluation = json.loads((run_dir / "local-eval.json").read_text())
+                self.assertEqual(evaluation["hypothesis_id"], hypothesis_id)
+                self.assertEqual(evaluation["total"], 4)
+                self.assertEqual(set(evaluation["per_task"]), dimensions)
+
 
 if __name__ == "__main__":
     unittest.main()

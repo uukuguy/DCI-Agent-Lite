@@ -1,38 +1,40 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13 23:03. **AF-210 is merged into main; this is a live post-merge checkpoint, not a final handoff.**
+> Updated: 2026-07-14. AF-220 local closure is complete in the isolated `af-220-shared-dci-config` worktree; this is not a final handoff.
 
 Active work package: AF-220
 
 ## TL;DR
 
-- AF-210 Climb H-001 through H-004 are confirmed 4/4 with deterministic local evidence.
-- `EnvironmentDciRunExecutor` now maps `ASTERION_RUNTIME_CWD` and `ASTERION_DCI_*` paths into one native DCI invocation, verified with a fake runner and no provider request.
-- The first-party DCI provider now binds that executor only for `pi.reference`; the installed application CLI test confirms native dispatch and body-free references, while the Claude fixture path remains unchanged.
-- A clean-worktree baseline repair makes `scripts/check_pi_rpc.py --help` source-runnable and removes a test dependency on an untracked empty directory.
-
-## Where things stand
-
-- Branch: `main`; merge commit `dcd4bf3` integrates AF-210 and its closure evidence.
-- The working tree contains this merge-journal/checkpoint update only; carry it into the next approved successor-work commit.
-- H-001 through H-004 are all confirmed 4/4; no provider request occurred.
-- User approved the complete-product migration direction and bounded real Pi/Judge acceptance. AF-220 is active under an approved plan; register its new Climb hypotheses before implementation.
+- AF-220-H-001 through H-004 are each confirmed 4/4 with tracked local records (cycles 67–70).
+- The local Climb adapter now maps the four AF-220 hypotheses to the current focused configuration/Judge, Pi-control, CLI/benchmark, and installed-application/example suites.
+- The adapter no longer requires a closed AF-210 work-package scope to evaluate current work. Historical AF-210 local contracts remain executable with current active-package preflight.
+- Full local Python, compile/Ruff, TypeScript, Rust, shell, scope, and diff closure passed; no Pi, Judge, or other provider request was sent.
 
 ## Next action
 
-1. Register AF-220 Climb hypotheses, run `python3 tools/project_scope_check.py --climb-hypothesis AF-220-H-001`, then execute the approved plan in an isolated worktree.
-2. Run provider-backed Pi/Judge checks only at the plan's bounded acceptance step; no full dataset launch is authorized.
+Run AF-220 Task 7’s already-authorized bounded external acceptance from this worktree. Do not mark AF-220 complete unless all of these succeed:
+
+1. `make check-pi-rpc && make check-judge-config`
+2. `make asterion-example && make asterion-runtime-example`
+3. the installed `asterion run` Pi application command in the AF-220 plan
+4. the one-row `asterion-dci benchmark` Pi-plus-Judge command in the plan
+
+Journal only safe output locations, exit status, configuration names, and verdicts—never credentials or provider bodies. On any failure, retain AF-220 as `in_progress` and record the exact safe failure.
 
 ## Guardrails
 
-- Do not modify/import `src/dci` or add DCI parsing to generic CLI/runner modules.
-- Do not send Pi, judge, or Claude provider requests; Claude remains fixture-only.
+- Do not modify or import `src/dci`; Asterion retains independent runtime ownership.
+- Do not add DCI option parsing to generic CLI/runner modules.
+- `DCI_*` is the shared normal `.env` surface; `ASTERION_DCI_OUTPUT_ROOT` remains product-local.
+- Do not run full external datasets.
 
-## Ready-to-paste commands
+## Ready-to-paste local checks
 
 ```bash
+python3 tools/project_scope_check.py --climb-hypothesis AF-220-H-004
 uv run python -m unittest discover -v
 npm --prefix packages/typescript/asterion-runtime test
-make test-rust-executor
-git status --short
+cargo test --manifest-path packages/rust/controlled-executor/Cargo.toml
+git diff --check
 ```

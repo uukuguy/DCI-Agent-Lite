@@ -449,3 +449,8 @@
 - 01:09 correction: Asterion Pi examples commit landed. [5d0a7d8]
 - 01:17 Asterion examples use the repository `uv run` launcher; no-provider regression blocks Pi and command-not-found failures. [pending repair commit]
 - 01:18 correction: Asterion example launcher repair committed. [0a7993c]
+- 01:19 AF-220-H-001 confirmed 4/4; package acceptance recorded.
+- 01:19 AF-220-H-002 confirmed 4/4; package acceptance recorded.
+- 01:19 AF-220-H-003 confirmed 4/4; package acceptance recorded.
+- 01:19 AF-220-H-004 confirmed 4/4; package acceptance recorded.
+- 01:20 AF-220 local Climb adapter now owns all four current shared-config/Pi-control/package-batch/application-example suites. It no longer relies on closed AF-210 scope, while legacy AF-210 adapter checks remain runnable. Full local Python, compile/Ruff, TypeScript, Rust, shell, scope, and diff closure passed without provider requests; bounded real acceptance remains pending.

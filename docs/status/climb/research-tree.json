@@ -1,13 +1,13 @@
 {
-  "run_count": 66,
+  "run_count": 70,
   "session": {
     "session": "2026-07-14-af-220-shared-config-runnable-pi",
     "phase": "implementation",
     "work_package_id": "AF-220",
-    "last_cycle": 66,
-    "next_hypothesis": "AF-220-H-001",
+    "last_cycle": 70,
+    "next_hypothesis": null,
     "in_flight": null,
-    "next_action": "Start AF-220-H-001.",
+    "next_action": "Run AF-220 Task 7 bounded real acceptance.",
     "falsified_routes": [
       "duplicate the authoritative Pi commit across setup.sh and .env.template",
       "convert the independent Pi checkout to vendored or submodule ownership",
@@ -21,60 +21,7 @@
       "reuse the completed AF-200 session or its hypotheses under AF-210"
     ]
   },
-  "active": [
-    {
-      "id": "AF-220-H-001",
-      "work_package_id": "AF-220",
-      "description": "Resolve shared DCI environment and judge configuration with explicit values taking precedence over compatibility aliases.",
-      "parent_paradigm": "dci-shared-configuration",
-      "expected_lift": "+1 shared configuration parity boundary",
-      "cost_h": 0.8,
-      "ranking": 0.9,
-      "status": "pending",
-      "created_at": "2026-07-14T00:18:17+08:00",
-      "verification_command": "uv run python -m unittest -v tests.test_asterion_dci_config tests.test_asterion_dci_judge",
-      "results": []
-    },
-    {
-      "id": "AF-220-H-002",
-      "work_package_id": "AF-220",
-      "description": "Carry native Pi context, session, and resource controls through the typed Asterion DCI request boundary.",
-      "parent_paradigm": "dci-native-pi-controls",
-      "expected_lift": "+1 native Pi control parity boundary",
-      "cost_h": 0.9,
-      "ranking": 0.8,
-      "status": "pending",
-      "created_at": "2026-07-14T00:18:17+08:00",
-      "verification_command": "uv run python -m unittest -v tests.test_asterion_dci_pi_rpc tests.test_asterion_dci_run",
-      "results": []
-    },
-    {
-      "id": "AF-220-H-003",
-      "work_package_id": "AF-220",
-      "description": "Propagate resolved DCI runtime options through package CLI and batch execution without bypassing the native request construction path.",
-      "parent_paradigm": "dci-package-batch-propagation",
-      "expected_lift": "+1 product command and batch parity boundary",
-      "cost_h": 0.9,
-      "ranking": 0.7,
-      "status": "pending",
-      "created_at": "2026-07-14T00:18:17+08:00",
-      "verification_command": "uv run python -m unittest -v tests.test_asterion_dci_cli tests.test_asterion_dci_benchmark",
-      "results": []
-    },
-    {
-      "id": "AF-220-H-004",
-      "work_package_id": "AF-220",
-      "description": "Apply shared configuration at the installed Pi application boundary and prove its runnable Asterion example equivalence.",
-      "parent_paradigm": "dci-installed-application-example-parity",
-      "expected_lift": "+1 installed application and operator example parity boundary",
-      "cost_h": 1.0,
-      "ranking": 0.6,
-      "status": "pending",
-      "created_at": "2026-07-14T00:18:17+08:00",
-      "verification_command": "uv run python -m unittest -v tests.test_asterion_dci_application_executor tests.test_builtin_dci_application",
-      "results": []
-    }
-  ],
+  "active": [],
   "confirmed": [
     {
       "id": "H-001",
@@ -1891,6 +1838,122 @@
           "decision_reason": "deterministic local package acceptance"
         }
       ]
+    },
+    {
+      "id": "AF-220-H-001",
+      "work_package_id": "AF-220",
+      "description": "Resolve shared DCI environment and judge configuration with explicit values taking precedence over compatibility aliases.",
+      "parent_paradigm": "dci-shared-configuration",
+      "expected_lift": "+1 shared configuration parity boundary",
+      "cost_h": 0.8,
+      "ranking": 0.9,
+      "status": "confirmed",
+      "created_at": "2026-07-14T00:18:17+08:00",
+      "verification_command": "uv run python -m unittest -v tests.test_asterion_dci_config tests.test_asterion_dci_judge",
+      "results": [
+        {
+          "session": "2026-07-14-af-220-shared-config-runnable-pi",
+          "cycle": 67,
+          "run": "20260714-011904-dci-climb-af220h001",
+          "local": 4,
+          "local_per_task": {
+            "shared_path_precedence": 1,
+            "runtime_option_precedence": 1,
+            "shared_judge_precedence": 1,
+            "invalid_shared_values": 1
+          },
+          "online": null,
+          "verdict": "confirmed 4/4",
+          "decision_reason": "deterministic local package acceptance"
+        }
+      ]
+    },
+    {
+      "id": "AF-220-H-002",
+      "work_package_id": "AF-220",
+      "description": "Carry native Pi context, session, and resource controls through the typed Asterion DCI request boundary.",
+      "parent_paradigm": "dci-native-pi-controls",
+      "expected_lift": "+1 native Pi control parity boundary",
+      "cost_h": 0.9,
+      "ranking": 0.8,
+      "status": "confirmed",
+      "created_at": "2026-07-14T00:18:17+08:00",
+      "verification_command": "uv run python -m unittest -v tests.test_asterion_dci_pi_rpc tests.test_asterion_dci_run",
+      "results": [
+        {
+          "session": "2026-07-14-af-220-shared-config-runnable-pi",
+          "cycle": 68,
+          "run": "20260714-011904-dci-climb-af220h002",
+          "local": 4,
+          "local_per_task": {
+            "typed_request_mapping": 1,
+            "pi_context_controls": 1,
+            "node_heap_preservation": 1,
+            "literal_control_safety": 1
+          },
+          "online": null,
+          "verdict": "confirmed 4/4",
+          "decision_reason": "deterministic local package acceptance"
+        }
+      ]
+    },
+    {
+      "id": "AF-220-H-003",
+      "work_package_id": "AF-220",
+      "description": "Propagate resolved DCI runtime options through package CLI and batch execution without bypassing the native request construction path.",
+      "parent_paradigm": "dci-package-batch-propagation",
+      "expected_lift": "+1 product command and batch parity boundary",
+      "cost_h": 0.9,
+      "ranking": 0.7,
+      "status": "confirmed",
+      "created_at": "2026-07-14T00:18:17+08:00",
+      "verification_command": "uv run python -m unittest -v tests.test_asterion_dci_cli tests.test_asterion_dci_benchmark",
+      "results": [
+        {
+          "session": "2026-07-14-af-220-shared-config-runnable-pi",
+          "cycle": 69,
+          "run": "20260714-011904-dci-climb-af220h003",
+          "local": 4,
+          "local_per_task": {
+            "cli_shared_defaults": 1,
+            "cli_explicit_override": 1,
+            "batch_runtime_propagation": 1,
+            "bounded_sorted_limit": 1
+          },
+          "online": null,
+          "verdict": "confirmed 4/4",
+          "decision_reason": "deterministic local package acceptance"
+        }
+      ]
+    },
+    {
+      "id": "AF-220-H-004",
+      "work_package_id": "AF-220",
+      "description": "Apply shared configuration at the installed Pi application boundary and prove its runnable Asterion example equivalence.",
+      "parent_paradigm": "dci-installed-application-example-parity",
+      "expected_lift": "+1 installed application and operator example parity boundary",
+      "cost_h": 1.0,
+      "ranking": 0.6,
+      "status": "confirmed",
+      "created_at": "2026-07-14T00:18:17+08:00",
+      "verification_command": "uv run python -m unittest -v tests.test_asterion_dci_application_executor tests.test_builtin_dci_application",
+      "results": [
+        {
+          "session": "2026-07-14-af-220-shared-config-runnable-pi",
+          "cycle": 70,
+          "run": "20260714-011905-dci-climb-af220h004",
+          "local": 4,
+          "local_per_task": {
+            "application_shared_options": 1,
+            "installed_provider_boundary": 1,
+            "example_shared_configuration": 1,
+            "example_preflight_safety": 1
+          },
+          "online": null,
+          "verdict": "confirmed 4/4",
+          "decision_reason": "deterministic local package acceptance"
+        }
+      ]
     }
   ],
   "falsified": [],
@@ -3346,6 +3409,94 @@
       "verdict": "confirmed 4/4",
       "train_cost_h": "0.01",
       "manifest_path": "runs/climb/20260713-225730-dci-climb-af210h004/manifest.json"
+    },
+    {
+      "run_id": "20260714-011904-dci-climb-af220h001",
+      "cycle": "67",
+      "session": "2026-07-14-af-220-shared-config-runnable-pi",
+      "hypothesis_id": "AF-220-H-001",
+      "paradigm": "dci-shared-configuration",
+      "parent_run": "",
+      "pushed_at": "2026-07-14T01:19:32+08:00",
+      "lb_landed_at": "",
+      "local_score": "4",
+      "immutable_resolution": "",
+      "repeat_validation": "",
+      "dirty_checkout_safety": "",
+      "override_compatibility": "",
+      "online_score": "",
+      "gap": "",
+      "push_decision": "PUSH",
+      "decision_reason": "deterministic local package acceptance",
+      "verdict": "confirmed 4/4",
+      "train_cost_h": "0.01",
+      "manifest_path": "runs/climb/20260714-011904-dci-climb-af220h001/manifest.json"
+    },
+    {
+      "run_id": "20260714-011904-dci-climb-af220h002",
+      "cycle": "68",
+      "session": "2026-07-14-af-220-shared-config-runnable-pi",
+      "hypothesis_id": "AF-220-H-002",
+      "paradigm": "dci-native-pi-controls",
+      "parent_run": "",
+      "pushed_at": "2026-07-14T01:19:32+08:00",
+      "lb_landed_at": "",
+      "local_score": "4",
+      "immutable_resolution": "",
+      "repeat_validation": "",
+      "dirty_checkout_safety": "",
+      "override_compatibility": "",
+      "online_score": "",
+      "gap": "",
+      "push_decision": "PUSH",
+      "decision_reason": "deterministic local package acceptance",
+      "verdict": "confirmed 4/4",
+      "train_cost_h": "0.01",
+      "manifest_path": "runs/climb/20260714-011904-dci-climb-af220h002/manifest.json"
+    },
+    {
+      "run_id": "20260714-011904-dci-climb-af220h003",
+      "cycle": "69",
+      "session": "2026-07-14-af-220-shared-config-runnable-pi",
+      "hypothesis_id": "AF-220-H-003",
+      "paradigm": "dci-package-batch-propagation",
+      "parent_run": "",
+      "pushed_at": "2026-07-14T01:19:32+08:00",
+      "lb_landed_at": "",
+      "local_score": "4",
+      "immutable_resolution": "",
+      "repeat_validation": "",
+      "dirty_checkout_safety": "",
+      "override_compatibility": "",
+      "online_score": "",
+      "gap": "",
+      "push_decision": "PUSH",
+      "decision_reason": "deterministic local package acceptance",
+      "verdict": "confirmed 4/4",
+      "train_cost_h": "0.01",
+      "manifest_path": "runs/climb/20260714-011904-dci-climb-af220h003/manifest.json"
+    },
+    {
+      "run_id": "20260714-011905-dci-climb-af220h004",
+      "cycle": "70",
+      "session": "2026-07-14-af-220-shared-config-runnable-pi",
+      "hypothesis_id": "AF-220-H-004",
+      "paradigm": "dci-installed-application-example-parity",
+      "parent_run": "",
+      "pushed_at": "2026-07-14T01:19:32+08:00",
+      "lb_landed_at": "",
+      "local_score": "4",
+      "immutable_resolution": "",
+      "repeat_validation": "",
+      "dirty_checkout_safety": "",
+      "override_compatibility": "",
+      "online_score": "",
+      "gap": "",
+      "push_decision": "PUSH",
+      "decision_reason": "deterministic local package acceptance",
+      "verdict": "confirmed 4/4",
+      "train_cost_h": "0.01",
+      "manifest_path": "runs/climb/20260714-011905-dci-climb-af220h004/manifest.json"
     }
   ],
   "calibration": {

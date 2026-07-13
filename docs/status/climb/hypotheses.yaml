@@ -1488,10 +1488,23 @@ hypotheses:
   expected_lift: +1 shared configuration parity boundary
   cost_h: 0.8
   ranking: 0.9
-  status: pending
+  status: confirmed
   created_at: '2026-07-14T00:18:17+08:00'
-  verification_command: uv run python -m unittest -v tests.test_asterion_dci_config tests.test_asterion_dci_judge
-  results: []
+  verification_command: uv run python -m unittest -v tests.test_asterion_dci_config
+    tests.test_asterion_dci_judge
+  results:
+  - session: 2026-07-14-af-220-shared-config-runnable-pi
+    cycle: 67
+    run: 20260714-011904-dci-climb-af220h001
+    local: 4
+    local_per_task:
+      shared_path_precedence: 1
+      runtime_option_precedence: 1
+      shared_judge_precedence: 1
+      invalid_shared_values: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-220-H-002
   work_package_id: AF-220
   description: Carry native Pi context, session, and resource controls through the
@@ -1500,10 +1513,23 @@ hypotheses:
   expected_lift: +1 native Pi control parity boundary
   cost_h: 0.9
   ranking: 0.8
-  status: pending
+  status: confirmed
   created_at: '2026-07-14T00:18:17+08:00'
-  verification_command: uv run python -m unittest -v tests.test_asterion_dci_pi_rpc tests.test_asterion_dci_run
-  results: []
+  verification_command: uv run python -m unittest -v tests.test_asterion_dci_pi_rpc
+    tests.test_asterion_dci_run
+  results:
+  - session: 2026-07-14-af-220-shared-config-runnable-pi
+    cycle: 68
+    run: 20260714-011904-dci-climb-af220h002
+    local: 4
+    local_per_task:
+      typed_request_mapping: 1
+      pi_context_controls: 1
+      node_heap_preservation: 1
+      literal_control_safety: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-220-H-003
   work_package_id: AF-220
   description: Propagate resolved DCI runtime options through package CLI and batch
@@ -1512,10 +1538,22 @@ hypotheses:
   expected_lift: +1 product command and batch parity boundary
   cost_h: 0.9
   ranking: 0.7
-  status: pending
+  status: confirmed
   created_at: '2026-07-14T00:18:17+08:00'
   verification_command: uv run python -m unittest -v tests.test_asterion_dci_cli tests.test_asterion_dci_benchmark
-  results: []
+  results:
+  - session: 2026-07-14-af-220-shared-config-runnable-pi
+    cycle: 69
+    run: 20260714-011904-dci-climb-af220h003
+    local: 4
+    local_per_task:
+      cli_shared_defaults: 1
+      cli_explicit_override: 1
+      batch_runtime_propagation: 1
+      bounded_sorted_limit: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-220-H-004
   work_package_id: AF-220
   description: Apply shared configuration at the installed Pi application boundary
@@ -1524,7 +1562,20 @@ hypotheses:
   expected_lift: +1 installed application and operator example parity boundary
   cost_h: 1.0
   ranking: 0.6
-  status: pending
+  status: confirmed
   created_at: '2026-07-14T00:18:17+08:00'
-  verification_command: uv run python -m unittest -v tests.test_asterion_dci_application_executor tests.test_builtin_dci_application
-  results: []
+  verification_command: uv run python -m unittest -v tests.test_asterion_dci_application_executor
+    tests.test_builtin_dci_application
+  results:
+  - session: 2026-07-14-af-220-shared-config-runnable-pi
+    cycle: 70
+    run: 20260714-011905-dci-climb-af220h004
+    local: 4
+    local_per_task:
+      application_shared_options: 1
+      installed_provider_boundary: 1
+      example_shared_configuration: 1
+      example_preflight_safety: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance

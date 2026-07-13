@@ -104,7 +104,7 @@ run_closure_dimension() {
             command=(npm --prefix packages/typescript/asterion-runtime test)
             ;;
         application_system)
-            command=(bash -c 'make test-rust-executor && make check-rust-executor && python3 tools/project_scope_check.py --climb-hypothesis AF-210-H-004 && git diff --check')
+            command=(bash -c 'make test-rust-executor && make check-rust-executor && python3 tools/project_scope_check.py && git diff --check')
             ;;
         *)
             echo "ERROR: unknown closure check $check" >&2
@@ -648,7 +648,7 @@ case "$HYPOTHESIS_ID" in
         second_dimension="default_isolation"
         third_dimension="dotenv_precedence"
         fourth_dimension="baseline_import_boundary"
-        immutable_test="tests.test_asterion_dci_config.AsterionDciConfigTests.test_uses_only_asterion_dci_path_namespace"
+        immutable_test="tests.test_asterion_dci_config.AsterionDciConfigTests.test_shared_paths_win_over_compatibility_aliases"
         repeat_test="tests.test_asterion_dci_config.AsterionDciConfigTests.test_defaults_never_select_legacy_dci_locations"
         dirty_test="tests.test_asterion_dci_config.AsterionDciConfigTests.test_loads_the_new_product_env_without_overriding_process_values"
         override_test="tests.test_distribution_boundaries.SourceDistributionBoundaryTests.test_asterion_core_never_imports_the_dci_baseline"
@@ -769,7 +769,7 @@ case "$HYPOTHESIS_ID" in
         third_dimension="default_isolation"
         fourth_dimension="dotenv_precedence"
         immutable_test="tests.test_asterion_dci_application_executor.AsterionDciApplicationExecutorTests.test_maps_runtime_cwd_and_native_paths_to_one_pi_run"
-        repeat_test="tests.test_asterion_dci_config.AsterionDciConfigTests.test_uses_only_asterion_dci_path_namespace"
+        repeat_test="tests.test_asterion_dci_config.AsterionDciConfigTests.test_shared_paths_win_over_compatibility_aliases"
         dirty_test="tests.test_asterion_dci_config.AsterionDciConfigTests.test_defaults_never_select_legacy_dci_locations"
         override_test="tests.test_asterion_dci_config.AsterionDciConfigTests.test_loads_the_new_product_env_without_overriding_process_values"
         ;;
@@ -803,6 +803,46 @@ case "$HYPOTHESIS_ID" in
         repeat_test="application_quality"
         dirty_test="application_typescript"
         override_test="application_system"
+        ;;
+    AF-220-H-001)
+        first_dimension="shared_path_precedence"
+        second_dimension="runtime_option_precedence"
+        third_dimension="shared_judge_precedence"
+        fourth_dimension="invalid_shared_values"
+        immutable_test="tests.test_asterion_dci_config.AsterionDciConfigTests.test_shared_paths_win_over_compatibility_aliases"
+        repeat_test="tests.test_asterion_dci_config.AsterionDciConfigTests.test_runtime_options_merge_shared_env_and_explicit_values"
+        dirty_test="tests.test_asterion_dci_judge.AsterionDciJudgeTests.test_shared_judge_settings_win_over_asterion_aliases"
+        override_test="tests.test_asterion_dci_judge.AsterionDciJudgeTests.test_judge_rejects_malformed_shared_or_alias_boolean"
+        ;;
+    AF-220-H-002)
+        first_dimension="typed_request_mapping"
+        second_dimension="pi_context_controls"
+        third_dimension="node_heap_preservation"
+        fourth_dimension="literal_control_safety"
+        immutable_test="tests.test_asterion_dci_run.AsterionDciRunTests.test_runtime_options_map_to_native_pi_request"
+        repeat_test="tests.test_asterion_dci_pi_rpc.PiRpcCommandTests.test_client_maps_context_thinking_and_session_to_pi"
+        dirty_test="tests.test_asterion_dci_pi_rpc.PiRpcCommandTests.test_heap_option_preserves_existing_node_options"
+        override_test="tests.test_asterion_dci_pi_rpc.PiRpcCommandTests.test_literal_runtime_controls_cannot_add_pi_flags"
+        ;;
+    AF-220-H-003)
+        first_dimension="cli_shared_defaults"
+        second_dimension="cli_explicit_override"
+        third_dimension="batch_runtime_propagation"
+        fourth_dimension="bounded_sorted_limit"
+        immutable_test="tests.test_asterion_dci_cli.AsterionDciCliTests.test_run_uses_shared_defaults_and_explicit_runtime_controls"
+        repeat_test="tests.test_asterion_dci_cli.AsterionDciCliTests.test_run_explicit_options_override_shared_environment"
+        dirty_test="tests.test_asterion_dci_benchmark.AsterionDciBenchmarkTests.test_batch_uses_its_runtime_options_for_every_native_row"
+        override_test="tests.test_asterion_dci_benchmark.AsterionDciBenchmarkTests.test_limit_slices_sorted_rows_and_rejects_zero"
+        ;;
+    AF-220-H-004)
+        first_dimension="application_shared_options"
+        second_dimension="installed_provider_boundary"
+        third_dimension="example_shared_configuration"
+        fourth_dimension="example_preflight_safety"
+        immutable_test="tests.test_asterion_dci_application_executor.AsterionDciApplicationExecutorTests.test_application_executor_applies_shared_options"
+        repeat_test="tests.test_builtin_dci_application.BuiltinDciApplicationTests.test_provider_binds_the_supplied_native_executor"
+        dirty_test="tests.test_asterion_dci_cli.AsterionDciCliTests.test_asterion_examples_use_shared_env_and_package_command"
+        override_test="tests.test_asterion_dci_cli.AsterionDciCliTests.test_asterion_examples_validate_missing_provider_before_pi"
         ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2

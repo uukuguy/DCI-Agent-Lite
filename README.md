@@ -59,6 +59,10 @@ settings in the repository-root `.env` are shared by source DCI,
 CLI options override those defaults. `ASTERION_DCI_OUTPUT_ROOT` remains
 Asterion-specific, and the product command never runs `src/dci`.
 
+AF-220 defines this shared configuration and runnable Pi-application boundary;
+the later parity packages extend it without creating a second normal `.env`
+surface.
+
 ```bash
 asterion-dci run \
   --cwd "$PWD/corpus/wiki_corpus" \

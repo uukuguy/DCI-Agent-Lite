@@ -1,22 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (66 runs).
+> Deterministic summary generated from tracked state (70 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 66
-- Next hypothesis: AF-220-H-001
+- Last cycle: 70
+- Next hypothesis: None
 - In flight: none
-- Next action: Start AF-220-H-001.
+- Next action: Run AF-220 Task 7 bounded real acceptance.
 
 ## Active hypotheses
 
-- **AF-220-H-001** (pending, rank 0.90): Resolve shared DCI environment and judge configuration with explicit values taking precedence over compatibility aliases.
-- **AF-220-H-002** (pending, rank 0.80): Carry native Pi context, session, and resource controls through the typed Asterion DCI request boundary.
-- **AF-220-H-003** (pending, rank 0.70): Propagate resolved DCI runtime options through package CLI and batch execution without bypassing the native request construction path.
-- **AF-220-H-004** (pending, rank 0.60): Apply shared configuration at the installed Pi application boundary and prove its runnable Asterion example equivalence.
 
 ## Run ladder
 
@@ -88,6 +84,10 @@
 | 20260713-225526-dci-climb-af210h002 | AF-210-H-002 | 4 | confirmed 4/4 |
 | 20260713-225530-dci-climb-af210h003 | AF-210-H-003 | 4 | confirmed 4/4 |
 | 20260713-225730-dci-climb-af210h004 | AF-210-H-004 | 4 | confirmed 4/4 |
+| 20260714-011904-dci-climb-af220h001 | AF-220-H-001 | 4 | confirmed 4/4 |
+| 20260714-011904-dci-climb-af220h002 | AF-220-H-002 | 4 | confirmed 4/4 |
+| 20260714-011904-dci-climb-af220h003 | AF-220-H-003 | 4 | confirmed 4/4 |
+| 20260714-011905-dci-climb-af220h004 | AF-220-H-004 | 4 | confirmed 4/4 |
 
 ## Negative cache
 
