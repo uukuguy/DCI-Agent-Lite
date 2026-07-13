@@ -7,12 +7,87 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from asterion.dci.benchmark import BenchmarkRequest, DciBenchmarkError, run_benchmark
+from asterion.dci.config import DciRuntimeOptions
 from asterion.dci.judge import JudgeConfig
 from asterion.dci.run import DciRunResult
 from asterion.runtime.host import RunEvent
 
 
 class AsterionDciBenchmarkTests(unittest.TestCase):
+    def test_batch_uses_its_runtime_options_for_every_native_row(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            dataset = root / "dataset.jsonl"
+            dataset.write_text(
+                "\n".join(
+                    (
+                        json.dumps({"query_id": "q-2", "query": "two", "answer": "two"}),
+                        json.dumps({"query_id": "q-1", "query": "one", "answer": "one"}),
+                    )
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            request = BenchmarkRequest(
+                dataset=dataset,
+                output_root=root / "out",
+                cwd=root,
+                judge_config=JudgeConfig(base_url="https://judge.example.test/v1"),
+                runtime_options=DciRuntimeOptions(provider="openai", model="gpt-test"),
+            )
+            with patch("asterion.dci.benchmark.run_pi_research") as run:
+                run.side_effect = [
+                    _result(root / "out" / "q-1"),
+                    _result(root / "out" / "q-2"),
+                ]
+                with patch("asterion.dci.benchmark.evaluate_run_directory", return_value={"is_correct": True}):
+                    run_benchmark(request, paths=Mock())
+
+        self.assertEqual([call.args[1].run_id for call in run.call_args_list], ["q-1", "q-2"])
+        self.assertEqual(
+            [(call.args[1].provider, call.args[1].model) for call in run.call_args_list],
+            [("openai", "gpt-test"), ("openai", "gpt-test")],
+        )
+
+    def test_limit_slices_sorted_rows_and_rejects_zero(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            dataset = root / "dataset.jsonl"
+            dataset.write_text(
+                "\n".join(
+                    (
+                        json.dumps({"query_id": "q-2", "query": "two", "answer": "two"}),
+                        json.dumps({"query_id": "q-1", "query": "one", "answer": "one"}),
+                    )
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            request = BenchmarkRequest(
+                dataset=dataset,
+                output_root=root / "out",
+                cwd=root,
+                judge_config=JudgeConfig(base_url="https://judge.example.test/v1"),
+                runtime_options=DciRuntimeOptions(provider="openai", model="gpt-test"),
+                limit=1,
+            )
+            with patch("asterion.dci.benchmark.run_pi_research", return_value=_result(root / "out" / "q-1")) as run:
+                with patch("asterion.dci.benchmark.evaluate_run_directory", return_value={"is_correct": True}):
+                    result = run_benchmark(request, paths=Mock())
+
+            self.assertEqual(result.counts["total"], 1)
+            self.assertEqual(run.call_args.args[1].run_id, "q-1")
+
+            invalid = BenchmarkRequest(
+                dataset=dataset,
+                output_root=root / "invalid",
+                cwd=root,
+                judge_config=JudgeConfig(base_url="https://judge.example.test/v1"),
+                runtime_options=DciRuntimeOptions(provider="openai", model="gpt-test"),
+                limit=0,
+            )
+            with self.assertRaisesRegex(DciBenchmarkError, "limit is invalid"):
+                run_benchmark(invalid, paths=Mock())
     def test_batch_reuses_the_native_asterion_run_and_writes_aggregate(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -68,7 +143,13 @@ class AsterionDciBenchmarkTests(unittest.TestCase):
 def _request(root: Path, *, query_id: str = "q-1") -> BenchmarkRequest:
     dataset = root / "dataset.jsonl"
     dataset.write_text(json.dumps({"query_id": query_id, "query": "question", "answer": "gold"}) + "\n")
-    return BenchmarkRequest(dataset=dataset, output_root=root / "out", cwd=root, judge_config=JudgeConfig(base_url="https://judge.example.test/v1"))
+    return BenchmarkRequest(
+        dataset=dataset,
+        output_root=root / "out",
+        cwd=root,
+        judge_config=JudgeConfig(base_url="https://judge.example.test/v1"),
+        runtime_options=DciRuntimeOptions(provider=None, model=None),
+    )
 
 
 def _result(output_dir: Path) -> DciRunResult:

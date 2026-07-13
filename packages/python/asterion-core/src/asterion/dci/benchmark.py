@@ -7,10 +7,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from asterion.dci.config import DciPaths
+from asterion.dci.config import DciPaths, DciRuntimeOptions
 from asterion.dci.evaluation import evaluate_run_directory
 from asterion.dci.judge import JudgeConfig
-from asterion.dci.run import DciRunRequest, run_pi_research
+from asterion.dci.run import request_from_runtime_options, run_pi_research
 
 
 class DciBenchmarkError(RuntimeError):
@@ -23,6 +23,8 @@ class BenchmarkRequest:
     output_root: Path
     cwd: Path
     judge_config: JudgeConfig
+    runtime_options: DciRuntimeOptions
+    limit: int | None = None
 
 
 @dataclass(frozen=True)
@@ -35,6 +37,10 @@ def run_benchmark(request: BenchmarkRequest, *, paths: DciPaths) -> BenchmarkRes
     """Run or reuse explicit dataset rows through Asterion-native boundaries only."""
 
     rows = _load_rows(request.dataset)
+    if request.limit is not None:
+        if isinstance(request.limit, bool) or not isinstance(request.limit, int) or request.limit < 1:
+            raise DciBenchmarkError("DCI benchmark limit is invalid")
+        rows = rows[: request.limit]
     output_root = Path(request.output_root).resolve()
     output_root.mkdir(parents=True, exist_ok=True)
     results: list[dict[str, object]] = []
@@ -47,7 +53,12 @@ def run_benchmark(request: BenchmarkRequest, *, paths: DciPaths) -> BenchmarkRes
         if not _is_completed_native_run(query_dir):
             run_pi_research(
                 paths,
-                DciRunRequest(run_id=row["query_id"], question=row["query"], cwd=request.cwd),
+                request_from_runtime_options(
+                    request.runtime_options,
+                    run_id=row["query_id"],
+                    question=row["query"],
+                    cwd=request.cwd,
+                ),
                 output_dir=query_dir,
             )
         verdict = evaluate_run_directory(query_dir, gold_answer=row["answer"], judge_config=request.judge_config)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -9,6 +10,7 @@ from unittest.mock import patch
 
 from asterion.cli import _parser
 from asterion.dci.cli import main
+from asterion.dci.evaluation import DciEvaluationError
 from asterion.dci.run import DciRunResult
 from asterion.runtime.host import RunEvent
 
@@ -26,6 +28,94 @@ def fixture_result(output_dir: Path) -> DciRunResult:
 
 
 class AsterionDciCliTests(unittest.TestCase):
+    def test_run_uses_shared_defaults_and_explicit_runtime_controls(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            with patch.dict(
+                os.environ,
+                {"DCI_PROVIDER": "openai", "DCI_MODEL": "gpt-test"},
+                clear=True,
+            ):
+                with patch("asterion.dci.cli.run_pi_research") as run:
+                    run.return_value = fixture_result(root / "run")
+                    code = main(
+                        [
+                            "run",
+                            "--runtime-context-level",
+                            "level3",
+                            "--thinking-level",
+                            "high",
+                            "question",
+                        ],
+                        repo_root=root,
+                        stdout=io.StringIO(),
+                        stderr=io.StringIO(),
+                    )
+
+        self.assertEqual(code, 0)
+        request = run.call_args.args[1]
+        self.assertEqual((request.provider, request.model), ("openai", "gpt-test"))
+        self.assertEqual(
+            (request.runtime_context_level, request.thinking_level), ("level3", "high")
+        )
+
+    def test_run_explicit_options_override_shared_environment(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            with patch.dict(
+                os.environ,
+                {"DCI_PROVIDER": "environment", "DCI_MODEL": "environment-model"},
+                clear=True,
+            ):
+                with patch("asterion.dci.cli.run_pi_research") as run:
+                    run.return_value = fixture_result(root / "run")
+                    code = main(
+                        [
+                            "run",
+                            "--provider",
+                            "openai",
+                            "--model",
+                            "cli-model",
+                            "--tools",
+                            "read",
+                            "--rpc-timeout-seconds",
+                            "42",
+                            "--node-max-old-space-size-mb",
+                            "4096",
+                            "--keep-session",
+                            "--extra-arg=--verbose",
+                            "question",
+                        ],
+                        repo_root=root,
+                        stdout=io.StringIO(),
+                        stderr=io.StringIO(),
+                    )
+
+        self.assertEqual(code, 0)
+        request = run.call_args.args[1]
+        self.assertEqual((request.provider, request.model, request.tools), ("openai", "cli-model", "read"))
+        self.assertEqual(request.timeout_seconds, 42.0)
+        self.assertEqual(request.node_max_old_space_size_mb, 4096)
+        self.assertTrue(request.keep_session)
+        self.assertEqual(request.extra_args, ("--verbose",))
+
+    def test_run_redacts_invalid_shared_runtime_configuration(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            with patch.dict(os.environ, {"DCI_RPC_TIMEOUT_SECONDS": "credential=secret"}, clear=True):
+                with patch("asterion.dci.cli.run_pi_research") as run:
+                    stderr = io.StringIO()
+                    code = main(
+                        ["run", "question"],
+                        repo_root=root,
+                        stdout=io.StringIO(),
+                        stderr=stderr,
+                    )
+
+        self.assertEqual(code, 2)
+        run.assert_not_called()
+        self.assertEqual(stderr.getvalue(), "DCI Pi execution failed\n")
+
     def test_run_maps_original_single_run_options_to_domain_request(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -77,6 +167,10 @@ class AsterionDciCliTests(unittest.TestCase):
                         "model": "fixture-model",
                         "tools": "read,bash",
                         "max_turns": 6,
+                        "runtime_context_level": None,
+                        "thinking_level": None,
+                        "node_max_old_space_size_mb": None,
+                        "keep_session": False,
                         "resume_count": 0,
                     }
                 ),
@@ -139,22 +233,111 @@ class AsterionDciCliTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(stdout.getvalue(), f"output_dir={root / 'run'}\nis_correct=True\nevaluation_uri=eval_result.json\n")
 
-    def test_benchmark_maps_explicit_dataset_without_generic_cli_changes(self) -> None:
+    def test_benchmark_maps_shared_runtime_options_without_generic_cli_changes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             with patch("asterion.dci.cli.run_benchmark") as benchmark:
                 benchmark.return_value = type("Result", (), {"output_root": root / "out", "counts": {"total": 1}})()
-                self.assertEqual(main(["benchmark", "--dataset", "data.jsonl", "--output-root", "out", "--cwd", str(root)], repo_root=root, stdout=io.StringIO(), stderr=io.StringIO()), 0)
+                self.assertEqual(
+                    main(
+                        [
+                            "benchmark",
+                            "--dataset",
+                            "data.jsonl",
+                            "--output-root",
+                            "out",
+                            "--cwd",
+                            str(root),
+                            "--provider",
+                            "openai",
+                            "--model",
+                            "gpt-test",
+                            "--tools",
+                            "read",
+                            "--rpc-timeout-seconds",
+                            "45",
+                            "--runtime-context-level",
+                            "level3",
+                            "--thinking-level",
+                            "high",
+                            "--node-max-old-space-size-mb",
+                            "4096",
+                            "--keep-session",
+                            "--extra-arg=--verbose",
+                            "--limit",
+                            "1",
+                        ],
+                        repo_root=root,
+                        stdout=io.StringIO(),
+                        stderr=io.StringIO(),
+                    ),
+                    0,
+                )
 
         self.assertTrue(benchmark.called)
+        request = benchmark.call_args.args[0]
+        self.assertEqual(request.limit, 1)
+        self.assertEqual(
+            (
+                request.runtime_options.provider,
+                request.runtime_options.model,
+                request.runtime_options.tools,
+                request.runtime_options.timeout_seconds,
+                request.runtime_options.runtime_context_level,
+                request.runtime_options.thinking_level,
+                request.runtime_options.node_max_old_space_size_mb,
+                request.runtime_options.keep_session,
+                request.runtime_options.extra_args,
+            ),
+            ("openai", "gpt-test", "read", 45.0, "level3", "high", 4096, True, ("--verbose",)),
+        )
 
-    def test_cli_rejects_deferred_features_without_calling_pi(self) -> None:
+    def test_cli_rejects_invalid_resume_without_calling_pi(self) -> None:
         stderr = io.StringIO()
         self.assertEqual(main(["run", "--resume", "question"], stderr=stderr), 2)
         self.assertIn("use asterion-dci resume", stderr.getvalue())
-        stderr = io.StringIO()
-        self.assertEqual(main(["run", "--eval-answer", "gold", "question"], stderr=stderr), 2)
-        self.assertIn("evaluation is not available until AF-200", stderr.getvalue())
+
+    def test_run_evaluates_native_result_and_redacts_evaluation_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            with patch("asterion.dci.cli.run_pi_research") as run:
+                run.return_value = fixture_result(root / "run")
+                with patch(
+                    "asterion.dci.cli.evaluate_run_directory",
+                    return_value={"is_correct": True},
+                ) as evaluate:
+                    stdout = io.StringIO()
+                    code = main(
+                        ["run", "--eval-answer", "gold", "question"],
+                        repo_root=root,
+                        stdout=stdout,
+                        stderr=io.StringIO(),
+                    )
+
+        self.assertEqual(code, 0)
+        self.assertEqual(evaluate.call_args.kwargs["gold_answer"], "gold")
+        self.assertEqual(
+            stdout.getvalue(),
+            f"output_dir={root / 'run'}\nis_correct=True\nevaluation_uri=eval_result.json\n",
+        )
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            with patch("asterion.dci.cli.run_pi_research", return_value=fixture_result(root / "run")):
+                with patch(
+                    "asterion.dci.cli.evaluate_run_directory",
+                    side_effect=DciEvaluationError("credential=secret"),
+                ):
+                    stderr = io.StringIO()
+                    code = main(
+                        ["run", "--eval-answer", "gold", "question"],
+                        repo_root=root,
+                        stdout=io.StringIO(),
+                        stderr=stderr,
+                    )
+
+        self.assertEqual(code, 2)
+        self.assertEqual(stderr.getvalue(), "DCI evaluation failed\n")
 
     def test_product_help_is_separate_from_the_generic_cli(self) -> None:
         stdout = io.StringIO()
