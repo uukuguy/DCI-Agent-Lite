@@ -28,6 +28,7 @@ from asterion.runtime.factory import (
     RuntimeFactoryError,
     RuntimeFactoryRegistry,
 )
+from asterion.runtime.defaults import default_runtime_factory_registry
 
 
 def main(
@@ -44,7 +45,11 @@ def main(
     stdin = sys.stdin if stdin is None else stdin
     stdout = sys.stdout if stdout is None else stdout
     stderr = sys.stderr if stderr is None else stderr
-    registry = RuntimeFactoryRegistry(()) if runtime_factories is None else runtime_factories
+    registry = (
+        default_runtime_factory_registry()
+        if runtime_factories is None
+        else runtime_factories
+    )
     parser = _parser()
     try:
         args = parser.parse_args(argv)
