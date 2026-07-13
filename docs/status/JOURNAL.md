@@ -456,3 +456,4 @@
 - 01:20 AF-220 local Climb adapter now owns all four current shared-config/Pi-control/package-batch/application-example suites. It no longer relies on closed AF-210 scope, while legacy AF-210 adapter checks remain runnable. Full local Python, compile/Ruff, TypeScript, Rust, shell, scope, and diff closure passed without provider requests; bounded real acceptance remains pending.
 - 01:24 AF-220 local Climb closure repair committed with current hypothesis suites and truthful state. [aaf0d40]
 - 01:28 AF-220 bounded external acceptance stopped at the model-free Pi preflight: this worktree has no local `.env` or `pi/` checkout, so `make check-pi-rpc` failed before any Pi model or Judge request; AF-220 remains in_progress.
+- 01:30 AF-220 preflight block checkpointed so recovery preserves the safe stop boundary. [c74c040]
