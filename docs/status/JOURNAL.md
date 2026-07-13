@@ -322,3 +322,8 @@
 - 08:34 AF-120 closure 通过 335 Python、11 Node、19 Rust、isolated wheel install 及全部门禁。
 - 08:36 AF-120 已关闭并激活 AF-130，聚焦按稳定应用 identity 使用安装产品。[ead0a96]
 - 08:42 AF-130 设计 exact application selector，同时保持 metadata-only global list 与显式 authority。[246d5aa]
+- 08:47 AF-130 TDD 计划已提交，分离纯 selector、CLI binding 与 installed-product closure。[2a869fa]
+- 08:51 exact application selector 拒绝 ranges、implicit latest、duplicate 与 multi-assembly ambiguity。[22266fe]
+- 08:56 CLI 支持 selected-provider application list 与 `run --application`，保留两种 assembly compatibility 路径。[17d4375]
+- 09:01 安装产品 selector、`.env` 与单 wheel 布局文档已更新。[667ce33]
+- 09:02 AF-130 closure 通过 342 Python、11 Node、19 Rust、isolated wheel listing 及全部门禁。

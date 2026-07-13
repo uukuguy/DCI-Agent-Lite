@@ -138,13 +138,24 @@
 
 ## AF-130 — Installed application selection and product usability
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Asterion Agent Application Framework
 - Scope: make installed Asterion applications discoverable and runnable by exact application identity without requiring operators to locate package-internal assembly paths, while retaining explicit provider/runtime selection and all AF-120 trust boundaries.
 - Dependencies: AF-120
 - Acceptance: the installed wheel lists exact application identities and runs the built-in DCI application through a stable application selector; ambiguous or unknown identities fail before provider/runtime work; filesystem assembly selection remains an explicit advanced compatibility path.
 - Design: `docs/superpowers/specs/2026-07-13-installed-application-selection-design.md`
 - Plan: `docs/superpowers/plans/2026-07-13-installed-application-selection.md`
+- Closure evidence: exact immutable selector parsing, selected-provider application listing, `--application`, explicit `--assembly`, legacy positional compatibility, pre-load conflict rejection, DCI-neutral generic modules, and isolated installed-wheel discovery pass 342 Python, 11 Node, and 19 Rust tests plus compile, Ruff, shell, scope, diff, and no-baseline-import gates.
+
+## AF-140 — Controlled-code executable application vertical slice
+
+- Status: in_progress
+- Parent objective: Asterion Agent Application Framework
+- Scope: turn the existing controlled-code policy/workflow/evaluation/observability graph into a second executable bundled Asterion application using explicit package implementations and the existing controlled-executor host-service boundary.
+- Dependencies: AF-050, AF-070, AF-110, AF-130
+- Acceptance: the second installed application is discoverable by exact identity and executes through the same generic provider/runner contracts without DCI-specific coupling; executor authority remains explicit and no sandbox claim, automatic service startup, or workflow scheduler is introduced.
+- Design: pending
+- Plan: pending design approval
 
 ## AF-095 — Asterion framework identity and extraction
 

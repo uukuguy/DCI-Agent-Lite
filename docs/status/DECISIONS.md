@@ -292,3 +292,4 @@
 - Compatibility: explicit `--assembly` remains the advanced path and the AF-120 positional assembly spelling remains temporarily supported. Plain `asterion list` stays metadata-only; `list --provider` explicitly authorizes loading one provider's application declarations.
 - Boundary: no aliases, implicit latest version, version ranges, global provider loading, or multi-assembly default selection.
 - Revalidation trigger: add assembly variants or version resolution only for a concrete application that cannot use one exact identity and one canonical assembly.
+- Implemented evidence: AF-130 adds pure exact selector parsing, selected-provider application listing, preferred `--application`, advanced `--assembly`, and legacy positional compatibility. Isolated wheel verification lists `dci.research-capability@1.0.0` without exposing resource paths.
