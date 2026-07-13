@@ -35,17 +35,42 @@
 | scripts/examples/asterion_dci_*.sh | Pi-default runnable product examples. |
 | .env.template, README.md, Makefile | Shared configuration and operator entry points. |
 
+### Task 0: Register AF-220 Climb state before implementation
+
+**Files:**
+- Modify: docs/status/climb/hypotheses.yaml
+- Modify: docs/status/climb/session-state.json
+- Regenerate: docs/status/climb/research-tree.md and docs/status/climb/research-tree.json
+- Modify: docs/status/JOURNAL.md
+
+**Interfaces:**
+- Registers AF-220-H-001 shared environment and judge configuration, AF-220-H-002 native Pi controls, AF-220-H-003 package/batch propagation, and AF-220-H-004 installed-application/example equivalence.
+- Each entry has work_package_id: AF-220, status: pending, and one exact Task 1-5 verification command.
+
+- [ ] **Step 1: Register the four hypotheses**
+
+Append-only entries use rankings 0.90, 0.80, 0.70, and 0.60 in that order. Set session-state phase to implementation, work_package_id to AF-220, last_cycle to the next unused integer, and next_hypothesis to AF-220-H-001. Run python3 tools/climb/regen-tree.py after editing state.
+
+- [ ] **Step 2: Run mandatory preflight**
+
+Run: python3 tools/project_scope_check.py --climb-hypothesis AF-220-H-001
+
+Expected: JSON reports ok true and active_package AF-220. Repair state before any production-code task if it fails.
+
 ### Task 1: Define shared configuration and option resolution
 
 **Files:**
 - Modify: packages/python/asterion-core/src/asterion/dci/config.py
+- Modify: packages/python/asterion-core/src/asterion/dci/judge.py
 - Modify: tests/test_asterion_dci_config.py
+- Modify: tests/test_asterion_dci_judge.py
 - Modify: .env.template
 
 **Interfaces:**
 - Produces DciRuntimeOptions(provider, model, tools, timeout_seconds, runtime_context_level, thinking_level, node_max_old_space_size_mb, keep_session, extra_args).
 - Produces resolve_dci_runtime_options(overrides: Mapping[str, object] | None = None) -> DciRuntimeOptions.
 - Updates resolve_dci_paths(repo_root: Path) -> DciPaths so non-empty DCI_PI_* wins over ASTERION_DCI_PI_* aliases.
+- Updates JudgeConfig.from_env() so DCI_EVAL_JUDGE_* wins over ASTERION_DCI_JUDGE_* compatibility aliases without exposing a credential value.
 
 - [ ] **Step 1: Write failing tests**
 
@@ -68,6 +93,18 @@ def test_runtime_options_merge_shared_env_and_explicit_values(self) -> None:
     self.assertEqual(
         (options.provider, options.model, options.timeout_seconds),
         ("openai", "explicit-model", 45.0),
+    )
+
+def test_shared_judge_settings_win_over_asterion_aliases(self) -> None:
+    with patch.dict(os.environ, {
+        "DCI_EVAL_JUDGE_BASE_URL": "https://shared.example.test/v1",
+        "DCI_EVAL_JUDGE_MODEL": "shared-judge",
+        "ASTERION_DCI_JUDGE_MODEL": "compat-judge",
+    }, clear=True):
+        config = JudgeConfig.from_env()
+    self.assertEqual(
+        (config.base_url, config.model),
+        ("https://shared.example.test/v1", "shared-judge"),
     )
 ~~~
 
@@ -121,18 +158,59 @@ def resolve_dci_runtime_options(
 
 Implement _configured_path_shared(shared_name, alias_name, default, root) so shared values win, aliases are fallback, and root/pi stays the default.
 
+Implement the judge source lookup without duplicating parsing rules:
+
+~~~python
+def _judge_env(name: str, default: str) -> str:
+    return os.environ.get(
+        f"DCI_EVAL_JUDGE_{name}",
+        os.environ.get(f"ASTERION_DCI_JUDGE_{name}", default),
+    )
+
+def _judge_env_int(name: str, default: int) -> int:
+    return int(_judge_env(name, str(default)))
+
+def _judge_env_float(name: str, default: float) -> float:
+    return float(_judge_env(name, str(default)))
+
+def _judge_env_bool(name: str, default: bool) -> bool:
+    return _judge_env(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
+
+@classmethod
+def from_env(cls) -> "JudgeConfig":
+    api_key_env = _judge_env("API_KEY_ENV", "OPENAI_API_KEY")
+    return cls(
+        base_url=_judge_env("BASE_URL", DEFAULT_JUDGE_BASE_URL),
+        api=_judge_env("API", "responses"),
+        model=_judge_env("MODEL", DEFAULT_JUDGE_MODEL),
+        timeout_seconds=_judge_env_int("TIMEOUT_SECONDS", 120),
+        max_output_tokens=_judge_env_int("MAX_OUTPUT_TOKENS", 1024),
+        json_mode=_judge_env_bool("JSON_MODE", True),
+        strict_json_schema=_judge_env_bool("STRICT_JSON_SCHEMA", False),
+        responses_store=_judge_env_bool("RESPONSES_STORE", False),
+        thinking=_judge_env("THINKING", "auto"),
+        input_price_per_1m=_judge_env_float("INPUT_PRICE_PER_1M", 0.20),
+        cached_input_price_per_1m=_judge_env_float("CACHED_INPUT_PRICE_PER_1M", 0.02),
+        output_price_per_1m=_judge_env_float("OUTPUT_PRICE_PER_1M", 1.25),
+        api_key_env=api_key_env,
+        api_key=os.environ.get("DCI_EVAL_JUDGE_API_KEY", "").strip()
+        or os.environ.get("ASTERION_DCI_JUDGE_API_KEY", "").strip()
+        or os.environ.get(api_key_env, "").strip(),
+    )
+~~~
+
 - [ ] **Step 4: Document the contract**
 
 Replace the isolated Asterion-path paragraph in .env.template. Document DCI_PI_*, DCI_PROVIDER, DCI_MODEL, DCI_RPC_TIMEOUT_SECONDS, and DCI_EVAL_JUDGE_* as shared; document only ASTERION_DCI_OUTPUT_ROOT as Asterion-specific and label ASTERION_DCI_PI_* as aliases.
 
 - [ ] **Step 5: Verify and commit**
 
-Run: uv run python -m unittest -v tests.test_asterion_dci_config
+Run: uv run python -m unittest -v tests.test_asterion_dci_config tests.test_asterion_dci_judge
 
 Expected: PASS, including invalid timeout and invalid heap rejection.
 
 ~~~bash
-git add packages/python/asterion-core/src/asterion/dci/config.py tests/test_asterion_dci_config.py .env.template
+git add packages/python/asterion-core/src/asterion/dci/config.py packages/python/asterion-core/src/asterion/dci/judge.py tests/test_asterion_dci_config.py tests/test_asterion_dci_judge.py .env.template
 git commit -m "feat: share DCI runtime configuration"
 ~~~
 
@@ -439,7 +517,7 @@ git add scripts/examples/asterion_dci_basic_example.sh scripts/examples/asterion
 git commit -m "docs: add runnable Asterion DCI Pi examples"
 ~~~
 
-### Task 6: Register Climb evidence and complete local closure
+### Task 6: Execute Climb evidence and complete local closure
 
 **Files:**
 - Modify: docs/status/climb/hypotheses.yaml
@@ -450,20 +528,9 @@ git commit -m "docs: add runnable Asterion DCI Pi examples"
 - Modify: docs/status/RESUME-NEXT-SESSION.md
 
 **Interfaces:**
-- Registers AF-220-H-001 shared configuration, AF-220-H-002 native Pi controls, AF-220-H-003 package/batch propagation, and AF-220-H-004 application/example equivalence.
-- Each entry includes work_package_id: AF-220, pending state, and the exact Task 1-5 test command.
+- Executes the AF-220-H-001 through AF-220-H-004 state already registered in Task 0.
 
-- [ ] **Step 1: Register hypotheses before implementation**
-
-Append four hypotheses with rankings 0.90, 0.80, 0.70, and 0.60. Set session-state phase to implementation, work_package_id to AF-220, last_cycle to the next unused integer, and next_hypothesis to AF-220-H-001. Regenerate the research tree.
-
-- [ ] **Step 2: Run preflight**
-
-Run: python3 tools/project_scope_check.py --climb-hypothesis AF-220-H-001
-
-Expected: JSON reports ok true and active_package AF-220. Repair governance before code work if it fails.
-
-- [ ] **Step 3: Run local closure**
+- [ ] **Step 1: Run local closure**
 
 ~~~bash
 uv run python -m unittest discover -v
@@ -477,7 +544,7 @@ git diff --check
 
 Expected: every command exits zero. Record totals and provider-independent evidence in JOURNAL.md.
 
-- [ ] **Step 4: Confirm local hypotheses**
+- [ ] **Step 2: Confirm local hypotheses**
 
 After each matching test passes, append its run record, mark it confirmed 4/4, regenerate the research tree, journal the result, and commit the implementation plus state. Do not close AF-220 before Task 7.
 

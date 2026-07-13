@@ -433,3 +433,4 @@
 ## 2026-07-14
 
 - 00:14 correction: preceding 00:12 AF-220 activation occurred on 2026-07-14.
+- 00:22 AF-220 plan corrected: shared judge configuration joins Task 1 and Climb registration becomes pre-implementation Task 0.
