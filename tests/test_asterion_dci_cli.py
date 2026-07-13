@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -37,9 +38,39 @@ class AsterionDciCliTests(unittest.TestCase):
             ROOT / "scripts/examples/asterion_dci_runtime_context_example.sh",
         ):
             source = path.read_text()
+            self.assertIn("uv run asterion-dci run", source)
             self.assertIn("asterion-dci run", source)
             self.assertIn("DCI_PROVIDER", source)
             self.assertNotIn("python -m dci.", source)
+
+    def test_asterion_examples_validate_missing_provider_before_pi(self) -> None:
+        launcher = subprocess.run(
+            ["uv", "run", "asterion-dci", "--help"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        self.assertNotEqual(launcher.returncode, 127)
+        self.assertIn("usage: asterion-dci", launcher.stdout)
+        self.assertNotIn("command not found", launcher.stdout + launcher.stderr)
+
+        for path in (
+            ROOT / "scripts/examples/asterion_dci_basic_example.sh",
+            ROOT / "scripts/examples/asterion_dci_runtime_context_example.sh",
+        ):
+            with self.subTest(path=path.name):
+                result = subprocess.run(
+                    ["bash", "-c", 'source() { :; }; builtin source "$1"', "bash", str(path)],
+                    cwd=ROOT,
+                    env={"PATH": os.environ["PATH"]},
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("DCI_PROVIDER", result.stderr)
+                self.assertNotIn("command not found", result.stdout + result.stderr)
 
     def test_run_uses_shared_defaults_and_explicit_runtime_controls(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:

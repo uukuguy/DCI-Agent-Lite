@@ -23,7 +23,7 @@ level="${1:-high}"
 QUESTION="Read the files in the current directory. Do not use web search. Use rg instead of grep when searching. Question: In the Bonang Matheba interview where the third-to-last question asks about the origin of the name given to her by radio listeners, what is the interviewer's first name? Answer with just the first name and one supporting file path."
 
 cd "$REPO_ROOT"
-asterion-dci run \
+uv run asterion-dci run \
   --cwd "$REPO_ROOT/corpus/bc_plus_docs" \
   --tools read,bash \
   --max-turns 6 \
