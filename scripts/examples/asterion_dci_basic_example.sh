@@ -20,9 +20,15 @@ set -euo pipefail
 : "${DCI_MODEL:?Set DCI_MODEL in .env}"
 
 QUESTION="Answer the following question using only wiki_dump.jsonl in the current directory. Do not use web search. Use rg instead of grep for fast searching. Question: In which street did the Great Fire of London originate?"
+CORPUS_ROOT="${ASTERION_DCI_CORPUS_ROOT:-$REPO_ROOT/corpus}"
+CORPUS_DIR="$CORPUS_ROOT/wiki_corpus"
+if [ ! -d "$CORPUS_DIR" ]; then
+  printf 'Asterion DCI corpus directory does not exist: %s\n' "$CORPUS_DIR" >&2
+  exit 2
+fi
 
 cd "$REPO_ROOT"
 uv run asterion-dci run \
-  --cwd "$REPO_ROOT/corpus/wiki_corpus" \
+  --cwd "$CORPUS_DIR" \
   --extra-arg="--thinking high" \
   "$QUESTION"

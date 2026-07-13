@@ -459,3 +459,4 @@
 - 01:30 AF-220 preflight block checkpointed so recovery preserves the safe stop boundary. [c74c040]
 - 01:36 correction: process-local shared `.env`, main Pi checkout, and worktree source path made both AF-220 prerequisites pass; no files were copied or linked.
 - 01:38 AF-220 basic Asterion example stopped before Pi startup because this worktree lacks `corpus/wiki_corpus`; the native run state is failed with no events or stderr, and no model/Judge request occurred.
+- 01:54 AF-220 examples now accept the documented `ASTERION_DCI_CORPUS_ROOT` read-only corpus-root override, default to the checkout `corpus/`, and reject a missing required child directory before launching Pi; 17 focused product CLI tests, shell syntax, scope, and diff checks pass without provider requests. [pending corpus-boundary commit]

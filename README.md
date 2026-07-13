@@ -74,7 +74,12 @@ asterion-dci run \
 Run the matching examples with `make asterion-example` or
 `make asterion-runtime-example`. They load the repository-root `.env`, require
 `DCI_PROVIDER` and `DCI_MODEL`, and then issue a real Pi request; configure the
-shared `DCI_EVAL_JUDGE_*` values before using the runtime-context example.
+shared `DCI_EVAL_JUDGE_*` values before using the runtime-context example. By
+default they use the checkout's `corpus/` directory. From an isolated worktree,
+set `ASTERION_DCI_CORPUS_ROOT` to the absolute `corpus/` directory in the main
+checkout; the examples verify the required `wiki_corpus` or `bc_plus_docs`
+directory before starting Pi. This override only selects read-only example
+input and does not copy or link corpus data.
 
 An AF-190 run writes `question.txt`, `events.jsonl`, `state.json`,
 `conversation_full.json`, `conversation.json`, `latest_model_context.json`,

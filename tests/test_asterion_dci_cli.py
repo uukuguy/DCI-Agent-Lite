@@ -72,6 +72,71 @@ class AsterionDciCliTests(unittest.TestCase):
                 self.assertIn("DCI_PROVIDER", result.stderr)
                 self.assertNotIn("command not found", result.stdout + result.stderr)
 
+    def test_asterion_examples_use_explicit_corpus_root_and_fail_before_launcher(self) -> None:
+        examples = (
+            (ROOT / "scripts/examples/asterion_dci_basic_example.sh", "wiki_corpus"),
+            (
+                ROOT / "scripts/examples/asterion_dci_runtime_context_example.sh",
+                "bc_plus_docs",
+            ),
+        )
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary_root = Path(temporary_directory)
+            corpus_root = temporary_root / "corpus"
+            corpus_root.mkdir()
+            launcher_bin = temporary_root / "bin"
+            launcher_bin.mkdir()
+            launcher_log = temporary_root / "launcher.log"
+            launcher = launcher_bin / "uv"
+            launcher.write_text(
+                "#!/usr/bin/env bash\nprintf '%s\\n' \"$*\" >> \"$UV_CALLED\"\n",
+                encoding="utf-8",
+            )
+            launcher.chmod(0o755)
+
+            for path, corpus_name in examples:
+                with self.subTest(path=path.name, case="uses override"):
+                    (corpus_root / corpus_name).mkdir()
+                    result = subprocess.run(
+                        ["bash", str(path)],
+                        cwd=ROOT,
+                        env={
+                            "PATH": f"{launcher_bin}:{os.environ['PATH']}",
+                            "DCI_PROVIDER": "test-provider",
+                            "DCI_MODEL": "test-model",
+                            "ASTERION_DCI_CORPUS_ROOT": str(corpus_root),
+                            "UV_CALLED": str(launcher_log),
+                        },
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                    )
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertIn(
+                        f"--cwd {corpus_root / corpus_name}",
+                        launcher_log.read_text(encoding="utf-8"),
+                    )
+
+            launcher_log.unlink()
+            missing_root = temporary_root / "missing-corpus"
+            result = subprocess.run(
+                ["bash", str(examples[0][0])],
+                cwd=ROOT,
+                env={
+                    "PATH": f"{launcher_bin}:{os.environ['PATH']}",
+                    "DCI_PROVIDER": "test-provider",
+                    "DCI_MODEL": "test-model",
+                    "ASTERION_DCI_CORPUS_ROOT": str(missing_root),
+                    "UV_CALLED": str(launcher_log),
+                },
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("Asterion DCI corpus directory does not exist", result.stderr)
+            self.assertFalse(launcher_log.exists())
+
     def test_run_uses_shared_defaults_and_explicit_runtime_controls(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)

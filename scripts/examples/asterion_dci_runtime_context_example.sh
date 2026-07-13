@@ -21,10 +21,16 @@ set -euo pipefail
 
 level="${1:-high}"
 QUESTION="Read the files in the current directory. Do not use web search. Use rg instead of grep when searching. Question: In the Bonang Matheba interview where the third-to-last question asks about the origin of the name given to her by radio listeners, what is the interviewer's first name? Answer with just the first name and one supporting file path."
+CORPUS_ROOT="${ASTERION_DCI_CORPUS_ROOT:-$REPO_ROOT/corpus}"
+CORPUS_DIR="$CORPUS_ROOT/bc_plus_docs"
+if [ ! -d "$CORPUS_DIR" ]; then
+  printf 'Asterion DCI corpus directory does not exist: %s\n' "$CORPUS_DIR" >&2
+  exit 2
+fi
 
 cd "$REPO_ROOT"
 uv run asterion-dci run \
-  --cwd "$REPO_ROOT/corpus/bc_plus_docs" \
+  --cwd "$CORPUS_DIR" \
   --tools read,bash \
   --max-turns 6 \
   --runtime-context-level "$level" \
