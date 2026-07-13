@@ -1388,3 +1388,47 @@ hypotheses:
     online: null
     verdict: confirmed 4/4
     decision_reason: deterministic local package acceptance
+- id: AF-210-H-001
+  work_package_id: AF-210
+  description: Bind the DCI capability to one configured native Pi executor without
+    adding DCI behavior to generic framework code.
+  parent_paradigm: dci-application-native-executor
+  expected_lift: +1 provider-bound native execution contract
+  cost_h: 0.8
+  ranking: 1.0
+  status: pending
+  created_at: '2026-07-13T22:40:00+08:00'
+  results: []
+- id: AF-210-H-002
+  work_package_id: AF-210
+  description: Dispatch selected Pi application invocations through the owned native
+    DCI workflow while retaining Claude as protocol-fixture-only.
+  parent_paradigm: dci-pi-application-dispatch
+  expected_lift: +1 exact runtime-scoped package behavior
+  cost_h: 0.9
+  ranking: 0.9
+  status: pending
+  created_at: '2026-07-13T22:40:00+08:00'
+  results: []
+- id: AF-210-H-003
+  work_package_id: AF-210
+  description: Prove selected installed DCI Pi assemblies project safe native artifacts
+    and redact failures without generic CLI coupling.
+  parent_paradigm: dci-installed-application-projection
+  expected_lift: +1 installed application parity evidence
+  cost_h: 0.9
+  ranking: 0.8
+  status: pending
+  created_at: '2026-07-13T22:40:00+08:00'
+  results: []
+- id: AF-210-H-004
+  work_package_id: AF-210
+  description: Close the Pi application parity matrix and repository gates while keeping
+    provider-backed Claude semantics explicitly deferred.
+  parent_paradigm: dci-application-parity-closure
+  expected_lift: +1 complete local acceptance confidence
+  cost_h: 1.2
+  ranking: 0.7
+  status: pending
+  created_at: '2026-07-13T22:40:00+08:00'
+  results: []

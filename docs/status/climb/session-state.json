@@ -1,11 +1,11 @@
 {
-  "session": "2026-07-13-af-200-dci-evaluation-benchmark",
-  "phase": "completed",
-  "work_package_id": "AF-200",
+  "session": "2026-07-13-af-210-dci-application-runtime-parity",
+  "phase": "implementation",
+  "work_package_id": "AF-210",
   "last_cycle": 62,
-  "next_hypothesis": null,
+  "next_hypothesis": "AF-210-H-001",
   "in_flight": null,
-  "next_action": "AF-200 closed; register a new AF-210 Climb session before another cycle.",
+  "next_action": "Start AF-210-H-001 after its failing native-executor test is recorded.",
   "falsified_routes": [
     "duplicate the authoritative Pi commit across setup.sh and .env.template",
     "convert the independent Pi checkout to vendored or submodule ownership",
@@ -15,6 +15,7 @@
     "build an enterprise control plane before a reference package graph",
     "reuse the AF-100 Climb session or its hypotheses under AF-180",
     "reuse the completed AF-180 session or its hypotheses under AF-190",
-    "reuse the completed AF-190 session or its hypotheses under AF-200"
+    "reuse the completed AF-190 session or its hypotheses under AF-200",
+    "reuse the completed AF-200 session or its hypotheses under AF-210"
   ]
 }

@@ -1,10 +1,10 @@
-score_name: asterion_dci_evaluation_benchmark_acceptance
+score_name: asterion_dci_application_runtime_parity_acceptance
 score_direction: max
 subscores:
-  - judge_contract
-  - evaluation_cache
-  - benchmark_orchestration
-  - evaluation_operator_surface
+  - native_executor
+  - pi_application_dispatch
+  - installed_projection
+  - local_closure
 push_mode: manual-csv
 state_dir: docs/status/climb
 artifact_dir: runs/climb

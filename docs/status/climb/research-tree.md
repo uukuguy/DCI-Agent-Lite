@@ -5,14 +5,18 @@
 
 ## In-flight / session state
 
-- Phase: completed
+- Phase: implementation
 - Last cycle: 62
-- Next hypothesis: None
+- Next hypothesis: AF-210-H-001
 - In flight: none
-- Next action: AF-200 closed; register a new AF-210 Climb session before another cycle.
+- Next action: Start AF-210-H-001 after its failing native-executor test is recorded.
 
 ## Active hypotheses
 
+- **AF-210-H-001** (pending, rank 1.00): Bind the DCI capability to one configured native Pi executor without adding DCI behavior to generic framework code.
+- **AF-210-H-002** (pending, rank 0.90): Dispatch selected Pi application invocations through the owned native DCI workflow while retaining Claude as protocol-fixture-only.
+- **AF-210-H-003** (pending, rank 0.80): Prove selected installed DCI Pi assemblies project safe native artifacts and redact failures without generic CLI coupling.
+- **AF-210-H-004** (pending, rank 0.70): Close the Pi application parity matrix and repository gates while keeping provider-backed Claude semantics explicitly deferred.
 
 ## Run ladder
 
@@ -92,3 +96,4 @@
 - reuse the AF-100 Climb session or its hypotheses under AF-180
 - reuse the completed AF-180 session or its hypotheses under AF-190
 - reuse the completed AF-190 session or its hypotheses under AF-200
+- reuse the completed AF-200 session or its hypotheses under AF-210
