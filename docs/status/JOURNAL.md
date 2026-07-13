@@ -396,3 +396,5 @@
 - 19:20 AF-190 closed: durable native artifacts, compatible resume, and body-free durable projection pass the complete local closure matrix; AF-200 activated.
 - 19:21 AF-190 durable-resume closure state committed for AF-200 recovery continuity. [0af5bc1]
 - 19:27 AF-200 judge, cache, batch, export, and package-CLI plan recorded from original DCI parity paths. [pending plan commit]
+- 19:28 AF-200 evaluation-benchmark plan committed for bounded independent migration. [0022532]
+- 19:30 AF-200 Climb H-001 through H-004 registered for judge, cache, batch, and operator parity. [pending registration commit]

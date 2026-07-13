@@ -7,12 +7,16 @@
 
 - Phase: implementation
 - Last cycle: 58
-- Next hypothesis: None
+- Next hypothesis: AF-200-H-001
 - In flight: none
-- Next action: Trigger Knowledge Layer.
+- Next action: Start AF-200-H-001.
 
 ## Active hypotheses
 
+- **AF-200-H-001** (pending, rank 1.00): Transplant the original DCI judge configuration, safe request shaping, validated response handling, and complete request-fingerprint identity.
+- **AF-200-H-002** (pending, rank 0.90): Evaluate completed native Asterion runs with exact cache reuse and safe evaluation-state persistence.
+- **AF-200-H-003** (pending, rank 0.80): Orchestrate explicit JSONL benchmark datasets through the independent Asterion DCI run and evaluation paths with deterministic exports.
+- **AF-200-H-004** (pending, rank 0.70): Expose evaluation and benchmark operations only through the package-local CLI and project validated evaluation evidence without bodies.
 
 ## Run ladder
 
@@ -87,3 +91,4 @@
 - build an enterprise control plane before a reference package graph
 - reuse the AF-100 Climb session or its hypotheses under AF-180
 - reuse the completed AF-180 session or its hypotheses under AF-190
+- reuse the completed AF-190 session or its hypotheses under AF-200

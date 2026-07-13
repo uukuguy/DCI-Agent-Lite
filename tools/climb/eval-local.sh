@@ -711,6 +711,46 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_asterion_dci_bridge.AsterionDciBridgeTests.test_projection_rejects_a_noncompleted_native_result"
         override_test="tests.test_distribution_boundaries.SourceDistributionBoundaryTests.test_asterion_core_never_imports_the_dci_baseline"
         ;;
+    AF-200-H-001)
+        first_dimension="safe_judge_configuration"
+        second_dimension="request_fingerprint_identity"
+        third_dimension="validated_response"
+        fourth_dimension="transport_redaction"
+        immutable_test="tests.test_asterion_dci_judge.AsterionDciJudgeTests.test_configuration_is_public_without_api_key"
+        repeat_test="tests.test_asterion_dci_judge.AsterionDciJudgeTests.test_fingerprint_changes_with_complete_request_shape"
+        dirty_test="tests.test_asterion_dci_judge.AsterionDciJudgeTests.test_mocked_response_is_validated_and_normalized"
+        override_test="tests.test_asterion_dci_judge.AsterionDciJudgeTests.test_transport_failure_is_safe_and_does_not_echo_response"
+        ;;
+    AF-200-H-002)
+        first_dimension="exact_cache_reuse"
+        second_dimension="cache_invalidation"
+        third_dimension="safe_state_summary"
+        fourth_dimension="pre_transport_validation"
+        immutable_test="tests.test_asterion_dci_evaluation.AsterionDciEvaluationTests.test_reuses_only_an_exact_judge_request_fingerprint"
+        repeat_test="tests.test_asterion_dci_evaluation.AsterionDciEvaluationTests.test_changed_request_shape_rejudges_without_reusing_cache"
+        dirty_test="tests.test_asterion_dci_evaluation.AsterionDciEvaluationTests.test_persists_only_safe_evaluation_state_summary"
+        override_test="tests.test_asterion_dci_evaluation.AsterionDciEvaluationTests.test_invalid_native_state_fails_before_judge_transport"
+        ;;
+    AF-200-H-003)
+        first_dimension="deterministic_dataset_execution"
+        second_dimension="completed_result_reuse"
+        third_dimension="cache_aware_re_evaluation"
+        fourth_dimension="dataset_boundary"
+        immutable_test="tests.test_asterion_dci_benchmark.AsterionDciBenchmarkTests.test_batch_reuses_the_native_asterion_run_and_writes_aggregate"
+        repeat_test="tests.test_asterion_dci_benchmark.AsterionDciBenchmarkTests.test_existing_successful_result_skips_run_and_evaluation"
+        dirty_test="tests.test_asterion_dci_benchmark.AsterionDciBenchmarkTests.test_changed_judge_configuration_reevaluates_without_rerunning_pi"
+        override_test="tests.test_asterion_dci_benchmark.AsterionDciBenchmarkTests.test_invalid_dataset_identity_fails_before_execution"
+        ;;
+    AF-200-H-004)
+        first_dimension="product_local_evaluation"
+        second_dimension="product_local_benchmark"
+        third_dimension="evaluation_reference_projection"
+        fourth_dimension="generic_cli_neutrality"
+        immutable_test="tests.test_asterion_dci_cli.AsterionDciCliTests.test_evaluate_maps_native_run_directory_without_exposing_bodies"
+        repeat_test="tests.test_asterion_dci_cli.AsterionDciCliTests.test_benchmark_maps_explicit_dataset_without_generic_cli_changes"
+        dirty_test="tests.test_asterion_dci_bridge.AsterionDciBridgeTests.test_projection_adds_only_an_evaluation_artifact_reference"
+        override_test="tests.test_asterion_dci_cli.AsterionDciCliTests.test_product_help_is_separate_from_the_generic_cli"
+        ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2
         exit 2
