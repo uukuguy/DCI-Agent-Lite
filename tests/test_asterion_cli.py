@@ -11,6 +11,7 @@ from asterion.cli import main
 from asterion.applications.provider import InstalledApplication, InstalledApplicationProvider
 from asterion.runtime.factory import RuntimeFactoryBinding, RuntimeFactoryRegistry
 from asterion.runtime.host import RunEvent, RunRequest, RuntimeManifest
+from asterion.services.controlled_executor import ControlledExecutionResult
 from tests.test_application_discovery import FakeEntryPoint
 from tests.test_installed_application_provider import provider
 
@@ -27,6 +28,45 @@ class FixtureRuntime:
         del request, signal
         if False:
             yield RunEvent("", 0, "", {})
+
+
+class ControlledFixtureRuntime(FixtureRuntime):
+    manifest = RuntimeManifest(
+        runtime_id="pi.reference", capabilities=("filesystem.read", "shell")
+    )
+
+
+class FixtureExecutor:
+    async def execute(self, request, *, signal=None):
+        del request, signal
+        return ControlledExecutionResult(
+            status="succeeded",
+            exit_code=0,
+            stdout_bytes=0,
+            stderr_bytes=0,
+            stdout_truncated=False,
+            stderr_truncated=False,
+            duration_ms=0,
+            failure_class=None,
+        )
+
+
+class FixtureManager:
+    def __init__(self) -> None:
+        self.config = None
+        self.entered = False
+
+    async def __aenter__(self):
+        self.entered = True
+        return FixtureExecutor()
+
+    async def __aexit__(self, exc_type, exc, traceback):
+        del exc_type, exc, traceback
+
+
+def configure_manager(manager, config):
+    manager.config = config
+    return manager
 
 
 class AsterionCliTests(unittest.TestCase):
@@ -183,6 +223,127 @@ class AsterionCliTests(unittest.TestCase):
                 )
                 self.assertEqual(code, 2)
         self.assertEqual(entry.loads, 0)
+
+    def test_controlled_code_requires_complete_operator_config_before_runtime(self) -> None:
+        calls = []
+        registry = RuntimeFactoryRegistry(
+            (
+                RuntimeFactoryBinding(
+                    runtime_id="pi.reference",
+                    capabilities=("filesystem.read", "shell"),
+                    factory=lambda context: calls.append(context),
+                ),
+            )
+        )
+        code = main(
+            [
+                "run",
+                "--provider",
+                "controlled-code",
+                "--application",
+                "code.quality@1.0.0",
+                "--runtime",
+                "pi.reference",
+            ],
+            runtime_factories=registry,
+            stdout=io.StringIO(),
+            stderr=io.StringIO(),
+        )
+        self.assertEqual(code, 2)
+        self.assertEqual(calls, [])
+
+    def test_dci_rejects_executor_lifecycle_options_before_runtime(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            value = provider(Path(temp_dir))
+            entry = FakeEntryPoint(name="example-app", factory=lambda: value)
+            calls = []
+            registry = RuntimeFactoryRegistry(
+                (
+                    RuntimeFactoryBinding(
+                        runtime_id="pi.reference",
+                        capabilities=(),
+                        factory=lambda context: calls.append(context),
+                    ),
+                )
+            )
+            code = main(
+                [
+                    "run",
+                    "--provider",
+                    "example-app",
+                    "--runtime",
+                    "pi.reference",
+                    "--application",
+                    "example.research@1.0.0",
+                    "--executor-binary",
+                    "/SECRET-binary",
+                ],
+                entry_points=(entry,),
+                runtime_factories=registry,
+                stdout=io.StringIO(),
+                stderr=io.StringIO(),
+            )
+        self.assertEqual(code, 2)
+        self.assertEqual(calls, [])
+
+    def test_controlled_code_injects_one_explicit_managed_service(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            binary = root / "executor"
+            policy = root / "policy.json"
+            validation = root / "validation.json"
+            binary.write_text("fixture")
+            policy.write_text("{}")
+            validation.write_text(
+                json.dumps(
+                    {
+                        "program_id": "check",
+                        "argument_prefix": [],
+                        "cwd": "workspace",
+                        "deadline_ms": 1000,
+                        "max_output_bytes": 1024,
+                    }
+                )
+            )
+            manager = FixtureManager()
+            stderr = io.StringIO()
+            registry = RuntimeFactoryRegistry(
+                (
+                    RuntimeFactoryBinding(
+                        runtime_id="pi.reference",
+                        capabilities=("filesystem.read", "shell"),
+                        factory=lambda context: ControlledFixtureRuntime(),
+                    ),
+                )
+            )
+            stdout = io.StringIO()
+            code = main(
+                [
+                    "run",
+                    "--provider",
+                    "controlled-code",
+                    "--application",
+                    "code.quality@1.0.0",
+                    "--runtime",
+                    "pi.reference",
+                    "--executor-binary",
+                    str(binary),
+                    "--executor-policy",
+                    str(policy),
+                    "--executor-validation-config",
+                    str(validation),
+                    "--input",
+                    "src/example.py",
+                ],
+                runtime_factories=registry,
+                managed_executor_factory=lambda config: configure_manager(manager, config),
+                stdout=stdout,
+                stderr=stderr,
+            )
+        self.assertEqual(code, 0, stderr.getvalue())
+        self.assertTrue(manager.entered)
+        self.assertIsNotNone(manager.config)
+        self.assertEqual(json.loads(stdout.getvalue())["application_id"], "code.quality")
 
     def test_invalid_provider_fails_before_runtime_factory_and_redacts_input(self) -> None:
         calls = []

@@ -8,7 +8,7 @@ import json
 import sys
 from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import TextIO
+from typing import Callable, TextIO
 
 from asterion.applications.discovery import (
     list_application_providers,
@@ -33,6 +33,11 @@ from asterion.runtime.factory import (
     RuntimeFactoryRegistry,
 )
 from asterion.runtime.defaults import default_runtime_factory_registry
+from asterion.services.managed_controlled_executor import (
+    ManagedControlledExecutor,
+    OperatorExecutorConfig,
+    load_operator_executor_config,
+)
 
 
 def main(
@@ -43,6 +48,7 @@ def main(
     stdin: TextIO | None = None,
     stdout: TextIO | None = None,
     stderr: TextIO | None = None,
+    managed_executor_factory: Callable[[OperatorExecutorConfig], object] | None = None,
 ) -> int:
     """Run the generic installed-application CLI."""
 
@@ -53,6 +59,11 @@ def main(
         default_runtime_factory_registry()
         if runtime_factories is None
         else runtime_factories
+    )
+    executor_factory = (
+        ManagedControlledExecutor
+        if managed_executor_factory is None
+        else managed_executor_factory
     )
     parser = _parser()
     try:
@@ -101,6 +112,7 @@ def main(
                 args,
                 entry_points=entry_points,
                 registry=registry,
+                managed_executor_factory=executor_factory,
                 stdin=stdin,
                 stdout=stdout,
             )
@@ -124,6 +136,7 @@ async def _run(
     *,
     entry_points: Iterable[object] | None,
     registry: RuntimeFactoryRegistry,
+    managed_executor_factory: Callable[[OperatorExecutorConfig], object],
     stdin: TextIO,
     stdout: TextIO,
 ) -> int:
@@ -158,6 +171,7 @@ async def _run(
         runtime_manifest=runtime_binding.manifest.to_mapping(),
     )
     validate_implementation_bindings(plan, application.implementations)
+    operator_config = _operator_executor_config(args, plan.host_capabilities)
     context = RuntimeFactoryContext(
         provider_id=provider.provider_id,
         application_id=application.application_id,
@@ -168,14 +182,25 @@ async def _run(
     )
     runtime = runtime_binding.factory(context)
     input_text = args.input if args.input is not None else stdin.read()
-    result = await run_composed_application(
-        plan,
-        implementations=application.implementations,
-        runtime=runtime,
-        run_id=args.run_id,
-        input_text=input_text,
-        host_services={},
-    )
+    if operator_config is None:
+        result = await run_composed_application(
+            plan,
+            implementations=application.implementations,
+            runtime=runtime,
+            run_id=args.run_id,
+            input_text=input_text,
+            host_services={},
+        )
+    else:
+        async with managed_executor_factory(operator_config) as executor:
+            result = await run_composed_application(
+                plan,
+                implementations=application.implementations,
+                runtime=runtime,
+                run_id=args.run_id,
+                input_text=input_text,
+                host_services={"executor.controlled": executor},
+            )
     stdout.write(json.dumps(_thaw(result.__dict__), sort_keys=True) + "\n")
     return 0
 
@@ -192,6 +217,9 @@ def _parser() -> argparse.ArgumentParser:
     run.add_argument("--input")
     run.add_argument("--application")
     run.add_argument("--assembly")
+    run.add_argument("--executor-binary")
+    run.add_argument("--executor-policy")
+    run.add_argument("--executor-validation-config")
     run.add_argument("legacy_assembly", nargs="?")
     return parser
 
@@ -202,3 +230,21 @@ def _thaw(value: object) -> object:
     if isinstance(value, (tuple, list, set, frozenset)):
         return [_thaw(item) for item in value]
     return value
+
+
+def _operator_executor_config(
+    args: argparse.Namespace, host_capabilities: tuple[str, ...]
+) -> OperatorExecutorConfig | None:
+    values = (
+        args.executor_binary,
+        args.executor_policy,
+        args.executor_validation_config,
+    )
+    requires_executor = "executor.controlled" in host_capabilities
+    if requires_executor:
+        if not all(values):
+            raise ApplicationProviderError("controlled executor configuration is required")
+        return load_operator_executor_config(*values)
+    if any(values):
+        raise ApplicationProviderError("controlled executor configuration is invalid")
+    return None
