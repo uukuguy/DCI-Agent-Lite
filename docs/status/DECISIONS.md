@@ -281,3 +281,4 @@
 - Baseline boundary: `src/dci` keeps the verified `.env`, Pi/Judge, CLI, evaluation, and security extensions as a repository-only runnable comparison baseline. It is excluded from every wheel, is not published, and neither imports nor is imported by Asterion.
 - Extension boundary: the versioned installed-provider contract remains for future independently installed third-party applications, but first-party DCI does not require a separate entry-point distribution.
 - Revalidation trigger: split a capability into its own distribution only when an independently versioned external consumer or deployment requirement justifies the additional artifact.
+- Implemented evidence: AF-120 ships one `asterion` wheel with bundled modular DCI capability/application resources and an explicit Pi runtime factory. The root is a non-buildable uv workspace, `src/dci` is source-only, and isolated installation confirms Asterion works while `dci` is absent.

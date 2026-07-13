@@ -315,3 +315,8 @@
 - 08:00 单 wheel TDD 计划替代旧多发行包计划，保持模块边界但减少安装产物。[b8441f7]
 - 08:06 根项目改为非构建 workspace，Asterion 成为唯一 wheel，baseline 由源码启动。[05813e0]
 - 08:11 DCI research 实现与四个 manifests 已并入 `asterion.capabilities`，独立 capability wheel 消失。[4a76c29]
+- 08:18 内置 DCI application provider 与三份 assemblies 已并入唯一 Asterion wheel。[f0581f9]
+- 08:22 baseline 文档、examples 与 evaluator 改为源码启动，未修改 `src/dci/benchmark/`。[648342a]
+- 08:25 AF-095 历史 acceptance evaluator 对齐当前独立实现与单 wheel 证据。[1c82c44]
+- 08:31 Asterion CLI 加入显式 `.env` 驱动的 `pi.reference` 默认工厂，安装后 `run` 不再依赖测试注入。[e765ec7]
+- 08:34 AF-120 closure 通过 335 Python、11 Node、19 Rust、isolated wheel install 及全部门禁。

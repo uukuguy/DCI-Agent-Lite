@@ -2,9 +2,9 @@
 
 > Updated: 2026-07-13 08:11 +0800. **Session remains active — not a final handoff.**
 
-Active work package: AF-120
+Active work package: AF-130
 
-Package state: AF-120 single-wheel plan is executing inline; distribution and capability consolidation are complete, built-in DCI provider is next.
+Package state: AF-120 is fully verified and closed; AF-130 is active and requires design for stable installed application selection.
 
 ## TL;DR
 
@@ -15,20 +15,22 @@ Package state: AF-120 single-wheel plan is executing inline; distribution and ca
 - The corrected design and plan are committed at `a0f0a7f` and `b8441f7`.
 - `05813e0` makes the root a non-buildable workspace and preserves baseline source execution.
 - `4a76c29` folds DCI research code/manifests into `asterion.capabilities.dci_research`; 108 focused Python and 11 Node tests pass.
+- `f0581f9`, `648342a`, and `e765ec7` bundle the DCI provider/resources, preserve source baseline workflows, and configure the installed Pi runtime.
+- AF-120 closure passes 335 Python, 11 Node, 19 Rust, compile/lint/shell/scope/diff, and isolated wheel installation. `asterion list` reports `dci-agent-lite`; installed `import dci` fails as required.
 
 ## Where things stand
 
 - Branch: `main`; no long-running process or in-flight climb hypothesis is active.
 - No long-running process is active; nothing has been pushed in this session.
-- AF-120 remains the sole active package and scope preflight passes.
+- AF-130 is the sole active package; post-transition scope preflight must pass before design work.
 - The interim root `dci` and `asterion-dci-research` build projects are removed. Application assemblies/provider still need to move into the Asterion wheel.
 - External `pi/` remains an independent checkout and was not modified.
 
 ## Next steps (immediate)
 
-1. Add failing built-in DCI provider/resource/entry-point tests.
-2. Move application assemblies into `asterion.applications.dci_agent_lite` and register the provider in the sole wheel.
-3. Convert repository baseline scripts/docs from removed console entry points to source invocation without modifying `src/dci/benchmark/`.
+1. Run post-transition scope preflight for AF-130.
+2. Brainstorm exact installed application selectors (`application_id@version`) while preserving explicit provider/runtime selection.
+3. Write and review the AF-130 design before implementation.
 
 ## Open questions
 

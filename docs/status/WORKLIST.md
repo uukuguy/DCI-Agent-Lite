@@ -127,13 +127,24 @@
 
 ## AF-120 — Installed application binding and generic entry point
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Asterion Agent Application Framework
 - Scope: ship one self-contained Asterion distribution containing modular capability/application implementations, define a security-reviewed provider boundary for built-in and future external applications, expose the generic `asterion run <assembly>` entry point, and keep `src/dci` as a repository-only runnable baseline excluded from all wheels.
 - Dependencies: AF-110
 - Acceptance: the single Asterion wheel runs its DCI application through exact provider bindings without arbitrary dynamic imports, implicit service discovery, or baseline coupling; canonical resources are included once; `src/dci` remains runnable in-repository and produces no wheel.
 - Design: `docs/superpowers/specs/2026-07-13-installed-application-binding-design.md`
-- Plan: pending revision for the approved single-wheel architecture
+- Plan: `docs/superpowers/plans/2026-07-13-installed-application-binding.md`
+- Closure evidence: one isolated `asterion==0.1.0` wheel contains framework, DCI capability/application code, four canonical manifests, three canonical assemblies, built-in provider metadata, and the explicit `pi.reference` runtime factory while excluding `dci`. The repository-only baseline remains source-runnable without changes under `src/dci/benchmark/`. Full closure passes 335 Python, 11 Node, and 19 Rust tests plus compile, Ruff, shell, scope, diff, isolated install, `asterion list`, resource, and import-boundary gates.
+
+## AF-130 — Installed application selection and product usability
+
+- Status: in_progress
+- Parent objective: Asterion Agent Application Framework
+- Scope: make installed Asterion applications discoverable and runnable by exact application identity without requiring operators to locate package-internal assembly paths, while retaining explicit provider/runtime selection and all AF-120 trust boundaries.
+- Dependencies: AF-120
+- Acceptance: the installed wheel lists exact application identities and runs the built-in DCI application through a stable application selector; ambiguous or unknown identities fail before provider/runtime work; filesystem assembly selection remains an explicit advanced compatibility path.
+- Design: pending
+- Plan: pending design approval
 
 ## AF-095 — Asterion framework identity and extraction
 
