@@ -1350,9 +1350,21 @@ hypotheses:
   expected_lift: +1 batch parity boundary
   cost_h: 1.1
   ranking: 0.8
-  status: pending
+  status: confirmed
   created_at: '2026-07-13T19:28:00+08:00'
-  results: []
+  results:
+  - session: 2026-07-13-af-200-dci-evaluation-benchmark
+    cycle: 61
+    run: 20260713-192440-dci-climb-af200h003
+    local: 4
+    local_per_task:
+      deterministic_dataset_execution: 1
+      completed_result_reuse: 1
+      cache_aware_re_evaluation: 1
+      dataset_boundary: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-200-H-004
   work_package_id: AF-200
   description: Expose evaluation and benchmark operations only through the package-local

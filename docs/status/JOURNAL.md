@@ -402,4 +402,7 @@
 - 19:23 Asterion-owned judge now validates configuration, request fingerprints, structured verdicts, and redacted transport failures. [pending H-001 commit]
 - 19:22 AF-200 judge contract committed for cache-safe evaluation implementation. [dc08fac]
 - 19:24 Asterion evaluation now reuses exact judge fingerprints and persists safe native state summaries. [pending H-002 commit]
+- 19:23 AF-200 evaluation cache committed for durable parity continuation. [d5db728]
+- 19:25 Asterion benchmark now validates explicit JSONL datasets and reuses native Asterion execution paths. [pending H-003 commit]
 - 19:23 AF-200-H-002 confirmed 4/4; package acceptance recorded.
+- 19:24 AF-200-H-003 confirmed 4/4; package acceptance recorded.
