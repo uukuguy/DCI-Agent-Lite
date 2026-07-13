@@ -327,3 +327,5 @@
 - 08:56 CLI 支持 selected-provider application list 与 `run --application`，保留两种 assembly compatibility 路径。[17d4375]
 - 09:01 安装产品 selector、`.env` 与单 wheel 布局文档已更新。[667ce33]
 - 09:02 AF-130 closure 通过 342 Python、11 Node、19 Rust、isolated wheel listing 及全部门禁。
+- 09:04 AF-130 已关闭并激活 AF-140，第二应用验证框架非 DCI 专用。[59ae1d5]
+- 09:10 AF-140 采用 host-owned fixed validation 与独立 controlled-code provider，agent 不生成命令。[c9dfdac]

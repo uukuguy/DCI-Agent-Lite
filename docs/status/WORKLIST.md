@@ -155,7 +155,7 @@
 - Dependencies: AF-050, AF-070, AF-110, AF-130
 - Acceptance: the second installed application is discoverable by exact identity and executes through the same generic provider/runner contracts without DCI-specific coupling; executor authority remains explicit and no sandbox claim, automatic service startup, or workflow scheduler is introduced.
 - Design: `docs/superpowers/specs/2026-07-13-controlled-code-executable-application-design.md`
-- Plan: pending design approval
+- Plan: `docs/superpowers/plans/2026-07-13-controlled-code-executable-application.md`
 
 ## AF-095 — Asterion framework identity and extraction
 
