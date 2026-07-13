@@ -13,6 +13,7 @@ dependencies = ["python-dotenv>=1.0.0"]
 asterion = "asterion.cli:main"
 
 [project.entry-points."asterion.applications"]
+controlled-code = "asterion.applications.controlled_code:create_provider"
 dci-agent-lite = "asterion.applications.dci_agent_lite:create_provider"
 
 [tool.hatch.build.targets.wheel]

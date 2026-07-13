@@ -25,10 +25,16 @@ const assemblyFixtures = new URL(
   "../../../../tests/fixtures/assembly/v1/",
   import.meta.url,
 );
-const referenceAssemblies = new URL(
-  "../../../../packages/python/asterion-core/src/asterion/applications/dci_agent_lite/assemblies/",
-  import.meta.url,
-);
+const referenceAssemblyRoots = [
+  new URL(
+    "../../../../packages/python/asterion-core/src/asterion/applications/dci_agent_lite/assemblies/",
+    import.meta.url,
+  ),
+  new URL(
+    "../../../../packages/python/asterion-core/src/asterion/applications/controlled_code/assemblies/",
+    import.meta.url,
+  ),
+];
 
 async function readJson(name) {
   return JSON.parse(await readFile(new URL(name, fixtures), "utf8"));
@@ -164,17 +170,24 @@ test("validates the shared assembly fixtures", async () => {
 });
 
 test("validates every checked-in reference assembly", async () => {
-  const names = (await readdir(referenceAssemblies))
-    .filter((name) => name.endsWith(".json"))
-    .sort();
+  const entries = (
+    await Promise.all(
+      referenceAssemblyRoots.map(async (root) =>
+        (await readdir(root))
+          .filter((name) => name.endsWith(".json"))
+          .map((name) => ({ name, root })),
+      ),
+    )
+  ).flat();
+  const names = entries.map(({ name }) => name).sort();
   assert.deepEqual(names, [
     "controlled-code-validation.json",
     "dci-local-research.json",
     "dci-research-capability.json",
   ]);
-  for (const name of names) {
+  for (const { name, root } of entries) {
     const assembly = JSON.parse(
-      await readFile(new URL(name, referenceAssemblies), "utf8"),
+      await readFile(new URL(name, root), "utf8"),
     );
     assert.deepEqual(validateAssemblyManifest(assembly), assembly);
   }

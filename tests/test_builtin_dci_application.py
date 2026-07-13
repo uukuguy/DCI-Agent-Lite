@@ -16,11 +16,12 @@ ASTERION = ROOT / "packages/python/asterion-core/src/asterion"
 
 
 class BuiltinDciApplicationTests(unittest.TestCase):
-    def test_distribution_registers_one_builtin_dci_provider(self) -> None:
+    def test_distribution_registers_the_builtin_dci_provider(self) -> None:
         entries = tuple(metadata.entry_points(group="asterion.applications"))
         metadata_values = list_application_providers(entry_points=entries)
-        self.assertEqual([item.provider_id for item in metadata_values], ["dci-agent-lite"])
-        self.assertEqual(metadata_values[0].distribution_name, "asterion")
+        providers = {item.provider_id: item for item in metadata_values}
+        self.assertIn("dci-agent-lite", providers)
+        self.assertEqual(providers["dci-agent-lite"].distribution_name, "asterion")
 
     def test_selected_provider_uses_one_asterion_resource_root(self) -> None:
         provider = load_application_provider("dci-agent-lite")

@@ -22,6 +22,9 @@ MANIFESTS = (
     ROOT / "packages/python/asterion-core/src/asterion/capabilities/controlled_code/manifests",
 )
 ASSEMBLIES = ROOT / "packages/python/asterion-core/src/asterion/applications/dci_agent_lite/assemblies"
+CONTROLLED_ASSEMBLIES = (
+    ROOT / "packages/python/asterion-core/src/asterion/applications/controlled_code/assemblies"
+)
 GUIDE = Path(__file__).resolve().parents[1] / "docs/architecture/static-application-assembly.md"
 
 
@@ -254,7 +257,10 @@ class ReferenceAssemblyTests(unittest.TestCase):
         )
 
     def test_checked_in_reference_assemblies_are_valid(self) -> None:
-        names = {path.name for path in ASSEMBLIES.glob("*.json")}
+        paths = tuple(ASSEMBLIES.glob("*.json")) + tuple(
+            CONTROLLED_ASSEMBLIES.glob("*.json")
+        )
+        names = {path.name for path in paths}
         self.assertEqual(
             names,
             {
@@ -263,8 +269,8 @@ class ReferenceAssemblyTests(unittest.TestCase):
                 "dci-research-capability.json",
             },
         )
-        for name in names:
-            validate_assembly_manifest(self.load(name))
+        for path in paths:
+            validate_assembly_manifest(json.loads(path.read_text()))
 
     def test_dci_plan_has_pi_and_claude_runtime_parity(self) -> None:
         assembly = self.load("dci-local-research.json")
@@ -273,7 +279,9 @@ class ReferenceAssemblyTests(unittest.TestCase):
         self.assertEqual(pi.composition, claude.composition)
 
     def test_controlled_code_keeps_executor_as_a_host_service(self) -> None:
-        assembly = self.load("controlled-code-validation.json")
+        assembly = json.loads(
+            (CONTROLLED_ASSEMBLIES / "controlled-code-validation.json").read_text()
+        )
         plan = self.resolve(assembly, "pi.reference")
         self.assertIn("workflow.code-quality", plan.composition.package_ids)
         self.assertEqual(assembly["host_capabilities"], ["executor.controlled"])

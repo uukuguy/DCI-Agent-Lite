@@ -24,7 +24,7 @@ MANIFESTS = (
 )
 ASSEMBLY = (
     ROOT
-    / "packages/python/asterion-core/src/asterion/applications/dci_agent_lite/assemblies/controlled-code-validation.json"
+    / "packages/python/asterion-core/src/asterion/applications/controlled_code/assemblies/controlled-code-validation.json"
 )
 
 

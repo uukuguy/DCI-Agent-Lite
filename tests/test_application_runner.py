@@ -22,7 +22,7 @@ MANIFEST_ROOTS = (
 )
 ASSEMBLY = ROOT / "packages/python/asterion-core/src/asterion/applications/dci_agent_lite/assemblies/dci-local-research.json"
 CONTROLLED_ASSEMBLY = (
-    ROOT / "packages/python/asterion-core/src/asterion/applications/dci_agent_lite/assemblies/controlled-code-validation.json"
+    ROOT / "packages/python/asterion-core/src/asterion/applications/controlled_code/assemblies/controlled-code-validation.json"
 )
 GUIDE = ROOT / "docs/architecture/application-runner.md"
 

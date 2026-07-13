@@ -89,7 +89,7 @@ class BuiltDistributionBoundaryTests(unittest.TestCase):
                 assemblies = [
                     name
                     for name in archive.namelist()
-                    if "/dci_agent_lite/assemblies/" in name
+                    if "/assemblies/" in name
                 ]
             self.assertEqual(len(manifests), 4)
             self.assertEqual(len(manifests), len(set(manifests)))
