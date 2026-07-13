@@ -417,3 +417,9 @@
 - 22:50 Provider-bound Pi application dispatch now reaches the native DCI executor while Claude remains fixture-only; focused local tests passed with no provider requests. [pending H-002 commit]
 - 22:50 Native Pi dispatch is committed so the installed DCI application has one provider-bound execution path. [c7c96cc]
 - 22:51 Installed Pi application projection, native-failure redaction, generic-CLI neutrality, and wheel packaging all pass deterministically with no provider requests. [pending H-003 commit]
+- 22:51 Installed application parity tests are committed to preserve projection, redaction, neutrality, and wheel-boundary evidence. [6412d17]
+- 22:55 AF-210-H-001 confirmed 4/4; package acceptance recorded.
+- 22:55 AF-210-H-002 confirmed 4/4; package acceptance recorded.
+- 22:55 AF-210-H-003 confirmed 4/4; package acceptance recorded.
+- 22:58 AF-210-H-004 confirmed 4/4; package acceptance recorded.
+- 23:01 AF-210 closed: native Pi application parity, body-free projection, failure redaction, wheel inclusion, and full local closure pass without provider requests. [pending closure commit]

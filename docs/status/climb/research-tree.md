@@ -1,22 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (62 runs).
+> Deterministic summary generated from tracked state (66 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 62
-- Next hypothesis: AF-210-H-001
+- Last cycle: 66
+- Next hypothesis: None
 - In flight: none
-- Next action: Start AF-210-H-001 after its failing native-executor test is recorded.
+- Next action: Trigger Knowledge Layer.
 
 ## Active hypotheses
 
-- **AF-210-H-001** (pending, rank 1.00): Bind the DCI capability to one configured native Pi executor without adding DCI behavior to generic framework code.
-- **AF-210-H-002** (pending, rank 0.90): Dispatch selected Pi application invocations through the owned native DCI workflow while retaining Claude as protocol-fixture-only.
-- **AF-210-H-003** (pending, rank 0.80): Prove selected installed DCI Pi assemblies project safe native artifacts and redact failures without generic CLI coupling.
-- **AF-210-H-004** (pending, rank 0.70): Close the Pi application parity matrix and repository gates while keeping provider-backed Claude semantics explicitly deferred.
 
 ## Run ladder
 
@@ -84,6 +80,10 @@
 | 20260713-192301-dci-climb-af200h002 | AF-200-H-002 | 4 | confirmed 4/4 |
 | 20260713-192440-dci-climb-af200h003 | AF-200-H-003 | 4 | confirmed 4/4 |
 | 20260713-192620-dci-climb-af200h004 | AF-200-H-004 | 4 | confirmed 4/4 |
+| 20260713-225521-dci-climb-af210h001 | AF-210-H-001 | 4 | confirmed 4/4 |
+| 20260713-225526-dci-climb-af210h002 | AF-210-H-002 | 4 | confirmed 4/4 |
+| 20260713-225530-dci-climb-af210h003 | AF-210-H-003 | 4 | confirmed 4/4 |
+| 20260713-225730-dci-climb-af210h004 | AF-210-H-004 | 4 | confirmed 4/4 |
 
 ## Negative cache
 
