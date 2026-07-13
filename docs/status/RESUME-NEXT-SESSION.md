@@ -15,12 +15,12 @@ Active work package: AF-160
 
 - Branch: `main`; no long-running process is active. No external Pi checkout was modified.
 - Latest implementation commits: `e7ab64a feat: forward controlled executor cancellation`; `e576122 fix: bound controlled executor stderr draining`.
-- AF-150 closure/AF-160 transition is committed as `f8416ed`; the AF-160 written design is pending its documentation commit and review.
+- AF-150 closure/AF-160 transition is committed as `f8416ed`; AF-160's approved design is committed and its TDD plan is pending commit.
 - Final verification completed: 362 Python tests, 11 Node tests, and 19 Rust tests; Python compilation, Ruff, shell syntax, scope audit, and `git diff --check` all passed.
 
 ## Next action
 
-Review and approve `docs/superpowers/specs/2026-07-13-installed-claude-runtime-interface-design.md`, then write the AF-160 implementation plan. The implementation must not send provider requests. Real UAT resumes only when an operator supplies authorization and an application explicitly declares the Claude runtime. Do not create a speculative executor protocol/daemon package: D-033 deliberately defers supervised connection, persistent reuse, and health negotiation until a concrete deployment requires them.
+Execute `docs/superpowers/plans/2026-07-13-installed-claude-runtime-interface.md` inline with TDD. The implementation must not send provider requests. Real UAT resumes only when an operator supplies authorization and an application explicitly declares the Claude runtime. Do not create a speculative executor protocol/daemon package: D-033 deliberately defers supervised connection, persistent reuse, and health negotiation until a concrete deployment requires them.
 
 ## Guardrails
 

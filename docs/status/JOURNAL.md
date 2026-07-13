@@ -350,3 +350,4 @@
 - 10:27 AF-150 closure state 与 AF-160 transition 已提交，保持唯一 active package 与可恢复治理边界。[f8416ed]
 - 10:30 AF-160 safe availability probe：Claude Code 2.1.199 已安装但无 stored login、无 gateway credential/endpoint presence；未发送 provider request，等待授权 backend。
 - 10:36 AF-160 转为无账号的 installed Claude runtime interface verification；真实 provider 调用继续 deferred。[pending design commit]
+- 10:44 AF-160 TDD plan 锁定 thin runtime client、exact factory、fixture-only wheel verification 与全量 closure。[pending plan commit]
