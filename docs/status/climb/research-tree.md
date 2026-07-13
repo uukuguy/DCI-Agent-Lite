@@ -1,19 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (55 runs).
+> Deterministic summary generated from tracked state (56 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 55
-- Next hypothesis: AF-190-H-002
+- Last cycle: 56
+- Next hypothesis: AF-190-H-003
 - In flight: none
-- Next action: Start AF-190-H-002.
+- Next action: Start AF-190-H-003.
 
 ## Active hypotheses
 
-- **AF-190-H-002** (pending, rank 0.90): Resume only compatible failed or incomplete native runs and isolate every protocol attempt.
 - **AF-190-H-003** (pending, rank 0.80): Expose resume through the package-local command while preserving generic CLI neutrality.
 - **AF-190-H-004** (pending, rank 0.70): Project durable native run references through the declared capability contract without bodies.
 
@@ -76,6 +75,7 @@
 | 20260713-180508-dci-climb-af180h003 | AF-180-H-003 | 4 | confirmed 4/4 |
 | 20260713-180718-dci-climb-af180h004 | AF-180-H-004 | 4 | confirmed 4/4 |
 | 20260713-185158-dci-climb-af190h001 | AF-190-H-001 | 4 | confirmed 4/4 |
+| 20260713-190556-dci-climb-af190h002 | AF-190-H-002 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

@@ -2,10 +2,10 @@
   "session": "2026-07-13-af-190-dci-durable-resume",
   "phase": "implementation",
   "work_package_id": "AF-190",
-  "last_cycle": 55,
-  "next_hypothesis": "AF-190-H-002",
+  "last_cycle": 56,
+  "next_hypothesis": "AF-190-H-003",
   "in_flight": null,
-  "next_action": "Start AF-190-H-002.",
+  "next_action": "Start AF-190-H-003.",
   "falsified_routes": [
     "duplicate the authoritative Pi commit across setup.sh and .env.template",
     "convert the independent Pi checkout to vendored or submodule ownership",

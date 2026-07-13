@@ -20,7 +20,7 @@ Active work package: AF-190
 
 ## Next action
 
-1. Execute AF-190-H-002 through TDD: add safe immutable-input validation and isolated protocol attempts for resumed native runs; do not reopen AF-180 scope.
+1. Execute AF-190-H-003 through TDD: expose package-local resume and durable body-free artifact references; do not reopen AF-180 scope.
 2. Before implementation, run `python3 tools/project_scope_check.py`; retain exactly one active package.
 3. Do not send Pi, judge, or Claude provider requests without the applicable operator authorization.
 
