@@ -32,6 +32,10 @@ class FixtureRuntime:
             yield RunEvent("", 0, "", {})
 
 
+class ClaudeFixtureRuntime(FixtureRuntime):
+    manifest = RuntimeManifest(runtime_id="claude-code.reference", capabilities=())
+
+
 class ControlledFixtureRuntime(FixtureRuntime):
     manifest = RuntimeManifest(
         runtime_id="pi.reference", capabilities=("filesystem.read", "shell")
@@ -201,6 +205,127 @@ class AsterionCliTests(unittest.TestCase):
 
         self.assertEqual(code, 0)
         self.assertEqual(json.loads(stdout.getvalue())["application_id"], "example.research")
+
+    def test_run_selects_matching_runtime_assembly(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            value = provider(root)
+            application = value.applications[0]
+            pi_assembly = application.assembly_paths[0]
+            claude_assembly = pi_assembly.with_name("claude.json")
+            claude_manifest = json.loads(pi_assembly.read_text())
+            claude_manifest["runtime_id"] = "claude-code.reference"
+            claude_assembly.write_text(json.dumps(claude_manifest))
+            compatible = InstalledApplicationProvider(
+                protocol=value.protocol,
+                provider_id=value.provider_id,
+                resource_root=value.resource_root,
+                applications=(
+                    InstalledApplication(
+                        application_id=application.application_id,
+                        version=application.version,
+                        assembly_paths=(pi_assembly, claude_assembly),
+                        catalog_roots=application.catalog_roots,
+                        implementations=application.implementations,
+                        runtime_ids=("claude-code.reference", "pi.reference"),
+                    ),
+                ),
+            )
+            entry = FakeEntryPoint(name="example-app", factory=lambda: compatible)
+            contexts = []
+            registry = RuntimeFactoryRegistry(
+                (
+                    RuntimeFactoryBinding(
+                        runtime_id="claude-code.reference",
+                        capabilities=(),
+                        factory=lambda context: contexts.append(context)
+                        or ClaudeFixtureRuntime(),
+                    ),
+                )
+            )
+
+            code = main(
+                [
+                    "run",
+                    "--provider",
+                    "example-app",
+                    "--runtime",
+                    "claude-code.reference",
+                    "--application",
+                    "example.research@1.0.0",
+                    "--input",
+                    "SECRET-INPUT",
+                ],
+                entry_points=(entry,),
+                runtime_factories=registry,
+                stdout=io.StringIO(),
+                stderr=io.StringIO(),
+            )
+
+        self.assertEqual(code, 0)
+        self.assertEqual(len(contexts), 1)
+        self.assertEqual(contexts[0].assembly_path.name, "claude.json")
+
+    def test_run_rejects_ambiguous_runtime_assemblies_before_factory(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            value = provider(root)
+            application = value.applications[0]
+            pi_assembly = application.assembly_paths[0]
+            claude_manifest = json.loads(pi_assembly.read_text())
+            claude_manifest["runtime_id"] = "claude-code.reference"
+            first_claude = pi_assembly.with_name("claude-first.json")
+            second_claude = pi_assembly.with_name("claude-second.json")
+            first_claude.write_text(json.dumps(claude_manifest))
+            second_claude.write_text(json.dumps(claude_manifest))
+            ambiguous = InstalledApplicationProvider(
+                protocol=value.protocol,
+                provider_id=value.provider_id,
+                resource_root=value.resource_root,
+                applications=(
+                    InstalledApplication(
+                        application_id=application.application_id,
+                        version=application.version,
+                        assembly_paths=(first_claude, second_claude, pi_assembly),
+                        catalog_roots=application.catalog_roots,
+                        implementations=application.implementations,
+                        runtime_ids=("claude-code.reference", "pi.reference"),
+                    ),
+                ),
+            )
+            entry = FakeEntryPoint(name="example-app", factory=lambda: ambiguous)
+            contexts = []
+            registry = RuntimeFactoryRegistry(
+                (
+                    RuntimeFactoryBinding(
+                        runtime_id="claude-code.reference",
+                        capabilities=(),
+                        factory=lambda context: contexts.append(context)
+                        or ClaudeFixtureRuntime(),
+                    ),
+                )
+            )
+
+            code = main(
+                [
+                    "run",
+                    "--provider",
+                    "example-app",
+                    "--runtime",
+                    "claude-code.reference",
+                    "--application",
+                    "example.research@1.0.0",
+                    "--input",
+                    "SECRET-INPUT",
+                ],
+                entry_points=(entry,),
+                runtime_factories=registry,
+                stdout=io.StringIO(),
+                stderr=io.StringIO(),
+            )
+
+        self.assertEqual(code, 2)
+        self.assertEqual(contexts, [])
 
     def test_conflicting_or_missing_selection_fails_before_provider_load(self) -> None:
         entry = FakeEntryPoint(name="example-app", factory=lambda: None)

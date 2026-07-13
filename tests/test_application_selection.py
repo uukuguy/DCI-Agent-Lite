@@ -39,7 +39,7 @@ class ApplicationSelectorTests(unittest.TestCase):
                 with self.assertRaises(ApplicationProviderError):
                     parse_application_selector(value)
 
-    def test_selects_one_exact_single_assembly_application(self) -> None:
+    def test_selects_one_exact_application(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             value = provider(Path(temp_dir))
             application = select_installed_application(
@@ -47,17 +47,11 @@ class ApplicationSelectorTests(unittest.TestCase):
             )
         self.assertEqual(application.application_id, "example.research")
 
-    def test_unknown_duplicate_and_multi_assembly_matches_fail_closed(self) -> None:
+    def test_selects_application_with_multiple_assemblies(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             value = provider(Path(temp_dir))
             application = value.applications[0]
-            duplicate = InstalledApplicationProvider(
-                protocol=value.protocol,
-                provider_id=value.provider_id,
-                resource_root=value.resource_root,
-                applications=(application, application),
-            )
-            multi_assembly = replace(
+            multiple = replace(
                 value,
                 applications=(
                     replace(
@@ -69,8 +63,26 @@ class ApplicationSelectorTests(unittest.TestCase):
                     ),
                 ),
             )
+
+            selected = select_installed_application(
+                multiple, ApplicationSelector("example.research", "1.0.0")
+            )
+
+        self.assertEqual(selected.application_id, "example.research")
+        self.assertEqual(len(selected.assembly_paths), 2)
+
+    def test_unknown_and_duplicate_application_matches_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            value = provider(Path(temp_dir))
+            application = value.applications[0]
+            duplicate = InstalledApplicationProvider(
+                protocol=value.protocol,
+                provider_id=value.provider_id,
+                resource_root=value.resource_root,
+                applications=(application, application),
+            )
             selector = ApplicationSelector("example.research", "1.0.0")
-            for invalid in (duplicate, multi_assembly):
+            for invalid in (duplicate,):
                 with self.assertRaises(ApplicationProviderError) as caught:
                     select_installed_application(invalid, selector)
                 self.assertNotIn(str(value.resource_root), str(caught.exception))

@@ -356,3 +356,5 @@
 - 10:49 AF-170 paired Pi/Claude assembly design approved; written-spec review blocks implementation and climb cycles. [pending design commit]
 - 10:50 correction: AF-170 paired-assembly design committed for exact generic runtime selection. [d6a5af4]
 - 10:53 AF-170 TDD implementation plan approved; fixture-only generic selection is ready for scoped Climb hypotheses. [pending plan commit]
+- 10:59 AF-170-H-001 confirms generic runtime-specific assembly selection; stale single-assembly application guard removed. [pending implementation commit]
+- 10:59 correction: this is Task 1 test evidence; no AF-170 Climb hypothesis or cycle is registered yet.

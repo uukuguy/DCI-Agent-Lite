@@ -21,7 +21,9 @@
 ## File Structure
 
 - `packages/python/asterion-core/src/asterion/cli.py` — generic exact runtime-to-assembly selection and explicit-path runtime preflight.
+- `packages/python/asterion-core/src/asterion/applications/selection.py` — exact application identity selection, independent of its runtime-specific assembly count.
 - `tests/test_asterion_cli.py` — fixture provider tests for selected, missing, and ambiguous runtime assemblies plus a real bundled-DCI fixture CLI run.
+- `tests/test_application_selection.py` — regression test that application selection permits multiple assemblies for later runtime selection.
 - `packages/python/asterion-core/src/asterion/applications/dci_agent_lite/provider.py` — DCI-only declaration of the two allowed runtime IDs and assembly resources.
 - `packages/python/asterion-core/src/asterion/applications/dci_agent_lite/assemblies/dci-research-capability-claude.json` — Claude runtime variant with the same composition as the Pi declaration.
 - `tests/test_builtin_dci_application.py` and `tests/test_application_assembly.py` — provider/resource and immutable-composition parity checks.
@@ -33,15 +35,37 @@
 
 **Files:**
 - Modify: `tests/test_asterion_cli.py`
+- Modify: `tests/test_application_selection.py`
 - Modify: `packages/python/asterion-core/src/asterion/cli.py`
+- Modify: `packages/python/asterion-core/src/asterion/applications/selection.py`
 
 **Interfaces:**
 - Produce: `_select_application_assembly(application: InstalledApplication, runtime_id: str) -> Path`.
 - Preserve: `main()` selects a provider and application before any runtime factory is constructed.
+- Preserve: `select_installed_application()` proves one exact application identity only; it must not preempt runtime-specific assembly uniqueness.
+
+- [ ] **Step 0: Remove the obsolete AF-130 single-assembly precondition with a failing test.**
+
+  In `tests/test_application_selection.py`, construct one otherwise-valid application with two assembly paths and assert exact application selection returns it:
+
+  ```python
+  selected = select_installed_application(
+      multiple, ApplicationSelector("example.research", "1.0.0")
+  )
+  self.assertEqual(len(selected.assembly_paths), 2)
+  ```
+
+  Run:
+
+  ```bash
+  uv run python -m unittest tests.test_application_selection.ApplicationSelectorTests.test_selects_application_with_multiple_assemblies -v
+  ```
+
+  Expected: failure from the old `len(application.assembly_paths) != 1` check. Remove only that check and change the docstring to "unique application"; duplicate application identities and unknown selectors must remain rejected.
 
 - [ ] **Step 1: Write failing selection tests.**
 
-  Add a `write_assembly(..., runtime_id, filename)` fixture helper in `tests/test_asterion_cli.py`, then assert application selection chooses the Claude path and refuses ambiguous/mismatched paths without calling a factory:
+  Add a `write_assembly(..., runtime_id, filename)` fixture helper in `tests/test_asterion_cli.py`, then assert application selection chooses the Claude path and refuses duplicate Claude assembly matches without calling a factory:
 
   ```python
   self.assertEqual(factory_calls[0].assembly_path.name, "claude.json")
@@ -99,7 +123,7 @@
   uv run ruff check packages/python/asterion-core/src/asterion/cli.py tests/test_asterion_cli.py
   ```
 
-  Expected: all pass; every mismatch/ambiguity test has zero factory calls.
+  Expected: all pass; the duplicate-runtime ambiguity test has zero factory calls. The existing resolver remains the explicit-path runtime-match gate before factory construction.
 
 - [ ] **Step 5: Commit the generic selection boundary.**
 

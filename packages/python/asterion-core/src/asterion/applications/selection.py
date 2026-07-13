@@ -37,7 +37,7 @@ def select_installed_application(
     provider: InstalledApplicationProvider,
     selector: ApplicationSelector,
 ) -> InstalledApplication:
-    """Return the unique single-assembly application matching *selector*."""
+    """Return the unique application matching *selector*."""
 
     if not isinstance(provider, InstalledApplicationProvider) or not isinstance(
         selector, ApplicationSelector
@@ -51,7 +51,4 @@ def select_installed_application(
     )
     if len(matches) != 1:
         raise ApplicationProviderError("installed application selection is invalid")
-    application = matches[0]
-    if len(application.assembly_paths) != 1:
-        raise ApplicationProviderError("installed application assembly is ambiguous")
-    return application
+    return matches[0]

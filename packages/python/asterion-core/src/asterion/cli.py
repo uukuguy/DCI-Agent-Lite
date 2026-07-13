@@ -15,7 +15,7 @@ from asterion.applications.discovery import (
     list_application_providers,
     load_application_provider,
 )
-from asterion.applications.provider import ApplicationProviderError
+from asterion.applications.provider import ApplicationProviderError, InstalledApplication
 from asterion.applications.selection import (
     parse_application_selector,
     select_installed_application,
@@ -148,7 +148,6 @@ async def _run(
         application = select_installed_application(
             provider, parse_application_selector(args.application)
         )
-        assembly_path = application.assembly_paths[0]
     else:
         requested = Path(args.assembly or args.legacy_assembly)
         if requested.is_symlink():
@@ -164,6 +163,8 @@ async def _run(
         application = matches[0]
     if args.runtime not in application.runtime_ids:
         raise ApplicationProviderError("application runtime selection is invalid")
+    if args.application is not None:
+        assembly_path = _select_application_assembly(application, args.runtime)
     runtime_binding = registry.select(args.runtime)
     assembly = json.loads(assembly_path.read_text())
     plan = resolve_assembly(
@@ -204,6 +205,24 @@ async def _run(
             )
     stdout.write(json.dumps(_thaw(result.__dict__), sort_keys=True) + "\n")
     return 0
+
+
+def _select_application_assembly(
+    application: InstalledApplication, runtime_id: str
+) -> Path:
+    """Return the application's unique canonical assembly for one runtime."""
+
+    matches = []
+    for path in application.assembly_paths:
+        try:
+            assembly = json.loads(path.read_text())
+        except (OSError, TypeError, ValueError):
+            raise ApplicationProviderError("application assembly selection is invalid") from None
+        if isinstance(assembly, dict) and assembly.get("runtime_id") == runtime_id:
+            matches.append(path)
+    if len(matches) != 1:
+        raise ApplicationProviderError("application assembly selection is invalid")
+    return matches[0]
 
 
 def _parser() -> argparse.ArgumentParser:
