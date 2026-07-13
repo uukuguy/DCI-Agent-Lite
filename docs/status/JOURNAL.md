@@ -394,3 +394,5 @@
 - 19:14 Durable DCI projection now exposes references only, preserving protected bodies outside package results. [pending H-004 commit]
 - 19:11 AF-190-H-004 confirmed 4/4; package acceptance recorded.
 - 19:20 AF-190 closed: durable native artifacts, compatible resume, and body-free durable projection pass the complete local closure matrix; AF-200 activated.
+- 19:21 AF-190 durable-resume closure state committed for AF-200 recovery continuity. [0af5bc1]
+- 19:27 AF-200 judge, cache, batch, export, and package-CLI plan recorded from original DCI parity paths. [pending plan commit]

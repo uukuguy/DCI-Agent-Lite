@@ -222,7 +222,7 @@
 - Dependencies: AF-180, AF-190
 - Acceptance: focused fixture tests prove safe evaluation/cache behavior and batch paths reuse the Asterion DCI implementation rather than `src/dci`.
 - Design: `docs/superpowers/specs/2026-07-13-complete-dci-capability-package-design.md`
-- Plan: pending AF-200 package plan after AF-190 durable-resume closure.
+- Plan: `docs/superpowers/plans/2026-07-13-asterion-dci-evaluation-benchmark.md`
 
 ## AF-210 — Complete DCI application and runtime semantic parity
 
