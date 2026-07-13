@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13 23:00. **AF-210 is complete; this is a live post-closure checkpoint, not a final handoff.**
+> Updated: 2026-07-13 23:03. **AF-210 is merged into main; this is a live post-merge checkpoint, not a final handoff.**
 
 Active work package: none
 
@@ -13,14 +13,14 @@ Active work package: none
 
 ## Where things stand
 
-- Branch: `codex/af-210-application-parity`; commits through `a423008` are ahead of main.
-- The working tree contains only this post-commit JOURNAL/checkpoint update; carry it into the next approved integration or successor-work commit.
+- Branch: `main`; merge commit `dcd4bf3` integrates AF-210 and its closure evidence.
+- The working tree contains this merge-journal/checkpoint update only; carry it into the next approved successor-work commit.
 - H-001 through H-004 are all confirmed 4/4; no provider request occurred.
 
 ## Next action
 
-1. Run the final repository verification matrix, then commit the AF-210 closure evidence.
-2. Select a new governed work package before starting any successor implementation; Claude provider-backed parity remains outside the closed AF-210 local scope.
+1. Select a new governed work package before starting any successor implementation.
+2. Claude provider-backed parity remains outside the closed AF-210 local scope and requires separate operator authorization.
 
 ## Guardrails
 

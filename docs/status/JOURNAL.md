@@ -411,6 +411,7 @@
 - 19:40 AF-200 closure committed as `d5d5d08`; AF-210 baton prepared with no live processes or provider requests.
 - 21:34 AF-210 provider-bound Pi application parity design committed. [7628d53]
 - 22:03 AF-210 plan, decision, and governed worklist link committed. [7ecd596]
+- 22:32 AF-210 checkpoint and isolated-worktree policy committed. [1cc5e73]
 - 22:36 Fresh-worktree source baseline repair committed. [b1ee100]
 - 22:38 AF-210 Climb session registered with four local hypotheses. [4f85e15]
 - 22:44 Native DCI executor maps application cwd and isolated paths. [dfe3e43]
@@ -424,3 +425,4 @@
 - 22:58 AF-210-H-004 confirmed 4/4; package acceptance recorded.
 - 23:01 AF-210 closed: native Pi application parity, body-free projection, failure redaction, wheel inclusion, and full local closure pass without provider requests. [pending closure commit]
 - 23:01 AF-210 closure evidence is committed so the governed worklist, Climb record, and operator documentation agree. [a423008]
+- 23:03 AF-210 was locally merged into main; the pre-existing main checkpoint journal entry was preserved. [dcd4bf3]
