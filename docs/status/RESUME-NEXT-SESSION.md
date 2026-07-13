@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13 19:20. **Session remains active — not a final handoff.**
+> Updated: 2026-07-13 19:40. **AF-200 is closed; this is the AF-210 handoff baton.**
 
 Active work package: AF-210
 
@@ -8,21 +8,21 @@ Active work package: AF-210
 
 - AF-170 is closed: generic application selection accepts multiple assemblies then selects the unique `--runtime` match; DCI ships paired Pi/Claude assemblies and runs through a fixture-only Claude CLI proof. No account, gateway, credential, or provider request was used.
 - The user approved a new product direction: Asterion DCI becomes the first complete capability-package reference product, independently owning the full original DCI behavior. Old `src/dci` stays untouched and independent; Asterion does not import or execute it.
-- AF-180 and AF-190 are closed. AF-190 completed all four Climb hypotheses at 4/4, adding original-style durable native evidence, safe compatible resume, isolated protocol attempts, and body-free durable projections. AF-200 now owns evaluation and benchmark parity.
+- AF-180 through AF-200 are closed. AF-200 completed all four Climb hypotheses at 4/4, adding independent judge request shaping, exact cache reuse, deterministic JSONL benchmark orchestration, product-local commands, and body-free evaluation references. AF-210 now owns application integration and runtime semantic parity.
 
 ## Verified state
 
 - AF-170 repository closure gates previously passed: Python full suite, Python compilation/Ruff, TypeScript tests, Rust tests, shell syntax, scope audit, diff check, and isolated-wheel resource verification.
 - D-030 remains authoritative: one Asterion wheel, with an independently owned DCI module inside it. Old `src/dci` stays excluded and must not become a shim, import, or subprocess dependency.
-- AF-190 closure is verified without any Pi, judge, or Claude provider request: focused durable/resume/CLI/bridge/boundary tests, full Python discovery, Python compilation/Ruff, TypeScript and Rust tests, shell syntax, `uv run asterion-dci resume --help`, wheel proof, scope, and diff checks all passed.
-- The single Asterion wheel now contains the independent `asterion.dci` product, durable original-style artifact layout, `asterion-dci run`/`resume` commands, isolated resume attempts, and body-free capability-result projections. Old `src/dci` remains a separate source baseline.
+- AF-200 closure is verified without Pi, judge, or Claude provider requests: focused judge/evaluation/benchmark/CLI/bridge/boundary tests, full Python discovery, compile/Ruff, TypeScript and Rust tests, shell syntax, command help, scope, wheel proof, and diff checks passed.
+- The single Asterion wheel now contains the independent `asterion.dci` product with run/resume/evaluate/benchmark operations, durable native artifacts, exact judge-cache identity, deterministic batch output, and body-free projections. Old `src/dci` remains a separate source baseline.
 - No Pi, judge, or Claude provider request was sent.
 
 ## Next action
 
-1. Start AF-210 with `python3 tools/project_scope_check.py`, then plan full application integration and Pi semantic-parity evidence.
-2. Register a new AF-210 Climb session; do not reuse the completed AF-200 session.
-3. Do not send Pi, judge, or Claude provider requests without the applicable operator authorization.
+1. Start AF-210 with `python3 tools/project_scope_check.py`; inspect the approved complete-capability design and existing application bridge before writing its bounded plan.
+2. Register a new AF-210 Climb session; do not reuse the completed AF-200 session or hypotheses.
+3. Do not send Pi, judge, or Claude provider requests without applicable operator authorization; local fixture work remains allowed.
 
 ## Guardrails
 
