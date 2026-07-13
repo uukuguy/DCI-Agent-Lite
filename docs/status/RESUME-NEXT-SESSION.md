@@ -7,24 +7,20 @@ Active work package: AF-220
 ## TL;DR
 
 - AF-220-H-001 through H-004 remain confirmed 4/4 with tracked local records (cycles 67–70); the full provider-independent closure passed.
-- The worktree can use the approved shared configuration process-locally: source the main-repository `.env`, set `DCI_PI_DIR` to the main external Pi checkout, and add the worktree `src` to `PYTHONPATH`. Under that setup `make check-pi-rpc && make check-judge-config` passes without a model or HTTP request.
-- The first real acceptance, `make asterion-example`, stopped before Pi startup because the example hard-codes this worktree's missing `corpus/wiki_corpus` directory. It created one native run directory whose state is `failed`, with no events or stderr; provider/model/tools were resolved. No Pi model or Judge HTTP request occurred.
-- The runtime-context example, installed application, and one-row benchmark were not run after this failure. AF-220 is correctly still `in_progress`.
+- With process-local main `.env`, main Pi checkout, worktree source path, and approved absolute corpus root, both model-free prerequisites pass and `make asterion-example` completes. Its native output has `state.json` status `completed` plus `question.txt`, `events.jsonl`, and `final.txt`.
+- `make asterion-runtime-example` stops before prompt because Asterion forwards `DCI_RUNTIME_CONTEXT_LEVEL` as Pi’s unsupported `--context-management-level` CLI flag. The real Pi help surface has no runtime/context-level control (only unrelated context-file disabling). The failed native output has no events or evaluation result; no model or Judge request occurred.
+- Installed application and one-row Pi-plus-Judge benchmark acceptance are intentionally unrun. AF-220 remains `in_progress`.
 
 ## Next action
 
-Add an AF-220-scoped safe corpus-location boundary for Asterion examples and acceptance commands that lets the isolated worktree read the existing main-repository corpus without copying data, changing the external Pi checkout, or exposing configuration values. Re-run the bounded sequence from Step 2 only after the prerequisite remains green:
+Repair AF-220’s native context-control mapping against the current Pi capability surface without changing the source baseline or fabricating a Pi flag. Preserve source-compatible operator semantics through an explicit supported path or fail-safe omission with documented parity limits, add focused tests, then rerun local closure and restart Task 7 at `make asterion-runtime-example`.
 
-1. `make asterion-example && make asterion-runtime-example`
-2. the installed `asterion run` Pi application command from the AF-220 plan
-3. the one-row `asterion-dci benchmark` command from the AF-220 plan
-
-Stop at the first nonzero result and journal safe status only. Do not mark AF-220 complete until all four authorized checks succeed.
+After that example passes, run the installed application and one-row benchmark exactly as prescribed. Stop at the first nonzero result and journal safe status only. Do not mark AF-220 complete until all four authorized checks succeed.
 
 ## Guardrails
 
 - Do not modify or import `src/dci`; Asterion retains independent runtime ownership.
 - Do not add DCI option parsing to generic CLI/runner modules.
 - `DCI_*` is the shared normal `.env` surface; `ASTERION_DCI_OUTPUT_ROOT` remains product-local.
-- Do not copy/symlink `.env`, Pi, or corpus data into the worktree, and do not print/store credentials or provider bodies.
-- Do not run full external datasets.
+- Use the process-local main `.env`, main `DCI_PI_DIR`, and approved absolute `ASTERION_DCI_CORPUS_ROOT`; do not copy/symlink configuration, Pi, or corpus data into the worktree.
+- Do not print/store credentials or provider bodies, and do not run full external datasets.
