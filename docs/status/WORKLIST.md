@@ -41,6 +41,7 @@
 - Acceptance: Pi provider-backed evidence plus Claude Code fixture, safe-failure, restricted-command, and environment-boundary tests prove the shared protocol surface without requiring a currently unavailable account.
 - Design: `docs/superpowers/specs/2026-07-12-claude-code-protocol-adapter-design.md`
 - Plan: `docs/superpowers/plans/2026-07-12-claude-code-protocol-adapter.md`
+- Availability evidence: 2026-07-13 probe found the supported Claude Code CLI 2.1.199 but no stored login and no configured compatible gateway. No provider request was sent; this package remains active solely for the externally authorized acceptance.
 - Deferred acceptance: run the tiny local-corpus provider-backed Claude slice when a Claude login or compatible `ANTHROPIC_*` gateway is available; this does not block AF-040.
 
 ## AF-040 — Python and TypeScript host boundaries

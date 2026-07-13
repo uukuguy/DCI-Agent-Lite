@@ -47,7 +47,7 @@
 ## Open Problems (theme-level)
 
 - Provider-backed acceptance of the first non-Pi runtime when credentials or a compatible gateway become available.
-- Provider-backed acceptance of the first non-Pi runtime remains conditional on local Claude login or a compatible gateway; AF-160 may only perform the approved probe and must otherwise record a safe block.
+- AF-160 verified Claude Code 2.1.199 is installed but has no stored login and no compatible gateway configuration present. Provider-backed acceptance remains safely blocked; no provider request was sent and no code change is authorized until an operator supplies access.
 
 ## Key Files
 

@@ -347,3 +347,5 @@
 - 10:12 运行中取消现在向 sidecar 发送关联 cancel 并等待原执行终态，补齐 AF-150 lifecycle 取消边界。[e7ab64a]
 - 10:16 sidecar stderr 改为 4096-byte 分块丢弃，避免 shutdown 留存无界诊断输出。[e576122]
 - 10:25 AF-150 closure：362 Python、11 Node、19 Rust 与全部仓库门禁通过；fresh wheel 排除 `dci` 并成功运行 controlled-code Rust sidecar。[pending state commit]
+- 10:27 AF-150 closure state 与 AF-160 transition 已提交，保持唯一 active package 与可恢复治理边界。[f8416ed]
+- 10:30 AF-160 safe availability probe：Claude Code 2.1.199 已安装但无 stored login、无 gateway credential/endpoint presence；未发送 provider request，等待授权 backend。
