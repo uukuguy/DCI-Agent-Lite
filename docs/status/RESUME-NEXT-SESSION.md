@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13 17:57. **Session remains active — not a final handoff.**
+> Updated: 2026-07-13 18:02. **Session remains active — not a final handoff.**
 
 Active work package: AF-180
 
@@ -15,11 +15,12 @@ Active work package: AF-180
 - AF-170 repository closure gates previously passed: Python full suite, Python compilation/Ruff, TypeScript tests, Rust tests, shell syntax, scope audit, diff check, and isolated-wheel resource verification.
 - D-030 remains authoritative: one Asterion wheel, with an independently owned DCI module inside it. Old `src/dci` stays excluded and must not become a shim, import, or subprocess dependency.
 - AF-180 Climb now owns H-001 through H-004 and replaces the old AF-100 hard-pause only for current-session execution. H-001 is confirmed 4/4 (cycle 51): only `ASTERION_DCI_*` resolves product paths, legacy paths are never selected, process config retains precedence, and source boundaries remain closed.
+- H-002 is confirmed 4/4 (cycle 52): the Asterion-owned transport preserves direct Pi JSONL acknowledgement, retry/abort/idle checks, safe failures, and writes the AF-180 native artifact subset plus normalized protocol events.
 - No Pi, judge, or Claude provider request was sent.
 
 ## Next action
 
-1. Execute AF-180-H-002 through TDD: transplant the single-run Pi JSONL lifecycle and minimal Asterion-native artifacts, without importing or invoking `src/dci`.
+1. Execute AF-180-H-003 through TDD: expose the independent package through `asterion-dci run` and `asterion-dci system-prompt`, without changing generic `asterion` CLI parsing.
 2. Before implementation, run `python3 tools/project_scope_check.py`; retain exactly one active package.
 3. Do not send Pi, judge, or Claude provider requests without the applicable operator authorization.
 

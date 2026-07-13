@@ -1,19 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (51 runs).
+> Deterministic summary generated from tracked state (52 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 51
-- Next hypothesis: AF-180-H-002
+- Last cycle: 52
+- Next hypothesis: AF-180-H-003
 - In flight: none
-- Next action: Start AF-180-H-002.
+- Next action: Start AF-180-H-003.
 
 ## Active hypotheses
 
-- **AF-180-H-002** (pending, rank 0.90): Transplant single-run Pi JSONL lifecycle and minimal Asterion-native artifacts while preserving safe failure behavior.
 - **AF-180-H-003** (pending, rank 0.80): Expose the independent execution package through a package-local CLI and Pi system-prompt surface without changing the generic Asterion CLI.
 - **AF-180-H-004** (pending, rank 0.70): Project completed native DCI runs into the declared capability result and prove the one-wheel product boundary.
 
@@ -72,6 +71,7 @@
 | 20260713-025950-dci-climb-af100h003 | AF-100-H-003 | 4 | confirmed 4/4 |
 | 20260713-030210-dci-climb-af100h004 | AF-100-H-004 | 4 | confirmed 4/4 |
 | 20260713-175701-dci-climb-af180h001 | AF-180-H-001 | 4 | confirmed 4/4 |
+| 20260713-180208-dci-climb-af180h002 | AF-180-H-002 | 4 | confirmed 4/4 |
 
 ## Negative cache
 
