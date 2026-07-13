@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13. **Session remains active — not a final handoff.**
+> Updated: 2026-07-13 17:10. **Session remains active — not a final handoff.**
 
 Active work package: AF-180
 
@@ -8,7 +8,7 @@ Active work package: AF-180
 
 - AF-170 is closed: generic application selection accepts multiple assemblies then selects the unique `--runtime` match; DCI ships paired Pi/Claude assemblies and runs through a fixture-only Claude CLI proof. No account, gateway, credential, or provider request was used.
 - The user approved a new product direction: Asterion DCI becomes the first complete capability-package reference product, independently owning the full original DCI behavior. Old `src/dci` stays untouched and independent; Asterion does not import or execute it.
-- Approved design: `docs/superpowers/specs/2026-07-13-complete-dci-capability-package-design.md`. AF-180 is the sole active package; AF-190/200/210 are staged successors. Written-spec review is the current hard gate before an implementation plan.
+- Commit `564575e` records the approved design, architecture/decision changes, AF-170 closure, and AF-180/190/200/210 governance. AF-180 is the sole active package; written-spec review is the current hard gate before an implementation plan.
 
 ## Verified state
 

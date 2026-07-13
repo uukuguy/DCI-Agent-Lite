@@ -367,3 +367,4 @@
 - 11:05 correction: AF-170 closure evidence and operator docs committed. [55a948b]
 - 2026-07-13 用户确认新产品方向：Asterion DCI 是首个完整能力包参考产品，需独立承接原 DCI 全部功能；旧 `src/dci` 保持独立且不作为运行时依赖。
 - 2026-07-13 已批准完整 DCI 能力包设计：保持单一 Asterion wheel，以独立领域模块和包级 CLI 承接原 DCI；AF-180/190/200/210 分别覆盖执行、持久化恢复、评测基准、应用/运行时语义，Pi 为强制完整对照，Claude 真实语义须另获授权。[pending governance commit]
+- 17:10 完整 DCI 能力包设计与治理切换已提交，建立独立迁移路径。[564575e]
