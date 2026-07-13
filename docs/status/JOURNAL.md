@@ -435,3 +435,4 @@
 - 00:14 correction: preceding 00:12 AF-220 activation occurred on 2026-07-14.
 - 00:22 AF-220 plan corrected: shared judge configuration joins Task 1 and Climb registration becomes pre-implementation Task 0.
 - 00:23 AF-220 Climb state registered before production work: four pending shared-config, Pi-control, package/batch, and installed-application/example hypotheses; scope preflight is ready to rerun. [pending state commit]
+- 00:24 AF-220 Climb registration committed to repair governance preflight. [f3299f1]
