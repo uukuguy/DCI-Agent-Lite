@@ -398,3 +398,5 @@
 - 19:27 AF-200 judge, cache, batch, export, and package-CLI plan recorded from original DCI parity paths. [pending plan commit]
 - 19:28 AF-200 evaluation-benchmark plan committed for bounded independent migration. [0022532]
 - 19:30 AF-200 Climb H-001 through H-004 registered for judge, cache, batch, and operator parity. [pending registration commit]
+- 19:21 AF-200-H-001 confirmed 4/4; package acceptance recorded.
+- 19:23 Asterion-owned judge now validates configuration, request fingerprints, structured verdicts, and redacted transport failures. [pending H-001 commit]

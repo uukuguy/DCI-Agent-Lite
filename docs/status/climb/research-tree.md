@@ -1,19 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (58 runs).
+> Deterministic summary generated from tracked state (59 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 58
-- Next hypothesis: AF-200-H-001
+- Last cycle: 59
+- Next hypothesis: AF-200-H-002
 - In flight: none
-- Next action: Start AF-200-H-001.
+- Next action: Start AF-200-H-002.
 
 ## Active hypotheses
 
-- **AF-200-H-001** (pending, rank 1.00): Transplant the original DCI judge configuration, safe request shaping, validated response handling, and complete request-fingerprint identity.
 - **AF-200-H-002** (pending, rank 0.90): Evaluate completed native Asterion runs with exact cache reuse and safe evaluation-state persistence.
 - **AF-200-H-003** (pending, rank 0.80): Orchestrate explicit JSONL benchmark datasets through the independent Asterion DCI run and evaluation paths with deterministic exports.
 - **AF-200-H-004** (pending, rank 0.70): Expose evaluation and benchmark operations only through the package-local CLI and project validated evaluation evidence without bodies.
@@ -80,6 +79,7 @@
 | 20260713-190556-dci-climb-af190h002 | AF-190-H-002 | 4 | confirmed 4/4 |
 | 20260713-191011-dci-climb-af190h003 | AF-190-H-003 | 4 | confirmed 4/4 |
 | 20260713-191115-dci-climb-af190h004 | AF-190-H-004 | 4 | confirmed 4/4 |
+| 20260713-192101-dci-climb-af200h001 | AF-200-H-001 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

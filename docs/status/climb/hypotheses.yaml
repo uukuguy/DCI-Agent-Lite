@@ -1304,13 +1304,25 @@ hypotheses:
   expected_lift: +1 independent safe evaluation boundary
   cost_h: 1.0
   ranking: 1.0
-  status: pending
+  status: confirmed
   created_at: '2026-07-13T19:28:00+08:00'
-  results: []
+  results:
+  - session: 2026-07-13-af-200-dci-evaluation-benchmark
+    cycle: 59
+    run: 20260713-192101-dci-climb-af200h001
+    local: 4
+    local_per_task:
+      safe_judge_configuration: 1
+      request_fingerprint_identity: 1
+      validated_response: 1
+      transport_redaction: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-200-H-002
   work_package_id: AF-200
-  description: Evaluate completed native Asterion runs with exact cache reuse and safe
-    evaluation-state persistence.
+  description: Evaluate completed native Asterion runs with exact cache reuse and
+    safe evaluation-state persistence.
   parent_paradigm: dci-evaluation-cache
   expected_lift: +1 reproducible evaluation result boundary
   cost_h: 0.8
