@@ -2,7 +2,7 @@
 
 > Updated: 2026-07-13 19:20. **Session remains active — not a final handoff.**
 
-Active work package: AF-200
+Active work package: AF-210
 
 ## TL;DR
 
@@ -20,8 +20,8 @@ Active work package: AF-200
 
 ## Next action
 
-1. Start AF-200 with `python3 tools/project_scope_check.py`, then inspect original `src/dci` judge/cache/batch paths and the approved complete-capability design before writing its bounded implementation plan.
-2. Register a new AF-200 Climb session and hypotheses; do not reuse the completed AF-190 session.
+1. Start AF-210 with `python3 tools/project_scope_check.py`, then plan full application integration and Pi semantic-parity evidence.
+2. Register a new AF-210 Climb session; do not reuse the completed AF-200 session.
 3. Do not send Pi, judge, or Claude provider requests without the applicable operator authorization.
 
 ## Guardrails

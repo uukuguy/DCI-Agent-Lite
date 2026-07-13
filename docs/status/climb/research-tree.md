@@ -5,11 +5,11 @@
 
 ## In-flight / session state
 
-- Phase: implementation
+- Phase: completed
 - Last cycle: 62
 - Next hypothesis: None
 - In flight: none
-- Next action: Trigger Knowledge Layer.
+- Next action: AF-200 closed; register a new AF-210 Climb session before another cycle.
 
 ## Active hypotheses
 

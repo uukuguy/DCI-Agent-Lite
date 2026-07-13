@@ -216,17 +216,18 @@
 
 ## AF-200 — Complete DCI evaluation and benchmark parity
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Asterion Agent Application Framework
 - Scope: transplant judge, cache identity, batch/dataset orchestration, result/export behavior, and package-local evaluation/benchmark entry points onto the Asterion DCI execution implementation.
 - Dependencies: AF-180, AF-190
 - Acceptance: focused fixture tests prove safe evaluation/cache behavior and batch paths reuse the Asterion DCI implementation rather than `src/dci`.
 - Design: `docs/superpowers/specs/2026-07-13-complete-dci-capability-package-design.md`
 - Plan: `docs/superpowers/plans/2026-07-13-asterion-dci-evaluation-benchmark.md`
+- Closure evidence: AF-200-H-001 through H-004 are confirmed 4/4. Independent judge configuration/request fingerprinting, cache-safe run-directory evaluation, deterministic explicit-JSONL benchmarking, product-local evaluate/benchmark commands, and conditional body-free evaluation projection pass all local gates without provider requests.
 
 ## AF-210 — Complete DCI application and runtime semantic parity
 
-- Status: planned
+- Status: in_progress
 - Parent objective: Asterion Agent Application Framework
 - Scope: run the full Asterion DCI package through application assemblies, complete the Pi parity matrix, and assess Claude semantic parity only with separately authorized provider-backed evidence.
 - Dependencies: AF-180, AF-190, AF-200

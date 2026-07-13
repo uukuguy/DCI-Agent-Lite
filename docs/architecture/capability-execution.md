@@ -64,6 +64,13 @@ name only body-free references, including `conversation.json`,
 `latest_model_context.json`, `events.jsonl`, `state.json`, `final.txt`, and
 `protocol/`; it never contains their bodies.
 
+`asterion-dci evaluate` uses an Asterion-owned OpenAI-compatible judge contract.
+It stores `eval_result.json` only after a structured verdict and reuses it only
+when the full public configuration plus shaped request fingerprint matches.
+`asterion-dci benchmark` accepts explicit JSONL rows and reuses only Asterion
+native run directories; aggregate package results contain references and public
+counts, not question, answer, credential, or provider-response bodies.
+
 The existing `dci-agent-lite` command remains the external baseline. Asterion
 and baseline runs may share questions and corpora for comparison, but they do
 not share benchmark execution code. Equivalent provider reasoning traces are

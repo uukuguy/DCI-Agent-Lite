@@ -78,6 +78,19 @@ new protocol attempt. The generic `asterion` CLI remains domain-neutral. Judge,
 evaluation, and benchmark functions remain deferred to AF-200. Use
 `asterion-dci system-prompt` to print Pi's generated prompt.
 
+Evaluate a completed native run with an explicitly configured Asterion judge:
+
+```bash
+asterion-dci evaluate --output-dir path/to/run --gold-answer "Expected answer"
+asterion-dci benchmark --dataset dataset.jsonl --output-root outputs/eval --cwd corpus
+```
+
+Evaluation reuses only an exact fingerprint of the public judge configuration and
+fully shaped request. Batch rows must contain unique `query_id`, `query`, and
+`answer` fields. Both commands are product-local and require operator
+authorization before a real judge or Pi request; AF-210 retains application and
+authorized runtime-semantic parity.
+
 The installed registry also exposes `claude-code.reference`. Its factory uses
 `ASTERION_CLAUDE_EXECUTABLE` (default `claude`) and `ASTERION_RUNTIME_CWD`, but
 constructing it neither authenticates nor sends a provider request. The bundled

@@ -8,7 +8,7 @@
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: `AF-200` — complete DCI evaluation and benchmark parity.
+- Active work package: `AF-210` — complete DCI application and runtime semantic parity.
 
 ## Current Architecture
 
@@ -52,7 +52,7 @@
 
 - Provider-backed acceptance of the first non-Pi runtime when credentials or a compatible gateway become available.
 - Provider-backed Claude acceptance remains deferred because the local CLI is unauthenticated. AF-160 instead validates the installed runtime factory and existing command/fixture/redaction boundary without a provider request.
-- Judge/cache/benchmark behavior and authorized runtime semantic parity are staged under AF-200 and AF-210; no fixture-only Claude declaration constitutes full DCI parity.
+- Authorized runtime semantic parity is staged under AF-210; no fixture-only Claude declaration constitutes full DCI parity.
 
 ## Key Files
 
