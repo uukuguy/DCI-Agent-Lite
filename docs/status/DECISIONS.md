@@ -293,3 +293,13 @@
 - Boundary: no aliases, implicit latest version, version ranges, global provider loading, or multi-assembly default selection.
 - Revalidation trigger: add assembly variants or version resolution only for a concrete application that cannot use one exact identity and one canonical assembly.
 - Implemented evidence: AF-130 adds pure exact selector parsing, selected-provider application listing, preferred `--application`, advanced `--assembly`, and legacy positional compatibility. Isolated wheel verification lists `dci.research-capability@1.0.0` without exposing resource paths.
+
+## D-032 — Keep controlled-code execution host-owned
+
+- Status: ✅ accepted decision
+- Decided: 2026-07-13
+- Decision: the controlled-code workflow submits one logical validation request to an explicitly injected `executor.controlled` host service; executable, arguments, workspace, environment, deadlines, and limits remain trusted host configuration.
+- Rationale: allowing Pi or portable manifests to generate commands would enlarge the agent-to-executor authority boundary and conflate composition with dynamic workflow planning.
+- Provider boundary: the second application uses built-in provider ID `controlled-code`, separate from the DCI application provider, while shipping in the same Asterion wheel.
+- Process boundary: Asterion may provide a JSONL client for an already authorized Rust sidecar but does not automatically start it or claim operating-system sandboxing.
+- Revalidation trigger: add typed agent-proposed actions or generic CLI service startup only through separately reviewed authorization and lifecycle designs.
