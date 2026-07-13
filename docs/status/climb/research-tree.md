@@ -6,7 +6,7 @@
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 67
+- Last cycle: 66
 - Next hypothesis: AF-220-H-001
 - In flight: none
 - Next action: Start AF-220-H-001.
