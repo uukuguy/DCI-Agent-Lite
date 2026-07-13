@@ -2,10 +2,10 @@
   "session": "2026-07-13-af-180-dci-execution",
   "phase": "implementation",
   "work_package_id": "AF-180",
-  "last_cycle": 50,
-  "next_hypothesis": "AF-180-H-001",
+  "last_cycle": 51,
+  "next_hypothesis": "AF-180-H-002",
   "in_flight": null,
-  "next_action": "Execute AF-180-H-001: establish isolated Asterion DCI configuration through TDD.",
+  "next_action": "Start AF-180-H-002.",
   "falsified_routes": [
     "duplicate the authoritative Pi commit across setup.sh and .env.template",
     "convert the independent Pi checkout to vendored or submodule ownership",

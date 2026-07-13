@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13 17:53. **Session remains active — not a final handoff.**
+> Updated: 2026-07-13 17:57. **Session remains active — not a final handoff.**
 
 Active work package: AF-180
 
@@ -8,17 +8,18 @@ Active work package: AF-180
 
 - AF-170 is closed: generic application selection accepts multiple assemblies then selects the unique `--runtime` match; DCI ships paired Pi/Claude assemblies and runs through a fixture-only Claude CLI proof. No account, gateway, credential, or provider request was used.
 - The user approved a new product direction: Asterion DCI becomes the first complete capability-package reference product, independently owning the full original DCI behavior. Old `src/dci` stays untouched and independent; Asterion does not import or execute it.
-- Commits `564575e` and `cc9031e` record the approved design/governance and the AF-180 TDD plan. Execution choice is the current hard gate.
+- Commits `564575e` and `cc9031e` record the approved design/governance and the AF-180 TDD plan. `2ef7a7b` establishes the independent Asterion configuration namespace.
 
 ## Verified state
 
 - AF-170 repository closure gates previously passed: Python full suite, Python compilation/Ruff, TypeScript tests, Rust tests, shell syntax, scope audit, diff check, and isolated-wheel resource verification.
 - D-030 remains authoritative: one Asterion wheel, with an independently owned DCI module inside it. Old `src/dci` stays excluded and must not become a shim, import, or subprocess dependency.
-- AF-180 Climb now owns H-001 through H-004 and replaces the old AF-100 hard-pause only for current-session execution. Scope preflight and the complete Python baseline pass; no provider request was sent.
+- AF-180 Climb now owns H-001 through H-004 and replaces the old AF-100 hard-pause only for current-session execution. H-001 is confirmed 4/4 (cycle 51): only `ASTERION_DCI_*` resolves product paths, legacy paths are never selected, process config retains precedence, and source boundaries remain closed.
+- No Pi, judge, or Claude provider request was sent.
 
 ## Next action
 
-1. Execute AF-180-H-001 through TDD: create its failing independent-configuration tests, then implement only the smallest passing Asterion DCI configuration module.
+1. Execute AF-180-H-002 through TDD: transplant the single-run Pi JSONL lifecycle and minimal Asterion-native artifacts, without importing or invoking `src/dci`.
 2. Before implementation, run `python3 tools/project_scope_check.py`; retain exactly one active package.
 3. Do not send Pi, judge, or Claude provider requests without the applicable operator authorization.
 
