@@ -1,405 +1,243 @@
-# Installed Application Binding Implementation Plan
+# Single-Wheel Installed Application Binding Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** Execute inline with test-driven development. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Split Asterion, the DCI capability, the DCI application, and the enhanced DCI baseline into independent distributions, then run explicitly selected installed applications through a safe generic `asterion` entry point.
+**Goal:** Produce one independently installable `asterion` wheel containing the framework, modular DCI capability/application, and canonical resources while keeping `src/dci` as an unpackaged runnable repository baseline.
 
-**Architecture:** Asterion core discovers metadata in the fixed `asterion.applications` entry-point group and loads only one explicitly selected provider. Exact provider/resource/runtime/package preflight precedes runtime construction. The DCI capability and application own their canonical resources in separate wheels; the runnable baseline retains frozen `dci.framework.*` implementations and no Asterion dependency.
+**Architecture:** Generic provider discovery and execution remain under `asterion.applications`; first-party DCI code lives in `asterion.capabilities.dci_research` and `asterion.applications.dci_agent_lite`. The root project is a non-package uv workspace that exposes the baseline source only for repository development. Asterion imports no `dci`, and the baseline imports no `asterion`.
 
-**Tech Stack:** Python 3.10+, uv workspaces, Hatchling wheels/sdists, `importlib.metadata`, `importlib.resources`, frozen dataclasses, argparse, unittest, existing Agent Runtime Protocol/package execution contracts.
+**Tech Stack:** Python 3.10+, uv workspace, Hatchling, `importlib.metadata`, `importlib.resources`, argparse, unittest.
 
 ## Global Constraints
 
-- Do not change behavior in `src/dci/benchmark/`, baseline CLI commands, `.env` extensions, Pi/Judge reliability, evaluation, or existing example scripts.
-- Asterion core, `asterion-dci-research`, and `asterion-dci-agent-lite` must never import `dci`.
-- The baseline distribution must never import `asterion`; `dci.framework.*` becomes frozen baseline-owned code while benchmark imports stay unchanged.
-- Preserve all current `dci.*` wire literals and shared JSON fixture conformance; Python object identity between baseline and Asterion is intentionally removed.
-- Package-owned manifests and assemblies have exactly one canonical source copy; former resource paths disappear.
-- Provider selection uses only `asterion.applications`, exact entry-point name, and one explicit provider ID; `list` never calls `load()`.
-- No arbitrary module argument, import path in manifests, remote registry, automatic install, dependency solver, provider sandbox claim, runtime/service auto-discovery, or control plane.
-- Credentials remain in the caller environment and never enter provider values, portable manifests, public errors, or normalized output.
-- Use TDD for every behavior change and commit each task only after focused regression, compile, Ruff, shell, and diff checks.
+- Build exactly one wheel: distribution `asterion`, import namespace `asterion`.
+- Never modify behavior under `src/dci/benchmark/`.
+- Never include `src/dci` in a wheel or Asterion dependency.
+- Preserve the frozen baseline-owned `dci.framework.*` implementation and existing `.env`, Pi/Judge, evaluation, and security behavior.
+- Keep generic provider/discovery/CLI code free of hard-coded DCI identities; register the built-in provider at the Asterion distribution boundary.
+- Keep manifests and assemblies in one canonical installed resource tree.
+- Use RED → GREEN for every behavior change and run scope/diff gates before each commit.
 
 ---
 
-## File Structure
-
-- `packages/python/asterion-core/pyproject.toml` — independent `asterion` distribution and console script.
-- `packages/python/asterion-core/src/asterion/` — sole Asterion implementation, moved from `src/asterion/`.
-- `packages/python/asterion-core/src/asterion/applications/provider.py` — versioned immutable provider contract and validation.
-- `packages/python/asterion-core/src/asterion/applications/discovery.py` — metadata-only listing and selected-only loading.
-- `packages/python/asterion-core/src/asterion/cli.py` — `list` and `run` commands.
-- `packages/python/asterion-core/src/asterion/runtime/factory.py` — host-owned exact runtime factory registry.
-- `capabilities/dci-research/pyproject.toml` — independent capability distribution.
-- `capabilities/dci-research/src/asterion_dci_research/manifests/` — canonical DCI manifests moved from the old directory.
-- `applications/dci-agent-lite/pyproject.toml` — independent installed application distribution and entry point.
-- `applications/dci-agent-lite/src/asterion_dci_application/provider.py` — DCI installed-provider factory.
-- `applications/dci-agent-lite/src/asterion_dci_application/assemblies/` — canonical assemblies moved from the old directory.
-- `src/dci/framework/` — frozen baseline-owned protocol/adapter/package implementations with no Asterion imports.
-- `pyproject.toml` — baseline-only root distribution plus uv workspace/development wiring.
-- `tests/test_distribution_boundaries.py` — wheel contents, isolated installs, import direction, baseline behavior.
-- `tests/test_installed_application_provider.py` — provider values, resource safety, exact contract.
-- `tests/test_application_discovery.py` — metadata-only list, exact selected load, ambiguity/redaction.
-- `tests/test_asterion_cli.py` — generic CLI preflight and normalized execution.
-- Existing framework tests — migrate product imports to `asterion.*`; retain separate baseline tests on `dci.framework.*`.
-
-### Task 1: Split the Asterion core and freeze the enhanced baseline
+### Task 1: Lock the one-wheel and source-baseline boundary
 
 **Files:**
-- Create: `packages/python/asterion-core/pyproject.toml`
-- Move: `src/asterion/` to `packages/python/asterion-core/src/asterion/`
-- Modify: `src/dci/framework/**/*.py`
-- Modify: root `pyproject.toml`
-- Create: `tests/test_distribution_boundaries.py`
-- Modify: `tests/test_asterion_structure.py`
+- Modify: `tests/test_distribution_boundaries.py`
+- Modify: `pyproject.toml`
+- Modify: `packages/python/asterion-core/pyproject.toml`
+- Delete: `capabilities/dci-research/pyproject.toml`
 
 **Interfaces:**
-- Produces distribution `asterion==0.1.0` containing only `asterion`.
-- Produces baseline distribution `dci==0.1.0` containing only `dci` and depending on no Asterion package.
-- Preserves baseline imports such as `dci.framework.protocol` and `dci.framework.adapters.pi` as independent implementations.
+- Produces one uv workspace member named `asterion`.
+- Produces no root `dci` build system, project metadata, wheel target, or installed DCI scripts.
+- Keeps `src/dci` importable for repository test and source-command execution.
 
-- [ ] **Step 1: Write failing distribution-boundary tests**
+- [ ] **Step 1: Write failing boundary tests**
 
-Tests must inspect built wheels and source imports:
+Replace the old core/baseline/capability wheel assertions with tests that:
 
 ```python
+self.assertEqual(workspace_members(), {"packages/python/asterion-core"})
+self.assertFalse(root_is_buildable_project())
+self.assertFalse((ROOT / "capabilities/dci-research/pyproject.toml").exists())
+self.assertEqual(built_wheels(), ["asterion"])
 self.assertEqual(wheel_top_levels(asterion_wheel), {"asterion"})
-self.assertEqual(wheel_top_levels(dci_wheel), {"dci"})
-self.assertNotIn("Requires-Dist: dci", metadata(asterion_wheel))
-self.assertNotIn("Requires-Dist: asterion", metadata(dci_wheel))
-self.assert_no_import(ROOT / "packages/python/asterion-core/src", "dci")
-self.assert_no_import(ROOT / "src/dci", "asterion")
+self.assertNotIn("dci/", wheel_names)
 ```
 
-Add a baseline test proving `PiProtocolAdapter`, request/event validation, and
-`dci-agent-lite --help` still work after uninstalling Asterion from an isolated
-environment.
+Retain source scans proving neither tree imports the other. Add a subprocess
+test using `PYTHONPATH=src` and `python -m dci.benchmark.pi_rpc_runner --help`
+to prove the unpackaged baseline remains runnable.
 
 - [ ] **Step 2: Verify RED**
 
 Run: `uv run python -m unittest tests.test_distribution_boundaries -v`
 
-Expected: failures because Asterion is still inside the root wheel and baseline framework modules import Asterion.
+Expected: failures because the root still defines distribution `dci`, the
+capability is a workspace project, and two extra wheels can be built.
 
-- [ ] **Step 3: Create the Asterion core project and move code**
+- [ ] **Step 3: Make the root a non-package workspace**
 
-Use Hatchling project metadata:
+Remove root `[build-system]`, `[project]`, `[project.scripts]`, and Hatch wheel
+sections. Keep shared dependencies in `[dependency-groups].dev`, keep only the
+Asterion workspace source/member, and add uv configuration needed for tests to
+see `src` and the Asterion project. Regenerate `uv.lock` with `uv lock`.
 
-```toml
-[project]
-name = "asterion"
-version = "0.1.0"
-requires-python = ">=3.10"
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/asterion"]
-```
-
-Move the complete authoritative tree; do not copy it. Update test/import paths
-and Python compilation roots.
-
-- [ ] **Step 4: Freeze baseline-owned framework behavior**
-
-Replace every Asterion re-export under `src/dci/framework/` with the current
-stable implementation required by baseline tests. Internal imports target
-`dci.framework.*`, never `asterion.*`. Preserve benchmark files and their import
-statements unchanged. Shared wire constants remain byte-equal, but tests must
-assert behavior/conformance rather than object identity.
-
-- [ ] **Step 5: Make the root distribution baseline-only**
-
-Root Hatch packages become `packages = ["src/dci"]`. Preserve every existing
-`[project.scripts]` entry and runtime dependency. Add uv workspace membership
-for the three Asterion-side projects without making baseline runtime metadata
-depend on them.
-
-- [ ] **Step 6: Verify and commit**
+- [ ] **Step 4: Verify GREEN and commit**
 
 Run:
 
 ```bash
-uv run python -m unittest tests.test_distribution_boundaries tests.test_asterion_structure tests.test_pi_rpc_runner tests.test_agent_runtime_protocol -v
-uv run python -m compileall -q packages/python/asterion-core/src src/dci tests
-uv run ruff check packages/python/asterion-core/src src/dci tests
-git diff --check
-```
-
-Commit: `refactor: split Asterion from the DCI baseline`
-
-### Task 2: Make the DCI capability an independent resource-owning distribution
-
-**Files:**
-- Create: `capabilities/dci-research/pyproject.toml`
-- Move: `capabilities/dci-research/manifests/*.json` to `capabilities/dci-research/src/asterion_dci_research/manifests/`
-- Modify: capability/catalog/assembly tests and docs referencing old paths
-- Modify: root workspace development configuration
-- Modify: `tests/test_distribution_boundaries.py`
-
-**Interfaces:**
-- Produces distribution `asterion-dci-research==0.1.0`, depending only on `asterion>=0.1.0`.
-- Produces `manifest_root() -> Traversable` or context-managed canonical resource access from `importlib.resources`.
-
-- [ ] **Step 1: Write failing wheel/resource tests**
-
-Build the capability wheel, install it with the Asterion wheel into an isolated
-environment, and assert all four validated manifests are discoverable through
-`importlib.resources.files("asterion_dci_research").joinpath("manifests")`.
-Assert the former `capabilities/dci-research/manifests` path does not exist and
-the wheel contains each JSON basename once.
-
-- [ ] **Step 2: Verify RED**
-
-Run: `uv run python -m unittest tests.test_distribution_boundaries.DciCapabilityDistributionTests -v`
-
-Expected: missing nested project/resources and duplicate root packaging assumptions.
-
-- [ ] **Step 3: Create distribution and move canonical resources**
-
-The nested project declares `asterion>=0.1.0`, includes
-`src/asterion_dci_research`, and includes `manifests/*.json` as wheel/sdist data.
-Remove the capability path from root Hatch packages. Update catalog consumers to
-resolve installed resources rather than repository-relative old paths.
-
-- [ ] **Step 4: Verify and commit**
-
-Run capability, catalog, composition, assembly, wheel, compile, and Ruff suites.
-
-Commit: `refactor: package DCI research independently`
-
-### Task 3: Define and validate the installed application provider contract
-
-**Files:**
-- Create: `packages/python/asterion-core/src/asterion/applications/__init__.py`
-- Create: `packages/python/asterion-core/src/asterion/applications/provider.py`
-- Create: `tests/test_installed_application_provider.py`
-
-**Interfaces:**
-- Produces `APPLICATION_PROVIDER_PROTOCOL = "asterion.application-provider/v1"`.
-- Produces frozen `InstalledApplicationProvider`, `InstalledApplication`, `ApplicationProviderError`, and `validate_installed_provider`.
-
-- [ ] **Step 1: Write failing contract and filesystem tests**
-
-Use this API:
-
-```python
-provider = InstalledApplicationProvider(
-    protocol="asterion.application-provider/v1",
-    provider_id="example-app",
-    resource_root=root,
-    applications=(InstalledApplication(
-        application_id="example.research",
-        version="1.0.0",
-        assembly_paths=(root / "assemblies/research.json",),
-        catalog_roots=(root / "manifests",),
-        implementations=((PackageRef("example.research", "1.0.0"), implementation),),
-        runtime_ids=("pi.reference",),
-    ),),
-)
-validated = validate_installed_provider(provider, selected_id="example-app")
-```
-
-Test protocol/ID mismatch, duplicates, mutable/wrong types, empty runtime set,
-unknown binding, symlink root/path, missing path, canonical escape, and safe
-messages without object/module/sentinel content.
-
-- [ ] **Step 2: Verify RED**
-
-Run: `uv run python -m unittest tests.test_installed_application_provider -v`
-
-Expected: provider module missing.
-
-- [ ] **Step 3: Implement immutable validation**
-
-Canonicalize with `resolve(strict=True)`, reject symlinks before resolution,
-require resources beneath `resource_root`, validate assembly identity against
-the declared `application_id@version`, and reuse AF-110 exact implementation
-preflight after assembly resolution. Return a deeply immutable validated value;
-never include reprs, module paths, or unsafe contents in errors.
-
-- [ ] **Step 4: Verify and commit**
-
-Run provider, package execution, assembly, compile, and Ruff tests.
-
-Commit: `feat: define installed application providers`
-
-### Task 4: Discover metadata and load only the selected provider
-
-**Files:**
-- Create: `packages/python/asterion-core/src/asterion/applications/discovery.py`
-- Create: `tests/test_application_discovery.py`
-
-**Interfaces:**
-- Produces `InstalledProviderMetadata`, `list_application_providers(entry_points=None)`, and `load_application_provider(provider_id, entry_points=None)`.
-
-- [ ] **Step 1: Write failing metadata/load tests**
-
-Use fake entry-point objects with counters. Assert list sorts provider and
-distribution metadata without `load()`. Assert load validates provider ID first,
-loads exactly one exact-name match, rejects zero/duplicates, does not load
-adjacent entries, invokes one no-argument factory, validates its result, and
-redacts import/factory exceptions.
-
-- [ ] **Step 2: Verify RED**
-
-Run: `uv run python -m unittest tests.test_application_discovery -v`
-
-Expected: discovery module missing.
-
-- [ ] **Step 3: Implement selected-only discovery**
-
-Query only group `asterion.applications`. Metadata output contains provider ID,
-distribution name, and distribution version; never entry-point value/module.
-Require the provider factory to be callable and convert every load/factory
-exception into `ApplicationProviderError("installed application provider failed to load")`.
-
-- [ ] **Step 4: Verify and commit**
-
-Run discovery/provider tests, compile, Ruff, and diff checks.
-
-Commit: `feat: load explicit installed applications`
-
-### Task 5: Add host-owned runtime factories and the generic Asterion CLI
-
-**Files:**
-- Create: `packages/python/asterion-core/src/asterion/runtime/factory.py`
-- Create: `packages/python/asterion-core/src/asterion/cli.py`
-- Modify: `packages/python/asterion-core/pyproject.toml`
-- Create: `tests/test_asterion_cli.py`
-
-**Interfaces:**
-- Produces exact `RuntimeFactoryRegistry` and console script `asterion = "asterion.cli:main"`.
-- Produces commands `asterion list` and `asterion run --provider ID --runtime ID ASSEMBLY`.
-
-- [ ] **Step 1: Write failing CLI ordering/privacy tests**
-
-Patch discovery and runtime factories with recording fakes. Prove list does not
-load, run loads only the selected provider, all provider/resource/assembly/
-binding/runtime compatibility checks precede factory invocation, stdin/input is
-not echoed on failure, and stdout is exactly one JSON object containing
-application/runtime/run IDs plus normalized events/artifacts.
-
-- [ ] **Step 2: Verify RED**
-
-Run: `uv run python -m unittest tests.test_asterion_cli -v`
-
-Expected: CLI/factory modules missing and no `asterion` script.
-
-- [ ] **Step 3: Implement exact runtime registry and CLI**
-
-The registry accepts iterable `(runtime_id, factory)` bindings and rejects
-duplicates/unknown IDs. `main(argv=None, *, entry_points=None,
-runtime_factories=None)` supports deterministic dependency injection for tests.
-Use argparse without exposing provider module values. Construct runtime only
-after complete provider and assembly preflight, then call
-`run_composed_application`.
-
-- [ ] **Step 4: Verify and commit**
-
-Run CLI, discovery, provider, runner, console-script wheel, compile, and Ruff tests.
-
-Commit: `feat: run installed Asterion applications`
-
-### Task 6: Package and register the DCI installed application
-
-**Files:**
-- Create: `applications/dci-agent-lite/pyproject.toml`
-- Create: `applications/dci-agent-lite/src/asterion_dci_application/__init__.py`
-- Create: `applications/dci-agent-lite/src/asterion_dci_application/provider.py`
-- Move: `applications/dci-agent-lite/assemblies/*.json` to `applications/dci-agent-lite/src/asterion_dci_application/assemblies/`
-- Replace/remove: `applications/dci-agent-lite/python/dci_research_host.py`
-- Modify: integration and distribution tests/docs
-
-**Interfaces:**
-- Registers `[project.entry-points."asterion.applications"] dci-agent-lite = "asterion_dci_application.provider:create_provider"`.
-- Produces one provider for `dci.research-capability@1.0.0` with exact DCI implementation and `pi.reference` compatibility.
-
-- [ ] **Step 1: Write failing independent-wheel and generic-run tests**
-
-Build/install Asterion core, DCI capability, and DCI application wheels into an
-isolated environment. Assert metadata listing does not import DCI provider,
-selected load returns canonical resources, assemblies occur exactly once, old
-paths do not exist, and a fixture runtime executes the DCI app through the same
-generic CLI used by a synthetic independent provider.
-
-- [ ] **Step 2: Verify RED**
-
-Run DCI application distribution and generic CLI integration tests.
-
-Expected: no nested distribution/entry point and resources remain at old paths.
-
-- [ ] **Step 3: Implement provider and move canonical resources**
-
-Use `importlib.resources.files` for application assemblies and the capability's
-manifest root. Return immutable provider values only; do not construct runtime,
-load `.env`, start services, import `dci`, or reference repository-root paths.
-
-- [ ] **Step 4: Verify baseline and product paths**
-
-Run isolated wheel integration, DCI capability/app, generic CLI, baseline
-`dci-agent-lite --help`, both baseline example command-construction tests, and
-source import-boundary checks.
-
-- [ ] **Step 5: Commit**
-
-Commit: `feat: register the installed DCI application`
-
-### Task 7: Document and close AF-120
-
-**Files:**
-- Create: `docs/architecture/installed-applications.md`
-- Modify: `docs/architecture/agent-framework.md`
-- Modify: `docs/status/DECISIONS.md`
-- Modify: `docs/status/WORKLIST.md`
-- Modify: `docs/status/CURRENT-STATE.md`
-- Modify: `docs/status/JOURNAL.md` append-only
-- Modify: `docs/status/RESUME-NEXT-SESSION.md`
-
-**Interfaces:**
-- Produces operator documentation, four-wheel dependency evidence, AF-120 acceptance, and a governed successor or explicit terminal state.
-
-- [ ] **Step 1: Add failing documentation assertions**
-
-Assert the guide documents entry-point trust, metadata-only list, selected-only
-load, resource roots, runtime authority, four distributions, frozen enhanced
-baseline, privacy failures, and all non-goals.
-
-- [ ] **Step 2: Write guide and migration notes**
-
-Include install/build commands for each wheel, `asterion list/run` examples,
-baseline comparison commands, dependency graph, and the removal of Python object
-identity between baseline and Asterion.
-
-- [ ] **Step 3: Run full verification**
-
-```bash
-uv run python -m unittest discover -v
-uv run python -m compileall -q packages/python/asterion-core/src capabilities/dci-research/src applications/dci-agent-lite/src src/dci tests
-uv run ruff check packages/python/asterion-core/src capabilities/dci-research/src applications/dci-agent-lite/src src/dci tests
-uv build --package asterion
-uv build --package asterion-dci-research
-uv build --package asterion-dci-agent-lite
-uv build --package dci
-npm --prefix packages/typescript/asterion-runtime test
-cargo test --manifest-path packages/rust/controlled-executor/Cargo.toml
-cargo fmt --manifest-path packages/rust/controlled-executor/Cargo.toml --check
-cargo clippy --manifest-path packages/rust/controlled-executor/Cargo.toml --all-targets -- -D warnings
-bash -n tools/climb/eval-local.sh scripts/examples/dci_basic_example.sh scripts/examples/dci_runtime_context_example.sh
+uv run python -m unittest tests.test_distribution_boundaries tests.test_pi_rpc_runner tests.test_judge -v
+uv run python -m compileall -q src packages/python/asterion-core/src tests
+uv run ruff check src packages/python/asterion-core/src tests
 python3 tools/project_scope_check.py
 git diff --check
 ```
 
-Install the four built wheels into separate temporary environments and rerun
-import/content/entry-point smoke tests outside the checkout. When credentials
-are valid, run the Asterion DCI provider probe and the independent baseline
-example; record correctness separately rather than treating process exit as an
-answer-quality pass.
+Commit: `build: make Asterion the only distribution`
 
-- [ ] **Step 4: Govern closure**
+### Task 2: Fold the DCI capability and manifests into Asterion
 
-Rerun scope preflight, record exact test/build/provider/baseline evidence,
-complete AF-120, select the dependency-ready successor or terminal state, update
-structural state and D-030, append journal facts, and refresh a live checkpoint.
+**Files:**
+- Move: `capabilities/dci-research/src/asterion_dci_research/implementation.py` to `packages/python/asterion-core/src/asterion/capabilities/dci_research/implementation.py`
+- Move: `capabilities/dci-research/src/asterion_dci_research/manifests/*.json` to `packages/python/asterion-core/src/asterion/capabilities/dci_research/manifests/`
+- Create: `packages/python/asterion-core/src/asterion/capabilities/__init__.py`
+- Create: `packages/python/asterion-core/src/asterion/capabilities/dci_research/__init__.py`
+- Modify: capability, catalog, composition, assembly, runner, TypeScript fixture, host, and architecture references found by `rg 'asterion_dci_research|capabilities/dci-research'`
+- Modify: `tests/test_distribution_boundaries.py`
 
-- [ ] **Step 5: Commit closure atomically**
+**Interfaces:**
+- Produces `asterion.capabilities.dci_research.DciLocalResearchImplementation`.
+- Produces canonical installed manifests at `importlib.resources.files("asterion").joinpath("capabilities/dci_research/manifests")`.
 
-Commit: `docs: close installed application binding`
+- [ ] **Step 1: Write failing namespace/resource tests**
+
+Update `tests/test_dci_research_capability.py` and distribution tests to import
+the new namespace and assert four manifests exist in the built Asterion wheel,
+each exactly once. Assert the former nested package directory is absent.
+
+- [ ] **Step 2: Verify RED**
+
+Run: `uv run python -m unittest tests.test_dci_research_capability tests.test_distribution_boundaries -v`
+
+Expected: import/resource failures for the new namespace.
+
+- [ ] **Step 3: Move code/resources and update consumers**
+
+Move rather than copy the implementation and JSON files. Update imports and
+repository test paths atomically. Preserve all manifest bytes and stable
+`dci.*` identities.
+
+- [ ] **Step 4: Verify GREEN and commit**
+
+Run focused capability/catalog/composition/assembly/execution tests, TypeScript
+fixture tests, compile, Ruff, scope, and diff checks.
+
+Commit: `refactor: bundle DCI research with Asterion`
+
+### Task 3: Add the built-in DCI application provider and resources
+
+**Files:**
+- Create: `packages/python/asterion-core/src/asterion/applications/dci_agent_lite/__init__.py`
+- Create: `packages/python/asterion-core/src/asterion/applications/dci_agent_lite/provider.py`
+- Move: `applications/dci-agent-lite/assemblies/*.json` to `packages/python/asterion-core/src/asterion/applications/dci_agent_lite/assemblies/`
+- Modify: `packages/python/asterion-core/pyproject.toml`
+- Modify: `packages/python/asterion-core/src/asterion/runtime/factory.py`
+- Create: `tests/test_builtin_dci_application.py`
+- Modify: assembly/runner/structure/TypeScript fixture documentation references found by `rg 'applications/dci-agent-lite/assemblies'`
+
+**Interfaces:**
+- Produces `create_provider() -> InstalledApplicationProvider` for provider ID `dci-agent-lite`.
+- Registers `[project.entry-points."asterion.applications"] dci-agent-lite = "asterion.applications.dci_agent_lite:create_provider"`.
+- Exposes canonical assemblies and DCI manifests beneath one `asterion` resource root.
+- Provides explicit `pi.reference` runtime binding through Asterion-owned factory configuration.
+
+- [ ] **Step 1: Write failing built-in provider tests**
+
+Test installed metadata discovery without provider load, exact selected loading,
+resource-root containment, exact DCI implementation binding, runtime identity,
+and successful wheel-isolated resource discovery. Assert generic discovery and
+CLI modules contain no DCI import or identity literal.
+
+- [ ] **Step 2: Verify RED**
+
+Run: `uv run python -m unittest tests.test_builtin_dci_application -v`
+
+Expected: missing built-in provider and entry point.
+
+- [ ] **Step 3: Implement the provider and move assemblies**
+
+Build provider paths through `importlib.resources.files("asterion")`, bind
+`dci.research@1.0.0` to `DciLocalResearchImplementation`, and declare only
+`pi.reference`. Register the provider in Asterion metadata. Do not add DCI
+fallback logic to discovery or CLI.
+
+- [ ] **Step 4: Verify GREEN and commit**
+
+Run provider/discovery/CLI/assembly/composed-runner tests plus wheel inspection,
+compile, Ruff, scope, and diff checks.
+
+Commit: `feat: bundle the DCI application provider`
+
+### Task 4: Preserve repository baseline workflows without packaging
+
+**Files:**
+- Modify: `README.md`
+- Modify: `assets/docs/*.md`
+- Modify: `scripts/examples/dci_*_example.sh`
+- Modify: `scripts/bcplus_eval/run_bcplus_eval.py`
+- Modify: `Makefile` if a shared source-command wrapper is needed
+- Modify: `tests/test_asterion_structure.py`
+
+**Interfaces:**
+- Produces one documented source invocation, `PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner`, reused by repository scripts.
+- Does not change any Python file below `src/dci/benchmark/`.
+
+- [ ] **Step 1: Write failing source-workflow tests**
+
+Update structural tests to reject `uv run dci-agent-lite` as an installed
+command and require the source invocation in maintained examples/evaluator.
+Record hashes of files under `src/dci/benchmark/` before this task and assert
+they remain unchanged in the task diff.
+
+- [ ] **Step 2: Verify RED**
+
+Run: `uv run python -m unittest tests.test_asterion_structure -v`
+
+Expected: old installed-command assertions and script contents fail.
+
+- [ ] **Step 3: Update wrappers and documentation**
+
+Replace repository invocations with the source command while preserving every
+existing CLI argument, environment default, stdin flow, and evaluation
+behavior. Do not edit baseline implementation files.
+
+- [ ] **Step 4: Verify GREEN and commit**
+
+Run structure, Pi runner, judge, evaluator tests; `bash -n` on all touched shell
+scripts; compile, Ruff, scope, and diff checks.
+
+Commit: `docs: run the DCI baseline from repository source`
+
+### Task 5: Close AF-120 with full verification
+
+**Files:**
+- Modify: `docs/architecture/asterion-framework-layout.md`
+- Modify: `docs/architecture/capability-execution.md`
+- Modify: `docs/status/WORKLIST.md`
+- Modify: `docs/status/CURRENT-STATE.md`
+- Modify: `docs/status/DECISIONS.md`
+- Modify: `docs/status/JOURNAL.md`
+- Modify: `docs/status/RESUME-NEXT-SESSION.md` only if a recovery checkpoint is due
+
+**Interfaces:**
+- Produces AF-120 acceptance evidence and either a governed successor package or explicit terminal roadmap state.
+
+- [ ] **Step 1: Run full verification**
+
+```bash
+uv run python -m unittest discover -v
+uv run python -m compileall -q src packages/python/asterion-core/src tests
+uv run ruff check src packages/python/asterion-core/src tests
+npm --prefix packages/typescript/asterion-runtime test
+cargo test --manifest-path packages/rust/controlled-executor/Cargo.toml
+bash -n scripts/examples/*.sh scripts/bcplus_eval/*.sh
+python3 tools/project_scope_check.py
+git diff --check
+```
+
+Build `asterion` into a temporary directory, install it into an isolated
+environment, run `asterion list`, and verify the DCI provider/resources are
+available while `import dci` fails.
+
+- [ ] **Step 2: Update architecture and package state**
+
+Document the one-wheel layout, source-only baseline, provider trust boundary,
+verification counts, and successor state. Run scope preflight again after the
+ledger transition.
+
+- [ ] **Step 3: Commit closure**
+
+Commit: `docs: close single-wheel application binding`
