@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13 17:10. **Session remains active — not a final handoff.**
+> Updated: 2026-07-13 17:18. **Session remains active — not a final handoff.**
 
 Active work package: AF-180
 
@@ -8,7 +8,7 @@ Active work package: AF-180
 
 - AF-170 is closed: generic application selection accepts multiple assemblies then selects the unique `--runtime` match; DCI ships paired Pi/Claude assemblies and runs through a fixture-only Claude CLI proof. No account, gateway, credential, or provider request was used.
 - The user approved a new product direction: Asterion DCI becomes the first complete capability-package reference product, independently owning the full original DCI behavior. Old `src/dci` stays untouched and independent; Asterion does not import or execute it.
-- Commit `564575e` records the approved design, architecture/decision changes, AF-170 closure, and AF-180/190/200/210 governance. AF-180 is the sole active package; written-spec review is the current hard gate before an implementation plan.
+- Commit `564575e` records the approved design, architecture/decision changes, AF-170 closure, and AF-180/190/200/210 governance. The approved AF-180 plan is `docs/superpowers/plans/2026-07-13-complete-dci-capability-execution.md`; execution choice is the current hard gate.
 
 ## Verified state
 
@@ -18,7 +18,7 @@ Active work package: AF-180
 
 ## Next action
 
-1. Ask the user to review the approved written AF-180 specification, then use `writing-plans` to produce the detailed implementation plan.
+1. Start AF-180 task execution only after the user selects subagent-driven or inline execution for the approved plan.
 2. Before implementation, run `python3 tools/project_scope_check.py`; retain exactly one active package.
 3. Do not send Pi, judge, or Claude provider requests without the applicable operator authorization.
 

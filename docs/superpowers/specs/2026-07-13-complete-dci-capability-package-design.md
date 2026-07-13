@@ -1,6 +1,6 @@
 # Complete Asterion DCI Capability Package Design
 
-> Status: approved direction; written specification awaiting user review.
+> Status: approved; AF-180 implementation plan written.
 >
 > Active package: AF-180.
 

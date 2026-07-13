@@ -200,7 +200,7 @@
 - Dependencies: AF-110, AF-120, AF-170
 - Acceptance: the Asterion-owned DCI implementation has a deterministic single-run Pi parity matrix, separate `ASTERION_DCI_*` configuration/output ownership, package-local run CLI, safe native artifacts, capability-contract bridge, and no runtime dependency on the legacy DCI product.
 - Design: `docs/superpowers/specs/2026-07-13-complete-dci-capability-package-design.md`
-- Plan: pending written-spec review; implementation planning remains blocked.
+- Plan: `docs/superpowers/plans/2026-07-13-complete-dci-capability-execution.md`
 
 ## AF-190 — Complete DCI durable run and resume parity
 
