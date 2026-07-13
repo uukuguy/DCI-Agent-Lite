@@ -189,7 +189,7 @@
 - Dependencies: AF-120, AF-160
 - Acceptance: approved design and plan define exact provider declaration, fixture-only generic CLI proof, Pi compatibility preservation, and the boundary for future real authorization.
 - Design: `docs/superpowers/specs/2026-07-13-installed-dci-claude-compatibility-design.md`
-- Plan: pending written-spec review; do not implement or launch a climb cycle.
+- Plan: `docs/superpowers/plans/2026-07-13-installed-dci-claude-compatibility.md`
 
 ## AF-095 — Asterion framework identity and extraction
 
