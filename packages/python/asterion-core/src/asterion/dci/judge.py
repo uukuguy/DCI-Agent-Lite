@@ -16,7 +16,6 @@ from typing import Any
 
 DEFAULT_JUDGE_BASE_URL = "https://api.openai.com/v1"
 DEFAULT_JUDGE_MODEL = "gpt-5.4-nano"
-JUDGE_ENV_PREFIX = "ASTERION_DCI_JUDGE_"
 JUDGE_VERDICT_SCHEMA: dict[str, object] = {
     "type": "object",
     "properties": {
@@ -79,25 +78,25 @@ class JudgeConfig:
 
     @classmethod
     def from_env(cls) -> "JudgeConfig":
-        """Load only Asterion DCI judge settings and an environment credential."""
+        """Load shared judge settings with Asterion compatibility aliases."""
 
-        base_url = os.environ.get(f"{JUDGE_ENV_PREFIX}BASE_URL", DEFAULT_JUDGE_BASE_URL)
-        api_key_env = os.environ.get(f"{JUDGE_ENV_PREFIX}API_KEY_ENV", "OPENAI_API_KEY")
+        api_key_env = _judge_env("API_KEY_ENV", "OPENAI_API_KEY")
         return cls(
-            base_url=base_url,
-            api=os.environ.get(f"{JUDGE_ENV_PREFIX}API", "responses"),
-            model=os.environ.get(f"{JUDGE_ENV_PREFIX}MODEL", DEFAULT_JUDGE_MODEL),
-            timeout_seconds=_env_int("TIMEOUT_SECONDS", 120),
-            max_output_tokens=_env_int("MAX_OUTPUT_TOKENS", 1024),
-            json_mode=_env_bool("JSON_MODE", True),
-            strict_json_schema=_env_bool("STRICT_JSON_SCHEMA", False),
-            responses_store=_env_bool("RESPONSES_STORE", False),
-            thinking=os.environ.get(f"{JUDGE_ENV_PREFIX}THINKING", "auto"),
-            input_price_per_1m=_env_float("INPUT_PRICE_PER_1M", 0.20),
-            cached_input_price_per_1m=_env_float("CACHED_INPUT_PRICE_PER_1M", 0.02),
-            output_price_per_1m=_env_float("OUTPUT_PRICE_PER_1M", 1.25),
+            base_url=_judge_env("BASE_URL", DEFAULT_JUDGE_BASE_URL),
+            api=_judge_env("API", "responses"),
+            model=_judge_env("MODEL", DEFAULT_JUDGE_MODEL),
+            timeout_seconds=_judge_env_int("TIMEOUT_SECONDS", 120),
+            max_output_tokens=_judge_env_int("MAX_OUTPUT_TOKENS", 1024),
+            json_mode=_judge_env_bool("JSON_MODE", True),
+            strict_json_schema=_judge_env_bool("STRICT_JSON_SCHEMA", False),
+            responses_store=_judge_env_bool("RESPONSES_STORE", False),
+            thinking=_judge_env("THINKING", "auto"),
+            input_price_per_1m=_judge_env_float("INPUT_PRICE_PER_1M", 0.20),
+            cached_input_price_per_1m=_judge_env_float("CACHED_INPUT_PRICE_PER_1M", 0.02),
+            output_price_per_1m=_judge_env_float("OUTPUT_PRICE_PER_1M", 1.25),
             api_key_env=api_key_env,
-            api_key=os.environ.get(f"{JUDGE_ENV_PREFIX}API_KEY", "").strip()
+            api_key=os.environ.get("DCI_EVAL_JUDGE_API_KEY", "").strip()
+            or os.environ.get("ASTERION_DCI_JUDGE_API_KEY", "").strip()
             or os.environ.get(api_key_env, "").strip(),
         )
 
@@ -237,29 +236,29 @@ def _normalize_api(value: str) -> str:
     raise ValueError("Judge API must be responses or chat-completions")
 
 
-def _env_int(name: str, default: int) -> int:
+def _judge_env(name: str, default: str) -> str:
+    return os.environ.get(
+        f"DCI_EVAL_JUDGE_{name}",
+        os.environ.get(f"ASTERION_DCI_JUDGE_{name}", default),
+    )
+
+
+def _judge_env_int(name: str, default: int) -> int:
     try:
-        return int(os.environ.get(f"{JUDGE_ENV_PREFIX}{name}", default))
+        return int(_judge_env(name, str(default)))
     except ValueError as error:
-        raise ValueError(f"{JUDGE_ENV_PREFIX}{name} must be an integer") from error
+        raise ValueError(f"DCI_EVAL_JUDGE_{name} must be an integer") from error
 
 
-def _env_float(name: str, default: float) -> float:
+def _judge_env_float(name: str, default: float) -> float:
     try:
-        return float(os.environ.get(f"{JUDGE_ENV_PREFIX}{name}", default))
+        return float(_judge_env(name, str(default)))
     except ValueError as error:
-        raise ValueError(f"{JUDGE_ENV_PREFIX}{name} must be a number") from error
+        raise ValueError(f"DCI_EVAL_JUDGE_{name} must be a number") from error
 
 
-def _env_bool(name: str, default: bool) -> bool:
-    value = os.environ.get(f"{JUDGE_ENV_PREFIX}{name}")
-    if value is None:
-        return default
-    if value.strip().lower() in {"1", "true", "yes", "on"}:
-        return True
-    if value.strip().lower() in {"0", "false", "no", "off"}:
-        return False
-    raise ValueError(f"{JUDGE_ENV_PREFIX}{name} must be a boolean")
+def _judge_env_bool(name: str, default: bool) -> bool:
+    return _judge_env(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _fingerprint(config: JudgeConfig, request_payload: dict[str, object]) -> str:

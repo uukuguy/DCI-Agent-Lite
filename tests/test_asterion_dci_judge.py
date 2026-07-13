@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import unittest
 import urllib.error
 from dataclasses import replace
@@ -27,6 +28,23 @@ class AsterionDciJudgeTests(unittest.TestCase):
         self.assertEqual(public["judge_base_url"], "https://judge.example.test/v1")
         self.assertNotIn("api_key", public)
         self.assertNotIn("secret-key", repr(public))
+
+    def test_shared_judge_settings_win_over_asterion_aliases(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "DCI_EVAL_JUDGE_BASE_URL": "https://shared.example.test/v1",
+                "DCI_EVAL_JUDGE_MODEL": "shared-judge",
+                "ASTERION_DCI_JUDGE_MODEL": "compat-judge",
+            },
+            clear=True,
+        ):
+            config = JudgeConfig.from_env()
+
+        self.assertEqual(
+            (config.base_url, config.model),
+            ("https://shared.example.test/v1", "shared-judge"),
+        )
 
     def test_fingerprint_changes_with_complete_request_shape(self) -> None:
         config = JudgeConfig(base_url="https://judge.example.test/v1", model="fixture")
