@@ -18,7 +18,7 @@ from dci.framework.packages import compose_packages
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_DIRS = (
     REPO_ROOT / "packages/python/asterion-core/src/asterion/capabilities/dci_research/manifests",
-    REPO_ROOT / "capabilities/controlled-code/manifests",
+    REPO_ROOT / "packages/python/asterion-core/src/asterion/capabilities/controlled_code/manifests",
 )
 CATALOG_GUIDE = REPO_ROOT / "docs/architecture/local-package-catalog.md"
 

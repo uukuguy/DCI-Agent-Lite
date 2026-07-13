@@ -18,7 +18,7 @@ from asterion.runtime.host import RunEvent, RunRequest, RuntimeManifest
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_ROOTS = (
     ROOT / "packages/python/asterion-core/src/asterion/capabilities/dci_research/manifests",
-    ROOT / "capabilities/controlled-code/manifests",
+    ROOT / "packages/python/asterion-core/src/asterion/capabilities/controlled_code/manifests",
 )
 ASSEMBLY = ROOT / "packages/python/asterion-core/src/asterion/applications/dci_agent_lite/assemblies/dci-local-research.json"
 CONTROLLED_ASSEMBLY = (

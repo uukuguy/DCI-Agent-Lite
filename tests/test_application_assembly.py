@@ -19,7 +19,7 @@ FIXTURES = Path(__file__).parent / "fixtures/assembly/v1"
 ROOT = Path(__file__).resolve().parents[1]
 MANIFESTS = (
     ROOT / "packages/python/asterion-core/src/asterion/capabilities/dci_research/manifests",
-    ROOT / "capabilities/controlled-code/manifests",
+    ROOT / "packages/python/asterion-core/src/asterion/capabilities/controlled_code/manifests",
 )
 ASSEMBLIES = ROOT / "packages/python/asterion-core/src/asterion/applications/dci_agent_lite/assemblies"
 GUIDE = Path(__file__).resolve().parents[1] / "docs/architecture/static-application-assembly.md"
