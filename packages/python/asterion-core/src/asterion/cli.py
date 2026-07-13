@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import sys
 from collections.abc import Iterable, Mapping
 from pathlib import Path
@@ -217,9 +218,12 @@ def _parser() -> argparse.ArgumentParser:
     run.add_argument("--input")
     run.add_argument("--application")
     run.add_argument("--assembly")
-    run.add_argument("--executor-binary")
-    run.add_argument("--executor-policy")
-    run.add_argument("--executor-validation-config")
+    run.add_argument("--executor-binary", default=os.environ.get("ASTERION_EXECUTOR_BINARY"))
+    run.add_argument("--executor-policy", default=os.environ.get("ASTERION_EXECUTOR_POLICY"))
+    run.add_argument(
+        "--executor-validation-config",
+        default=os.environ.get("ASTERION_EXECUTOR_VALIDATION_CONFIG"),
+    )
     run.add_argument("legacy_assembly", nargs="?")
     return parser
 

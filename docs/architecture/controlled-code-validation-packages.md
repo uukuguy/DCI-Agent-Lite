@@ -110,6 +110,14 @@ Rust sidecar. It never starts a process and discards stdout/stderr bodies after
 deriving bounded metadata. The focused host composition lives at
 `applications/controlled-code/python/controlled_code_host.py`.
 
+For the installed CLI, AF-150 makes lifecycle ownership explicit. A
+`controlled-code` run requires the complete `--executor-binary`,
+`--executor-policy`, and `--executor-validation-config` set (or their
+`ASTERION_EXECUTOR_*` environment equivalents). After provider, assembly,
+binding, and configuration preflight, the CLI starts exactly one direct-argv
+stdio sidecar, injects it, then closes and reaps it. This is process ownership,
+not automatic service discovery or a sandbox claim.
+
 ## Verification
 
 ```bash

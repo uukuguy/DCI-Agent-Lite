@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import tempfile
 import unittest
 from collections.abc import AsyncIterator
 from pathlib import Path
+from unittest.mock import patch
 
-from asterion.cli import main
+from asterion.cli import _parser, main
 from asterion.applications.provider import InstalledApplication, InstalledApplicationProvider
 from asterion.runtime.factory import RuntimeFactoryBinding, RuntimeFactoryRegistry
 from asterion.runtime.host import RunEvent, RunRequest, RuntimeManifest
@@ -285,6 +287,31 @@ class AsterionCliTests(unittest.TestCase):
             )
         self.assertEqual(code, 2)
         self.assertEqual(calls, [])
+
+    def test_executor_environment_configuration_is_used_when_flags_are_absent(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "ASTERION_EXECUTOR_BINARY": "/binary",
+                "ASTERION_EXECUTOR_POLICY": "/policy",
+                "ASTERION_EXECUTOR_VALIDATION_CONFIG": "/validation",
+            },
+            clear=False,
+        ):
+            args = _parser().parse_args(
+                [
+                    "run",
+                    "--provider",
+                    "controlled-code",
+                    "--runtime",
+                    "pi.reference",
+                    "--application",
+                    "code.quality@1.0.0",
+                ]
+            )
+        self.assertEqual(args.executor_binary, "/binary")
+        self.assertEqual(args.executor_policy, "/policy")
+        self.assertEqual(args.executor_validation_config, "/validation")
 
     def test_controlled_code_injects_one_explicit_managed_service(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

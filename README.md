@@ -44,6 +44,11 @@ The installed Pi runtime reads `DCI_PI_DIR`, `DCI_PI_PACKAGE_DIR`,
 `DCI_PI_AGENT_DIR`, `ASTERION_RUNTIME_CWD`, `DCI_PROVIDER`, `DCI_MODEL`, and
 `DCI_TOOLS` from the caller environment or current-directory `.env`.
 
+The bundled controlled-code application requires an explicit executor binary,
+Rust policy, and validation configuration. Supply all three through flags or
+the matching `ASTERION_EXECUTOR_*` environment variables; no service is
+automatically discovered or reused.
+
 <div align="center">
   <img src="assets/imgs/teaser.png" alt="OpenResearcher Teaser" width="100%" style="max-width: 850px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
 </div>
