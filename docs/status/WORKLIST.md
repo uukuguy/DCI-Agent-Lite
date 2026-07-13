@@ -194,17 +194,18 @@
 
 ## AF-180 — Complete DCI capability execution parity
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Asterion Agent Application Framework
 - Scope: establish the independently owned Asterion DCI domain module and package-local operator CLI, transplant the original DCI single-run/Pi RPC/system-prompt/corpus/tool/final-answer behavior, and prove interactive Pi run parity without importing or executing `src/dci`.
 - Dependencies: AF-110, AF-120, AF-170
 - Acceptance: the Asterion-owned DCI implementation has a deterministic single-run Pi parity matrix, separate `ASTERION_DCI_*` configuration/output ownership, package-local run CLI, safe native artifacts, capability-contract bridge, and no runtime dependency on the legacy DCI product.
 - Design: `docs/superpowers/specs/2026-07-13-complete-dci-capability-package-design.md`
 - Plan: `docs/superpowers/plans/2026-07-13-complete-dci-capability-execution.md`
+- Closure evidence: AF-180-H-001 through H-004 are confirmed 4/4. The one Asterion wheel owns isolated `ASTERION_DCI_*` configuration, direct Pi JSONL single-run transport, minimal native artifacts and normalized protocol projection, `asterion-dci` operator commands, and a body-free capability-result bridge. Focused parity tests, full Python discovery, Python compile/Ruff, TypeScript tests, Rust tests, shell syntax, installed command help, scope audit, wheel proof, and diff check pass without a Pi, judge, or Claude provider request.
 
 ## AF-190 — Complete DCI durable run and resume parity
 
-- Status: planned
+- Status: in_progress
 - Parent objective: Asterion Agent Application Framework
 - Scope: transplant native run-directory, raw-event, transcript, final-answer, state, and resume semantics and map their durable evidence to Asterion artifacts/events.
 - Dependencies: AF-180

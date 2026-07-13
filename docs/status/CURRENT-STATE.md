@@ -8,7 +8,7 @@
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: `AF-180` — complete DCI capability execution parity.
+- Active work package: `AF-190` — complete DCI durable run and resume parity.
 
 ## Current Architecture
 
@@ -20,7 +20,7 @@
 - Maintenance history: Pi/Judge reliability H-001 through H-019 is completed and remains available as reference-maintenance evidence; it is not an active roadmap stream.
 - Claude Code provider access: the adapter supports stored login and inherited environment-configured backends; provider-backed UAT is deferred while the local account is unavailable and does not block host-language work.
 - Installed DCI compatibility: the bundled DCI application declares exact Pi and Claude runtime identities through paired composition-equivalent canonical assemblies; generic application selection picks the unique matching assembly before runtime construction, and fixture-only CLI proof does not authorize or invoke Claude.
-- Complete DCI direction: `src/dci` remains an independent source-only legacy product and comparison baseline. AF-180 through AF-210 will transplant its complete run, durable/resume, evaluation/benchmark, and application/runtime semantics into an Asterion-owned DCI module without either product importing or launching the other. The single Asterion wheel remains unchanged; package-local DCI commands keep the generic framework CLI domain-neutral.
+- Complete DCI direction: `src/dci` remains an independent source-only legacy product and comparison baseline. AF-180 is complete: the one Asterion wheel owns isolated configuration, direct Pi single-run transport, native artifacts, package-local operator commands, and a body-free capability projection without either product importing or launching the other. AF-190 through AF-210 now stage durable/resume, evaluation/benchmark, and application/runtime semantic parity; package-local DCI commands keep the generic framework CLI domain-neutral.
 - Host contracts: Python and TypeScript expose the same schema-backed runtime manifest, request, event, and asynchronous client boundary without adapter-private types.
 - Controlled execution: `dci.executor/v1` has a runnable concurrent Rust JSONL sidecar with trusted startup policy, direct execution, bounded dual-stream draining, deadline/cancel kill-and-reap, duplicate-ID denial, out-of-order correlation, safe parse errors, EOF draining, operator documentation, and root verification targets.
 - Package composition: `dci.package/v1` and the deterministic Python composer resolve a portable policy → DCI research → evaluation → observability graph identically for Pi and Claude Code capability mappings. The TypeScript host exports the same manifest types and validates the canonical schema/fixtures without implementing a second composer.
@@ -45,12 +45,13 @@
 - AF-140 acceptance: the second `controlled-code` provider executes declarative policy plus three exact implementations through an explicit executor host service; caller-owned JSONL transport never starts a process or persists output bodies. 352 Python, 11 Node, and 19 Rust tests plus isolated installation and all gates pass.
 - AF-150 acceptance: the generic installed CLI starts one operator-authorized controlled-executor sidecar only after complete provider/application/assembly/binding/configuration preflight. It uses direct binary-plus-policy argv, a minimal environment, pipe-level readiness, explicit service injection, correlated protocol cancellation, bounded stderr discard, and deterministic reap. The final closure passes 362 Python, 11 Node, and 19 Rust tests plus all repository gates; a fresh wheel installation lists both providers, excludes `dci`, and successfully executes `code.quality@1.0.0` against the Rust sidecar.
 - Reference assemblies: checked-in DCI and controlled-code application manifests validate and resolve; DCI composition is identical for Pi/Claude runtime identities and controlled execution remains an explicit host service.
+- AF-180 acceptance: all four Climb hypotheses are confirmed 4/4. The independent Asterion DCI module passes focused parity, full Python, compile/Ruff, TypeScript, Rust, shell, installed-command, wheel, scope, and diff gates without a provider request. It deliberately limits artifacts to the AF-180 single-run subset; durable transcript and resume behavior remain AF-190.
 
 ## Open Problems (theme-level)
 
 - Provider-backed acceptance of the first non-Pi runtime when credentials or a compatible gateway become available.
 - Provider-backed Claude acceptance remains deferred because the local CLI is unauthenticated. AF-160 instead validates the installed runtime factory and existing command/fixture/redaction boundary without a provider request.
-- Full Asterion DCI Pi behavior, durable artifacts/resume, judge/cache/benchmark behavior, and authorized runtime semantic parity are staged under AF-180 through AF-210; no fixture-only Claude declaration constitutes full DCI parity.
+- Durable Asterion DCI artifacts/resume, judge/cache/benchmark behavior, and authorized runtime semantic parity are staged under AF-190 through AF-210; no fixture-only Claude declaration constitutes full DCI parity.
 
 ## Key Files
 

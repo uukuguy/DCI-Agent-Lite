@@ -5,11 +5,11 @@
 
 ## In-flight / session state
 
-- Phase: implementation
+- Phase: completed
 - Last cycle: 54
 - Next hypothesis: None
 - In flight: none
-- Next action: Trigger Knowledge Layer.
+- Next action: AF-180 complete; prepare the AF-190 durable-resume plan before registering new hypotheses.
 
 ## Active hypotheses
 
