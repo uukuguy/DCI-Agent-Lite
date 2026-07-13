@@ -4,7 +4,7 @@
 
 **Goal:** Ship a second bundled executable Asterion application whose fixed host-owned validation request runs through an explicitly injected controlled-executor service.
 
-**Architecture:** A typed Python service contract isolates logical validation from executable policy. Four exact package implementations transform one bounded execution result through workflow, verdict, and audit artifacts. A separate built-in provider binds canonical manifests/assembly; a JSONL client connects only to an already running Rust sidecar.
+**Architecture:** A typed Python service contract isolates logical validation from host-enforced policy. Three exact executable package implementations transform one bounded execution result through workflow, verdict, and audit artifacts; the policy package remains declarative. A separate built-in provider binds canonical manifests/assembly; a JSONL client connects only to an already running Rust sidecar.
 
 **Tech Stack:** Python 3.10+, asyncio JSONL, immutable dataclasses, existing package runner/provider contracts, existing Rust `dci.executor/v1` service.
 
@@ -29,14 +29,14 @@
 - [ ] Implement the minimal Protocol/value validation.
 - [ ] Run focused tests, compile, Ruff, scope, diff, and commit `feat: define controlled executor host service`.
 
-### Task 2: Controlled-code package implementations
+### Task 2: Controlled-code executable package implementations
 
 **Files:**
 - Move: `capabilities/controlled-code/manifests/*.json` to `packages/python/asterion-core/src/asterion/capabilities/controlled_code/manifests/`
 - Create: `packages/python/asterion-core/src/asterion/capabilities/controlled_code/implementation.py`
 - Create: `tests/test_controlled_code_application.py`
 
-**Interfaces:** four exact implementations for policy/workflow/evaluation/observability; one executor call; declared report/verdict/audit outputs.
+**Interfaces:** three exact implementations for workflow/evaluation/observability; declarative policy; one executor call; declared report/verdict/audit outputs.
 
 - [ ] Write RED order/service/output/failure tests using a fixture runtime/service.
 - [ ] Move canonical manifests and implement minimal deterministic transformations.

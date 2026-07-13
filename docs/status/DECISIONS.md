@@ -303,3 +303,4 @@
 - Provider boundary: the second application uses built-in provider ID `controlled-code`, separate from the DCI application provider, while shipping in the same Asterion wheel.
 - Process boundary: Asterion may provide a JSONL client for an already authorized Rust sidecar but does not automatically start it or claim operating-system sandboxing.
 - Revalidation trigger: add typed agent-proposed actions or generic CLI service startup only through separately reviewed authorization and lifecycle designs.
+- Policy-package boundary: `policy.controlled-code-check` remains declarative and is not added to the runner's executable package kinds. The resolved graph plus host service trusted policy enforce it; only workflow, evaluation, and observability receive implementations.

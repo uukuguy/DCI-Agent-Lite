@@ -23,10 +23,11 @@ policy.controlled-code-check
       → observability.execution-audit
 ```
 
-Each package has one exact Asterion implementation:
+The three executable packages have exact Asterion implementations; the policy
+package remains a declarative composition constraint:
 
-- policy implementation validates that the explicit controlled-executor service
-  and trusted validation configuration are present, then produces no output;
+- `policy.controlled-code-check` is validated during composition/preflight and
+  has no executable implementation;
 - workflow implementation submits one host-owned validation request to that
   service and emits one normalized report artifact plus
   `workflow.code-quality.completed`;
@@ -114,7 +115,8 @@ the lifecycle and authorization model is separately approved.
 
 1. Provider/application/runtime/package binding preflight completes.
 2. Required `executor.controlled` service presence and type are validated.
-3. Policy implementation confirms trusted configuration availability.
+3. Static policy identity and host-service authority are already confirmed by
+   the resolved plan and preflight.
 4. Workflow submits exactly one logical validation request.
 5. The service returns a bounded normalized execution result.
 6. Workflow emits the declared report artifact and completion event.
@@ -132,9 +134,10 @@ environment values, stdout/stderr bodies, or sidecar payloads.
 
 Tests must prove:
 
-- all four exact implementations bind and execute in the resolved package order;
-- policy and workflow require one explicit `executor.controlled` service before
-  any runtime or executor call;
+- all three executable implementations bind and execute in resolved order while
+  the policy remains declarative;
+- composition and workflow require one explicit `executor.controlled` service
+  before any runtime or executor call;
 - workflow submits one logical request and never accepts executable fields from
   application/runtime input;
 - evaluation and audit consume the workflow report without another executor

@@ -329,3 +329,6 @@
 - 09:02 AF-130 closure 通过 342 Python、11 Node、19 Rust、isolated wheel listing 及全部门禁。
 - 09:04 AF-130 已关闭并激活 AF-140，第二应用验证框架非 DCI 专用。[59ae1d5]
 - 09:10 AF-140 采用 host-owned fixed validation 与独立 controlled-code provider，agent 不生成命令。[c9dfdac]
+- 09:14 AF-140 TDD 计划已提交，先稳定 service contract 再执行第二应用。[634536d]
+- 09:17 controlled executor service values 已闭合且不保存输出正文。[5f83ae2]
+- 09:20 修正 AF-140：policy 保持声明式，仅 workflow/evaluation/observability 可执行，避免改变 DCI 语义。
