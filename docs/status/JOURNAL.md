@@ -369,3 +369,4 @@
 - 2026-07-13 已批准完整 DCI 能力包设计：保持单一 Asterion wheel，以独立领域模块和包级 CLI 承接原 DCI；AF-180/190/200/210 分别覆盖执行、持久化恢复、评测基准、应用/运行时语义，Pi 为强制完整对照，Claude 真实语义须另获授权。[pending governance commit]
 - 17:10 完整 DCI 能力包设计与治理切换已提交，建立独立迁移路径。[564575e]
 - 2026-07-13 AF-180 书面规格获用户批准；执行计划将单次 Pi 对照与后续 resume/evaluation/runtime 语义分包。[pending plan commit]
+- 17:19 AF-180 Pi 执行对照计划已提交，锁定 TDD 与独立边界。[cc9031e]
