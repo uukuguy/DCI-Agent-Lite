@@ -14,6 +14,7 @@ from asterion.runtime.factory import (
     RuntimeFactoryError,
     RuntimeFactoryRegistry,
 )
+from asterion.runtimes.claude_code import ClaudeCodeRuntimeClient
 from asterion.runtimes.pi import PiRuntimeClient
 
 
@@ -30,6 +31,11 @@ def default_runtime_factory_registry() -> RuntimeFactoryRegistry:
                 runtime_id="pi.reference",
                 capabilities=PI_CAPABILITIES,
                 factory=_create_pi_runtime,
+            ),
+            RuntimeFactoryBinding(
+                runtime_id="claude-code.reference",
+                capabilities=PI_CAPABILITIES,
+                factory=_create_claude_code_runtime,
             ),
         )
     )
@@ -69,9 +75,35 @@ def _create_pi_runtime(context: RuntimeFactoryContext) -> PiRuntimeClient:
     )
 
 
+def _create_claude_code_runtime(
+    context: RuntimeFactoryContext,
+) -> ClaudeCodeRuntimeClient:
+    if context.runtime_id != "claude-code.reference":
+        raise RuntimeFactoryError("runtime factory context is invalid")
+    executable = _configured_executable("ASTERION_CLAUDE_EXECUTABLE", "claude")
+    runtime_cwd = _configured_path("ASTERION_RUNTIME_CWD", Path.cwd(), root=Path.cwd())
+    if executable is None or not runtime_cwd.is_dir():
+        raise RuntimeFactoryError("Claude Code runtime is unavailable")
+    return ClaudeCodeRuntimeClient(
+        executable=executable,
+        cwd=runtime_cwd,
+        environment=os.environ.copy(),
+    )
+
+
 def _configured_path(name: str, default: Path, *, root: Path) -> Path:
     value = os.environ.get(name, "").strip()
     path = Path(value).expanduser() if value else default
     if not path.is_absolute():
         path = root / path
     return path.resolve()
+
+
+def _configured_executable(name: str, default: str) -> str | None:
+    value = os.environ.get(name, default).strip()
+    if not value:
+        return None
+    candidate = Path(value).expanduser()
+    if candidate.is_absolute() or candidate.parent != Path("."):
+        return str(candidate) if candidate.is_file() else None
+    return shutil.which(value)

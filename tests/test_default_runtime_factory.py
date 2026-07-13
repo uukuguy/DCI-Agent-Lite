@@ -10,6 +10,69 @@ from asterion.runtime.factory import RuntimeFactoryContext
 
 
 class DefaultRuntimeFactoryTests(unittest.TestCase):
+    def test_claude_factory_is_exact_and_constructs_without_starting_a_process(self) -> None:
+        from asterion.runtime.defaults import default_runtime_factory_registry
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            with (
+                patch.dict(
+                    os.environ,
+                    {
+                        "ASTERION_CLAUDE_EXECUTABLE": "claude",
+                        "ASTERION_RUNTIME_CWD": str(root),
+                    },
+                    clear=False,
+                ),
+                patch("asterion.runtime.defaults.shutil.which", return_value="/tool/claude"),
+            ):
+                binding = default_runtime_factory_registry().select(
+                    "claude-code.reference"
+                )
+                runtime = binding.factory(
+                    RuntimeFactoryContext(
+                        provider_id="dci-agent-lite",
+                        application_id="dci.research-capability",
+                        application_version="1.0.0",
+                        runtime_id="claude-code.reference",
+                        assembly_path=root / "assembly.json",
+                        options={},
+                    )
+                )
+
+        self.assertEqual(binding.capabilities, ("filesystem.read", "shell"))
+        self.assertEqual(runtime.manifest.runtime_id, "claude-code.reference")
+
+    def test_missing_claude_executable_fails_without_echoing_the_path(self) -> None:
+        from asterion.runtime.defaults import default_runtime_factory_registry
+        from asterion.runtime.factory import RuntimeFactoryError
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            with patch.dict(
+                os.environ,
+                {
+                    "ASTERION_CLAUDE_EXECUTABLE": "/SECRET/missing",
+                    "ASTERION_RUNTIME_CWD": str(root),
+                },
+                clear=False,
+            ):
+                binding = default_runtime_factory_registry().select(
+                    "claude-code.reference"
+                )
+                with self.assertRaises(RuntimeFactoryError) as caught:
+                    binding.factory(
+                        RuntimeFactoryContext(
+                            provider_id="dci-agent-lite",
+                            application_id="dci.research-capability",
+                            application_version="1.0.0",
+                            runtime_id="claude-code.reference",
+                            assembly_path=root / "assembly.json",
+                            options={},
+                        )
+                    )
+        self.assertNotIn("SECRET", str(caught.exception))
+
     def test_pi_reference_factory_uses_explicit_environment_paths(self) -> None:
         from asterion.runtime.defaults import default_runtime_factory_registry
 

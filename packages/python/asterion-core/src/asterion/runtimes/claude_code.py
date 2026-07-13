@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import subprocess
+from asyncio import CancelledError
 from collections.abc import Callable, Mapping
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any
 
 from asterion.adapters.claude_code import (
@@ -16,9 +19,77 @@ from asterion.adapters.claude_code import (
 from asterion.runtime.protocol import (
     MAX_DEADLINE_MS,
     PROTOCOL_VERSION,
+    ProtocolError,
     validate_event_stream,
     validate_run_request,
 )
+from asterion.runtime.host import (
+    CancellationSignal,
+    RunEvent,
+    RunRequest,
+    RuntimeManifest,
+)
+
+
+class ClaudeCodeRuntimeClient:
+    """Adapt the restricted Claude runner to the public runtime client contract."""
+
+    def __init__(
+        self,
+        *,
+        executable: str,
+        cwd: Path,
+        environment: Mapping[str, str],
+        run_process: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+    ) -> None:
+        self._executable = executable
+        self._cwd = Path(cwd)
+        self._environment = dict(environment)
+        self._run_process = run_process
+
+    @property
+    def manifest(self) -> RuntimeManifest:
+        return RuntimeManifest(
+            runtime_id="claude-code.reference",
+            capabilities=("filesystem.read", "shell"),
+        )
+
+    async def run(
+        self,
+        request: RunRequest,
+        *,
+        signal: CancellationSignal | None = None,
+    ):
+        request.to_mapping()
+        if signal is not None and signal.cancelled:
+            raise ProtocolError("Claude Code runtime request was cancelled")
+        timeout_seconds = (
+            request.deadline_ms / 1000 if request.deadline_ms is not None else 30
+        )
+        try:
+            with TemporaryDirectory(prefix="asterion-claude-") as directory:
+                output_dir = Path(directory)
+                await asyncio.to_thread(
+                    run_claude_code,
+                    prompt=request.input_text,
+                    output_dir=output_dir,
+                    cwd=self._cwd,
+                    tools=["Read", "Bash"],
+                    timeout_seconds=timeout_seconds,
+                    executable=self._executable,
+                    environment=self._environment,
+                    run_process=self._run_process,
+                )
+                mappings = [
+                    {**json.loads(line), "run_id": request.run_id}
+                    for line in (output_dir / "events.jsonl").read_text().splitlines()
+                    if line
+                ]
+                validate_event_stream(mappings)
+        except (CancelledError, OSError, ValueError, json.JSONDecodeError):
+            raise ProtocolError("Claude Code runtime execution failed") from None
+        for mapping in mappings:
+            yield RunEvent.from_mapping(mapping)
 
 
 def build_claude_command(*, executable: str, tools: list[str]) -> list[str]:
