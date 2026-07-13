@@ -5,14 +5,18 @@
 
 ## In-flight / session state
 
-- Phase: completed
+- Phase: implementation
 - Last cycle: 54
-- Next hypothesis: None
+- Next hypothesis: AF-190-H-001
 - In flight: none
-- Next action: AF-180 complete; prepare the AF-190 durable-resume plan before registering new hypotheses.
+- Next action: Execute AF-190-H-001: establish durable Asterion DCI artifact recording through TDD.
 
 ## Active hypotheses
 
+- **AF-190-H-001** (pending, rank 1.00): Restore original DCI durable artifact recording under the independent Asterion DCI output root.
+- **AF-190-H-002** (pending, rank 0.90): Resume only compatible failed or incomplete native runs and isolate every protocol attempt.
+- **AF-190-H-003** (pending, rank 0.80): Expose resume through the package-local command while preserving generic CLI neutrality.
+- **AF-190-H-004** (pending, rank 0.70): Project durable native run references through the declared capability contract without bodies.
 
 ## Run ladder
 
@@ -82,3 +86,4 @@
 - build a workflow engine before portable package composition semantics
 - build an enterprise control plane before a reference package graph
 - reuse the AF-100 Climb session or its hypotheses under AF-180
+- reuse the completed AF-180 session or its hypotheses under AF-190

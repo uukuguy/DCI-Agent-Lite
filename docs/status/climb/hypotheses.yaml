@@ -1204,3 +1204,43 @@ hypotheses:
     online: null
     verdict: confirmed 4/4
     decision_reason: deterministic local package acceptance
+- id: AF-190-H-001
+  work_package_id: AF-190
+  description: Restore original DCI durable artifact recording under the independent Asterion DCI output root.
+  parent_paradigm: dci-durable-artifacts
+  expected_lift: +1 durable native evidence boundary
+  cost_h: 1.0
+  ranking: 1.0
+  status: pending
+  created_at: '2026-07-13T18:18:00+08:00'
+  results: []
+- id: AF-190-H-002
+  work_package_id: AF-190
+  description: Resume only compatible failed or incomplete native runs and isolate every protocol attempt.
+  parent_paradigm: dci-resume-validation
+  expected_lift: +1 safe durable-resume boundary
+  cost_h: 1.1
+  ranking: 0.9
+  status: pending
+  created_at: '2026-07-13T18:18:00+08:00'
+  results: []
+- id: AF-190-H-003
+  work_package_id: AF-190
+  description: Expose resume through the package-local command while preserving generic CLI neutrality.
+  parent_paradigm: dci-resume-operator-surface
+  expected_lift: +1 durable operator interface
+  cost_h: 0.6
+  ranking: 0.8
+  status: pending
+  created_at: '2026-07-13T18:18:00+08:00'
+  results: []
+- id: AF-190-H-004
+  work_package_id: AF-190
+  description: Project durable native run references through the declared capability contract without bodies.
+  parent_paradigm: dci-durable-projection
+  expected_lift: +1 durable capability-package confidence
+  cost_h: 0.6
+  ranking: 0.7
+  status: pending
+  created_at: '2026-07-13T18:18:00+08:00'
+  results: []

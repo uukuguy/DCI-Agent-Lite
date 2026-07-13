@@ -1,10 +1,10 @@
-score_name: asterion_dci_execution_acceptance
+score_name: asterion_dci_durable_resume_acceptance
 score_direction: max
 subscores:
-  - configuration_isolation
-  - pi_lifecycle
-  - native_artifacts
-  - package_projection
+  - durable_artifacts
+  - resume_validation
+  - resume_operator_surface
+  - durable_projection
 push_mode: manual-csv
 state_dir: docs/status/climb
 artifact_dir: runs/climb
