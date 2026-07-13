@@ -11,6 +11,7 @@ dependencies = ["python-dotenv>=1.0.0"]
 
 [project.scripts]
 asterion = "asterion.cli:main"
+asterion-dci = "asterion.dci.cli:main"
 
 [project.entry-points."asterion.applications"]
 controlled-code = "asterion.applications.controlled_code:create_provider"
