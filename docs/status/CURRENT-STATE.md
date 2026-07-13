@@ -20,7 +20,7 @@
 - Maintenance history: Pi/Judge reliability H-001 through H-019 is completed and remains available as reference-maintenance evidence; it is not an active roadmap stream.
 - Claude Code provider access: the adapter supports stored login and inherited environment-configured backends; provider-backed UAT is deferred while the local account is unavailable and does not block host-language work.
 - Installed DCI compatibility: the bundled DCI application declares exact Pi and Claude runtime identities through paired composition-equivalent canonical assemblies; generic application selection picks the unique matching assembly before runtime construction, and fixture-only CLI proof does not authorize or invoke Claude.
-- Complete DCI direction: `src/dci` remains an independent source-only legacy product and comparison baseline. AF-180 through AF-200 are complete: the one Asterion wheel owns isolated configuration, direct Pi transport, durable native evidence, package-local run/resume/evaluate/benchmark commands, exact judge-cache identity, and body-free projections without either product importing or launching the other. AF-210 now owns application/runtime semantic parity; package-local DCI commands keep the generic framework CLI domain-neutral.
+- Complete DCI direction: `src/dci` remains an independent source-only legacy product and comparison baseline. AF-180 through AF-200 are complete: the one Asterion wheel owns isolated configuration, direct Pi transport, durable native evidence, package-local run/resume/evaluate/benchmark commands, exact judge-cache identity, and body-free projections without either product importing or launching the other. AF-210 binds Pi application execution to a provider-owned native executor while generic framework code stays DCI-neutral; Claude remains fixture-only pending separate authorization.
 - Host contracts: Python and TypeScript expose the same schema-backed runtime manifest, request, event, and asynchronous client boundary without adapter-private types.
 - Controlled execution: `dci.executor/v1` has a runnable concurrent Rust JSONL sidecar with trusted startup policy, direct execution, bounded dual-stream draining, deadline/cancel kill-and-reap, duplicate-ID denial, out-of-order correlation, safe parse errors, EOF draining, operator documentation, and root verification targets.
 - Package composition: `dci.package/v1` and the deterministic Python composer resolve a portable policy → DCI research → evaluation → observability graph identically for Pi and Claude Code capability mappings. The TypeScript host exports the same manifest types and validates the canonical schema/fixtures without implementing a second composer.
@@ -92,6 +92,8 @@
 - `docs/superpowers/specs/2026-07-13-application-runner-vertical-slice-design.md` — approved AF-100 scope and execution/security boundaries.
 - `docs/superpowers/plans/2026-07-13-application-runner-vertical-slice.md` — AF-100 implementation and verification slices.
 - `docs/superpowers/specs/2026-07-13-asterion-framework-extraction-design.md` — Asterion naming, directory ownership, compatibility, and migration boundaries.
+- `docs/superpowers/specs/2026-07-13-dci-application-runtime-parity-design.md` — approved provider-bound Pi application integration boundary for AF-210.
+- `docs/superpowers/plans/2026-07-13-dci-application-runtime-parity.md` — AF-210 TDD and Climb acceptance plan.
 - `scripts/bcplus_eval/run_bcplus_eval.py` — DCI reference benchmark harness.
 - `tools/climb/` — autonomous-work adapter; future cycles require a work-package parent.
 

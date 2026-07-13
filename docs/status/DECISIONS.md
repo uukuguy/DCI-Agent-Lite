@@ -345,3 +345,12 @@
 - Distribution boundary: D-030 remains in force. `asterion.dci` is independently owned code within the one `asterion` wheel; it is not a second first-party wheel. Its public configuration and output roots are separate from the old product.
 - Revalidation trigger: split the package only for a concrete separately versioned consumer/deployment need; alter native DCI artifact formats only with an explicit migration policy and parity test; claim a runtime-specific DCI semantic only with matching evidence.
 - Implemented evidence: AF-180 establishes isolated configuration, direct Pi execution, package-local commands, and an initial body-free projection. AF-190 completes durable native artifacts, compatible failed/incomplete resume through `asterion-dci resume`, isolated protocol attempts, and durable body-free references; all eight hypotheses pass locally without provider requests.
+
+## D-037 — Bind native DCI execution at the first-party provider boundary
+
+- Status: ✅ accepted design decision
+- Decided: 2026-07-13
+- Decision: the first-party DCI provider will bind its capability implementation to a private native Pi executor. The `pi.reference` application path maps an immutable package invocation to `DciRunRequest`, invokes the independent Asterion DCI workflow, and projects body-free native references; the existing Claude path remains protocol-fixture-only.
+- Rationale: this makes the installed application and `asterion-dci` share one complete DCI implementation without adding DCI parsing, artifacts, or configuration to generic CLI/runner/runtime layers.
+- Boundary: no new generic host-service protocol, no `src/dci` dependency, no DCI-specific generic CLI flag, no provider request, and no Claude semantic-parity claim.
+- Revalidation trigger: introduce a generic application-executor extension only when a second independently owned application requires the same provider-bound native execution pattern.

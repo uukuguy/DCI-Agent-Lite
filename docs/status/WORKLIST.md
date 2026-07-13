@@ -232,8 +232,8 @@
 - Scope: run the full Asterion DCI package through application assemblies, complete the Pi parity matrix, and assess Claude semantic parity only with separately authorized provider-backed evidence.
 - Dependencies: AF-180, AF-190, AF-200
 - Acceptance: Asterion application execution and package-local operations share one full DCI implementation; Pi parity is complete and any Claude claim has matching authorized evidence.
-- Design: `docs/superpowers/specs/2026-07-13-complete-dci-capability-package-design.md`
-- Plan: deferred until AF-200 acceptance.
+- Design: `docs/superpowers/specs/2026-07-13-dci-application-runtime-parity-design.md`
+- Plan: `docs/superpowers/plans/2026-07-13-dci-application-runtime-parity.md`
 
 ## AF-095 — Asterion framework identity and extraction
 
