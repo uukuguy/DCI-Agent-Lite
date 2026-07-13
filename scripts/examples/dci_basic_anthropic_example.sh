@@ -19,7 +19,7 @@ fi
 QUESTION="Answer the following question using only wiki_dump.jsonl in the current directory. Do not use web search. Use rg instead of grep for fast searching. Question: In which street did the Great Fire of London originate?"
 
 cd "$REPO_ROOT"
-uv run dci-agent-lite \
+PYTHONPATH="$REPO_ROOT/src" uv run python -m dci.benchmark.pi_rpc_runner \
   --provider anthropic \
   --model claude-sonnet-4-20250514 \
   --cwd "$REPO_ROOT/corpus/wiki_corpus" \

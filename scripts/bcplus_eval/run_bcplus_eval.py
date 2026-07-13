@@ -452,6 +452,13 @@ def build_ir_prompt(query: str, corpus_dir: Path, corpus_hint: str | None = None
 
 def build_subprocess_env(args: argparse.Namespace) -> Dict[str, str]:
     env = os.environ.copy()
+    existing_pythonpath = env.get("PYTHONPATH", "").strip()
+    source_root = str(REPO_ROOT / "src")
+    env["PYTHONPATH"] = (
+        f"{source_root}{os.pathsep}{existing_pythonpath}"
+        if existing_pythonpath
+        else source_root
+    )
     if args.node_max_old_space_size_mb is not None:
         existing = env.get("NODE_OPTIONS", "").strip()
         extra = f"--max-old-space-size={args.node_max_old_space_size_mb}"
@@ -640,7 +647,9 @@ def build_run_command(
     cmd: List[str] = [
         "uv",
         "run",
-        "dci-agent-lite",
+        "python",
+        "-m",
+        "dci.benchmark.pi_rpc_runner",
         "--provider",
         args.provider,
         "--model",

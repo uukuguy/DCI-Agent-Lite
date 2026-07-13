@@ -14,7 +14,7 @@ working without a second implementation.
 ```text
 src/asterion/                         framework implementation
 src/dci/                              DCI capability, benchmark, configuration
-capabilities/dci-research/            DCI declarative packages
+packages/python/asterion-core/src/asterion/capabilities/dci_research/  bundled DCI capability and manifests
 capabilities/controlled-code/         controlled-code declarative packages
 applications/dci-agent-lite/          DCI reference application assemblies
 packages/typescript/asterion-runtime/ TypeScript validation and host types

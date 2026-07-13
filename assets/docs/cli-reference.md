@@ -2,7 +2,7 @@
 
 ```bash
 dci-agent-lite [options] [message...]
-uv run dci-agent-lite [options] [message...]
+PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner [options] [message...]
 ```
 
 `dci-agent-lite` is the lightweight DCI wrapper around Pi. It can launch Pi's interactive TUI or run a question programmatically and save artifacts under `outputs/runs/<timestamp>/`.
@@ -10,7 +10,7 @@ uv run dci-agent-lite [options] [message...]
 If no positional message is provided, the runner reads from `--question-file` or stdin.
 
 ```bash
-cat question.txt | uv run dci-agent-lite --provider openai --model gpt-5.4-nano
+cat question.txt | PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner --provider openai --model gpt-5.4-nano
 ```
 
 ## Modes
@@ -41,13 +41,13 @@ Terminal mode forwards positional text or `--question-file` as the initial messa
 Examples:
 
 ```bash
-uv run dci-agent-lite \
+PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
   --provider openai \
   --model gpt-5.4-nano \
   --extra-arg="--thinking high" \
   "your question"
 
-uv run dci-agent-lite \
+PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
   --provider anthropic \
   --model claude-sonnet-4-20250514 \
   --extra-arg="--context-management-level level3" \

@@ -50,11 +50,12 @@ class AsterionStructureTests(unittest.TestCase):
         source = "\n".join(path.read_text() for path in source_root.rglob("*.py"))
         self.assertNotRegex(source, r"(?:from|import)\s+dci(?:\.|\s|$)")
 
-    def test_core_and_baseline_have_independent_wheel_roots(self) -> None:
-        baseline = (ROOT / "pyproject.toml").read_text()
+    def test_only_asterion_has_a_wheel_root(self) -> None:
+        workspace = (ROOT / "pyproject.toml").read_text()
         core = (ROOT / "packages/python/asterion-core/pyproject.toml").read_text()
-        self.assertIn('packages = ["src/dci"]', baseline)
-        self.assertNotIn('"src/asterion"', baseline)
+        self.assertIn("package = false", workspace)
+        self.assertNotIn("[build-system]", workspace)
+        self.assertNotIn('packages = ["src/dci"]', workspace)
         self.assertIn('packages = ["src/asterion"]', core)
         self.assertNotIn('"src/dci"', core)
 
@@ -95,19 +96,21 @@ class AsterionStructureTests(unittest.TestCase):
 
     def test_declarative_assets_have_product_level_owners(self) -> None:
         capabilities = ROOT / "capabilities"
-        applications = ROOT / "applications"
+        bundled = ROOT / "packages/python/asterion-core/src/asterion"
         self.assertEqual(
             {path.name for path in capabilities.iterdir()},
-            {"controlled-code", "dci-research"},
+            {"controlled-code"},
         )
         self.assertTrue(
             (
-                applications
-                / "dci-agent-lite/assemblies/dci-local-research.json"
+                bundled
+                / "applications/dci_agent_lite/assemblies/dci-local-research.json"
             ).is_file()
         )
         package_ids = set()
-        for path in capabilities.rglob("manifests/*.json"):
+        manifest_paths = list(capabilities.rglob("manifests/*.json"))
+        manifest_paths.extend(bundled.rglob("manifests/*.json"))
+        for path in manifest_paths:
             import json
 
             package_ids.add(json.loads(path.read_text())["package_id"])
@@ -131,10 +134,13 @@ class AsterionStructureTests(unittest.TestCase):
         self.assertFalse((ROOT / "packages/typescript/agent-runtime").exists())
         self.assertFalse((ROOT / "packages/rust/executor").exists())
 
-    def test_verified_dci_examples_keep_the_product_cli(self) -> None:
+    def test_verified_dci_examples_use_the_source_baseline(self) -> None:
         for name in ("dci_basic_example.sh", "dci_runtime_context_example.sh"):
             source = (ROOT / "scripts/examples" / name).read_text()
-            self.assertIn("uv run dci-agent-lite", source)
+            self.assertIn(
+                'PYTHONPATH="$REPO_ROOT/src" uv run python -m dci.benchmark.pi_rpc_runner',
+                source,
+            )
             self.assertIn('source "$REPO_ROOT/.env"', source)
 
     def test_examples_build_cli_commands_in_an_isolated_repository(self) -> None:
@@ -170,16 +176,21 @@ class AsterionStructureTests(unittest.TestCase):
                 self.assertNotIn("test-model", result.stdout + result.stderr)
             commands = log.read_text().splitlines()
             self.assertEqual(len(commands), 2)
-            self.assertTrue(all(command.startswith("run dci-agent-lite ") for command in commands))
+            self.assertTrue(
+                all(
+                    command.startswith("run python -m dci.benchmark.pi_rpc_runner ")
+                    for command in commands
+                )
+            )
 
-    def test_distribution_preserves_existing_console_scripts(self) -> None:
+    def test_workspace_does_not_install_baseline_console_scripts(self) -> None:
         pyproject = (ROOT / "pyproject.toml").read_text()
         for command in (
             "dci-agent-lite",
             "dci-run-pi-rpc",
             "dci-print-pi-system-prompt",
         ):
-            self.assertIn(command, pyproject)
+            self.assertNotIn(command, pyproject)
 
     def test_layout_guide_defines_framework_ownership(self) -> None:
         guide = (ROOT / "docs/architecture/asterion-framework-layout.md").read_text()

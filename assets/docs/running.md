@@ -7,7 +7,7 @@ Run `make check-pi-rpc` for a fast model-free compatibility check before a bench
 Main entry point:
 
 ```bash
-uv run dci-agent-lite
+PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner
 ```
 
 The runner reads `DCI_PI_DIR` from the repository-root `.env`. Without an explicit value it prefers an existing `./pi` checkout and falls back to the legacy `./pi-mono` path. `--package-dir` and `--agent-dir` remain available as one-off overrides. `setup.sh` pins new and clean existing checkouts to the full commit in `pi-revision.txt`; `DCI_PI_REVISION` is an explicit override for deliberate revision tests.
@@ -26,7 +26,7 @@ By default:
 ### Basic example
 
 ```bash
-uv run dci-agent-lite \
+PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
   --provider openai \
   --model gpt-5.4-nano \
   --cwd "$PWD/corpus/bc_plus_docs/thefourwallmag.wordpress.com" \
@@ -47,7 +47,7 @@ Provider-specific runnable examples live under `scripts/examples/`:
 Use `--terminal` to launch Pi's interactive terminal UI through the same wrapper:
 
 ```bash
-uv run dci-agent-lite --terminal \
+PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner --terminal \
   --provider openai \
   --model gpt-5.4-nano \
   --cwd "$PWD/corpus/wiki_corpus" \
@@ -62,7 +62,7 @@ Optional positional text or `--question-file` is forwarded as the initial messag
 Resume by pointing directly at a run directory:
 
 ```bash
-uv run dci-agent-lite \
+PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
   --resume "$PWD/outputs/runs/bonang-test" \
   --provider anthropic \
   --model claude-sonnet-4-20250514 \
@@ -74,7 +74,7 @@ uv run dci-agent-lite \
 Or resume the same directory named in `--output-dir`:
 
 ```bash
-uv run dci-agent-lite \
+PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
   --output-dir "$PWD/outputs/runs/bonang-test" \
   --resume \
   --provider anthropic \
@@ -89,7 +89,7 @@ uv run dci-agent-lite \
 ### Override system prompt
 
 ```bash
-uv run dci-agent-lite \
+PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
   --system-prompt-file "$(git rev-parse --show-toplevel)/prompts/system_prompt.txt" \
   --provider anthropic \
   --model claude-sonnet-4-20250514 \
@@ -111,42 +111,42 @@ Use `--extra-arg` to forward the runtime profile into Pi:
 
 ```bash
 # level0: current upstream runtime behavior
-uv run dci-agent-lite \
+PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
   --provider anthropic \
   --model claude-sonnet-4-20250514 \
   --extra-arg="--context-management-level level0" \
   "your question here"
 
 # level1: only truncate very large tool results
-uv run dci-agent-lite \
+PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
   --provider anthropic \
   --model claude-sonnet-4-20250514 \
   --extra-arg="--context-management-level level1" \
   "your question here"
 
 # level2: stricter truncation
-uv run dci-agent-lite \
+PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
   --provider anthropic \
   --model claude-sonnet-4-20250514 \
   --extra-arg="--context-management-level level2" \
   "your question here"
 
 # level3: truncation + micro-compaction
-uv run dci-agent-lite \
+PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
   --provider anthropic \
   --model claude-sonnet-4-20250514 \
   --extra-arg="--context-management-level level3" \
   "your question here"
 
 # legacy / level4: closest to the older pi runtime
-uv run dci-agent-lite \
+PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
   --provider anthropic \
   --model claude-sonnet-4-20250514 \
   --extra-arg="--context-management-level legacy" \
   "your question here"
 
 # level5: most aggressive runtime profile
-uv run dci-agent-lite \
+PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
   --provider anthropic \
   --model claude-sonnet-4-20250514 \
   --extra-arg="--context-management-level level5" \

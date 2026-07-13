@@ -65,7 +65,7 @@ Use it only when you want:
 
 ```bash
 # level1
-uv run dci-agent-lite \
+PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
   --conversation-clear-tool-results \
   --conversation-externalize-tool-results \
   --provider anthropic \
@@ -73,7 +73,7 @@ uv run dci-agent-lite \
   "your question here"
 
 # level5
-uv run dci-agent-lite \
+PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
   --conversation-clear-tool-results \
   --conversation-clear-tool-results-keep-last 0 \
   --conversation-externalize-tool-results \

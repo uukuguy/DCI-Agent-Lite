@@ -165,7 +165,7 @@ The example below illustrates DCI-Agent-Lite in action: the deep research agent 
 # load keys from .env if not already in environment
 set -a; source .env 2>/dev/null; set +a
 
-uv run dci-agent-lite --terminal \
+PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner --terminal \
   --provider openai \
   --model gpt-5.4-nano \
   --cwd "corpus/wiki_corpus" \
@@ -183,7 +183,7 @@ Answer the following question using only wiki_dump.jsonl in the current director
 ```bash
 set -a; source .env 2>/dev/null; set +a
 
-uv run dci-agent-lite \
+PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
   --provider openai \
   --model gpt-5.4-nano \
   --cwd "corpus/wiki_corpus" \
@@ -230,7 +230,7 @@ Pass a level through Pi with `--extra-arg`:
 ```bash
 set -a; source .env 2>/dev/null; set +a
 
-uv run dci-agent-lite \
+PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
   --provider openai \
   --model gpt-5.4-nano \
   --cwd "corpus/wiki_corpus" \
