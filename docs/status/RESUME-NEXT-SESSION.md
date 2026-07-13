@@ -16,11 +16,12 @@ Active work package: none
 - Branch: `main`; merge commit `dcd4bf3` integrates AF-210 and its closure evidence.
 - The working tree contains this merge-journal/checkpoint update only; carry it into the next approved successor-work commit.
 - H-001 through H-004 are all confirmed 4/4; no provider request occurred.
+- User approved the complete-product migration direction and bounded real Pi/Judge acceptance. AF-220 is proposed pending written-spec review; do not implement or launch Climb until its plan activates the package.
 
 ## Next action
 
 1. Select a new governed work package before starting any successor implementation.
-2. Claude provider-backed parity remains outside the closed AF-210 local scope and requires separate operator authorization.
+2. Obtain written-spec review for `docs/superpowers/specs/2026-07-13-asterion-dci-complete-product-parity-design.md`, then write AF-220's plan and activate exactly one package before implementation.
 
 ## Guardrails
 

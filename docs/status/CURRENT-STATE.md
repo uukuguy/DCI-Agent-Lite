@@ -4,11 +4,11 @@
 
 - Project: Asterion framework under development in the DCI-Agent-Lite repository; DCI remains the first capability and reference application.
 - Current branch: `main`
-- Theme-level focus: establish Asterion DCI as the first complete capability-package reference product.
+- Theme-level focus: complete and prove Asterion DCI as the first capability-package reference product against the source DCI product.
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: none — AF-210 is complete; select a governed successor before starting new implementation work.
+- Active work package: none — AF-220 is proposed and awaits written-spec review before planning/activation.
 
 ## Current Architecture
 
@@ -20,7 +20,7 @@
 - Maintenance history: Pi/Judge reliability H-001 through H-019 is completed and remains available as reference-maintenance evidence; it is not an active roadmap stream.
 - Claude Code provider access: the adapter supports stored login and inherited environment-configured backends; provider-backed UAT is deferred while the local account is unavailable and does not block host-language work.
 - Installed DCI compatibility: the bundled DCI application declares exact Pi and Claude runtime identities through paired composition-equivalent canonical assemblies; generic application selection picks the unique matching assembly before runtime construction, and fixture-only CLI proof does not authorize or invoke Claude.
-- Complete DCI direction: `src/dci` remains an independent source-only legacy product and comparison baseline. AF-180 through AF-210 are complete: the one Asterion wheel owns isolated configuration, direct Pi transport, durable native evidence, package-local run/resume/evaluate/benchmark commands, exact judge-cache identity, and body-free projections without either product importing or launching the other. AF-210 binds installed Pi application execution to the provider-owned native executor while generic framework code stays DCI-neutral; Claude remains fixture-only pending separate authorization.
+- Complete DCI direction: `src/dci` remains an independent source-only comparison baseline. AF-180 through AF-210 established independent Asterion DCI components, but their local closure is not a claim of full source-product parity: shared `.env` forwarding, complete operator controls, batch/export semantics, Asterion examples, and provider-backed acceptance remain governed by proposed AF-220 through AF-250. Asterion will share normal `DCI_*` configuration with the baseline while keeping Asterion-owned output paths; neither product imports or launches the other.
 - Host contracts: Python and TypeScript expose the same schema-backed runtime manifest, request, event, and asynchronous client boundary without adapter-private types.
 - Controlled execution: `dci.executor/v1` has a runnable concurrent Rust JSONL sidecar with trusted startup policy, direct execution, bounded dual-stream draining, deadline/cancel kill-and-reap, duplicate-ID denial, out-of-order correlation, safe parse errors, EOF draining, operator documentation, and root verification targets.
 - Package composition: `dci.package/v1` and the deterministic Python composer resolve a portable policy → DCI research → evaluation → observability graph identically for Pi and Claude Code capability mappings. The TypeScript host exports the same manifest types and validates the canonical schema/fixtures without implementing a second composer.
@@ -55,6 +55,7 @@
 - Provider-backed acceptance of the first non-Pi runtime when credentials or a compatible gateway become available.
 - Provider-backed Claude acceptance remains deferred because the local CLI is unauthenticated. AF-160 instead validates the installed runtime factory and existing command/fixture/redaction boundary without a provider request.
 - A future provider-backed Claude parity claim requires separate operator authorization and evidence; fixture-only compatibility remains insufficient.
+- Complete source-DCI product parity remains open: the current Asterion CLI/application/benchmark lacks several source controls and no authorized Pi/Judge acceptance has yet been run.
 
 ## Key Files
 

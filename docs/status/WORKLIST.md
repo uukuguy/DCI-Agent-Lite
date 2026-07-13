@@ -236,6 +236,16 @@
 - Plan: `docs/superpowers/plans/2026-07-13-dci-application-runtime-parity.md`
 - Closure evidence: AF-210-H-001 through H-004 are confirmed 4/4. The first-party DCI provider binds native Pi execution without generic CLI/runner coupling; installed Pi applications produce body-free native references, redact native failures, and ship the executor/provider in the Asterion wheel. Full Python product tests, compile/Ruff/shell checks, TypeScript tests, Rust checks, scope audit, and diff check pass without Pi, judge, or Claude provider requests. Claude remains a fixture-only protocol path, not a semantic-parity claim.
 
+## AF-220 — Shared configuration and runnable Pi application parity
+
+- Status: proposed
+- Parent objective: Asterion DCI complete capability-package reference product
+- Scope: replace the prior split configuration assumption with the approved shared `.env` contract, carry effective Pi/provider/model/tool/context configuration through Asterion package, benchmark, and installed-application paths, and provide Pi-default Asterion runnable examples.
+- Dependencies: AF-180, AF-190, AF-200, AF-210
+- Acceptance: Asterion and source DCI share normal `DCI_*` configuration without an Asterion runtime dependency on the source product; package CLI and installed Pi application construct equivalent native requests; configuration/context/resource mappings and two Asterion example launchers pass fixture, installed-wheel, and authorized bounded Pi checks.
+- Design: `docs/superpowers/specs/2026-07-13-asterion-dci-complete-product-parity-design.md`
+- Plan: pending written-spec review
+
 ## AF-095 — Asterion framework identity and extraction
 
 - Status: completed

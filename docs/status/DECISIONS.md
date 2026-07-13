@@ -354,3 +354,12 @@
 - Rationale: this makes the installed application and `asterion-dci` share one complete DCI implementation without adding DCI parsing, artifacts, or configuration to generic CLI/runner/runtime layers.
 - Boundary: no new generic host-service protocol, no `src/dci` dependency, no DCI-specific generic CLI flag, no provider request, and no Claude semantic-parity claim.
 - Revalidation trigger: introduce a generic application-executor extension only when a second independently owned application requires the same provider-bound native execution pattern.
+
+## D-038 — Share normal DCI runtime configuration across the source and Asterion products
+
+- Status: ✅ accepted design decision
+- Decided: 2026-07-13
+- Decision: normal Pi, provider/model, deadline, judge, and provider-authentication configuration is shared through the repository `.env` and inherited process environment.  Asterion reads the same `DCI_*` values as the source product; `ASTERION_DCI_OUTPUT_ROOT` is reserved for Asterion output location, while existing `ASTERION_DCI_PI_*` values become backward-compatible aliases rather than a required parallel surface.
+- Rationale: both products intentionally use the same external Pi and service credentials.  Separate mandatory configuration made the installed Asterion application unable to reproduce a normal source DCI run and obscured missing request forwarding.
+- Boundary: explicit package CLI options still override environment defaults; generic framework modules remain DCI-neutral; Asterion remains independently implemented and never imports or executes `src/dci`.
+- Revalidation trigger: introduce a separate Asterion runtime namespace only if the products need intentionally divergent credentials, Pi checkouts, or security policy, with a versioned migration and parity update.
