@@ -352,3 +352,4 @@
 - 10:36 AF-160 转为无账号的 installed Claude runtime interface verification；真实 provider 调用继续 deferred。[pending design commit]
 - 10:44 AF-160 TDD plan 锁定 thin runtime client、exact factory、fixture-only wheel verification 与全量 closure。[pending plan commit]
 - 10:52 AF-160 client/factory fixture tests、full Python/Node/Rust gates与 isolated wheel factory check通过；未发送 Claude request。[4072971]
+- 11:00 AF-160 closed after complete account-free acceptance; AF-170 now owns installed DCI Claude compatibility design.[pending transition commit]

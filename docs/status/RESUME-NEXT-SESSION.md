@@ -2,7 +2,7 @@
 
 > Updated: 2026-07-13. **Session remains active — not a final handoff.**
 
-Active work package: AF-160
+Active work package: AF-170
 
 ## TL;DR
 

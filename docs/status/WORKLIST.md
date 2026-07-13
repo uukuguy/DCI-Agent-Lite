@@ -172,11 +172,22 @@
 
 ## AF-160 — Installed Claude runtime interface verification
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Asterion Agent Application Framework
 - Scope: expose the existing Claude Code runtime through the installed Asterion runtime-factory boundary and prove its command, capability, environment, fixture-normalization, and unauthenticated safe-failure contracts without sending a provider request.
 - Dependencies: AF-030, AF-120
 - Acceptance: an installed wheel exposes exact `claude-code.reference` factory selection and preserves the existing restricted subprocess/normalization/redaction contract under fixture execution; no account, gateway, prompt, or provider request is required, and a future real invocation remains deferred.
+- Design: `docs/superpowers/specs/2026-07-13-installed-claude-runtime-interface-design.md`
+- Plan: `docs/superpowers/plans/2026-07-13-installed-claude-runtime-interface.md`
+- Closure evidence: exact `claude-code.reference` selection, fixture-only normalized events/redaction/pre-cancel, safe factory construction, isolated-wheel import boundary, documentation, and full Python/Node/Rust closure gates pass without a Claude request.
+
+## AF-170 — Installed DCI Claude compatibility
+
+- Status: in_progress
+- Parent objective: Asterion Agent Application Framework
+- Scope: design an explicit, fixture-verifiable `claude-code.reference` compatibility declaration for the installed DCI application while preserving Pi behavior and deferring real provider UAT.
+- Dependencies: AF-120, AF-160
+- Acceptance: approved design and plan define exact provider declaration, fixture-only generic CLI proof, Pi compatibility preservation, and the boundary for future real authorization.
 - Design: `docs/superpowers/specs/2026-07-13-installed-claude-runtime-interface-design.md`
 - Plan: `docs/superpowers/plans/2026-07-13-installed-claude-runtime-interface.md`
 

@@ -4,11 +4,11 @@
 
 - Project: Asterion framework under development in the DCI-Agent-Lite repository; DCI remains the first capability and reference application.
 - Current branch: `main`
-- Theme-level focus: Verify the installed Claude runtime interface without a provider request.
+- Theme-level focus: Design explicit installed DCI compatibility with the Claude runtime.
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: `AF-160` — installed Claude runtime interface verification.
+- Active work package: `AF-170` — installed DCI Claude compatibility.
 
 ## Current Architecture
 
