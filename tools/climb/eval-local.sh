@@ -701,6 +701,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_asterion_dci_cli.AsterionDciCliTests.test_product_help_is_separate_from_the_generic_cli"
         override_test="tests.test_asterion_dci_cli.AsterionDciCliTests.test_cli_rejects_deferred_features_without_calling_pi"
         ;;
+    AF-190-H-004)
+        first_dimension="durable_reference_projection"
+        second_dimension="body_free_projection"
+        third_dimension="terminal_result_rejection"
+        fourth_dimension="baseline_independence"
+        immutable_test="tests.test_asterion_dci_bridge.AsterionDciBridgeTests.test_projection_preserves_native_references_without_answer_body"
+        repeat_test="tests.test_asterion_dci_bridge.AsterionDciBridgeTests.test_projection_preserves_native_references_without_answer_body"
+        dirty_test="tests.test_asterion_dci_bridge.AsterionDciBridgeTests.test_projection_rejects_a_noncompleted_native_result"
+        override_test="tests.test_distribution_boundaries.SourceDistributionBoundaryTests.test_asterion_core_never_imports_the_dci_baseline"
+        ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2
         exit 2

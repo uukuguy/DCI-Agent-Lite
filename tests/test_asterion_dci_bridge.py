@@ -45,7 +45,10 @@ class AsterionDciBridgeTests(unittest.TestCase):
             dict(projection.artifacts[0]["value"]),
             {
                 "answer_artifact_uri": "final.txt",
+                "conversation_artifact_uri": "conversation.json",
                 "events_artifact_uri": "events.jsonl",
+                "latest_model_context_artifact_uri": "latest_model_context.json",
+                "protocol_artifact_uri": "protocol/",
                 "state_artifact_uri": "state.json",
             },
         )
