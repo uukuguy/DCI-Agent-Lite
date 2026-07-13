@@ -143,7 +143,7 @@
 - Scope: make installed Asterion applications discoverable and runnable by exact application identity without requiring operators to locate package-internal assembly paths, while retaining explicit provider/runtime selection and all AF-120 trust boundaries.
 - Dependencies: AF-120
 - Acceptance: the installed wheel lists exact application identities and runs the built-in DCI application through a stable application selector; ambiguous or unknown identities fail before provider/runtime work; filesystem assembly selection remains an explicit advanced compatibility path.
-- Design: pending
+- Design: `docs/superpowers/specs/2026-07-13-installed-application-selection-design.md`
 - Plan: pending design approval
 
 ## AF-095 — Asterion framework identity and extraction

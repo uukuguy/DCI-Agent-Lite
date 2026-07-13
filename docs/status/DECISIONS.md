@@ -282,3 +282,13 @@
 - Extension boundary: the versioned installed-provider contract remains for future independently installed third-party applications, but first-party DCI does not require a separate entry-point distribution.
 - Revalidation trigger: split a capability into its own distribution only when an independently versioned external consumer or deployment requirement justifies the additional artifact.
 - Implemented evidence: AF-120 ships one `asterion` wheel with bundled modular DCI capability/application resources and an explicit Pi runtime factory. The root is a non-buildable uv workspace, `src/dci` is source-only, and isolated installation confirms Asterion works while `dci` is absent.
+
+## D-031 — Select installed applications by exact identity
+
+- Status: ✅ accepted decision
+- Decided: 2026-07-13
+- Decision: the preferred installed-product command selects one application as exact `application_id@version` within one explicitly selected provider. Internal assembly paths are not part of the normal operator experience.
+- Rationale: requiring users to discover wheel-internal resource paths defeats independent installation, while global application scanning would load unselected executable providers.
+- Compatibility: explicit `--assembly` remains the advanced path and the AF-120 positional assembly spelling remains temporarily supported. Plain `asterion list` stays metadata-only; `list --provider` explicitly authorizes loading one provider's application declarations.
+- Boundary: no aliases, implicit latest version, version ranges, global provider loading, or multi-assembly default selection.
+- Revalidation trigger: add assembly variants or version resolution only for a concrete application that cannot use one exact identity and one canonical assembly.
