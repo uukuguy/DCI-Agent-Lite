@@ -446,3 +446,4 @@
 - 01:00 Installed Asterion DCI Pi applications now resolve shared runtime options at the provider boundary while the capability implementation keeps its minimal invocation request; focused application tests, compile, Ruff, scope, and diff checks pass without external requests. [pending Task 4 commit]
 - 01:01 Installed applications resolve shared runtime options at the provider boundary for Pi parity. [947b6f0]
 - 01:08 Asterion Pi examples, Make targets, and operator documentation now use shared `DCI_*` configuration; shell syntax and 15 focused product CLI tests pass without a provider request. [pending Task 5 commit]
+- 01:09 correction: Asterion Pi examples commit landed. [5d0a7d8]
