@@ -74,7 +74,7 @@ run_closure_dimension() {
             command=(uv run python -m unittest tests.test_climb_tools.ClimbToolTests.test_af095_h004_train_runs_full_framework_closure_gate -v)
             ;;
         asterion_cli)
-            command=(uv run python -m unittest tests.test_asterion_structure.AsterionStructureTests.test_distribution_preserves_existing_console_scripts -v)
+            command=(uv run python -m unittest tests.test_distribution_boundaries.SourceDistributionBoundaryTests.test_source_baseline_remains_runnable_without_installation -v)
             ;;
         asterion_examples)
             command=(uv run python -m unittest tests.test_asterion_structure.AsterionStructureTests.test_examples_build_cli_commands_in_an_isolated_repository -v)
@@ -364,20 +364,20 @@ case "$HYPOTHESIS_ID" in
         second_dimension="object_identity"
         third_dimension="dependency_direction"
         fourth_dimension="packaging_compatibility"
-        immutable_test="tests.test_asterion_structure.AsterionStructureTests.test_runtime_objects_are_authoritative_and_compatible"
-        repeat_test="tests.test_asterion_structure.AsterionStructureTests.test_runtime_adapters_are_authoritative_and_compatible"
+        immutable_test="tests.test_asterion_structure.AsterionStructureTests.test_runtime_objects_are_independent_and_wire_compatible"
+        repeat_test="tests.test_asterion_structure.AsterionStructureTests.test_runtime_adapters_are_independent_and_capability_compatible"
         dirty_test="tests.test_asterion_structure.AsterionStructureTests.test_asterion_never_imports_dci"
-        override_test="tests.test_asterion_structure.AsterionStructureTests.test_wheel_contains_framework_baseline_and_capability_packages"
+        override_test="tests.test_asterion_structure.AsterionStructureTests.test_only_asterion_has_a_wheel_root"
         ;;
     AF-095-H-002)
         first_dimension="package_extraction"
         second_dimension="assembly_extraction"
         third_dimension="wire_stability"
         fourth_dimension="single_implementation"
-        immutable_test="tests.test_asterion_structure.AsterionStructureTests.test_package_and_assembly_objects_are_compatibility_aliases"
+        immutable_test="tests.test_asterion_structure.AsterionStructureTests.test_package_and_assembly_objects_are_independent_wire_implementations"
         repeat_test="tests.test_application_assembly.ReferenceAssemblyTests.test_checked_in_reference_assemblies_are_valid"
         dirty_test="tests.test_asterion_structure.AsterionStructureTests.test_extracted_wire_protocol_literals_remain_stable"
-        override_test="tests.test_asterion_structure.AsterionStructureTests.test_dci_framework_compatibility_modules_define_no_behavior"
+        override_test="tests.test_asterion_structure.AsterionStructureTests.test_dci_framework_is_frozen_baseline_owned_behavior"
         ;;
     AF-095-H-003)
         first_dimension="capability_roots"
