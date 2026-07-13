@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -9,6 +10,7 @@ from pathlib import Path
 
 from asterion.services.controlled_executor import ControlledExecutorError
 from asterion.services.controlled_executor_jsonl import TrustedValidationConfig
+from asterion.services.controlled_executor_jsonl import ControlledExecutorJsonlClient
 
 
 @dataclass(frozen=True)
@@ -16,6 +18,68 @@ class OperatorExecutorConfig:
     binary_path: Path
     policy_path: Path
     validation_config: TrustedValidationConfig
+
+
+class ManagedControlledExecutor:
+    """Start, expose, and reap one explicit stdio executor subprocess."""
+
+    def __init__(self, config: OperatorExecutorConfig) -> None:
+        self._config = config
+        self._process: asyncio.subprocess.Process | None = None
+
+    async def __aenter__(self) -> ControlledExecutorJsonlClient:
+        try:
+            process = await asyncio.create_subprocess_exec(
+                str(self._config.binary_path),
+                str(self._config.policy_path),
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                env={},
+            )
+        except (OSError, ValueError):
+            raise ControlledExecutorError("controlled executor failed to start") from None
+        self._process = process
+        await asyncio.sleep(0)
+        if (
+            process.returncode is not None
+            or process.stdin is None
+            or process.stdout is None
+            or process.stderr is None
+        ):
+            await self._shutdown()
+            raise ControlledExecutorError("controlled executor is unavailable")
+        return ControlledExecutorJsonlClient(
+            reader=process.stdout,
+            writer=process.stdin,
+            config=self._config.validation_config,
+        )
+
+    async def __aexit__(self, exc_type, exc, traceback) -> None:
+        del exc_type, exc, traceback
+        await self._shutdown()
+
+    async def _shutdown(self) -> None:
+        process = self._process
+        self._process = None
+        if process is None:
+            return
+        if process.stdin is not None:
+            process.stdin.close()
+        try:
+            await asyncio.wait_for(process.wait(), timeout=1)
+        except TimeoutError:
+            process.terminate()
+            try:
+                await asyncio.wait_for(process.wait(), timeout=1)
+            except TimeoutError:
+                process.kill()
+                await process.wait()
+        if process.stderr is not None:
+            try:
+                await asyncio.wait_for(process.stderr.read(), timeout=1)
+            except (TimeoutError, OSError):
+                pass
 
 
 def load_operator_executor_config(
