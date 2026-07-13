@@ -238,13 +238,13 @@
 
 ## AF-220 — Shared configuration and runnable Pi application parity
 
-- Status: proposed
+- Status: in_progress
 - Parent objective: Asterion DCI complete capability-package reference product
 - Scope: replace the prior split configuration assumption with the approved shared `.env` contract, carry effective Pi/provider/model/tool/context configuration through Asterion package, benchmark, and installed-application paths, and provide Pi-default Asterion runnable examples.
 - Dependencies: AF-180, AF-190, AF-200, AF-210
 - Acceptance: Asterion and source DCI share normal `DCI_*` configuration without an Asterion runtime dependency on the source product; package CLI and installed Pi application construct equivalent native requests; configuration/context/resource mappings and two Asterion example launchers pass fixture, installed-wheel, and authorized bounded Pi checks.
 - Design: `docs/superpowers/specs/2026-07-13-asterion-dci-complete-product-parity-design.md`
-- Plan: pending written-spec review
+- Plan: `docs/superpowers/plans/2026-07-14-af-220-shared-config-runnable-pi.md`
 
 ## AF-095 — Asterion framework identity and extraction
 

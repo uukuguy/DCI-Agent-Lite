@@ -428,3 +428,8 @@
 - 23:03 AF-210 was locally merged into main; the pre-existing main checkpoint journal entry was preserved. [dcd4bf3]
 - 23:18 User approved shared `.env` DCI configuration, Pi-default complete-product parity direction, and bounded real Pi/Judge acceptance; AF-220 proposed pending spec review.
 - 23:25 Complete-parity specification and AF-220 proposal committed; awaiting written-spec review.
+- 00:12 AF-220 plan approved, package activated, and stale AF-210 Climb session marked completed before new dispatch.
+
+## 2026-07-14
+
+- 00:14 correction: preceding 00:12 AF-220 activation occurred on 2026-07-14.
