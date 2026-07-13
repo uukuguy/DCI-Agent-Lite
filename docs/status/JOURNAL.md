@@ -444,3 +444,4 @@
 - 00:52 Benchmark command now redacts native-run, evaluation, and artifact I/O failures while preserving deterministic batch behavior; 19 focused tests pass. [a677139]
 - 00:55 Standalone evaluation now redacts artifact I/O errors at the product boundary; 20 focused CLI/benchmark tests pass. [7eb80e1]
 - 01:00 Installed Asterion DCI Pi applications now resolve shared runtime options at the provider boundary while the capability implementation keeps its minimal invocation request; focused application tests, compile, Ruff, scope, and diff checks pass without external requests. [pending Task 4 commit]
+- 01:01 Installed applications resolve shared runtime options at the provider boundary for Pi parity. [947b6f0]
