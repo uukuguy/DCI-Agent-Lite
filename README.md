@@ -59,12 +59,24 @@ asterion-dci run \
   "Answer using only the local corpus."
 ```
 
-An AF-180 run writes `question.txt`, `events.jsonl`, `state.json`,
-`final.txt`, `stderr.txt`, and `protocol/` beneath the independent output
-root. Resume and durable recovery are deferred to AF-190; judge, evaluation,
-and benchmark functions are deferred to AF-200. Use `asterion-dci
-system-prompt` to print Pi's generated prompt without changing the generic
-`asterion` CLI.
+An AF-190 run writes `question.txt`, `events.jsonl`, `state.json`,
+`conversation_full.json`, `conversation.json`, `latest_model_context.json`,
+`tool_results/`, `final.txt`, `stderr.txt`, and a separate `protocol/` attempt
+directory beneath the independent output root. `conversation_full.json` and
+raw tool-result bodies remain protected native evidence; package results expose
+only body-free artifact references.
+
+Resume a failed or incomplete run without re-entering its immutable inputs:
+
+```bash
+asterion-dci resume --output-dir path/to/asterion-dci-run
+```
+
+The command reconstructs the request from `state.json`, rejects completed or
+invalid runs before starting Pi, and retains previous evidence while creating a
+new protocol attempt. The generic `asterion` CLI remains domain-neutral. Judge,
+evaluation, and benchmark functions remain deferred to AF-200. Use
+`asterion-dci system-prompt` to print Pi's generated prompt.
 
 The installed registry also exposes `claude-code.reference`. Its factory uses
 `ASTERION_CLAUDE_EXECUTABLE` (default `claude`) and `ASTERION_RUNTIME_CWD`, but

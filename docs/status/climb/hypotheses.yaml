@@ -1281,6 +1281,18 @@ hypotheses:
   expected_lift: +1 durable capability-package confidence
   cost_h: 0.6
   ranking: 0.7
-  status: pending
+  status: confirmed
   created_at: '2026-07-13T18:18:00+08:00'
-  results: []
+  results:
+  - session: 2026-07-13-af-190-dci-durable-resume
+    cycle: 58
+    run: 20260713-191115-dci-climb-af190h004
+    local: 4
+    local_per_task:
+      durable_reference_projection: 1
+      body_free_projection: 1
+      terminal_result_rejection: 1
+      baseline_independence: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance

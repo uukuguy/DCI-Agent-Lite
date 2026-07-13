@@ -71,6 +71,18 @@ class SourceDistributionBoundaryTests(unittest.TestCase):
         self.assertIn("project_dci_run", execution)
         self.assertRegex(execution.lower(), r"generic\s+asterion cli")
 
+    def test_durable_dci_documentation_names_resume_and_protected_artifacts(self) -> None:
+        readme = (ROOT / "README.md").read_text()
+        execution = (ROOT / "docs/architecture/capability-execution.md").read_text()
+
+        self.assertIn("asterion-dci resume", readme)
+        self.assertIn("conversation_full.json", readme)
+        self.assertIn("immutable", readme)
+        self.assertIn("AF-200", readme)
+        self.assertIn("latest_model_context.json", execution)
+        self.assertIn("conversation_full.json", execution)
+        self.assertIn("protected", execution)
+
 
     def test_source_baseline_remains_runnable_without_installation(self) -> None:
         environment = os.environ.copy()

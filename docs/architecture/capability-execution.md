@@ -54,6 +54,16 @@ references without answer, question, command, or stderr bodies. The generic
 Asterion CLI remains DCI-neutral; `asterion-dci` owns its product-specific
 arguments. Neither it nor Asterion imports or modifies `src/dci/benchmark/`.
 
+The package-local `asterion-dci resume --output-dir RUN_DIR` command restores
+only the immutable request recorded in native `state.json`; it rejects
+completed or malformed state before Pi starts and isolates each retry under
+`protocol/`. Native evidence includes `conversation_full.json`, the processed
+`conversation.json`, and `latest_model_context.json`. Full conversation and
+tool-result bodies remain protected native artifacts. A package projection may
+name only body-free references, including `conversation.json`,
+`latest_model_context.json`, `events.jsonl`, `state.json`, `final.txt`, and
+`protocol/`; it never contains their bodies.
+
 The existing `dci-agent-lite` command remains the external baseline. Asterion
 and baseline runs may share questions and corpora for comparison, but they do
 not share benchmark execution code. Equivalent provider reasoning traces are

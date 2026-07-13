@@ -1,19 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (57 runs).
+> Deterministic summary generated from tracked state (58 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 57
-- Next hypothesis: AF-190-H-004
+- Last cycle: 58
+- Next hypothesis: None
 - In flight: none
-- Next action: Start AF-190-H-004.
+- Next action: Trigger Knowledge Layer.
 
 ## Active hypotheses
 
-- **AF-190-H-004** (pending, rank 0.70): Project durable native run references through the declared capability contract without bodies.
 
 ## Run ladder
 
@@ -76,6 +75,7 @@
 | 20260713-185158-dci-climb-af190h001 | AF-190-H-001 | 4 | confirmed 4/4 |
 | 20260713-190556-dci-climb-af190h002 | AF-190-H-002 | 4 | confirmed 4/4 |
 | 20260713-191011-dci-climb-af190h003 | AF-190-H-003 | 4 | confirmed 4/4 |
+| 20260713-191115-dci-climb-af190h004 | AF-190-H-004 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

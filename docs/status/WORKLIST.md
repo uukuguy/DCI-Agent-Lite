@@ -205,23 +205,24 @@
 
 ## AF-190 — Complete DCI durable run and resume parity
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Asterion Agent Application Framework
 - Scope: transplant native run-directory, raw-event, transcript, final-answer, state, and resume semantics and map their durable evidence to Asterion artifacts/events.
 - Dependencies: AF-180
 - Acceptance: stable fixture comparisons prove native artifact and resume parity while retaining the generic framework privacy boundary.
 - Design: `docs/superpowers/specs/2026-07-13-complete-dci-capability-package-design.md`
-- Plan: deferred until AF-180 acceptance.
+- Plan: `docs/superpowers/plans/2026-07-13-asterion-dci-durable-resume.md`
+- Closure evidence: AF-190-H-001 through H-004 are confirmed 4/4. The independent Asterion DCI package records original-style transcripts, processed conversation/context, raw events, final/state/stderr, tool-result references, and isolated protocol attempts; `asterion-dci resume --output-dir` reconstructs only compatible failed/incomplete native state before Pi construction; package projections expose durable references without bodies. Focused parity/boundary tests, full Python discovery, Python compile/Ruff, TypeScript tests, Rust tests, shell syntax, workspace command help, scope audit, wheel proof, and diff check pass without Pi, judge, or Claude provider requests.
 
 ## AF-200 — Complete DCI evaluation and benchmark parity
 
-- Status: planned
+- Status: in_progress
 - Parent objective: Asterion Agent Application Framework
 - Scope: transplant judge, cache identity, batch/dataset orchestration, result/export behavior, and package-local evaluation/benchmark entry points onto the Asterion DCI execution implementation.
 - Dependencies: AF-180, AF-190
 - Acceptance: focused fixture tests prove safe evaluation/cache behavior and batch paths reuse the Asterion DCI implementation rather than `src/dci`.
 - Design: `docs/superpowers/specs/2026-07-13-complete-dci-capability-package-design.md`
-- Plan: deferred until AF-190 acceptance.
+- Plan: pending AF-200 package plan after AF-190 durable-resume closure.
 
 ## AF-210 — Complete DCI application and runtime semantic parity
 
