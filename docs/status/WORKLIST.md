@@ -190,6 +190,7 @@
 - Acceptance: approved design and plan define exact provider declaration, fixture-only generic CLI proof, Pi compatibility preservation, and the boundary for future real authorization.
 - Design: `docs/superpowers/specs/2026-07-13-installed-dci-claude-compatibility-design.md`
 - Plan: `docs/superpowers/plans/2026-07-13-installed-dci-claude-compatibility.md`
+- Implementation evidence: generic runtime-specific assembly selection, paired immutable DCI Pi/Claude assemblies, bundled fixture-only generic CLI proof, isolated-wheel resources, Python/Node/Rust closure, compile/lint/shell/scope/diff gates all pass without a Claude request. Formal package transition awaits governed successor selection; real provider-backed UAT remains externally authorized work.
 
 ## AF-095 — Asterion framework identity and extraction
 

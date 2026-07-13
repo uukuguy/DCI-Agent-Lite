@@ -47,7 +47,10 @@ The installed Pi runtime reads `DCI_PI_DIR`, `DCI_PI_PACKAGE_DIR`,
 The installed registry also exposes `claude-code.reference`. Its factory uses
 `ASTERION_CLAUDE_EXECUTABLE` (default `claude`) and `ASTERION_RUNTIME_CWD`, but
 constructing it neither authenticates nor sends a provider request. The bundled
-DCI application remains explicitly `pi.reference` compatible.
+DCI application explicitly supports `pi.reference` and
+`claude-code.reference`; the latter is fixture-verified only until an operator
+supplies authorization for a real provider-backed run. For either runtime, the
+generic CLI selects the application's unique matching canonical assembly.
 
 The bundled controlled-code application requires an explicit executor binary,
 Rust policy, and validation configuration. Supply all three through flags or

@@ -38,8 +38,10 @@ asterion run --provider dci-agent-lite \
 ```
 
 Plain `asterion list` remains metadata-only. Application listing loads only the
-explicitly selected provider. `--assembly PATH` remains an advanced explicit
-compatibility path.
+explicitly selected provider. `--application` selects the one canonical
+assembly whose declared runtime matches `--runtime`; zero or multiple matches
+fail before runtime construction. `--assembly PATH` remains an advanced
+explicit compatibility path and must itself declare the selected runtime.
 
 ## Wire compatibility
 

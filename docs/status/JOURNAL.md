@@ -362,3 +362,5 @@
 - 11:01 AF-170 paired DCI Pi/Claude assemblies pass provider and composition parity. [pending implementation commit]
 - 11:02 correction: paired DCI assembly declaration committed. [3dafba9]
 - 11:02 AF-170 generic CLI executes bundled DCI with an injected Claude fixture; no provider request. [pending test commit]
+- 11:04 correction: bundled DCI Claude fixture proof committed. [3b660b3]
+- 11:04 AF-170 closure gates pass after TypeScript fixture parity includes paired Claude assembly. [pending closure commit]

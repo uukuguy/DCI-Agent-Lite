@@ -100,7 +100,15 @@ class BuiltDistributionBoundaryTests(unittest.TestCase):
             self.assertEqual(len(manifests), len(set(manifests)))
             self.assertEqual(len(controlled_manifests), 4)
             self.assertEqual(len(controlled_manifests), len(set(controlled_manifests)))
-            self.assertEqual(len(assemblies), 3)
+            self.assertEqual(
+                {Path(name).name for name in assemblies},
+                {
+                    "controlled-code-validation.json",
+                    "dci-local-research.json",
+                    "dci-research-capability-claude.json",
+                    "dci-research-capability.json",
+                },
+            )
             self.assertEqual(len(assemblies), len(set(assemblies)))
 
     def test_no_capability_or_baseline_project_remains(self) -> None:
