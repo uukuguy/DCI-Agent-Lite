@@ -9,6 +9,7 @@ from asterion.packages.catalog import PackageRef
 from asterion.packages.execution import PackageExecutionError, PackageInvocation
 from asterion.runtime.host import RunEvent, RunRequest, RuntimeManifest
 from asterion.capabilities.dci_research import DciLocalResearchImplementation
+from asterion.dci.run import DciRunResult
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -123,6 +124,35 @@ class DciResearchCapabilityTests(unittest.IsolatedAsyncioTestCase):
         message = str(raised.exception)
         self.assertNotIn("SECRET-APPLICATION-INPUT", message)
         self.assertNotIn("SECRET-PROVIDER-PAYLOAD", message)
+
+    async def test_completed_native_run_uses_the_explicit_projection_seam(self) -> None:
+        result = DciRunResult(
+            output_dir=Path("run"),
+            final_text="SECRET-NATIVE-ANSWER",
+            events=(
+                RunEvent("run", 1, "run.started", {"capabilities": []}),
+                RunEvent(
+                    "run",
+                    2,
+                    "artifact.created",
+                    {
+                        "artifact": {
+                            "artifact_id": "answer",
+                            "kind": "answer",
+                            "media_type": "text/plain",
+                            "uri": "final.txt",
+                        }
+                    },
+                ),
+                RunEvent("run", 3, "run.completed", {"status": "completed"}),
+            ),
+            status="completed",
+        )
+
+        projection = DciLocalResearchImplementation().execute_completed_native_run(result)
+
+        self.assertEqual(projection.artifacts[0]["value"]["events_artifact_uri"], "events.jsonl")
+        self.assertNotIn("SECRET-NATIVE-ANSWER", repr(projection))
 
 
 class DciResearchCapabilityBoundaryTests(unittest.TestCase):

@@ -9,6 +9,8 @@ from asterion.packages.execution import (
     PackageExecutionResult,
     PackageInvocation,
 )
+from asterion.dci.bridge import project_dci_run
+from asterion.dci.run import DciRunResult
 from asterion.runtime.host import RunRequest
 from asterion.runtime.protocol import ProtocolError, validate_event_stream
 
@@ -52,6 +54,11 @@ class DciLocalResearchImplementation:
                 },
             ),
         )
+
+    def execute_completed_native_run(self, result: DciRunResult) -> PackageExecutionResult:
+        """Project an explicitly supplied native run; generic ownership remains unchanged."""
+
+        return project_dci_run(result)
 
 
 def _answer_artifact_uri(events: tuple[Mapping[str, object], ...]) -> str:
