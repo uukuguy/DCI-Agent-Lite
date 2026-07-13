@@ -86,6 +86,11 @@ class BuiltDistributionBoundaryTests(unittest.TestCase):
                 manifests = [
                     name for name in archive.namelist() if "/dci_research/manifests/" in name
                 ]
+                controlled_manifests = [
+                    name
+                    for name in archive.namelist()
+                    if "/controlled_code/manifests/" in name
+                ]
                 assemblies = [
                     name
                     for name in archive.namelist()
@@ -93,6 +98,8 @@ class BuiltDistributionBoundaryTests(unittest.TestCase):
                 ]
             self.assertEqual(len(manifests), 4)
             self.assertEqual(len(manifests), len(set(manifests)))
+            self.assertEqual(len(controlled_manifests), 4)
+            self.assertEqual(len(controlled_manifests), len(set(controlled_manifests)))
             self.assertEqual(len(assemblies), 3)
             self.assertEqual(len(assemblies), len(set(assemblies)))
 
