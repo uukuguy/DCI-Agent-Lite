@@ -233,6 +233,24 @@ class AsterionDciCliTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(stdout.getvalue(), f"output_dir={root / 'run'}\nis_correct=True\nevaluation_uri=eval_result.json\n")
 
+    def test_evaluate_redacts_artifact_io_failure(self) -> None:
+        with patch(
+            "asterion.dci.cli.evaluate_run_directory",
+            side_effect=OSError("credential=synthetic-secret"),
+        ):
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            code = main(
+                ["evaluate", "--output-dir", "run", "--gold-answer", "gold"],
+                stdout=stdout,
+                stderr=stderr,
+            )
+
+        self.assertEqual(code, 2)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertEqual(stderr.getvalue(), "DCI evaluation failed\n")
+        self.assertNotIn("synthetic-secret", stdout.getvalue() + stderr.getvalue())
+
     def test_benchmark_maps_shared_runtime_options_without_generic_cli_changes(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)

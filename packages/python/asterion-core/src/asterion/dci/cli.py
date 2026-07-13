@@ -109,7 +109,7 @@ def main(
                 predicted_answer=args.answer,
                 judge_config=JudgeConfig.from_env(),
             )
-        except (DciEvaluationError, ValueError):
+        except (DciEvaluationError, OSError, ValueError):
             stderr.write("DCI evaluation failed\n")
             return 2
         stdout.write(f"output_dir={args.output_dir}\n")
