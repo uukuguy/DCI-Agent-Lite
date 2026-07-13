@@ -40,9 +40,10 @@ asterion run \
   --input "Research this corpus"
 ```
 
-The installed Pi runtime reads `DCI_PI_DIR`, `DCI_PI_PACKAGE_DIR`,
-`DCI_PI_AGENT_DIR`, `ASTERION_RUNTIME_CWD`, `DCI_PROVIDER`, `DCI_MODEL`, and
-`DCI_TOOLS` from the caller environment or current-directory `.env`.
+The installed Pi runtime reads the same normal `DCI_*` configuration as the
+source DCI tools and `asterion-dci`: Pi paths, provider/model, tools, timeout,
+context, thinking, Node heap, session, and judge settings. Its working
+directory remains the application-specific `ASTERION_RUNTIME_CWD`.
 
 For `pi.reference`, the installed DCI application delegates to the same
 Asterion-owned native DCI workflow as `asterion-dci run`, so its durable run,
@@ -52,10 +53,11 @@ arguments or artifact formats.
 
 ### Independent Asterion DCI execution
 
-`asterion-dci` is the Asterion-owned DCI product command. It uses only
-`ASTERION_DCI_PI_DIR`, `ASTERION_DCI_PI_PACKAGE_DIR`,
-`ASTERION_DCI_PI_AGENT_DIR`, and `ASTERION_DCI_OUTPUT_ROOT`; it does not use
-the legacy DCI configuration namespace or run `src/dci`.
+`asterion-dci` is the Asterion-owned DCI product command. Normal `DCI_*`
+settings in the repository-root `.env` are shared by source DCI,
+`asterion-dci`, its benchmark command, and installed Pi applications. Explicit
+CLI options override those defaults. `ASTERION_DCI_OUTPUT_ROOT` remains
+Asterion-specific, and the product command never runs `src/dci`.
 
 ```bash
 asterion-dci run \
@@ -64,6 +66,11 @@ asterion-dci run \
   --extra-arg="--thinking high" \
   "Answer using only the local corpus."
 ```
+
+Run the matching examples with `make asterion-example` or
+`make asterion-runtime-example`. They load the repository-root `.env`, require
+`DCI_PROVIDER` and `DCI_MODEL`, and then issue a real Pi request; configure the
+shared `DCI_EVAL_JUDGE_*` values before using the runtime-context example.
 
 An AF-190 run writes `question.txt`, `events.jsonl`, `state.json`,
 `conversation_full.json`, `conversation.json`, `latest_model_context.json`,
@@ -214,7 +221,12 @@ Common variables:
 - `ANTHROPIC_API_KEY` for Anthropic model runs.
 - `OPENAI_API_KEY` for OpenAI model runs or the optional official OpenAI judge configuration.
 - `DEEPSEEK_API_KEY` for the primary DeepSeek judge example.
-- `DCI_PROVIDER` and `DCI_MODEL` select the agent used by environment-driven example scripts.
+- Normal `DCI_*` settings are shared by source DCI, `asterion-dci`, its benchmark,
+  and installed Pi applications. In addition to `DCI_PROVIDER` and `DCI_MODEL`,
+  this includes `DCI_PI_DIR`, `DCI_PI_PACKAGE_DIR`, `DCI_PI_AGENT_DIR`,
+  `DCI_TOOLS`, `DCI_RPC_TIMEOUT_SECONDS`, `DCI_RUNTIME_CONTEXT_LEVEL`,
+  `DCI_PI_THINKING_LEVEL`, `DCI_NODE_MAX_OLD_SPACE_SIZE_MB`, and
+  `DCI_EVAL_JUDGE_*`; explicit CLI options take precedence.
 - `DCI_EVAL_JUDGE_BASE_URL`, `DCI_EVAL_JUDGE_API`, `DCI_EVAL_JUDGE_MODEL`, and
   `DCI_EVAL_JUDGE_API_KEY_ENV` select the eval judge backend. See `.env.template` for DeepSeek,
   OpenAI, and local-compatible examples. The base URL must be an absolute HTTP(S) origin without

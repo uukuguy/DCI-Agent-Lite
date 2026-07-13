@@ -1,10 +1,16 @@
-.PHONY: example runtime-example check-pi-rpc check-judge check-judge-config test-typescript-host test-rust-executor check-rust-executor codex-example deepseek-example
+.PHONY: example runtime-example asterion-example asterion-runtime-example check-pi-rpc check-judge check-judge-config test-typescript-host test-rust-executor check-rust-executor codex-example deepseek-example
 
 example:
 	bash scripts/examples/dci_basic_example.sh
 
 runtime-example:
 	bash scripts/examples/dci_runtime_context_example.sh
+
+asterion-example:
+	bash scripts/examples/asterion_dci_basic_example.sh
+
+asterion-runtime-example:
+	bash scripts/examples/asterion_dci_runtime_context_example.sh
 
 check-pi-rpc:
 	uv run python scripts/check_pi_rpc.py

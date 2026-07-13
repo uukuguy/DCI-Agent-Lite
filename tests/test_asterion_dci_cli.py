@@ -15,6 +15,9 @@ from asterion.dci.run import DciRunError, DciRunResult
 from asterion.runtime.host import RunEvent
 
 
+ROOT = Path(__file__).resolve().parents[1]
+
+
 def fixture_result(output_dir: Path) -> DciRunResult:
     return DciRunResult(
         output_dir=output_dir,
@@ -28,6 +31,16 @@ def fixture_result(output_dir: Path) -> DciRunResult:
 
 
 class AsterionDciCliTests(unittest.TestCase):
+    def test_asterion_examples_use_shared_env_and_package_command(self) -> None:
+        for path in (
+            ROOT / "scripts/examples/asterion_dci_basic_example.sh",
+            ROOT / "scripts/examples/asterion_dci_runtime_context_example.sh",
+        ):
+            source = path.read_text()
+            self.assertIn("asterion-dci run", source)
+            self.assertIn("DCI_PROVIDER", source)
+            self.assertNotIn("python -m dci.", source)
+
     def test_run_uses_shared_defaults_and_explicit_runtime_controls(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
