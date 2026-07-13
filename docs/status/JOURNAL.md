@@ -410,3 +410,4 @@
 - 19:35 AF-200 closed: judge, exact evaluation cache, JSONL batch orchestration, package CLI, and body-free projection passed local closure; AF-210 activated.
 - 19:40 AF-200 closure committed as `d5d5d08`; AF-210 baton prepared with no live processes or provider requests.
 - 21:34 AF-210 provider-bound Pi application parity design committed. [7628d53]
+- 22:03 AF-210 plan, decision, and governed worklist link committed. [7ecd596]

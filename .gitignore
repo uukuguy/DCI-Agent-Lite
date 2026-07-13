@@ -224,3 +224,4 @@ node_modules/
 .claudeignore
 .codex/
 .codexignore
+.worktrees/
