@@ -358,3 +358,5 @@
 - 10:53 AF-170 TDD implementation plan approved; fixture-only generic selection is ready for scoped Climb hypotheses. [pending plan commit]
 - 10:59 AF-170-H-001 confirms generic runtime-specific assembly selection; stale single-assembly application guard removed. [pending implementation commit]
 - 10:59 correction: this is Task 1 test evidence; no AF-170 Climb hypothesis or cycle is registered yet.
+- 11:00 correction: Task 1 generic runtime assembly selection committed. [ac96286]
+- 11:01 AF-170 paired DCI Pi/Claude assemblies pass provider and composition parity. [pending implementation commit]

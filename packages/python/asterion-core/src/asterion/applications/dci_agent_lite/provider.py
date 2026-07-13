@@ -29,6 +29,8 @@ def create_provider() -> InstalledApplicationProvider:
                 application_id="dci.research-capability",
                 version="1.0.0",
                 assembly_paths=(
+                    application_root
+                    / "assemblies/dci-research-capability-claude.json",
                     application_root / "assemblies/dci-research-capability.json",
                 ),
                 catalog_roots=(capability_root / "manifests",),
@@ -38,7 +40,7 @@ def create_provider() -> InstalledApplicationProvider:
                         DciLocalResearchImplementation(),
                     ),
                 ),
-                runtime_ids=("pi.reference",),
+                runtime_ids=("claude-code.reference", "pi.reference"),
             ),
         ),
     )

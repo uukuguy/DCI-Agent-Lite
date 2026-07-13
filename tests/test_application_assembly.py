@@ -267,6 +267,7 @@ class ReferenceAssemblyTests(unittest.TestCase):
                 "controlled-code-validation.json",
                 "dci-local-research.json",
                 "dci-research-capability.json",
+                "dci-research-capability-claude.json",
             },
         )
         for path in paths:
@@ -277,6 +278,14 @@ class ReferenceAssemblyTests(unittest.TestCase):
         pi = self.resolve(assembly, "pi.reference")
         claude = self.resolve(assembly, "claude-code.reference")
         self.assertEqual(pi.composition, claude.composition)
+
+    def test_dci_installed_assemblies_differ_only_by_runtime_identity(self) -> None:
+        pi = self.load("dci-research-capability.json")
+        claude = self.load("dci-research-capability-claude.json")
+
+        self.assertEqual(pi.pop("runtime_id"), "pi.reference")
+        self.assertEqual(claude.pop("runtime_id"), "claude-code.reference")
+        self.assertEqual(pi, claude)
 
     def test_controlled_code_keeps_executor_as_a_host_service(self) -> None:
         assembly = json.loads(

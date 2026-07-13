@@ -32,7 +32,17 @@ class BuiltinDciApplicationTests(unittest.TestCase):
             (application.application_id, application.version),
             ("dci.research-capability", "1.0.0"),
         )
-        self.assertEqual(application.runtime_ids, ("pi.reference",))
+        self.assertEqual(
+            application.runtime_ids,
+            ("claude-code.reference", "pi.reference"),
+        )
+        self.assertEqual(
+            {path.name for path in application.assembly_paths},
+            {
+                "dci-research-capability-claude.json",
+                "dci-research-capability.json",
+            },
+        )
         self.assertEqual(
             tuple(ref for ref, _ in application.implementations),
             (PackageRef("dci.research", "1.0.0"),),
