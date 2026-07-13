@@ -4,11 +4,11 @@
 
 - Project: Asterion framework under development in the DCI-Agent-Lite repository; DCI remains the first capability and reference application.
 - Current branch: `main`
-- Theme-level focus: Run the deferred Claude provider-backed acceptance only if an authorized backend is locally available.
+- Theme-level focus: Verify the installed Claude runtime interface without a provider request.
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: `AF-160` — deferred Claude provider-backed acceptance.
+- Active work package: `AF-160` — installed Claude runtime interface verification.
 
 ## Current Architecture
 
@@ -47,7 +47,7 @@
 ## Open Problems (theme-level)
 
 - Provider-backed acceptance of the first non-Pi runtime when credentials or a compatible gateway become available.
-- AF-160 verified Claude Code 2.1.199 is installed but has no stored login and no compatible gateway configuration present. Provider-backed acceptance remains safely blocked; no provider request was sent and no code change is authorized until an operator supplies access.
+- Provider-backed Claude acceptance remains deferred because the local CLI is unauthenticated. AF-160 instead validates the installed runtime factory and existing command/fixture/redaction boundary without a provider request.
 
 ## Key Files
 

@@ -316,3 +316,12 @@
 - Security boundary: direct argv is `[binary, policy_path]`, the environment is minimal, no shell is used, and readiness means pipe/process availability rather than a false policy-health claim.
 - Revalidation trigger: add supervised connection, persistent reuse, or protocol health only for a concrete deployment through separately versioned lifecycle/protocol designs.
 - Implemented evidence: AF-150 validates all three operator inputs before runtime/child construction, starts exactly one direct-argv stdio sidecar with a minimal environment, injects it only into the controlled-code run, forwards correlated protocol cancellation, discards stderr in bounded chunks, and reaps on exit. The isolated wheel runs `code.quality@1.0.0` successfully against the Rust sidecar while excluding `dci`.
+
+## D-034 — Expose Claude runtime explicitly without provider authorization
+
+- Status: ✅ accepted decision
+- Decided: 2026-07-13
+- Decision: the installed runtime registry may expose `claude-code.reference` by exact runtime ID even when no Claude account or gateway is available; constructing it is an interface operation, never a provider request.
+- Rationale: installed-product runtime selection needs the same explicit, testable boundary as Pi, while unavailable authorization must not block protocol, command, environment, or redaction conformance.
+- Boundary: no bundled application is implicitly made Claude-compatible, and AF-160 does not automate login, configure credentials, attempt a prompt, add dynamic selection, or change the existing DCI provider runtime list.
+- Revalidation trigger: add a real provider-backed invocation only when an operator supplies authorization and an application explicitly declares `claude-code.reference`.
