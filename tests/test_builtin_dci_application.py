@@ -43,6 +43,7 @@ class BuiltinDciApplicationTests(unittest.TestCase):
         generic_files = [
             ASTERION / "applications/discovery.py",
             ASTERION / "applications/provider.py",
+            ASTERION / "applications/selection.py",
             ASTERION / "cli.py",
         ]
         source = "\n".join(path.read_text() for path in generic_files)

@@ -48,6 +48,35 @@ class AsterionCliTests(unittest.TestCase):
         self.assertEqual(payload[0]["provider_id"], "example-app")
         self.assertNotIn("SECRET-MODULE-PATH", stdout.getvalue())
 
+    def test_list_selected_provider_reports_exact_applications(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            value = provider(Path(temp_dir))
+            entry = FakeEntryPoint(name="example-app", factory=lambda: value)
+            stdout = io.StringIO()
+            code = main(
+                ["list", "--provider", "example-app"],
+                entry_points=(entry,),
+                stdout=stdout,
+                stderr=io.StringIO(),
+            )
+
+        self.assertEqual(code, 0)
+        self.assertEqual(entry.loads, 1)
+        self.assertEqual(
+            json.loads(stdout.getvalue()),
+            {
+                "applications": [
+                    {
+                        "application_id": "example.research",
+                        "runtime_ids": ["pi.reference"],
+                        "selector": "example.research@1.0.0",
+                        "version": "1.0.0",
+                    }
+                ],
+                "provider_id": "example-app",
+            },
+        )
+
     def test_run_preflights_then_constructs_runtime_and_outputs_one_result(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             value = provider(Path(temp_dir))
@@ -79,6 +108,7 @@ class AsterionCliTests(unittest.TestCase):
                     "cli-run",
                     "--input",
                     "SECRET-INPUT",
+                    "--assembly",
                     str(value.applications[0].assembly_paths[0]),
                 ],
                 entry_points=(entry,),
@@ -94,6 +124,65 @@ class AsterionCliTests(unittest.TestCase):
         self.assertEqual(payload["runtime_id"], "pi.reference")
         self.assertEqual(payload["run_id"], "cli-run")
         self.assertNotIn("SECRET-INPUT", stdout.getvalue())
+
+    def test_run_selects_application_without_an_assembly_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            value = provider(Path(temp_dir))
+            entry = FakeEntryPoint(name="example-app", factory=lambda: value)
+            registry = RuntimeFactoryRegistry(
+                (
+                    RuntimeFactoryBinding(
+                        runtime_id="pi.reference",
+                        capabilities=(),
+                        factory=lambda context: FixtureRuntime(),
+                    ),
+                )
+            )
+            stdout = io.StringIO()
+            code = main(
+                [
+                    "run",
+                    "--provider",
+                    "example-app",
+                    "--runtime",
+                    "pi.reference",
+                    "--application",
+                    "example.research@1.0.0",
+                    "--input",
+                    "research",
+                ],
+                entry_points=(entry,),
+                runtime_factories=registry,
+                stdout=stdout,
+                stderr=io.StringIO(),
+            )
+
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(stdout.getvalue())["application_id"], "example.research")
+
+    def test_conflicting_or_missing_selection_fails_before_provider_load(self) -> None:
+        entry = FakeEntryPoint(name="example-app", factory=lambda: None)
+        for selection in (
+            [],
+            ["--application", "example.research@1.0.0", "--assembly", "/tmp/a"],
+        ):
+            with self.subTest(selection=selection):
+                code = main(
+                    [
+                        "run",
+                        "--provider",
+                        "example-app",
+                        "--runtime",
+                        "pi.reference",
+                        *selection,
+                    ],
+                    entry_points=(entry,),
+                    runtime_factories=RuntimeFactoryRegistry(()),
+                    stdout=io.StringIO(),
+                    stderr=io.StringIO(),
+                )
+                self.assertEqual(code, 2)
+        self.assertEqual(entry.loads, 0)
 
     def test_invalid_provider_fails_before_runtime_factory_and_redacts_input(self) -> None:
         calls = []

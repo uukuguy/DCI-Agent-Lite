@@ -15,6 +15,10 @@ from asterion.applications.discovery import (
     load_application_provider,
 )
 from asterion.applications.provider import ApplicationProviderError
+from asterion.applications.selection import (
+    parse_application_selector,
+    select_installed_application,
+)
 from asterion.assembly.protocol import AssemblyError, resolve_assembly
 from asterion.packages.catalog import discover_packages
 from asterion.packages.execution import (
@@ -54,6 +58,29 @@ def main(
     try:
         args = parser.parse_args(argv)
         if args.command == "list":
+            if args.provider is not None:
+                provider = load_application_provider(
+                    args.provider, entry_points=entry_points
+                )
+                payload = {
+                    "provider_id": provider.provider_id,
+                    "applications": [
+                        {
+                            "application_id": application.application_id,
+                            "version": application.version,
+                            "selector": (
+                                f"{application.application_id}@{application.version}"
+                            ),
+                            "runtime_ids": list(application.runtime_ids),
+                        }
+                        for application in sorted(
+                            provider.applications,
+                            key=lambda item: (item.application_id, item.version),
+                        )
+                    ],
+                }
+                stdout.write(json.dumps(payload, sort_keys=True) + "\n")
+                return 0
             payload = [
                 {
                     "provider_id": item.provider_id,
@@ -64,6 +91,11 @@ def main(
             ]
             stdout.write(json.dumps(payload, sort_keys=True) + "\n")
             return 0
+        if sum(
+            value is not None
+            for value in (args.application, args.assembly, args.legacy_assembly)
+        ) != 1:
+            raise ApplicationProviderError("application selection mode is invalid")
         return asyncio.run(
             _run(
                 args,
@@ -98,18 +130,24 @@ async def _run(
     provider = load_application_provider(
         args.provider, entry_points=entry_points
     )
-    requested = Path(args.assembly)
-    if requested.is_symlink():
-        raise ApplicationProviderError("application assembly is unsafe")
-    assembly_path = requested.resolve(strict=True)
-    matches = [
-        application
-        for application in provider.applications
-        if assembly_path in application.assembly_paths
-    ]
-    if len(matches) != 1:
-        raise ApplicationProviderError("application assembly selection is invalid")
-    application = matches[0]
+    if args.application is not None:
+        application = select_installed_application(
+            provider, parse_application_selector(args.application)
+        )
+        assembly_path = application.assembly_paths[0]
+    else:
+        requested = Path(args.assembly or args.legacy_assembly)
+        if requested.is_symlink():
+            raise ApplicationProviderError("application assembly is unsafe")
+        assembly_path = requested.resolve(strict=True)
+        matches = [
+            candidate
+            for candidate in provider.applications
+            if assembly_path in candidate.assembly_paths
+        ]
+        if len(matches) != 1:
+            raise ApplicationProviderError("application assembly selection is invalid")
+        application = matches[0]
     if args.runtime not in application.runtime_ids:
         raise ApplicationProviderError("application runtime selection is invalid")
     runtime_binding = registry.select(args.runtime)
@@ -145,13 +183,16 @@ async def _run(
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="asterion")
     subparsers = parser.add_subparsers(dest="command", required=True)
-    subparsers.add_parser("list")
+    list_command = subparsers.add_parser("list")
+    list_command.add_argument("--provider")
     run = subparsers.add_parser("run")
     run.add_argument("--provider", required=True)
     run.add_argument("--runtime", required=True)
     run.add_argument("--run-id", default="asterion-run")
     run.add_argument("--input")
-    run.add_argument("assembly")
+    run.add_argument("--application")
+    run.add_argument("--assembly")
+    run.add_argument("legacy_assembly", nargs="?")
     return parser
 
 
