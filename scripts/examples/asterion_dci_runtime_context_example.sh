@@ -21,6 +21,10 @@ set -euo pipefail
 
 level="${1:-high}"
 QUESTION="Read the files in the current directory. Do not use web search. Use rg instead of grep when searching. Question: In the Bonang Matheba interview where the third-to-last question asks about the origin of the name given to her by radio listeners, what is the interviewer's first name? Answer with just the first name and one supporting file path."
+if [ -n "${ASTERION_DCI_CORPUS_ROOT:-}" ] && [ "${ASTERION_DCI_CORPUS_ROOT#/}" = "$ASTERION_DCI_CORPUS_ROOT" ]; then
+  printf 'ASTERION_DCI_CORPUS_ROOT must be an absolute path\n' >&2
+  exit 2
+fi
 CORPUS_ROOT="${ASTERION_DCI_CORPUS_ROOT:-$REPO_ROOT/corpus}"
 CORPUS_DIR="$CORPUS_ROOT/bc_plus_docs"
 if [ ! -d "$CORPUS_DIR" ]; then

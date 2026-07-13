@@ -137,6 +137,31 @@ class AsterionDciCliTests(unittest.TestCase):
             self.assertIn("Asterion DCI corpus directory does not exist", result.stderr)
             self.assertFalse(launcher_log.exists())
 
+            for path, corpus_name in examples:
+                with self.subTest(path=path.name, case="rejects relative override"):
+                    relative_root = temporary_root / "relative"
+                    (relative_root / corpus_name).mkdir(parents=True, exist_ok=True)
+                    result = subprocess.run(
+                        ["bash", str(path)],
+                        cwd=temporary_root,
+                        env={
+                            "PATH": f"{launcher_bin}:{os.environ['PATH']}",
+                            "DCI_PROVIDER": "test-provider",
+                            "DCI_MODEL": "test-model",
+                            "ASTERION_DCI_CORPUS_ROOT": "relative",
+                            "UV_CALLED": str(launcher_log),
+                        },
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                    )
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn(
+                        "ASTERION_DCI_CORPUS_ROOT must be an absolute path",
+                        result.stderr,
+                    )
+                    self.assertFalse(launcher_log.exists())
+
     def test_run_uses_shared_defaults_and_explicit_runtime_controls(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)

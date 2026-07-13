@@ -78,8 +78,8 @@ shared `DCI_EVAL_JUDGE_*` values before using the runtime-context example. By
 default they use the checkout's `corpus/` directory. From an isolated worktree,
 set `ASTERION_DCI_CORPUS_ROOT` to the absolute `corpus/` directory in the main
 checkout; the examples verify the required `wiki_corpus` or `bc_plus_docs`
-directory before starting Pi. This override only selects read-only example
-input and does not copy or link corpus data.
+directory before starting Pi. This override does not copy or link corpus data;
+it does not impose a filesystem-permission boundary.
 
 An AF-190 run writes `question.txt`, `events.jsonl`, `state.json`,
 `conversation_full.json`, `conversation.json`, `latest_model_context.json`,
