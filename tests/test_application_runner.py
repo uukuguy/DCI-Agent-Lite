@@ -20,9 +20,9 @@ MANIFEST_ROOTS = (
     ROOT / "packages/python/asterion-core/src/asterion/capabilities/dci_research/manifests",
     ROOT / "capabilities/controlled-code/manifests",
 )
-ASSEMBLY = ROOT / "applications/dci-agent-lite/assemblies/dci-local-research.json"
+ASSEMBLY = ROOT / "packages/python/asterion-core/src/asterion/applications/dci_agent_lite/assemblies/dci-local-research.json"
 CONTROLLED_ASSEMBLY = (
-    ROOT / "applications/dci-agent-lite/assemblies/controlled-code-validation.json"
+    ROOT / "packages/python/asterion-core/src/asterion/applications/dci_agent_lite/assemblies/controlled-code-validation.json"
 )
 GUIDE = ROOT / "docs/architecture/application-runner.md"
 

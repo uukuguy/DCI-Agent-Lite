@@ -11,5 +11,8 @@ requires-python = ">=3.10"
 [project.scripts]
 asterion = "asterion.cli:main"
 
+[project.entry-points."asterion.applications"]
+dci-agent-lite = "asterion.applications.dci_agent_lite:create_provider"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/asterion"]

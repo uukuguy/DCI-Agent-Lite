@@ -26,7 +26,7 @@ const assemblyFixtures = new URL(
   import.meta.url,
 );
 const referenceAssemblies = new URL(
-  "../../../../applications/dci-agent-lite/assemblies/",
+  "../../../../packages/python/asterion-core/src/asterion/applications/dci_agent_lite/assemblies/",
   import.meta.url,
 );
 

@@ -8,8 +8,8 @@ validates those identities and asks the existing package composer to prove the
 declared graph. It does not start a runtime, invoke a tool, execute a workflow,
 launch the Rust sidecar, or mutate any input manifest.
 
-The checked-in `applications/dci-agent-lite/assemblies/dci-local-research.json` and
-`applications/dci-agent-lite/assemblies/controlled-code-validation.json` files are portable application
+The checked-in `packages/python/asterion-core/src/asterion/applications/dci_agent_lite/assemblies/dci-local-research.json` and
+`packages/python/asterion-core/src/asterion/applications/dci_agent_lite/assemblies/controlled-code-validation.json` files are portable application
 descriptions. Their package refs are sorted, unique, and exact: assembly does
 not select a highest version, solve ranges, install packages, or access a
 registry.

@@ -86,8 +86,15 @@ class BuiltDistributionBoundaryTests(unittest.TestCase):
                 manifests = [
                     name for name in archive.namelist() if "/dci_research/manifests/" in name
                 ]
+                assemblies = [
+                    name
+                    for name in archive.namelist()
+                    if "/dci_agent_lite/assemblies/" in name
+                ]
             self.assertEqual(len(manifests), 4)
             self.assertEqual(len(manifests), len(set(manifests)))
+            self.assertEqual(len(assemblies), 3)
+            self.assertEqual(len(assemblies), len(set(assemblies)))
 
     def test_no_capability_or_baseline_project_remains(self) -> None:
         self.assertFalse((ROOT / "capabilities/dci-research/pyproject.toml").exists())
