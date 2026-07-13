@@ -454,3 +454,4 @@
 - 01:19 AF-220-H-003 confirmed 4/4; package acceptance recorded.
 - 01:19 AF-220-H-004 confirmed 4/4; package acceptance recorded.
 - 01:20 AF-220 local Climb adapter now owns all four current shared-config/Pi-control/package-batch/application-example suites. It no longer relies on closed AF-210 scope, while legacy AF-210 adapter checks remain runnable. Full local Python, compile/Ruff, TypeScript, Rust, shell, scope, and diff closure passed without provider requests; bounded real acceptance remains pending.
+- 01:24 AF-220 local Climb closure repair committed with current hypothesis suites and truthful state. [aaf0d40]
