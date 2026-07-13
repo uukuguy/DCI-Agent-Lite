@@ -57,6 +57,7 @@ class ControlledExecutorJsonlClient:
         self._writer = writer
         self._config = config
         self._counter = 0
+        self._cancel_counter = 0
         self._lock = asyncio.Lock()
 
     async def execute(self, request: ControlledExecutionRequest, *, signal=None) -> ControlledExecutionResult:
@@ -82,15 +83,46 @@ class ControlledExecutorJsonlClient:
                 self._writer.write((json.dumps(message, separators=(",", ":")) + "\n").encode())
                 await self._writer.drain()
                 started = monotonic()
-                raw = await self._reader.readline()
-                if not raw:
-                    raise ValueError("executor stream ended")
-                response = json.loads(raw)
-                validate_message(response)
-                if response.get("request_id") != request_id:
-                    raise ValueError("executor response mismatch")
-                if response.get("type") != "execution.result":
-                    raise ValueError("executor did not return a result")
+                cancellation_sent = False
+                cancel_request_id = ""
+                while True:
+                    if signal is not None and signal.cancelled and not cancellation_sent:
+                        self._cancel_counter += 1
+                        cancel_request_id = f"asterion-cancel-{self._cancel_counter}"
+                        cancel = {
+                            "protocol": EXECUTOR_PROTOCOL_VERSION,
+                            "request_id": cancel_request_id,
+                            "type": "cancel",
+                            "target_request_id": request_id,
+                        }
+                        validate_message(cancel)
+                        self._writer.write(
+                            (json.dumps(cancel, separators=(",", ":")) + "\n").encode()
+                        )
+                        await self._writer.drain()
+                        cancellation_sent = True
+                    try:
+                        raw = await asyncio.wait_for(self._reader.readline(), timeout=0.05)
+                    except TimeoutError:
+                        continue
+                    if not raw:
+                        raise ValueError("executor stream ended")
+                    response = json.loads(raw)
+                    validate_message(response)
+                    if response.get("type") == "cancel.acknowledged":
+                        if (
+                            not cancellation_sent
+                            or response.get("request_id") != cancel_request_id
+                            or response.get("target_request_id") != request_id
+                        ):
+                            raise ValueError("executor cancellation response mismatch")
+                        continue
+                    if (
+                        response.get("request_id") != request_id
+                        or response.get("type") != "execution.result"
+                    ):
+                        raise ValueError("executor response mismatch")
+                    break
             except Exception:
                 raise ControlledExecutorError("controlled executor transport failed") from None
             return _result(response, duration_ms=max(0, int((monotonic() - started) * 1000)))
