@@ -312,3 +312,6 @@
 - 07:35 通用 `asterion list/run` 已提交，runtime 构造严格晚于 provider 与 binding preflight。[444efc3]
 - 07:54 AF-120 收敛为唯一 Asterion wheel；`src/dci` 仅保留仓库内可运行 baseline。[a0f0a7f]
 - 07:55 单 wheel 设计恢复 checkpoint 已提交，下一步为书面 spec review。[df21975]
+- 08:00 单 wheel TDD 计划替代旧多发行包计划，保持模块边界但减少安装产物。[b8441f7]
+- 08:06 根项目改为非构建 workspace，Asterion 成为唯一 wheel，baseline 由源码启动。[05813e0]
+- 08:11 DCI research 实现与四个 manifests 已并入 `asterion.capabilities`，独立 capability wheel 消失。[4a76c29]

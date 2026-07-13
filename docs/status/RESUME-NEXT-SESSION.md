@@ -1,10 +1,10 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-13 07:54 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-13 08:11 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-120
 
-Package state: AF-120 single-wheel design correction committed; written-spec review is the next gate before revising the implementation plan.
+Package state: AF-120 single-wheel plan is executing inline; distribution and capability consolidation are complete, built-in DCI provider is next.
 
 ## TL;DR
 
@@ -12,21 +12,23 @@ Package state: AF-120 single-wheel design correction committed; written-spec rev
 - AF-120 has implemented the Asterion/core split, frozen baseline-owned `dci.framework.*`, provider v1 validation, selected-only discovery, and generic `asterion list/run` through `444efc3`.
 - The earlier four-distribution plan is superseded. User-approved D-030 requires exactly one buildable `asterion` wheel containing framework core, modular first-party DCI capability/application code, and canonical resources.
 - `src/dci` remains the enhanced runnable comparison baseline in this repository, but produces no wheel and is never an Asterion dependency.
-- The corrected design, worklist acceptance, decision record, and structural state are committed at `a0f0a7f`.
+- The corrected design and plan are committed at `a0f0a7f` and `b8441f7`.
+- `05813e0` makes the root a non-buildable workspace and preserves baseline source execution.
+- `4a76c29` folds DCI research code/manifests into `asterion.capabilities.dci_research`; 108 focused Python and 11 Node tests pass.
 
 ## Where things stand
 
 - Branch: `main`; no long-running process or in-flight climb hypothesis is active.
 - No long-running process is active; nothing has been pushed in this session.
 - AF-120 remains the sole active package and scope preflight passes.
-- The implementation tree still reflects the interim separate `asterion-dci-research` project and root `dci` wheel; those are the next implementation corrections after plan revision.
+- The interim root `dci` and `asterion-dci-research` build projects are removed. Application assemblies/provider still need to move into the Asterion wheel.
 - External `pi/` remains an independent checkout and was not modified.
 
 ## Next steps (immediate)
 
-1. Obtain written-spec review confirmation for `docs/superpowers/specs/2026-07-13-installed-application-binding-design.md`.
-2. Use `writing-plans` to replace the superseded multi-wheel plan with a single-wheel TDD plan.
-3. Fold `asterion_dci_research` into `asterion.capabilities.dci_research`, add the built-in DCI provider/resources, and remove both the capability and root baseline build artifacts without modifying `src/dci/benchmark/`.
+1. Add failing built-in DCI provider/resource/entry-point tests.
+2. Move application assemblies into `asterion.applications.dci_agent_lite` and register the provider in the sole wheel.
+3. Convert repository baseline scripts/docs from removed console entry points to source invocation without modifying `src/dci/benchmark/`.
 
 ## Open questions
 
