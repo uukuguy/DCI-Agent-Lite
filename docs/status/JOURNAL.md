@@ -465,3 +465,4 @@
 - 01:54 correction: corpus-root example boundary committed after focused no-provider verification. [8f47a19]
 - 02:00 AF-220 example corpus override now rejects relative paths before Pi; documentation no longer claims a read-only boundary. [pending review-fix commit]
 - 02:08 AF-220 current-Pi compatibility repair: Pi help confirms no runtime context-level control, while the source runtime-context example uses `--thinking`. Asterion now forwards only supported thinking/session/heap controls, records legacy context requests as an explicit native `unsupported` diagnostic, and its runtime-context example uses `--thinking-level`. Focused config/run/transport/CLI/application tests (42), compile, Ruff, shell syntax, scope, and diff checks pass without a provider or Judge request. [pending context-compatibility commit]
+- 02:09 Pi capability-gated Asterion context controls prevent a pre-prompt failure while preserving supported runtime controls. [1b8bc56]
