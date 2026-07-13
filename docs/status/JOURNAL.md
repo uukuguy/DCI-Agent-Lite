@@ -320,3 +320,5 @@
 - 08:25 AF-095 历史 acceptance evaluator 对齐当前独立实现与单 wheel 证据。[1c82c44]
 - 08:31 Asterion CLI 加入显式 `.env` 驱动的 `pi.reference` 默认工厂，安装后 `run` 不再依赖测试注入。[e765ec7]
 - 08:34 AF-120 closure 通过 335 Python、11 Node、19 Rust、isolated wheel install 及全部门禁。
+- 08:36 AF-120 已关闭并激活 AF-130，聚焦按稳定应用 identity 使用安装产品。[ead0a96]
+- 08:42 AF-130 设计 exact application selector，同时保持 metadata-only global list 与显式 authority。[246d5aa]

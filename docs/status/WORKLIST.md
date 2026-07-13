@@ -144,7 +144,7 @@
 - Dependencies: AF-120
 - Acceptance: the installed wheel lists exact application identities and runs the built-in DCI application through a stable application selector; ambiguous or unknown identities fail before provider/runtime work; filesystem assembly selection remains an explicit advanced compatibility path.
 - Design: `docs/superpowers/specs/2026-07-13-installed-application-selection-design.md`
-- Plan: pending design approval
+- Plan: `docs/superpowers/plans/2026-07-13-installed-application-selection.md`
 
 ## AF-095 — Asterion framework identity and extraction
 
