@@ -440,4 +440,4 @@
 - 00:34 Shared DCI parsing rejects malformed booleans and non-finite numbers, preserving safe runtime configuration. [49cf1b1]
 - 00:39 Native Pi receives persisted context, thinking, session, and heap controls for runtime parity. [7fcdadc]
 - 00:43 Typed Pi controls now stay literal argv values, preventing flag injection through configured levels. [223a96d]
-- 00:49 Product CLI and deterministic benchmark now resolve one shared DCI runtime option set, support bounded sorted `--limit`, and run native evaluation with redacted failures; 18 focused tests and full Python discovery pass without external requests. [pending Task 3 commit]
+- 00:49 Product CLI and deterministic benchmark now resolve one shared DCI runtime option set, support bounded sorted `--limit`, and run native evaluation with redacted failures; 18 focused tests and full Python discovery pass without external requests. [a9b7e5c]
