@@ -176,6 +176,98 @@ class AsterionDciCliTests(unittest.TestCase):
                     )
         terminal.assert_not_called()
 
+    def test_parse_failures_are_body_free_and_use_injected_error_stream(self) -> None:
+        cases = (
+            (
+                [
+                    "terminal",
+                    "--node-max-old-space-size-mb",
+                    "sentinel-secret-typed",
+                ],
+                "DCI Pi terminal failed\n",
+            ),
+            (
+                ["terminal", "--output-dir=sentinel-secret-runner"],
+                "DCI Pi terminal failed\n",
+            ),
+            (
+                ["run", "--unknown=sentinel-secret-run"],
+                "DCI Pi execution failed\n",
+            ),
+            (
+                ["system-prompt", "--unknown=sentinel-secret-prompt"],
+                "DCI system prompt generation failed\n",
+            ),
+            (
+                ["benchmark", "--unknown=sentinel-secret-benchmark"],
+                "DCI benchmark failed\n",
+            ),
+            (
+                ["evaluate", "--unknown=sentinel-secret-evaluate"],
+                "DCI evaluation failed\n",
+            ),
+            (
+                ["resume", "--unknown=sentinel-secret-resume"],
+                "DCI Pi execution failed\n",
+            ),
+        )
+        for argv, expected in cases:
+            with self.subTest(argv=argv):
+                injected = io.StringIO()
+                process_stderr = io.StringIO()
+                with patch("sys.stderr", process_stderr):
+                    code = main(argv, stderr=injected)
+                self.assertEqual(code, 2)
+                self.assertEqual(injected.getvalue(), expected)
+                self.assertEqual(process_stderr.getvalue(), "")
+                self.assertNotIn("sentinel", injected.getvalue())
+
+        help_stdout = io.StringIO()
+        help_stderr = io.StringIO()
+        with patch("sys.stdout", io.StringIO()), patch("sys.stderr", io.StringIO()):
+            self.assertEqual(
+                main(
+                    ["terminal", "--help"],
+                    stdout=help_stdout,
+                    stderr=help_stderr,
+                ),
+                0,
+            )
+        self.assertIn("--question-file", help_stdout.getvalue())
+        self.assertEqual(help_stderr.getvalue(), "")
+
+    def test_terminal_rejects_invalid_cwd_before_terminal_boundary(self) -> None:
+        class TtyStream(io.StringIO):
+            def isatty(self) -> bool:
+                return True
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            file_path = root / "file"
+            file_path.write_text("x", encoding="utf-8")
+            target = root / "target"
+            target.mkdir()
+            symlink = root / "link"
+            symlink.symlink_to(target, target_is_directory=True)
+            unreadable = root / "unreadable"
+            unreadable.mkdir()
+            unreadable.chmod(0)
+            with patch("asterion.dci.cli.run_pi_terminal") as terminal:
+                for cwd in (root / "missing", file_path, symlink, unreadable):
+                    with self.subTest(cwd=cwd):
+                        self.assertEqual(
+                            main(
+                                ["terminal", "--cwd", str(cwd)],
+                                repo_root=root,
+                                stdin=TtyStream(),
+                                stdout=TtyStream(),
+                                stderr=io.StringIO(),
+                            ),
+                            2,
+                        )
+            unreadable.chmod(0o700)
+        terminal.assert_not_called()
+
     def test_run_generates_distinct_default_ids_and_destinations(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
+import io
 import os
 import secrets
 import stat
@@ -22,7 +24,7 @@ from asterion.dci.benchmark import BenchmarkRequest, DciBenchmarkError, run_benc
 from asterion.dci.artifacts import DciConversationFeatures
 from asterion.dci.evaluation import DciEvaluationError, evaluate_run_directory
 from asterion.dci.judge import JudgeConfig
-from asterion.dci.pi_rpc import run_pi_terminal
+from asterion.dci.pi_rpc import run_pi_terminal, validate_terminal_cwd
 from asterion.dci.run import (
     DciRunError,
     DciRunResult,
@@ -114,14 +116,22 @@ def main(
     stdin = sys.stdin if stdin is None else stdin
     stdout = sys.stdout if stdout is None else stdout
     stderr = sys.stderr if stderr is None else stderr
+    effective_argv = list(sys.argv[1:] if argv is None else argv)
     parser = _parser()
-    if argv == ["--help"]:
+    if effective_argv == ["--help"]:
         parser.print_help(file=stdout)
         return 0
     try:
-        args = parser.parse_args(argv)
+        with (
+            contextlib.redirect_stdout(stdout),
+            contextlib.redirect_stderr(io.StringIO()),
+        ):
+            args = parser.parse_args(effective_argv)
     except SystemExit as error:
-        return 0 if error.code == 0 else 2
+        if error.code == 0:
+            return 0
+        _write_command_failure(stderr, _requested_command(effective_argv))
+        return 2
     try:
         invocation_cwd = Path.cwd().resolve()
         root = invocation_cwd if repo_root is None else Path(repo_root).resolve()
@@ -227,9 +237,12 @@ def main(
                 args, question_file=question_file
             )
             options = _terminal_runtime_options(args)
+            terminal_cwd = validate_terminal_cwd(
+                _path_from_invocation(args.cwd, invocation_cwd)
+            )
             return run_pi_terminal(
                 package_dir=paths.pi.package_dir,
-                cwd=_absolute_from_invocation(args.cwd, invocation_cwd),
+                cwd=terminal_cwd,
                 agent_dir=paths.pi.agent_dir,
                 provider=options.provider,
                 model=options.model,
@@ -372,6 +385,15 @@ def _absolute_from_invocation(path: Path, invocation_cwd: Path) -> Path:
     return candidate.resolve()
 
 
+def _path_from_invocation(path: Path, invocation_cwd: Path) -> Path:
+    """Make an input path absolute without following security-relevant links."""
+
+    candidate = path.expanduser()
+    if not candidate.is_absolute():
+        candidate = invocation_cwd / candidate
+    return Path(os.path.normpath(candidate))
+
+
 def _output_path_from_invocation(path: Path, invocation_cwd: Path) -> Path:
     """Make a destination absolute without erasing security-relevant links."""
 
@@ -452,6 +474,25 @@ def _write_command_failure(stderr: TextIO, command: str) -> None:
         "terminal": "DCI Pi terminal failed\n",
     }
     stderr.write(messages.get(command, "DCI Pi execution failed\n"))
+
+
+def _requested_command(argv: list[str]) -> str:
+    """Classify only the exact command token without retaining argument values."""
+
+    return (
+        argv[0]
+        if argv
+        and argv[0]
+        in {
+            "run",
+            "terminal",
+            "resume",
+            "system-prompt",
+            "evaluate",
+            "benchmark",
+        }
+        else ""
+    )
 
 
 def _runtime_options(args: argparse.Namespace) -> DciRuntimeOptions:

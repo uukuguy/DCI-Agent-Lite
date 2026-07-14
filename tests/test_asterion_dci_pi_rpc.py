@@ -15,6 +15,8 @@ from asterion.dci.pi_rpc import (
     resolve_node_bin,
     run_pi_terminal,
 )
+from asterion.dci.config import DciPaths, DciPiPaths
+from asterion.dci.system_prompt import render_pi_system_prompt
 
 
 def make_client(
@@ -108,6 +110,10 @@ class PiRpcCommandTests(unittest.TestCase):
                 subprocess.CompletedProcess([], 0, stdout="v19.9.0", stderr=""),
             ),
             ("/path/node", OSError("sentinel-secret")),
+            (
+                "/path/node",
+                UnicodeDecodeError("utf-8", b"\xff", 0, 1, "sentinel-decode"),
+            ),
         )
         for found, probe in cases:
             with self.subTest(found=found, probe=type(probe).__name__):
@@ -127,11 +133,85 @@ class PiRpcCommandTests(unittest.TestCase):
                     ) as caught:
                         resolve_node_bin(dict(os.environ))
                 self.assertNotIn("sentinel-secret", str(caught.exception))
+                self.assertNotIn("sentinel-decode", str(caught.exception))
+
+    def test_system_prompt_uses_verified_node_and_isolated_selected_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            package = root / "pi" / "packages" / "coding-agent"
+            prompt_module = package / "dist" / "core" / "system-prompt.js"
+            tools_module = package / "dist" / "core" / "tools" / "index.js"
+            prompt_module.parent.mkdir(parents=True)
+            tools_module.parent.mkdir(parents=True)
+            prompt_module.touch()
+            tools_module.touch()
+            paths = DciPaths(
+                repo_root=root,
+                pi=DciPiPaths(
+                    repo_dir=root / "pi",
+                    package_dir=package,
+                    agent_dir=root / "pi" / ".pi" / "agent",
+                ),
+                output_root=root / "output",
+            )
+            with (
+                patch(
+                    "asterion.dci.system_prompt.resolve_node_bin",
+                    return_value="/nvm/v22/bin/node",
+                ) as resolve,
+                patch(
+                    "asterion.dci.system_prompt.subprocess.run",
+                    return_value=subprocess.CompletedProcess(
+                        [], 0, stdout="rendered", stderr=""
+                    ),
+                ) as run,
+                patch.dict(
+                    os.environ,
+                    {"PATH": "/usr/bin", "API_SECRET": "sentinel-secret"},
+                    clear=True,
+                ),
+            ):
+                self.assertEqual(
+                    render_pi_system_prompt(paths, root, "read", None), "rendered"
+                )
+
+        resolve.assert_called_once_with(os.environ)
+        self.assertEqual(run.call_args.args[0][0], "/nvm/v22/bin/node")
+        self.assertEqual(run.call_args.kwargs["env"], {"PATH": "/nvm/v22/bin"})
+        self.assertNotIn("API_SECRET", run.call_args.kwargs["env"])
+
+    def test_system_prompt_invalid_node_fails_before_renderer(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            package = root / "pi" / "packages" / "coding-agent"
+            for relative in (
+                Path("dist/core/system-prompt.js"),
+                Path("dist/core/tools/index.js"),
+            ):
+                path = package / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.touch()
+            paths = DciPaths(
+                repo_root=root,
+                pi=DciPiPaths(root / "pi", package, root / "agent"),
+                output_root=root / "output",
+            )
+            with (
+                patch(
+                    "asterion.dci.system_prompt.resolve_node_bin",
+                    side_effect=RuntimeError("sentinel-node-detail"),
+                ),
+                patch("asterion.dci.system_prompt.subprocess.run") as run,
+                self.assertRaises(RuntimeError),
+            ):
+                render_pi_system_prompt(paths, root, None, None)
+        run.assert_not_called()
 
     def test_terminal_uses_literal_argv_inherited_heap_and_exit_status(self) -> None:
         stdin = Mock(isatty=Mock(return_value=True))
         stdout = Mock(isatty=Mock(return_value=True))
         with (
+            tempfile.TemporaryDirectory() as temporary_cwd,
             patch("asterion.dci.pi_rpc.resolve_node_bin", return_value="/node20"),
             patch(
                 "asterion.dci.pi_rpc.ensure_built_pi_cli",
@@ -149,7 +229,7 @@ class PiRpcCommandTests(unittest.TestCase):
         ):
             status = run_pi_terminal(
                 package_dir=Path("/pi"),
-                cwd=Path("/corpus"),
+                cwd=Path(temporary_cwd).resolve(),
                 agent_dir=Path("/agent"),
                 provider="provider; touch /tmp/no",
                 model="model --tools bash",
@@ -173,7 +253,7 @@ class PiRpcCommandTests(unittest.TestCase):
         self.assertIn("model --tools bash", command)
         self.assertEqual(command[command.index("--second") + 1], "two words")
         self.assertEqual(command[-1], "question; echo nope")
-        self.assertEqual(run.call_args.kwargs["cwd"], Path("/corpus"))
+        self.assertEqual(run.call_args.kwargs["cwd"], Path(temporary_cwd).resolve())
         self.assertEqual(run.call_args.kwargs["env"]["PI_CODING_AGENT_DIR"], "/agent")
         self.assertEqual(
             run.call_args.kwargs["env"]["NODE_OPTIONS"],
@@ -211,6 +291,49 @@ class PiRpcCommandTests(unittest.TestCase):
                     )
                 node.assert_not_called()
                 built.assert_not_called()
+
+    def test_terminal_rejects_invalid_cwd_before_any_subprocess(self) -> None:
+        stdin = Mock(isatty=Mock(return_value=True))
+        stdout = Mock(isatty=Mock(return_value=True))
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            file_path = root / "file"
+            file_path.write_text("x", encoding="utf-8")
+            target = root / "target"
+            target.mkdir()
+            symlink = root / "link"
+            symlink.symlink_to(target, target_is_directory=True)
+            unreadable = root / "unreadable"
+            unreadable.mkdir()
+            unreadable.chmod(0)
+            for cwd in (root / "missing", file_path, symlink, unreadable):
+                with (
+                    self.subTest(cwd=cwd),
+                    patch("asterion.dci.pi_rpc.resolve_node_bin") as node,
+                    patch("asterion.dci.pi_rpc.ensure_built_pi_cli") as built,
+                    patch("asterion.dci.pi_rpc.subprocess.run") as run,
+                    self.assertRaises(RuntimeError),
+                ):
+                    run_pi_terminal(
+                        package_dir=Path("/pi"),
+                        cwd=cwd,
+                        agent_dir=Path("/agent"),
+                        provider=None,
+                        model=None,
+                        tools="read",
+                        system_prompt_file=None,
+                        append_system_prompt_file=None,
+                        thinking_level=None,
+                        extra_args=(),
+                        node_max_old_space_size_mb=None,
+                        initial_question=None,
+                        stdin=stdin,
+                        stdout=stdout,
+                    )
+                node.assert_not_called()
+                built.assert_not_called()
+                run.assert_not_called()
+            unreadable.chmod(0o700)
 
     def test_builds_direct_rpc_argv_and_expands_extra_args(self) -> None:
         with patch("asterion.dci.pi_rpc.ensure_built_pi_cli") as built:

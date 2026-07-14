@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from pathlib import Path
 
 from asterion.dci.config import DciPaths
-from asterion.dci.pi_rpc import _node_env
+from asterion.dci.pi_rpc import _node_env, resolve_node_bin
 
 
 _NODE_SCRIPT = """
@@ -45,13 +46,18 @@ def render_pi_system_prompt(
     tools_module = package_dir / "dist" / "core" / "tools" / "index.js"
     if not prompt_module.is_file() or not tools_module.is_file():
         raise RuntimeError("Pi system prompt modules are unavailable")
-    selected_tools = [part.strip() for part in (tools or "read,bash,edit,write").split(",") if part.strip()]
+    selected_tools = [
+        part.strip()
+        for part in (tools or "read,bash,edit,write").split(",")
+        if part.strip()
+    ]
     append_text = ""
     if append_system_prompt_file is not None:
         append_text = Path(append_system_prompt_file).read_text(encoding="utf-8")
+    node_bin = resolve_node_bin(os.environ)
     completed = subprocess.run(
         [
-            "node",
+            node_bin,
             "--input-type=module",
             "-e",
             _NODE_SCRIPT,
@@ -63,7 +69,7 @@ def render_pi_system_prompt(
         ],
         text=True,
         capture_output=True,
-        env=_node_env({}),
+        env=_node_env({}, node_bin),
         check=False,
     )
     if completed.returncode != 0:

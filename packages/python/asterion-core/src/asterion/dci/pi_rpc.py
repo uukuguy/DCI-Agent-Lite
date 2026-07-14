@@ -42,9 +42,13 @@ def _probe_node(candidate: str, environment: Mapping[str, str]) -> bool:
             check=False,
             timeout=5,
         )
-    except (OSError, subprocess.SubprocessError):
+    except (OSError, subprocess.SubprocessError, UnicodeError, ValueError):
         return False
-    major = _node_major(result.stdout) if result.returncode == 0 else None
+    major = (
+        _node_major(result.stdout)
+        if result.returncode == 0 and isinstance(result.stdout, str)
+        else None
+    )
     return major is not None and major >= 20
 
 
@@ -180,6 +184,30 @@ def _pi_child_environment(
     return environment
 
 
+def validate_terminal_cwd(cwd: Path) -> Path:
+    """Return one existing readable directory without following any symlink."""
+
+    candidate = Path(cwd).expanduser()
+    if not candidate.is_absolute():
+        candidate = Path.cwd() / candidate
+    absolute = Path(os.path.normpath(candidate))
+    try:
+        parts = absolute.parts
+        current = Path(parts[0])
+        for part in parts[1:]:
+            current /= part
+            if current.is_symlink():
+                raise RuntimeError("Pi terminal cwd is unsafe")
+        metadata = absolute.stat()
+        if not absolute.is_dir():
+            raise RuntimeError("Pi terminal cwd is unavailable")
+        if metadata.st_mode & 0o444 == 0 or metadata.st_mode & 0o111 == 0:
+            raise RuntimeError("Pi terminal cwd is unavailable")
+        return absolute.resolve(strict=True)
+    except OSError as error:
+        raise RuntimeError("Pi terminal cwd is unavailable") from error
+
+
 def run_pi_terminal(
     *,
     package_dir: Path,
@@ -203,6 +231,7 @@ def run_pi_terminal(
     terminal_stdout = sys.stdout if stdout is None else stdout
     if not terminal_stdin.isatty() or not terminal_stdout.isatty():
         raise RuntimeError("Pi terminal requires interactive stdin/stdout TTY")
+    verified_cwd = validate_terminal_cwd(cwd)
     node_bin = resolve_node_bin(os.environ)
     literal_controls = (
         ["--thinking", thinking_level] if thinking_level is not None else []
@@ -222,7 +251,7 @@ def run_pi_terminal(
     )
     result = subprocess.run(
         command,
-        cwd=cwd,
+        cwd=verified_cwd,
         env=_pi_child_environment(
             agent_dir=agent_dir,
             node_bin=node_bin,
