@@ -574,3 +574,5 @@
 - 03:43 AF-240 Task 5 exposes source replacement and nonregular destination controls before repair. [8aa1485]
 - 03:48 AF-240 Task 5 requires immutable source authority, preserved locks, and fixed-size content identities. [2686ef6]
 - 04:02 AF-240 Task 5 snapshots parquet inputs to close preflight TOCTOU without corpus memory. [1c58697]
+- 04:09 AF-240 Task 5 R4 independently approves exporter authority and safety with no blockers.
+- 04:13 AF-240 Task 5 full suite reports 1133 tests OK; post-run exit-file capture failed.
