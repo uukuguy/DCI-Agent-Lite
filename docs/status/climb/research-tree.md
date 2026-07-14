@@ -1,22 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (74 runs).
+> Deterministic summary generated from tracked state (78 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
-- Phase: completed
-- Last cycle: 75
+- Phase: implementation
+- Last cycle: 79
 - Next hypothesis: None
 - In flight: none
-- Next action: AF-230 is complete; plan and review AF-240 before implementation.
+- Next action: Trigger Knowledge Layer.
 
 ## Active hypotheses
 
-- **AF-240-H-001** (pending, rank 0.90): Reproduce source dataset, prompt, retrieval parsing, and IR metric semantics in Asterion-owned modules.
-- **AF-240-H-002** (pending, rank 0.80): Coordinate bounded concurrent runs with durable per-query evidence, exact reuse, and compatible resume.
-- **AF-240-H-003** (pending, rank 0.70): Reproduce Judge cache, aggregate metrics, detailed analysis, and deterministic figure behavior.
-- **AF-240-H-004** (pending, rank 0.60): Reproduce QA and corpus exports plus all launcher profiles at the installed Asterion boundary.
 
 ## Run ladder
 
@@ -96,6 +92,10 @@
 | 20260714-194400-dci-climb-af230h002 | AF-230-H-002 | 4 | confirmed 4/4 |
 | 20260714-194405-dci-climb-af230h003 | AF-230-H-003 | 4 | confirmed 4/4 |
 | 20260714-194409-dci-climb-af230h004 | AF-230-H-004 | 4 | confirmed 4/4 |
+| 20260715-025206-dci-climb-af240h001 | AF-240-H-001 | 4 | confirmed 4/4 |
+| 20260715-025313-dci-climb-af240h002 | AF-240-H-002 | 4 | confirmed 4/4 |
+| 20260715-025315-dci-climb-af240h003 | AF-240-H-003 | 4 | confirmed 4/4 |
+| 20260715-025318-dci-climb-af240h004 | AF-240-H-004 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

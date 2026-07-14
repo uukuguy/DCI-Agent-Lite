@@ -1592,7 +1592,7 @@ hypotheses:
   verification_command: uv run python -m unittest -v tests.test_asterion_dci_run tests.test_asterion_dci_artifacts
     tests.test_asterion_dci_application_executor tests.test_builtin_dci_application
   results:
-  - session: 2026-07-14-af-230-native-operator-artifact-parity
+  - session: 2026-07-15-af-240-full-source-parity
     cycle: 72
     run: 20260714-194356-dci-climb-af230h001
     local: 4
@@ -1681,73 +1681,117 @@ hypotheses:
     decision_reason: deterministic local package acceptance
 - id: AF-240-H-001
   work_package_id: AF-240
-  description: Reproduce source dataset, prompt, retrieval parsing, and IR metric semantics in Asterion-owned modules.
+  description: Reproduce source dataset, prompt, retrieval parsing, and IR metric
+    semantics in Asterion-owned modules.
   parent_paradigm: dci-dataset-prompt-ir-parity
   expected_lift: +1 dataset, prompt, and IR parity boundary
   cost_h: 1.1
   ranking: 0.9
-  status: pending
+  status: confirmed
   evidence_kind: inventory_readiness
   product_confirmation: false
   created_at: '2026-07-14T20:30:00+08:00'
-  verification_command: >-
-    uv run python -m unittest -v
-    tests.test_climb_tools.Af240InventoryTests.test_af240_h001_dataset_mapping_readiness
+  verification_command: uv run python -m unittest -v tests.test_climb_tools.Af240InventoryTests.test_af240_h001_dataset_mapping_readiness
     tests.test_climb_tools.Af240InventoryTests.test_af240_h001_prompt_mapping_readiness
     tests.test_climb_tools.Af240InventoryTests.test_af240_h001_retrieval_mapping_readiness
     tests.test_climb_tools.Af240InventoryTests.test_af240_h001_ir_metric_mapping_readiness
-  results: []
+  results:
+  - session: 2026-07-14-af-230-native-operator-artifact-parity
+    cycle: 76
+    run: 20260715-025206-dci-climb-af240h001
+    local: 4
+    local_per_task:
+      dataset_contract: 1
+      prompt_contract: 1
+      retrieval_parsing: 1
+      ir_metric: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-240-H-002
   work_package_id: AF-240
-  description: Coordinate bounded concurrent runs with durable per-query evidence, exact reuse, and compatible resume.
+  description: Coordinate bounded concurrent runs with durable per-query evidence,
+    exact reuse, and compatible resume.
   parent_paradigm: dci-concurrent-durable-batch-reuse
   expected_lift: +1 concurrent durable coordinator boundary
   cost_h: 1.3
   ranking: 0.8
-  status: pending
+  status: confirmed
   evidence_kind: inventory_readiness
   product_confirmation: false
   created_at: '2026-07-14T20:30:00+08:00'
-  verification_command: >-
-    uv run python -m unittest -v
-    tests.test_climb_tools.Af240InventoryTests.test_af240_h002_nested_coordinator_mapping_readiness
+  verification_command: uv run python -m unittest -v tests.test_climb_tools.Af240InventoryTests.test_af240_h002_nested_coordinator_mapping_readiness
     tests.test_climb_tools.Af240InventoryTests.test_af240_h002_durable_query_mapping_readiness
     tests.test_climb_tools.Af240InventoryTests.test_af240_h002_reuse_mapping_readiness
     tests.test_climb_tools.Af240InventoryTests.test_af240_h002_cancellation_mapping_readiness
-  results: []
+  results:
+  - session: 2026-07-15-af-240-full-source-parity
+    cycle: 77
+    run: 20260715-025313-dci-climb-af240h002
+    local: 4
+    local_per_task:
+      bounded_concurrency: 1
+      durable_query_state: 1
+      exact_reuse: 1
+      compatible_resume: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-240-H-003
   work_package_id: AF-240
-  description: Reproduce Judge cache, aggregate metrics, detailed analysis, and deterministic figure behavior.
+  description: Reproduce Judge cache, aggregate metrics, detailed analysis, and deterministic
+    figure behavior.
   parent_paradigm: dci-evaluation-aggregate-analysis-parity
   expected_lift: +1 evaluation and analysis parity boundary
   cost_h: 1.2
   ranking: 0.7
-  status: pending
+  status: confirmed
   evidence_kind: inventory_readiness
   product_confirmation: false
   created_at: '2026-07-14T20:30:00+08:00'
-  verification_command: >-
-    uv run python -m unittest -v
-    tests.test_climb_tools.Af240InventoryTests.test_af240_h003_judge_mapping_readiness
+  verification_command: uv run python -m unittest -v tests.test_climb_tools.Af240InventoryTests.test_af240_h003_judge_mapping_readiness
     tests.test_climb_tools.Af240InventoryTests.test_af240_h003_aggregate_metric_mapping_readiness
     tests.test_climb_tools.Af240InventoryTests.test_af240_h003_analysis_mapping_readiness
     tests.test_climb_tools.Af240InventoryTests.test_af240_h003_figure_mapping_readiness
-  results: []
+  results:
+  - session: 2026-07-15-af-240-full-source-parity
+    cycle: 78
+    run: 20260715-025315-dci-climb-af240h003
+    local: 4
+    local_per_task:
+      judge_retry_cache: 1
+      aggregate_metrics: 1
+      detailed_analysis: 1
+      reproducible_figures: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-240-H-004
   work_package_id: AF-240
-  description: Reproduce QA and corpus exports plus all launcher profiles at the installed Asterion boundary.
+  description: Reproduce QA and corpus exports plus all launcher profiles at the installed
+    Asterion boundary.
   parent_paradigm: dci-export-launcher-installed-parity
   expected_lift: +1 export, launcher, and installed resource boundary
   cost_h: 1.0
   ranking: 0.6
-  status: pending
+  status: confirmed
   evidence_kind: inventory_readiness
   product_confirmation: false
   created_at: '2026-07-14T20:30:00+08:00'
-  verification_command: >-
-    uv run python -m unittest -v
-    tests.test_climb_tools.Af240InventoryTests.test_af240_h004_extractor_mapping_readiness
+  verification_command: uv run python -m unittest -v tests.test_climb_tools.Af240InventoryTests.test_af240_h004_extractor_mapping_readiness
     tests.test_climb_tools.Af240InventoryTests.test_af240_h004_export_mapping_readiness
     tests.test_climb_tools.Af240InventoryTests.test_af240_h004_launcher_mapping_readiness
     tests.test_climb_tools.Af240InventoryTests.test_af240_h004_installed_resource_mapping_readiness
-  results: []
+  results:
+  - session: 2026-07-15-af-240-full-source-parity
+    cycle: 79
+    run: 20260715-025318-dci-climb-af240h004
+    local: 4
+    local_per_task:
+      bcplus_qa_export: 1
+      corpus_exports: 1
+      launcher_profiles: 1
+      installed_resources: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance

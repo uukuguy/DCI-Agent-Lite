@@ -1,10 +1,9 @@
 # Climb Session Target
 
-The AF-220 shared-configuration/runnable-Pi session is complete. Its four
-local hypotheses remain confirmed and its bounded real acceptance is recorded
-in `docs/status/JOURNAL.md`. AF-230 must register a new parented session only
-after its detailed plan is approved; no external request is implied by this
-closed session.
+AF-240 owns the active full source-parity session. Its four local hypotheses
+must each reach 4/4 before package closure. Bounded real Pi and Judge acceptance
+is recorded separately in `docs/status/JOURNAL.md`; no full dataset run is
+implied by this local target.
 
 <!-- TARGET-BEGIN (machine-readable, check-target.py reads) -->
 target_metric: local

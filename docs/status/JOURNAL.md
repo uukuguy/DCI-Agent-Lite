@@ -597,3 +597,11 @@
 - 03:52 AF-240 docs state that disabling analysis also requires disabling figures. [865f970]
 - 03:55 AF-240 Task 6 independently approved after 109 tests and adversarial launcher/runtime rechecks. [6560057]
 - 02:49 AF-240 Task 6 independent review approves installed profiles, launchers, CLI safety, and wheel independence. [6560057]
+- 02:58 AF-240 recovery advances to Task 7 after independent Task 6 approval. [5426cb2]
+
+## 2026-07-15
+- 02:52 AF-240-H-001 confirmed 4/4; package acceptance recorded.
+- 02:53 AF-240-H-002 confirmed 4/4; package acceptance recorded.
+- 02:53 AF-240-H-003 confirmed 4/4; package acceptance recorded.
+- 02:53 AF-240-H-004 confirmed 4/4; package acceptance recorded.
+- 02:54 AF-240 Climb session ownership repaired from the completed AF-230 session before package closure; all four AF-240 results now share the AF-240 session identity.
