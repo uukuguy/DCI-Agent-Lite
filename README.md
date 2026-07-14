@@ -71,6 +71,26 @@ asterion-dci run \
   "Answer using only the local corpus."
 ```
 
+`run` accepts any number of positional question tokens and joins them with
+spaces. `--question-file` takes precedence over those tokens; when neither is
+present, input is read only from non-interactive stdin. Relative question and
+prompt files are resolved first from the invocation directory and then from
+the repository root, before `--cwd` is applied to the Pi child. Missing,
+unreadable, or symlinked resources are rejected before Pi starts.
+
+Omitting `--run-id` creates a collision-resistant UTC-and-random identifier
+under `outputs/asterion-dci-runs/`. An explicit `--run-id` remains stable, and
+an existing explicit ID or `--output-dir` is rejected rather than reused.
+
+The following `run`-only controls shape `conversation.json` without changing
+the complete evidence in `conversation_full.json`:
+
+- `--conversation-clear-tool-results`
+- `--conversation-clear-tool-results-keep-last N` (default `3`, minimum `0`)
+- `--conversation-externalize-tool-results`
+- `--conversation-strip-thinking`
+- `--conversation-strip-usage`
+
 Run the matching examples with `make asterion-example` or
 `make asterion-runtime-example`. They load the repository-root `.env`, require
 `DCI_PROVIDER` and `DCI_MODEL`, and then issue a real Pi request; configure the
@@ -96,7 +116,14 @@ asterion-dci resume --output-dir path/to/asterion-dci-run
 
 The command reconstructs the request from `state.json`, rejects completed or
 invalid runs before starting Pi, and retains previous evidence while creating a
-new protocol attempt. The generic `asterion` CLI remains domain-neutral. Use
+new protocol attempt. This is durable artifact continuation; it is not a claim
+of Pi session continuity when the original run did not enable `--keep-session`.
+`--runtime-context-level` is persisted as an unsupported diagnostic until Pi
+advertises a typed control; Asterion does not invent a Pi flag for it. Native
+run directories are private and atomic, but are not described as read-only:
+when bash is enabled, the agent can still modify files allowed by its working
+directory and host permissions. The generic `asterion` CLI remains
+domain-neutral. Use
 `asterion-dci system-prompt` to print Pi's generated prompt.
 
 Evaluate a completed native run with an explicitly configured Asterion judge:

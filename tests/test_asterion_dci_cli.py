@@ -11,8 +11,9 @@ from unittest.mock import patch
 
 from asterion.cli import _parser
 from asterion.dci.cli import main
+from asterion.dci.artifacts import DciConversationFeatures
 from asterion.dci.evaluation import DciEvaluationError
-from asterion.dci.run import DciRunError, DciRunResult
+from asterion.dci.run import DciRunError, DciRunRequest, DciRunResult
 from asterion.runtime.host import RunEvent
 
 
@@ -32,6 +33,218 @@ def fixture_result(output_dir: Path) -> DciRunResult:
 
 
 class AsterionDciCliTests(unittest.TestCase):
+    def test_run_generates_distinct_default_ids_and_destinations(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            with patch("asterion.dci.cli.run_pi_research") as run:
+                run.side_effect = lambda _paths, request, *, output_dir: fixture_result(
+                    output_dir
+                )
+                for _ in range(2):
+                    self.assertEqual(
+                        main(
+                            ["run", "question"],
+                            repo_root=root,
+                            stdin=io.StringIO(),
+                            stdout=io.StringIO(),
+                            stderr=io.StringIO(),
+                        ),
+                        0,
+                    )
+
+        requests = [call.args[1] for call in run.call_args_list]
+        destinations = [call.kwargs["output_dir"] for call in run.call_args_list]
+        self.assertNotEqual(requests[0].run_id, requests[1].run_id)
+        self.assertNotEqual(destinations[0], destinations[1])
+        self.assertTrue(
+            all(request.run_id.startswith("asterion-dci-") for request in requests)
+        )
+
+    def test_run_rejects_explicit_destination_collision_before_pi(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            collision = root / "outputs" / "asterion-dci-runs" / "stable"
+            collision.mkdir(parents=True)
+            with patch("asterion.dci.cli.run_pi_research") as run:
+                code = main(
+                    ["run", "--run-id", "stable", "question"],
+                    repo_root=root,
+                    stdin=io.StringIO(),
+                    stdout=io.StringIO(),
+                    stderr=io.StringIO(),
+                )
+
+        self.assertEqual(code, 2)
+        run.assert_not_called()
+
+    def test_run_question_sources_have_file_tokens_stdin_priority(self) -> None:
+        class TtyInput(io.StringIO):
+            def isatty(self) -> bool:
+                return True
+
+            def read(self, *args: object, **kwargs: object) -> str:
+                raise AssertionError("TTY stdin must not be read")
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            question_file = root / "question.txt"
+            question_file.write_text("from file\n", encoding="utf-8")
+            cases = (
+                (
+                    [
+                        "run",
+                        "--question-file",
+                        str(question_file.resolve()),
+                        "ignored",
+                        "tokens",
+                    ],
+                    io.StringIO("ignored stdin"),
+                    "from file",
+                ),
+                (
+                    ["run", "multiple", "question", "tokens"],
+                    io.StringIO("ignored stdin"),
+                    "multiple question tokens",
+                ),
+                (["run"], io.StringIO("from stdin\n"), "from stdin"),
+            )
+            with patch("asterion.dci.cli.run_pi_research") as run:
+                run.side_effect = lambda _paths, request, *, output_dir: fixture_result(
+                    output_dir
+                )
+                for argv, stdin, expected in cases:
+                    with self.subTest(argv=argv):
+                        self.assertEqual(
+                            main(
+                                argv,
+                                repo_root=root,
+                                stdin=stdin,
+                                stdout=io.StringIO(),
+                                stderr=io.StringIO(),
+                            ),
+                            0,
+                        )
+                        self.assertEqual(run.call_args.args[1].question, expected)
+                self.assertEqual(
+                    main(
+                        ["run"],
+                        repo_root=root,
+                        stdin=TtyInput(),
+                        stdout=io.StringIO(),
+                        stderr=io.StringIO(),
+                    ),
+                    2,
+                )
+
+    def test_run_resolves_resources_before_child_cwd_with_repo_fallback(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            invocation = root / "invocation"
+            invocation.mkdir()
+            child = root / "child"
+            child.mkdir()
+            local_prompt = invocation / "system.txt"
+            local_prompt.write_text("local", encoding="utf-8")
+            repo_append = root / "append.txt"
+            repo_append.write_text("repo", encoding="utf-8")
+            previous = Path.cwd()
+            try:
+                os.chdir(invocation)
+                with patch("asterion.dci.cli.run_pi_research") as run:
+                    run.return_value = fixture_result(root / "run")
+                    code = main(
+                        [
+                            "run",
+                            "--cwd",
+                            str(child),
+                            "--system-prompt-file",
+                            "system.txt",
+                            "--append-system-prompt-file",
+                            "append.txt",
+                            "question",
+                        ],
+                        repo_root=root,
+                        stdin=io.StringIO(),
+                        stdout=io.StringIO(),
+                        stderr=io.StringIO(),
+                    )
+            finally:
+                os.chdir(previous)
+
+        self.assertEqual(code, 0)
+        request = run.call_args.args[1]
+        self.assertEqual(request.cwd, child.resolve())
+        self.assertEqual(request.system_prompt_file, local_prompt.resolve())
+        self.assertEqual(request.append_system_prompt_file, repo_append.resolve())
+
+    def test_run_rejects_missing_unreadable_and_symlink_resources_before_pi(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            target = root / "target.txt"
+            target.write_text("body", encoding="utf-8")
+            symlink = root / "link.txt"
+            symlink.symlink_to(target)
+            unreadable = root / "unreadable.txt"
+            unreadable.write_text("body", encoding="utf-8")
+            unreadable.chmod(0)
+            cases = (
+                ["run", "--system-prompt-file", "missing.txt", "question"],
+                ["run", "--system-prompt-file", str(unreadable.resolve()), "question"],
+                ["run", "--question-file", str(symlink)],
+            )
+            with patch("asterion.dci.cli.run_pi_research") as run:
+                for argv in cases:
+                    with self.subTest(argv=argv):
+                        self.assertEqual(
+                            main(
+                                argv,
+                                repo_root=root,
+                                stdin=io.StringIO(),
+                                stdout=io.StringIO(),
+                                stderr=io.StringIO(),
+                            ),
+                            2,
+                        )
+            unreadable.chmod(0o600)
+
+        run.assert_not_called()
+
+    def test_run_maps_all_conversation_controls_exactly(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            with patch("asterion.dci.cli.run_pi_research") as run:
+                run.return_value = fixture_result(root / "run")
+                code = main(
+                    [
+                        "run",
+                        "--conversation-clear-tool-results",
+                        "--conversation-clear-tool-results-keep-last",
+                        "0",
+                        "--conversation-externalize-tool-results",
+                        "--conversation-strip-thinking",
+                        "--conversation-strip-usage",
+                        "question",
+                    ],
+                    repo_root=root,
+                    stdin=io.StringIO(),
+                    stdout=io.StringIO(),
+                    stderr=io.StringIO(),
+                )
+
+        self.assertEqual(code, 0)
+        self.assertEqual(
+            run.call_args.args[1].conversation_features,
+            DciConversationFeatures(
+                clear_tool_results=True,
+                clear_tool_results_keep_last=0,
+                externalize_tool_results=True,
+                strip_thinking=True,
+                strip_usage=True,
+            ),
+        )
+
     def test_asterion_examples_use_shared_env_and_package_command(self) -> None:
         for path in (
             ROOT / "scripts/examples/asterion_dci_basic_example.sh",
@@ -61,7 +274,13 @@ class AsterionDciCliTests(unittest.TestCase):
         ):
             with self.subTest(path=path.name):
                 result = subprocess.run(
-                    ["bash", "-c", 'source() { :; }; builtin source "$1"', "bash", str(path)],
+                    [
+                        "bash",
+                        "-c",
+                        'source() { :; }; builtin source "$1"',
+                        "bash",
+                        str(path),
+                    ],
                     cwd=ROOT,
                     env={"PATH": os.environ["PATH"]},
                     capture_output=True,
@@ -72,7 +291,9 @@ class AsterionDciCliTests(unittest.TestCase):
                 self.assertIn("DCI_PROVIDER", result.stderr)
                 self.assertNotIn("command not found", result.stdout + result.stderr)
 
-    def test_asterion_examples_use_explicit_corpus_root_and_fail_before_launcher(self) -> None:
+    def test_asterion_examples_use_explicit_corpus_root_and_fail_before_launcher(
+        self,
+    ) -> None:
         examples = (
             (ROOT / "scripts/examples/asterion_dci_basic_example.sh", "wiki_corpus"),
             (
@@ -89,7 +310,7 @@ class AsterionDciCliTests(unittest.TestCase):
             launcher_log = temporary_root / "launcher.log"
             launcher = launcher_bin / "uv"
             launcher.write_text(
-                "#!/usr/bin/env bash\nprintf '%s\\n' \"$*\" >> \"$UV_CALLED\"\n",
+                '#!/usr/bin/env bash\nprintf \'%s\\n\' "$*" >> "$UV_CALLED"\n',
                 encoding="utf-8",
             )
             launcher.chmod(0o755)
@@ -227,7 +448,10 @@ class AsterionDciCliTests(unittest.TestCase):
 
         self.assertEqual(code, 0)
         request = run.call_args.args[1]
-        self.assertEqual((request.provider, request.model, request.tools), ("openai", "cli-model", "read"))
+        self.assertEqual(
+            (request.provider, request.model, request.tools),
+            ("openai", "cli-model", "read"),
+        )
         self.assertEqual(request.timeout_seconds, 42.0)
         self.assertEqual(request.node_max_old_space_size_mb, 4096)
         self.assertTrue(request.keep_session)
@@ -236,7 +460,9 @@ class AsterionDciCliTests(unittest.TestCase):
     def test_run_redacts_invalid_shared_runtime_configuration(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
-            with patch.dict(os.environ, {"DCI_RPC_TIMEOUT_SECONDS": "credential=secret"}, clear=True):
+            with patch.dict(
+                os.environ, {"DCI_RPC_TIMEOUT_SECONDS": "credential=secret"}, clear=True
+            ):
                 with patch("asterion.dci.cli.run_pi_research") as run:
                     stderr = io.StringIO()
                     code = main(
@@ -310,7 +536,22 @@ class AsterionDciCliTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
-            with patch("asterion.dci.cli.run_pi_research") as run:
+            resumed = DciRunRequest(
+                run_id="prior-run",
+                question="question",
+                cwd=root,
+                provider="anthropic",
+                model="fixture-model",
+                max_turns=6,
+                resume=True,
+            )
+            with (
+                patch(
+                    "asterion.dci.cli.resume_request_from_output_dir",
+                    return_value=resumed,
+                ),
+                patch("asterion.dci.cli.run_pi_research") as run,
+            ):
                 run.return_value = fixture_result(output_dir)
                 stdout = io.StringIO()
                 code = main(
@@ -355,17 +596,29 @@ class AsterionDciCliTests(unittest.TestCase):
     def test_evaluate_maps_native_run_directory_without_exposing_bodies(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
-            with patch("asterion.dci.cli.evaluate_run_directory", return_value={"is_correct": True}):
+            with patch(
+                "asterion.dci.cli.evaluate_run_directory",
+                return_value={"is_correct": True},
+            ):
                 stdout = io.StringIO()
                 code = main(
-                    ["evaluate", "--output-dir", str(root / "run"), "--gold-answer", "gold"],
+                    [
+                        "evaluate",
+                        "--output-dir",
+                        str(root / "run"),
+                        "--gold-answer",
+                        "gold",
+                    ],
                     repo_root=root,
                     stdout=stdout,
                     stderr=io.StringIO(),
                 )
 
         self.assertEqual(code, 0)
-        self.assertEqual(stdout.getvalue(), f"output_dir={root / 'run'}\nis_correct=True\nevaluation_uri=eval_result.json\n")
+        self.assertEqual(
+            stdout.getvalue(),
+            f"output_dir={root / 'run'}\nis_correct=True\nevaluation_uri=eval_result.json\n",
+        )
 
     def test_evaluate_redacts_artifact_io_failure(self) -> None:
         with patch(
@@ -385,11 +638,15 @@ class AsterionDciCliTests(unittest.TestCase):
         self.assertEqual(stderr.getvalue(), "DCI evaluation failed\n")
         self.assertNotIn("synthetic-secret", stdout.getvalue() + stderr.getvalue())
 
-    def test_benchmark_maps_shared_runtime_options_without_generic_cli_changes(self) -> None:
+    def test_benchmark_maps_shared_runtime_options_without_generic_cli_changes(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             with patch("asterion.dci.cli.run_benchmark") as benchmark:
-                benchmark.return_value = type("Result", (), {"output_root": root / "out", "counts": {"total": 1}})()
+                benchmark.return_value = type(
+                    "Result", (), {"output_root": root / "out", "counts": {"total": 1}}
+                )()
                 self.assertEqual(
                     main(
                         [
@@ -441,7 +698,17 @@ class AsterionDciCliTests(unittest.TestCase):
                 request.runtime_options.keep_session,
                 request.runtime_options.extra_args,
             ),
-            ("openai", "gpt-test", "read", 45.0, "level3", "high", 4096, True, ("--verbose",)),
+            (
+                "openai",
+                "gpt-test",
+                "read",
+                45.0,
+                "level3",
+                "high",
+                4096,
+                True,
+                ("--verbose",),
+            ),
         )
 
     def test_benchmark_redacts_native_and_artifact_failures(self) -> None:
@@ -455,7 +722,13 @@ class AsterionDciCliTests(unittest.TestCase):
                     stdout = io.StringIO()
                     stderr = io.StringIO()
                     code = main(
-                        ["benchmark", "--dataset", "data.jsonl", "--output-root", "out"],
+                        [
+                            "benchmark",
+                            "--dataset",
+                            "data.jsonl",
+                            "--output-root",
+                            "out",
+                        ],
                         stdout=stdout,
                         stderr=stderr,
                     )
@@ -463,7 +736,9 @@ class AsterionDciCliTests(unittest.TestCase):
                 self.assertEqual(code, 2)
                 self.assertEqual(stdout.getvalue(), "")
                 self.assertEqual(stderr.getvalue(), "DCI benchmark failed\n")
-                self.assertNotIn("synthetic-secret", stdout.getvalue() + stderr.getvalue())
+                self.assertNotIn(
+                    "synthetic-secret", stdout.getvalue() + stderr.getvalue()
+                )
 
     def test_cli_rejects_invalid_resume_without_calling_pi(self) -> None:
         stderr = io.StringIO()
@@ -496,7 +771,10 @@ class AsterionDciCliTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
-            with patch("asterion.dci.cli.run_pi_research", return_value=fixture_result(root / "run")):
+            with patch(
+                "asterion.dci.cli.run_pi_research",
+                return_value=fixture_result(root / "run"),
+            ):
                 with patch(
                     "asterion.dci.cli.evaluate_run_directory",
                     side_effect=DciEvaluationError("credential=secret"),
@@ -519,7 +797,10 @@ class AsterionDciCliTests(unittest.TestCase):
         self.assertNotIn("dci", _parser().format_help().lower())
 
     def test_system_prompt_failure_is_publicly_safe(self) -> None:
-        with patch("asterion.dci.cli.render_pi_system_prompt", side_effect=RuntimeError("provider detail")):
+        with patch(
+            "asterion.dci.cli.render_pi_system_prompt",
+            side_effect=RuntimeError("provider detail"),
+        ):
             stderr = io.StringIO()
             code = main(["system-prompt"], stderr=stderr)
 

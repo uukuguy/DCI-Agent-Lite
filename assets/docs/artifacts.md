@@ -1,9 +1,11 @@
 # Run Artifacts
 
-Each run produces the following under `outputs/runs/<timestamp>/`:
+Each Asterion DCI run produces the following under its private generated or
+explicit run directory (normally
+`outputs/asterion-dci-runs/asterion-dci-<UTC>-<random>/`):
 
 ```text
-outputs/runs/<timestamp>/
+outputs/asterion-dci-runs/<run-id>/
   events.jsonl              # raw RPC event stream, appended in real time
   state.json                # low-level debug snapshot, rewritten after each event
   conversation_full.json    # full normalized transcript without DCI-side compaction
@@ -19,21 +21,31 @@ outputs/runs/<timestamp>/
 
 Each resume creates the next isolated protocol attempt (`attempt-0002`, and so on). Raw Pi events continue to append to `events.jsonl`; protocol events contain normalized text, tool, usage, artifact, and terminal events, but exclude hidden thinking and provider request payloads. `state.json.protocol` points to the current attempt and its protocol run ID.
 
-`state.json`, `conversation_full.json`, and `latest_model_context.json` include a `pi_source` object so a result can identify its actual external runtime source:
+`state.json`, `conversation_full.json`, and `latest_model_context.json` include
+a credential-safe `pi_source` object so a result can identify its actual
+external runtime source. It contains revision/match/dirty facts and, only when
+safe, a sanitized remote identity; it does not persist local checkout paths,
+URL credentials, query strings, fragments, environment values, or arbitrary
+extra-argument bodies.
 
-- `repo_dir` and `origin_url` — detected Git checkout and remote
 - `commit` and `dirty` — exact `HEAD` plus whether tracked/untracked local changes were present
-- `lock_file` and `lock_revision` — the DCI default pin used for comparison
+- `lock_revision` — the DCI default pin used for comparison
 - `lock_match` — whether the run used that default commit (`null` for a non-Git/custom package directory)
 - `expected_revision`, `expected_revision_source`, and `expected_match` — compare against an explicit `DCI_PI_REVISION` when set, otherwise the tracked lock
 
 Local modifications are reported as a boolean; their contents are never copied into artifacts.
 
-If you pass `--system-prompt-file`, both `conversation_full.json` and `conversation.json` include a single `system` message built from that file and any appended system prompt file.
+If you pass `--system-prompt-file`, both `conversation_full.json` and
+`conversation.json` include a single `system` message built from that file and
+any appended system prompt file. Relative question/prompt resources resolve
+from the invocation directory first and repository root second, never from the
+Pi child `--cwd`; missing, unreadable, or symlinked resources fail before Pi.
 
 ## Artifact-Only Transcript Compaction
 
-The runner supports Claude Code-inspired transcript compaction for `conversation.json`. These are **independent and all off by default**.
+`asterion-dci run` supports independent transcript-processing controls for
+`conversation.json`. They are all off by default except the inert keep-last
+value of `3`.
 
 **Important:** this does **not** change Pi's runtime behavior. It only changes how DCI stores the processed transcript view on disk. If your question is "does context management affect performance or behavior?", this layer is usually not the one you want.
 
@@ -65,27 +77,35 @@ Use it only when you want:
 
 ```bash
 # level1
-PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
+uv run asterion-dci run \
   --conversation-clear-tool-results \
   --conversation-externalize-tool-results \
-  --provider anthropic \
-  --model claude-sonnet-4-20250514 \
+  --provider "$DCI_PROVIDER" \
+  --model "$DCI_MODEL" \
   "your question here"
 
 # level5
-PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
+uv run asterion-dci run \
   --conversation-clear-tool-results \
   --conversation-clear-tool-results-keep-last 0 \
   --conversation-externalize-tool-results \
   --conversation-strip-thinking \
   --conversation-strip-usage \
-  --provider anthropic \
-  --model claude-sonnet-4-20250514 \
+  --provider "$DCI_PROVIDER" \
+  --model "$DCI_MODEL" \
   "your question here"
 ```
 
 If tool outputs are bloating `conversation.json`, start with `level1`. If the transcript is still too large, move to `level3`. For the leanest artifact, use `level5`.
 
-Runnable examples in `scripts/examples/`:
+`conversation_full.json`, raw events, stderr, and externalized tool-result
+bodies are protected native evidence. Framework/application projections expose
+only body-free artifact URIs. `conversation.json` is the processed view and may
+omit or replace bodies only according to the five explicit controls above.
 
-- `dci_conversation_level1.sh` through `dci_conversation_level5.sh`
+Resume appends a new isolated protocol attempt and preserves prior evidence. It
+is artifact continuation, not Pi session continuity when the original request
+did not enable `--keep-session`. `runtime_context_level` is recorded only as an
+unsupported diagnostic until Pi exposes a typed control. Run-directory files
+are private and atomically maintained, but the directory is not a read-only
+sandbox when bash is available.
