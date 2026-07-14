@@ -924,6 +924,46 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_climb_tools.Af240InventoryTests.test_af240_h004_launcher_mapping_readiness"
         override_test="tests.test_climb_tools.Af240InventoryTests.test_af240_h004_installed_resource_mapping_readiness"
         ;;
+    AF-250-H-001)
+        first_dimension="product_rows"
+        second_dimension="source_entries"
+        third_dimension="asterion_entries"
+        fourth_dimension="local_selectors"
+        immutable_test="tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h001_exact_product_row_surface"
+        repeat_test="tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h001_source_entry_points_exist"
+        dirty_test="tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h001_asterion_entry_points_exist"
+        override_test="tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h001_local_selectors_resolve"
+        ;;
+    AF-250-H-002)
+        first_dimension="stable_semantics"
+        second_dimension="independent_entries"
+        third_dimension="batch_inventory"
+        fourth_dimension="no_placeholders"
+        immutable_test="tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h002_rows_define_stable_semantics"
+        repeat_test="tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h002_products_keep_distinct_entry_points"
+        dirty_test="tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h002_batch_row_delegates_to_digest_bound_inventory"
+        override_test="tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h002_matrix_contains_no_placeholder_text"
+        ;;
+    AF-250-H-003)
+        first_dimension="installed_rows"
+        second_dimension="wheel_boundary"
+        third_dimension="application_assembly"
+        fourth_dimension="model_free_install"
+        immutable_test="tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h003_installed_rows_are_explicit"
+        repeat_test="tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h003_wheel_row_names_distribution_boundaries"
+        dirty_test="tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h003_application_row_names_bundled_assembly"
+        override_test="tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h003_installed_evidence_is_model_free"
+        ;;
+    AF-250-H-004)
+        first_dimension="supported_rows"
+        second_dimension="provider_case_ids"
+        third_dimension="provider_skip"
+        fourth_dimension="schema_inventory"
+        immutable_test="tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h004_all_rows_are_supported"
+        repeat_test="tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h004_provider_cases_are_body_free_ids"
+        dirty_test="tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h004_local_executor_never_runs_provider_cases"
+        override_test="tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h004_matrix_schema_and_inventory_are_finalized"
+        ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2
         exit 2
@@ -936,12 +976,25 @@ dirty_checkout_safety="$($dimension_runner "$third_dimension" "$dirty_test")"
 override_compatibility="$($dimension_runner "$fourth_dimension" "$override_test")"
 total=$((immutable_resolution + repeat_validation + dirty_checkout_safety + override_compatibility))
 
+evidence_kind="capability_acceptance"
+candidate_status="tracked"
+product_confirmation="true"
+if [ "${HYPOTHESIS_ID#AF-240-H-}" != "$HYPOTHESIS_ID" ]; then
+    evidence_kind="inventory_readiness"
+    candidate_status="pending"
+    product_confirmation="false"
+elif [ "${HYPOTHESIS_ID#AF-250-H-}" != "$HYPOTHESIS_ID" ]; then
+    evidence_kind="product_matrix_readiness"
+    candidate_status="pending"
+    product_confirmation="false"
+fi
+
 cat >"$RUN_DIR/local-eval.json" <<EOF
 {
   "hypothesis_id": "$HYPOTHESIS_ID",
-  "evidence_kind": "$([ "${HYPOTHESIS_ID#AF-240-H-}" != "$HYPOTHESIS_ID" ] && printf inventory_readiness || printf capability_acceptance)",
-  "candidate_status": "$([ "${HYPOTHESIS_ID#AF-240-H-}" != "$HYPOTHESIS_ID" ] && printf pending || printf tracked)",
-  "product_confirmation": $([ "${HYPOTHESIS_ID#AF-240-H-}" != "$HYPOTHESIS_ID" ] && printf false || printf true),
+  "evidence_kind": "$evidence_kind",
+  "candidate_status": "$candidate_status",
+  "product_confirmation": $product_confirmation,
   "total": $total,
   "per_task": {
     "$first_dimension": $immutable_resolution,

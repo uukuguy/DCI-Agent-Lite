@@ -5,14 +5,18 @@
 
 ## In-flight / session state
 
-- Phase: completed
+- Phase: active
 - Last cycle: 79
-- Next hypothesis: None
+- Next hypothesis: AF-250-H-001
 - In flight: none
-- Next action: AF-240 is complete; govern and execute AF-250 before any full-parity conclusion.
+- Next action: Strengthen and execute the AF-250 product matrix before any full-parity conclusion.
 
 ## Active hypotheses
 
+- **AF-250-H-001** (pending, rank 0.90): Prove source/Asterion runnable-surface completeness through the exact eight-row product matrix.
+- **AF-250-H-002** (pending, rank 0.80): Prove stable cross-product semantic comparison across independently owned DCI entry points.
+- **AF-250-H-003** (pending, rank 0.70): Prove installed wheel/application independence from the source-only DCI product.
+- **AF-250-H-004** (pending, rank 0.60): Govern bounded real evidence and final matrix closure without executing providers during local verification.
 
 ## Run ladder
 

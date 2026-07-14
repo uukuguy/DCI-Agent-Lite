@@ -78,6 +78,32 @@ AF240_FUTURE_TEST_TARGETS = {
         "AsterionDciBatchLauncherTests",
     ),
 }
+AF250_MATRIX_TESTS = {
+    "AF-250-H-001": (
+        "test_af250_h001_exact_product_row_surface",
+        "test_af250_h001_source_entry_points_exist",
+        "test_af250_h001_asterion_entry_points_exist",
+        "test_af250_h001_local_selectors_resolve",
+    ),
+    "AF-250-H-002": (
+        "test_af250_h002_rows_define_stable_semantics",
+        "test_af250_h002_products_keep_distinct_entry_points",
+        "test_af250_h002_batch_row_delegates_to_digest_bound_inventory",
+        "test_af250_h002_matrix_contains_no_placeholder_text",
+    ),
+    "AF-250-H-003": (
+        "test_af250_h003_installed_rows_are_explicit",
+        "test_af250_h003_wheel_row_names_distribution_boundaries",
+        "test_af250_h003_application_row_names_bundled_assembly",
+        "test_af250_h003_installed_evidence_is_model_free",
+    ),
+    "AF-250-H-004": (
+        "test_af250_h004_all_rows_are_supported",
+        "test_af250_h004_provider_cases_are_body_free_ids",
+        "test_af250_h004_local_executor_never_runs_provider_cases",
+        "test_af250_h004_matrix_schema_and_inventory_are_finalized",
+    ),
+}
 
 
 def _af240_source_functions(path: str) -> set[str]:
@@ -2766,14 +2792,16 @@ class ClimbToolTests(unittest.TestCase):
                     self.assertEqual(ledger["session"], result["session"])
 
     def test_af240_session_name_stays_within_batch_package_scope(self) -> None:
-        session = json.loads(
-            (REPO_ROOT / "docs/status/climb/session-state.json").read_text()
-        )
+        hypotheses = yaml.safe_load(
+            (REPO_ROOT / "docs/status/climb/hypotheses.yaml").read_text()
+        )["hypotheses"]
         target = (REPO_ROOT / "docs/status/climb/session-target.md").read_text()
-
-        self.assertEqual(
-            session["session"], "2026-07-15-af-240-batch-evaluation-export-parity"
-        )
+        for item in hypotheses:
+            if item.get("work_package_id") == "AF-240":
+                self.assertEqual(
+                    item["results"][-1]["session"],
+                    "2026-07-15-af-240-batch-evaluation-export-parity",
+                )
         self.assertNotIn("full source-parity", target.lower())
 
     def test_af240_local_eval_reports_batch_parity_dimensions(self) -> None:
@@ -2834,6 +2862,89 @@ class ClimbToolTests(unittest.TestCase):
                 self.assertEqual(evaluation["total"], 4)
                 self.assertEqual(set(evaluation["per_task"]), dimensions)
                 self.assertEqual(evaluation["evidence_kind"], "inventory_readiness")
+                self.assertEqual(evaluation["candidate_status"], "pending")
+                self.assertIs(evaluation["product_confirmation"], False)
+
+    def test_af250_governance_uses_the_exact_package_and_session(self) -> None:
+        hypotheses = yaml.safe_load(
+            (REPO_ROOT / "docs/status/climb/hypotheses.yaml").read_text()
+        )["hypotheses"]
+        indexed = {item["id"]: item for item in hypotheses}
+        commands: list[str] = []
+        for hypothesis_id, selectors in AF250_MATRIX_TESTS.items():
+            item = indexed[hypothesis_id]
+            self.assertEqual(item["work_package_id"], "AF-250")
+            self.assertEqual(item["status"], "pending")
+            self.assertEqual(item.get("results"), [])
+            command = item["verification_command"]
+            self.assertEqual({name for name in selectors if name in command}, set(selectors))
+            commands.append(command)
+        self.assertEqual(len(commands), len(set(commands)))
+
+        session = json.loads(
+            (REPO_ROOT / "docs/status/climb/session-state.json").read_text()
+        )
+        self.assertEqual(session["session"], "2026-07-15-af-250-product-acceptance-matrix")
+        self.assertEqual(session["work_package_id"], "AF-250")
+        self.assertEqual(session["phase"], "active")
+        self.assertEqual(session["next_hypothesis"], "AF-250-H-001")
+        self.assertIsNone(session["in_flight"])
+
+    def test_af250_train_registers_distinct_executable_selectors(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+        all_names = {name for names in AF250_MATRIX_TESTS.values() for name in names}
+        self.assertEqual(len(all_names), 16)
+        for hypothesis_id, selectors in AF250_MATRIX_TESTS.items():
+            marker = f'elif [ "$1" = "{hypothesis_id}" ]; then'
+            start = train_script.rindex(marker)
+            end = train_script.find("\nelif ", start + len(marker))
+            branch = train_script[start : end if end >= 0 else None]
+            self.assertEqual({name for name in all_names if name in branch}, set(selectors))
+
+    def test_af250_local_eval_dimensions_have_distinct_executable_selectors(self) -> None:
+        eval_script = (REPO_ROOT / "tools/climb/eval-local.sh").read_text()
+        all_names = {name for names in AF250_MATRIX_TESTS.values() for name in names}
+        seen_dimensions: set[str] = set()
+        for hypothesis_id, selectors in AF250_MATRIX_TESTS.items():
+            marker = f"    {hypothesis_id})"
+            start = eval_script.index(marker)
+            end = eval_script.find("\n    AF-250-H-", start + len(marker))
+            if end < 0:
+                end = eval_script.find("\n    *)", start + len(marker))
+            branch = eval_script[start:end]
+            self.assertEqual({name for name in all_names if name in branch}, set(selectors))
+            dimensions = set(re.findall(r'^\s*(?:first|second|third|fourth)_dimension="([^"]+)"', branch, re.M))
+            self.assertEqual(len(dimensions), 4)
+            self.assertTrue(seen_dimensions.isdisjoint(dimensions))
+            seen_dimensions.update(dimensions)
+
+    def test_af250_local_eval_executes_each_governed_dimension(self) -> None:
+        expected_dimensions = {
+            "AF-250-H-001": {"product_rows", "source_entries", "asterion_entries", "local_selectors"},
+            "AF-250-H-002": {"stable_semantics", "independent_entries", "batch_inventory", "no_placeholders"},
+            "AF-250-H-003": {"installed_rows", "wheel_boundary", "application_assembly", "model_free_install"},
+            "AF-250-H-004": {"supported_rows", "provider_case_ids", "provider_skip", "schema_inventory"},
+        }
+        for hypothesis_id, dimensions in expected_dimensions.items():
+            with self.subTest(hypothesis_id=hypothesis_id), tempfile.TemporaryDirectory() as temp_dir:
+                run_dir = Path(temp_dir)
+                env = os.environ.copy()
+                env["DCI_CLIMB_HYPOTHESIS_ID"] = hypothesis_id
+                result = subprocess.run(
+                    ["bash", "tools/climb/eval-local.sh", str(run_dir)],
+                    cwd=REPO_ROOT,
+                    env=env,
+                    text=True,
+                    capture_output=True,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                evaluation = json.loads((run_dir / "local-eval.json").read_text())
+                self.assertEqual(evaluation["hypothesis_id"], hypothesis_id)
+                self.assertEqual(evaluation["total"], 4)
+                self.assertEqual(set(evaluation["per_task"]), dimensions)
+                self.assertEqual(
+                    evaluation["evidence_kind"], "product_matrix_readiness"
+                )
                 self.assertEqual(evaluation["candidate_status"], "pending")
                 self.assertIs(evaluation["product_confirmation"], False)
 

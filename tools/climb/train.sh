@@ -6,7 +6,7 @@ if [ "$#" -ne 1 ]; then
     exit 2
 fi
 case "$1" in
-    H-001|H-002|H-003|H-004|H-005|H-006|H-007|H-008|H-009|H-010|H-011|H-012|H-013|H-014|H-015|H-016|H-017|H-018|H-019|AF-050-H-001|AF-050-H-002|AF-050-H-003|AF-050-H-004|AF-050-H-005|AF-060-H-001|AF-060-H-002|AF-060-H-003|AF-060-H-004|AF-060-H-005|AF-070-H-001|AF-070-H-002|AF-070-H-003|AF-070-H-004|AF-080-H-001|AF-080-H-002|AF-080-H-003|AF-080-H-004|AF-090-H-001|AF-090-H-002|AF-090-H-003|AF-090-H-004|AF-095-H-001|AF-095-H-002|AF-095-H-003|AF-095-H-004|AF-100-H-001|AF-100-H-002|AF-100-H-003|AF-100-H-004|AF-180-H-001|AF-180-H-002|AF-180-H-003|AF-180-H-004|AF-190-H-001|AF-190-H-002|AF-190-H-003|AF-190-H-004|AF-200-H-001|AF-200-H-002|AF-200-H-003|AF-200-H-004|AF-210-H-001|AF-210-H-002|AF-210-H-003|AF-210-H-004|AF-220-H-001|AF-220-H-002|AF-220-H-003|AF-220-H-004|AF-230-H-001|AF-230-H-002|AF-230-H-003|AF-230-H-004|AF-240-H-001|AF-240-H-002|AF-240-H-003|AF-240-H-004) ;;
+    H-001|H-002|H-003|H-004|H-005|H-006|H-007|H-008|H-009|H-010|H-011|H-012|H-013|H-014|H-015|H-016|H-017|H-018|H-019|AF-050-H-001|AF-050-H-002|AF-050-H-003|AF-050-H-004|AF-050-H-005|AF-060-H-001|AF-060-H-002|AF-060-H-003|AF-060-H-004|AF-060-H-005|AF-070-H-001|AF-070-H-002|AF-070-H-003|AF-070-H-004|AF-080-H-001|AF-080-H-002|AF-080-H-003|AF-080-H-004|AF-090-H-001|AF-090-H-002|AF-090-H-003|AF-090-H-004|AF-095-H-001|AF-095-H-002|AF-095-H-003|AF-095-H-004|AF-100-H-001|AF-100-H-002|AF-100-H-003|AF-100-H-004|AF-180-H-001|AF-180-H-002|AF-180-H-003|AF-180-H-004|AF-190-H-001|AF-190-H-002|AF-190-H-003|AF-190-H-004|AF-200-H-001|AF-200-H-002|AF-200-H-003|AF-200-H-004|AF-210-H-001|AF-210-H-002|AF-210-H-003|AF-210-H-004|AF-220-H-001|AF-220-H-002|AF-220-H-003|AF-220-H-004|AF-230-H-001|AF-230-H-002|AF-230-H-003|AF-230-H-004|AF-240-H-001|AF-240-H-002|AF-240-H-003|AF-240-H-004|AF-250-H-001|AF-250-H-002|AF-250-H-003|AF-250-H-004) ;;
     *)
         echo "ERROR: train adapter has no acceptance suite for $1." >&2
         exit 2
@@ -136,6 +136,14 @@ elif [ "$1" = "AF-240-H-003" ]; then
     paradigm="dci-evaluation-aggregate-analysis-parity"
 elif [ "$1" = "AF-240-H-004" ]; then
     paradigm="dci-export-launcher-installed-parity"
+elif [ "$1" = "AF-250-H-001" ]; then
+    paradigm="dci-product-runnable-surface"
+elif [ "$1" = "AF-250-H-002" ]; then
+    paradigm="dci-product-stable-semantics"
+elif [ "$1" = "AF-250-H-003" ]; then
+    paradigm="dci-product-installed-independence"
+elif [ "$1" = "AF-250-H-004" ]; then
+    paradigm="dci-product-final-acceptance"
 elif [ "$1" = "H-003" ]; then
     paradigm="rpc-contract-probe"
 elif [ "$1" = "H-004" ] || [ "$1" = "H-005" ]; then
@@ -170,15 +178,28 @@ elif [ "$1" = "H-019" ]; then
     paradigm="rpc-settlement-postcondition"
 fi
 
+evidence_kind="capability_acceptance"
+candidate_status="tracked"
+product_confirmation="true"
+if [ "${1#AF-240-H-}" != "$1" ]; then
+    evidence_kind="inventory_readiness"
+    candidate_status="pending"
+    product_confirmation="false"
+elif [ "${1#AF-250-H-}" != "$1" ]; then
+    evidence_kind="product_matrix_readiness"
+    candidate_status="pending"
+    product_confirmation="false"
+fi
+
 cat >"$run_dir/manifest.json" <<EOF
 {
   "cycle": null,
   "hypothesis_id": "$1",
   "paradigm": "$paradigm",
   "run_id": "$run_id",
-  "evidence_kind": "$([ "${1#AF-240-H-}" != "$1" ] && printf inventory_readiness || printf capability_acceptance)",
-  "candidate_status": "$([ "${1#AF-240-H-}" != "$1" ] && printf pending || printf tracked)",
-  "product_confirmation": $([ "${1#AF-240-H-}" != "$1" ] && printf false || printf true)
+  "evidence_kind": "$evidence_kind",
+  "candidate_status": "$candidate_status",
+  "product_confirmation": $product_confirmation
 }
 EOF
 
@@ -597,6 +618,46 @@ elif [ "$1" = "AF-240-H-004" ]; then
         tests.test_climb_tools.Af240InventoryTests.test_af240_h004_installed_resource_mapping_readiness \
         -v >"$run_dir/train.log" 2>&1; then
         echo "ERROR: $1 AF-240 inventory readiness failed; see $run_dir/train.log" >&2
+        exit 1
+    fi
+elif [ "$1" = "AF-250-H-001" ]; then
+    if ! uv run python -m unittest \
+        tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h001_exact_product_row_surface \
+        tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h001_source_entry_points_exist \
+        tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h001_asterion_entry_points_exist \
+        tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h001_local_selectors_resolve \
+        -v >"$run_dir/train.log" 2>&1; then
+        echo "ERROR: $1 product surface readiness failed; see $run_dir/train.log" >&2
+        exit 1
+    fi
+elif [ "$1" = "AF-250-H-002" ]; then
+    if ! uv run python -m unittest \
+        tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h002_rows_define_stable_semantics \
+        tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h002_products_keep_distinct_entry_points \
+        tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h002_batch_row_delegates_to_digest_bound_inventory \
+        tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h002_matrix_contains_no_placeholder_text \
+        -v >"$run_dir/train.log" 2>&1; then
+        echo "ERROR: $1 stable semantics readiness failed; see $run_dir/train.log" >&2
+        exit 1
+    fi
+elif [ "$1" = "AF-250-H-003" ]; then
+    if ! uv run python -m unittest \
+        tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h003_installed_rows_are_explicit \
+        tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h003_wheel_row_names_distribution_boundaries \
+        tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h003_application_row_names_bundled_assembly \
+        tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h003_installed_evidence_is_model_free \
+        -v >"$run_dir/train.log" 2>&1; then
+        echo "ERROR: $1 installed independence readiness failed; see $run_dir/train.log" >&2
+        exit 1
+    fi
+elif [ "$1" = "AF-250-H-004" ]; then
+    if ! uv run python -m unittest \
+        tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h004_all_rows_are_supported \
+        tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h004_provider_cases_are_body_free_ids \
+        tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h004_local_executor_never_runs_provider_cases \
+        tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h004_matrix_schema_and_inventory_are_finalized \
+        -v >"$run_dir/train.log" 2>&1; then
+        echo "ERROR: $1 final matrix readiness failed; see $run_dir/train.log" >&2
         exit 1
     fi
 elif [ "$1" = "H-003" ]; then

@@ -622,3 +622,8 @@
 - 03:24 AF-250 plan defines eight executable product rows, 533 delegated batch rows, seven bounded real cases, and four governed Climb hypotheses.
 - 03:25 AF-250 executable product-matrix plan is committed to govern final migration evidence. [d8a2c0f]
 - 03:28 AF-250 Task 1 plan now includes executable Climb train/eval adapters and ownership regression coverage.
+- 03:29 AF-250 Climb adapter requirements are committed before Task 1 dispatch. [4981069]
+- 03:32 AF-250 Task 1 scope preflight passes with AF-250 as the sole active package; no provider-backed or full-dataset command was authorized.
+- 03:34 AF-250 Task 1 RED captures the missing strict product matrix/verifier before implementation (`ModuleNotFoundError: tools.verify_asterion_dci_product`).
+- 03:42 AF-250 Task 1 defines eight executable product rows, digest-binds all 533 AF-240 rows, and registers four pending package-owned Climb hypotheses with distinct model-free selectors.
+- 03:50 AF-250 Task 1 GREEN passes 155 focused/governance tests, eight local matrix rows, compile, Ruff, Bash syntax, scope, and diff gates without provider execution.

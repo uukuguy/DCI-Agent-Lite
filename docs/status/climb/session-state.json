@@ -1,11 +1,11 @@
 {
-  "session": "2026-07-15-af-240-batch-evaluation-export-parity",
-  "phase": "completed",
-  "work_package_id": "AF-240",
+  "session": "2026-07-15-af-250-product-acceptance-matrix",
+  "phase": "active",
+  "work_package_id": "AF-250",
   "last_cycle": 79,
-  "next_hypothesis": null,
+  "next_hypothesis": "AF-250-H-001",
   "in_flight": null,
-  "next_action": "AF-240 is complete; govern and execute AF-250 before any full-parity conclusion.",
+  "next_action": "Strengthen and execute the AF-250 product matrix before any full-parity conclusion.",
   "falsified_routes": [
     "duplicate the authoritative Pi commit across setup.sh and .env.template",
     "convert the independent Pi checkout to vendored or submodule ownership",

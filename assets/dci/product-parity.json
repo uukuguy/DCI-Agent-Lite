@@ -1,0 +1,82 @@
+{
+  "schema": "asterion.dci.product-parity/v1",
+  "batch_inventory": {
+    "path": "assets/dci/batch-parity.json",
+    "sha256": "ceec342a6a6c9311d043379067bc33ba6445414dd8c236cff1d8416fcdad2e55",
+    "row_count": 533
+  },
+  "rows": [
+    {
+      "id": "configuration-and-pi-argv",
+      "source_entry_points": ["src/dci/config.py", "src/dci/benchmark/pi_rpc_runner.py"],
+      "asterion_entry_points": ["packages/python/asterion-core/src/asterion/dci/config.py", "packages/python/asterion-core/src/asterion/dci/pi_rpc.py"],
+      "stable_semantics": ["Shared DCI configuration resolves with explicit overrides taking precedence", "Pi runtime controls map to literal argument vectors without shell interpretation"],
+      "unsupported": false,
+      "local_evidence": [{"id": "configuration-row-contract", "tier": "local", "argv": ["uv", "run", "python", "-m", "unittest", "tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h001_exact_product_row_surface"], "selectors": ["tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h001_exact_product_row_surface"]}],
+      "provider_evidence": null
+    },
+    {
+      "id": "interactive-run-and-terminal",
+      "source_entry_points": ["src/dci/benchmark/pi_rpc_runner.py"],
+      "asterion_entry_points": ["packages/python/asterion-core/src/asterion/dci/cli.py", "packages/python/asterion-core/src/asterion/dci/run.py"],
+      "stable_semantics": ["Interactive execution preserves lifecycle and final-answer semantics", "Terminal execution stays direct and artifact-free while returning child exit status"],
+      "unsupported": false,
+      "local_evidence": [{"id": "interactive-row-contract", "tier": "local", "argv": ["uv", "run", "python", "-m", "unittest", "tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h002_rows_define_stable_semantics"], "selectors": ["tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h002_rows_define_stable_semantics"]}],
+      "provider_evidence": "asterion-basic"
+    },
+    {
+      "id": "native-artifacts-and-resume",
+      "source_entry_points": ["src/dci/benchmark/pi_rpc_runner.py"],
+      "asterion_entry_points": ["packages/python/asterion-core/src/asterion/dci/artifacts.py", "packages/python/asterion-core/src/asterion/dci/run.py"],
+      "stable_semantics": ["Completed and failed runs publish parseable native lifecycle evidence", "Compatible resume reuses the authorized run while isolating protocol attempts"],
+      "unsupported": false,
+      "local_evidence": [{"id": "native-artifact-row-contract", "tier": "local", "argv": ["uv", "run", "python", "-m", "unittest", "tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h001_asterion_entry_points_exist"], "selectors": ["tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h001_asterion_entry_points_exist"]}],
+      "provider_evidence": "asterion-runtime-context"
+    },
+    {
+      "id": "judge-and-exact-cache",
+      "source_entry_points": ["src/dci/benchmark/judge.py"],
+      "asterion_entry_points": ["packages/python/asterion-core/src/asterion/dci/judge.py", "packages/python/asterion-core/src/asterion/dci/evaluation.py"],
+      "stable_semantics": ["Judge requests produce boolean verdicts through credential-safe transport", "Exact cache reuse binds answer evidence and complete request configuration"],
+      "unsupported": false,
+      "local_evidence": [{"id": "judge-cache-row-contract", "tier": "local", "argv": ["uv", "run", "python", "-m", "unittest", "tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h002_products_keep_distinct_entry_points"], "selectors": ["tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h002_products_keep_distinct_entry_points"]}],
+      "provider_evidence": "one-row-pi-judge"
+    },
+    {
+      "id": "batch-ir-analysis-and-exports",
+      "source_entry_points": ["assets/dci/batch-parity.json", "scripts/bcplus_eval/run_bcplus_eval.py"],
+      "asterion_entry_points": ["packages/python/asterion-core/src/asterion/dci/benchmark.py", "packages/python/asterion-core/src/asterion/dci/analysis.py", "packages/python/asterion-core/src/asterion/dci/export.py"],
+      "stable_semantics": ["The digest-bound 533-row inventory delegates complete fine-grained batch coverage", "Batch reuse metrics analysis figures and exports retain deterministic product semantics"],
+      "unsupported": false,
+      "local_evidence": [{"id": "batch-inventory-row-contract", "tier": "local", "argv": ["uv", "run", "python", "-m", "unittest", "tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h002_batch_row_delegates_to_digest_bound_inventory"], "selectors": ["tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h002_batch_row_delegates_to_digest_bound_inventory"]}],
+      "provider_evidence": "one-row-exact-reuse"
+    },
+    {
+      "id": "source-and-asterion-examples",
+      "source_entry_points": ["scripts/examples/dci_basic_example.sh", "scripts/examples/dci_runtime_context_example.sh"],
+      "asterion_entry_points": ["scripts/examples/asterion_dci_basic_example.sh", "scripts/examples/asterion_dci_runtime_context_example.sh"],
+      "stable_semantics": ["Both products expose independently runnable basic examples", "Both runtime-context examples preserve explicit context thinking and evaluation controls"],
+      "unsupported": false,
+      "local_evidence": [{"id": "example-row-contract", "tier": "model-free", "argv": ["uv", "run", "python", "-m", "unittest", "tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h001_source_entry_points_exist"], "selectors": ["tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h001_source_entry_points_exist"]}],
+      "provider_evidence": "source-basic"
+    },
+    {
+      "id": "installed-wheel-boundary",
+      "source_entry_points": ["pyproject.toml"],
+      "asterion_entry_points": ["tests/test_distribution_boundaries.py", "packages/python/asterion-core/src/asterion/applications/dci_agent_lite/provider.py"],
+      "stable_semantics": ["The installed wheel contains Asterion DCI without packaging the source DCI module", "Installed commands and resources resolve outside the repository"],
+      "unsupported": false,
+      "local_evidence": [{"id": "installed-wheel-row-contract", "tier": "model-free", "argv": ["uv", "run", "python", "-m", "unittest", "tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h003_wheel_row_names_distribution_boundaries"], "selectors": ["tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h003_wheel_row_names_distribution_boundaries"]}],
+      "provider_evidence": null
+    },
+    {
+      "id": "installed-pi-application",
+      "source_entry_points": ["applications/dci-agent-lite/python/dci_research_host.py"],
+      "asterion_entry_points": ["packages/python/asterion-core/src/asterion/applications/dci_agent_lite/assemblies/dci-research-capability.json", "packages/python/asterion-core/src/asterion/dci/application_executor.py"],
+      "stable_semantics": ["The installed Pi-default application selects its bundled assembly independently", "Application projection retains durable references while excluding provider response bodies"],
+      "unsupported": false,
+      "local_evidence": [{"id": "installed-application-row-contract", "tier": "model-free", "argv": ["uv", "run", "python", "-m", "unittest", "tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h003_application_row_names_bundled_assembly"], "selectors": ["tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h003_application_row_names_bundled_assembly"]}],
+      "provider_evidence": "installed-pi-application"
+    }
+  ]
+}
