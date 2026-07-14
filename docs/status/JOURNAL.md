@@ -537,3 +537,5 @@
 - 23:43 AF-240 Task 2 R4 requires exact generated cost arithmetic so modified caches always rejudge. [22ccfde]
 - 23:50 AF-240 Task 2 R5 approved exact costs, recovery, projections, and lock boundaries after 121 focused tests. [e0a1005]
 - 22:59 AF-240 Task 3 adds bounded durable batches and cooperative Pi cancellation to prevent orphaned work. [e6d0eea]
+- 23:58 AF-240 Task 3 hardens evidence reuse, descriptor authority, snapshots, cancellation, and fresh generations. [82b31b1]
+- 23:29 correction: preceding AF-240 Task 3 hardening landed at 23:29, not 23:58.
