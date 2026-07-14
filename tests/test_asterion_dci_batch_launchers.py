@@ -114,7 +114,8 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
             ASTERION_LAUNCHER_ROOT / "bcplus_eval/run_bcplus_eval_openai.sh"
         ).read_text(encoding="utf-8")
         self.assertIn('level=${1:-"level3"}', text)
-        self.assertIn('thinking_level=${2:-""}', text)
+        self.assertIn('thinking_level=""', text)
+        self.assertIn('[[ "$1" != --* ]]', text)
         self.assertIn('--runtime-context-level "$level"', text)
         self.assertIn('command+=(--thinking-level "$thinking_level")', text)
 
@@ -280,6 +281,39 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
             )
             run.assert_not_called()
 
+    def test_invalid_runtime_values_fail_before_batch_boundary_or_output(self) -> None:
+        for option, value in (
+            ("--thinking-level", "invalid"),
+            ("--provider", ""),
+            ("--model", ""),
+            ("--tools", ""),
+        ):
+            with self.subTest(option=option), tempfile.TemporaryDirectory() as td:
+                root = Path(td).resolve()
+                dataset = root / "dataset.jsonl"
+                output = root / "output"
+                dataset.write_text(
+                    '{"query_id":"q","query":"question","answer":"answer"}\n',
+                    encoding="utf-8",
+                )
+                with patch("asterion.dci.cli.run_benchmark") as run:
+                    stdout = io.StringIO()
+                    stderr = io.StringIO()
+                    status = main(
+                        [
+                            "benchmark", "--dataset", str(dataset),
+                            "--output-root", str(output), option, value,
+                        ],
+                        repo_root=root,
+                        stdout=stdout,
+                        stderr=stderr,
+                    )
+                self.assertEqual(status, 2)
+                self.assertEqual(stdout.getvalue(), "")
+                self.assertEqual(stderr.getvalue(), "DCI benchmark failed\n")
+                self.assertFalse(output.exists())
+                run.assert_not_called()
+
     def test_installed_wheel_loads_profiles_without_repository(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory).resolve()
@@ -313,29 +347,147 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
 
 
-for _relative, _profile in {
-    "bcplus_eval/run_L3.sh": "bcplus_level3",
-    "bcplus_eval/run_bcplus_eval_openai.sh": "bcplus_dynamic_level_thinking",
-    "bright/run_bio.sh": "bright_biology",
-    "bright/run_earth_science.sh": "bright_earth_science",
-    "bright/run_economics.sh": "bright_economics",
-    "bright/run_robotics.sh": "bright_robotics",
-    "qa/run_2wikimultihopqa_dev_sample50.sh": "qa_2wikimultihopqa",
-    "qa/run_bamboogle_test_sample50.sh": "qa_bamboogle",
-    "qa/run_hotpotqa_dev_sample50.sh": "qa_hotpotqa",
-    "qa/run_musique_dev_sample50.sh": "qa_musique",
-    "qa/run_nq_test_sample50.sh": "qa_nq",
-    "qa/run_triviaqa_test_sample50.sh": "qa_triviaqa",
+for _relative, (_profile_slug, _profile_name) in {
+    "bcplus_eval/run_L3.sh": ("bcplus_level3", "bcplus.level3"),
+    "bcplus_eval/run_bcplus_eval_openai.sh": ("bcplus_dynamic_level_thinking", "bcplus.openai"),
+    "bright/run_bio.sh": ("bright_biology", "bright.biology"),
+    "bright/run_earth_science.sh": ("bright_earth_science", "bright.earth-science"),
+    "bright/run_economics.sh": ("bright_economics", "bright.economics"),
+    "bright/run_robotics.sh": ("bright_robotics", "bright.robotics"),
+    "qa/run_2wikimultihopqa_dev_sample50.sh": ("qa_2wikimultihopqa", "qa.2wikimultihopqa"),
+    "qa/run_bamboogle_test_sample50.sh": ("qa_bamboogle", "qa.bamboogle"),
+    "qa/run_hotpotqa_dev_sample50.sh": ("qa_hotpotqa", "qa.hotpotqa"),
+    "qa/run_musique_dev_sample50.sh": ("qa_musique", "qa.musique"),
+    "qa/run_nq_test_sample50.sh": ("qa_nq", "qa.nq"),
+    "qa/run_triviaqa_test_sample50.sh": ("qa_triviaqa", "qa.triviaqa"),
 }.items():
-    def _test(self: AsterionDciBatchLauncherTests, relative: str = _relative) -> None:
-        self.assertTrue((ASTERION_LAUNCHER_ROOT / relative).is_file())
+    def _test(
+        self: AsterionDciBatchLauncherTests,
+        relative: str = _relative,
+        profile_name: str = _profile_name,
+    ) -> None:
+        launcher = ASTERION_LAUNCHER_ROOT / relative
+        profile = json.loads(PROFILE_RESOURCE.read_text(encoding="utf-8"))[
+            "profiles"
+        ][profile_name]
+        text = launcher.read_text(encoding="utf-8")
+        self.assertIn(f"--profile {profile_name}", text)
+        self.assertIn(profile["dataset"], text)
+        self.assertIn(profile["corpus"], text)
+        self.assertIn("asterion-dci benchmark", text)
+        self.assertIn('source "$REPO_ROOT/.env"', text)
+        self.assertNotIn("run_bcplus_eval.py", text)
+        syntax = subprocess.run(
+            ["bash", "-n", str(launcher)], capture_output=True, text=True
+        )
+        self.assertEqual(syntax.returncode, 0, syntax.stderr)
+        if profile_name == "bcplus.openai":
+            self.test_dynamic_launcher_omits_unset_optionals_and_forwards_explicit_limit()
 
     source_id = _relative.replace("/", "_").replace(".", "_").lower()
     setattr(
         AsterionDciBatchLauncherTests,
-        f"test_scripts_{source_id}_launcher_{_profile}",
+        f"test_scripts_{source_id}_launcher_{_profile_slug}",
         _test,
     )
+
+
+def _assert_cli_flag_mapping(
+    case: AsterionDciBatchLauncherTests, flag: str
+) -> None:
+    with tempfile.TemporaryDirectory() as temporary_directory:
+        root = Path(temporary_directory).resolve()
+        dataset = root / "dataset.jsonl"
+        alternate_dataset = root / "alternate.jsonl"
+        corpus = root / "corpus"
+        prompt = root / "prompt.md"
+        dataset.write_text("{}\n", encoding="utf-8")
+        alternate_dataset.write_text("{}\n", encoding="utf-8")
+        corpus.mkdir()
+        prompt.write_text("prompt", encoding="utf-8")
+        arguments: dict[str, list[str]] = {
+            "--agent-dir": [flag, str(root / "agent")],
+            "--append-system-prompt-file": [flag, str(prompt)],
+            "--corpus-dir": [flag, str(corpus)],
+            "--corpus-hint": [flag, "sharded corpus"],
+            "--dataset": [flag, str(alternate_dataset)],
+            "--enable-ir": [flag],
+            "--judge-api": [flag, "chat-completions"],
+            "--judge-api-key-env": [flag, "TASK6_JUDGE_KEY"],
+            "--judge-base-url": [flag, "https://judge.invalid/v1"],
+            "--judge-cached-input-price-per-1m": [flag, "0.25"],
+            "--judge-input-price-per-1m": [flag, "1.5"],
+            "--judge-model": [flag, "judge-model"],
+            "--judge-output-price-per-1m": [flag, "3.75"],
+            "--judge-timeout-seconds": [flag, "17"],
+            "--limit": [flag, "2"],
+            "--max-concurrency": [flag, "3"],
+            "--max-turns": [flag, "9"],
+            "--model": [flag, "agent-model"],
+            "--node-max-old-space-size-mb": [flag, "4096"],
+            "--output-root": [flag, str(root / "alternate-output")],
+            "--package-dir": [flag, str(root / "package")],
+            "--pi-extra-arg": [f"{flag}=--custom value"],
+            "--pi-thinking-level": [flag, "high"],
+            "--provider": [flag, "agent-provider"],
+            "--runtime-context-level": [flag, "level4"],
+            "--system-prompt-file": [flag, str(prompt)],
+            "--tools": [flag, "read"],
+        }
+        argv = [
+            "benchmark",
+            "--dataset",
+            str(dataset),
+            "--output-root",
+            str(root / "output"),
+            *arguments[flag],
+        ]
+        environment = {"TASK6_JUDGE_KEY": "synthetic-secret"}
+        with patch.dict(os.environ, environment, clear=False), patch(
+            "asterion.dci.cli.run_benchmark"
+        ) as run:
+            run.return_value = type(
+                "Result", (), {"output_root": root / "output", "counts": {"total": 1}}
+            )()
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            status = main(argv, repo_root=root, stdout=stdout, stderr=stderr)
+        if flag in {"--agent-dir", "--package-dir"}:
+            case.assertEqual(status, 2)
+            case.assertEqual(stderr.getvalue(), "DCI benchmark failed\n")
+            run.assert_not_called()
+            return
+        case.assertEqual(status, 0, stderr.getvalue())
+        request = run.call_args.args[0]
+        expectations: dict[str, tuple[object, object]] = {
+            "--append-system-prompt-file": (request.append_system_prompt_file, prompt),
+            "--corpus-dir": (request.corpus, corpus),
+            "--corpus-hint": (request.corpus_hint, "sharded corpus"),
+            "--dataset": (request.dataset, alternate_dataset),
+            "--enable-ir": (request.mode, "ir"),
+            "--judge-api": (request.judge_config.api, "chat-completions"),
+            "--judge-api-key-env": (request.judge_config.api_key_env, "TASK6_JUDGE_KEY"),
+            "--judge-base-url": (request.judge_config.base_url, "https://judge.invalid/v1"),
+            "--judge-cached-input-price-per-1m": (request.judge_config.cached_input_price_per_1m, 0.25),
+            "--judge-input-price-per-1m": (request.judge_config.input_price_per_1m, 1.5),
+            "--judge-model": (request.judge_config.model, "judge-model"),
+            "--judge-output-price-per-1m": (request.judge_config.output_price_per_1m, 3.75),
+            "--judge-timeout-seconds": (request.judge_config.timeout_seconds, 17),
+            "--limit": (request.limit, 2),
+            "--max-concurrency": (request.max_concurrency, 3),
+            "--max-turns": (request.max_turns, 9),
+            "--model": (request.runtime_options.model, "agent-model"),
+            "--node-max-old-space-size-mb": (request.runtime_options.node_max_old_space_size_mb, 4096),
+            "--output-root": (request.output_root, root / "alternate-output"),
+            "--pi-extra-arg": (request.runtime_options.extra_args, ("--custom value",)),
+            "--pi-thinking-level": (request.runtime_options.thinking_level, "high"),
+            "--provider": (request.runtime_options.provider, "agent-provider"),
+            "--runtime-context-level": (request.runtime_options.runtime_context_level, "level4"),
+            "--system-prompt-file": (request.system_prompt_file, prompt),
+            "--tools": (request.runtime_options.tools, "read"),
+        }
+        actual, expected = expectations[flag]
+        case.assertEqual(actual, expected)
 
 
 for _flag in (
@@ -370,17 +522,7 @@ for _flag in (
     def _flag_test(
         self: AsterionDciBatchLauncherTests, flag: str = _flag
     ) -> None:
-        stdout = io.StringIO()
-        self.assertEqual(
-            main(
-                ["benchmark", "--help"],
-                repo_root=ROOT,
-                stdout=stdout,
-                stderr=io.StringIO(),
-            ),
-            0,
-        )
-        self.assertIn(flag, stdout.getvalue())
+        _assert_cli_flag_mapping(self, flag)
 
     flag_id = _flag.removeprefix("--").replace("-", "_")
     setattr(
