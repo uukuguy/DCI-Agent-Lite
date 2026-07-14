@@ -703,6 +703,7 @@ def _resume_preflight(
     if (
         not isinstance(attempts[-1], dict)
         or attempts[-1].get("status") != state.get("status")
+        or conversation.get("status") != state.get("status")
         or conversation_full.get("status") != state.get("status")
         or latest_context.get("status") != state.get("status")
         or conversation_full.get("question") != request.question
@@ -731,10 +732,24 @@ def _resume_preflight(
             if prior_request != expected_request:
                 raise DciArtifactError("DCI resume evidence is invalid")
             prior_events = _read_jsonl_at(protocol_fd, events_name)
-            if attempt.get("status") == "running" and prior_events:
+            expected_run_id = expected_request["run_id"]
+            if any(event.get("run_id") != expected_run_id for event in prior_events):
+                raise DciArtifactError("DCI resume evidence is invalid")
+            terminal_type = prior_events[-1].get("type") if prior_events else None
+            status = attempt["status"]
+            if status == "completed" or terminal_type == "run.completed":
+                raise DciArtifactError("DCI resume evidence is invalid")
+            if status in {"failed", "incomplete"}:
+                if terminal_type != "run.failed":
+                    raise DciArtifactError("DCI resume evidence is invalid")
+            elif status == "running":
+                if terminal_type in {"run.completed", "run.failed"}:
+                    raise DciArtifactError("DCI resume evidence is invalid")
+                if not prior_events:
+                    raise DciArtifactError("DCI resume evidence is invalid")
                 terminal = {
                     "protocol": PROTOCOL_VERSION,
-                    "run_id": prior_events[0].get("run_id"),
+                    "run_id": expected_run_id,
                     "sequence": len(prior_events) + 1,
                     "type": "run.failed",
                     "payload": {

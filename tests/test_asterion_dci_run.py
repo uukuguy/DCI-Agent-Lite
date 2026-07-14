@@ -162,6 +162,86 @@ class LifecyclePiClient(FixturePiClient):
 
 
 class AsterionDciRunTests(unittest.TestCase):
+    def test_resume_rejects_relabelled_completed_or_mismatched_run_id_stream_without_mutation(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            paths = resolve_dci_paths(root)
+            request = DciRunRequest(run_id="run-1", question="question", cwd=root)
+            for case in ("completed-as-failed", "mismatched-run-id"):
+                with self.subTest(case=case):
+                    output = root / case
+                    with patch("asterion.dci.run.PiRpcClient", FixturePiClient):
+                        run_pi_research(paths, request, output_dir=output)
+                    if case == "completed-as-failed":
+                        for name in (
+                            "state.json",
+                            "conversation.json",
+                            "conversation_full.json",
+                            "latest_model_context.json",
+                        ):
+                            path = output / name
+                            value = json.loads(path.read_text())
+                            value["status"] = "failed"
+                            if name == "state.json":
+                                value["attempts"][-1]["status"] = "failed"
+                            path.write_text(json.dumps(value), encoding="utf-8")
+                    else:
+                        state_path = output / "state.json"
+                        state = json.loads(state_path.read_text())
+                        state["status"] = "failed"
+                        state["attempts"][-1]["status"] = "failed"
+                        state_path.write_text(json.dumps(state), encoding="utf-8")
+                        for name in (
+                            "conversation.json",
+                            "conversation_full.json",
+                            "latest_model_context.json",
+                        ):
+                            path = output / name
+                            value = json.loads(path.read_text())
+                            value["status"] = "failed"
+                            path.write_text(json.dumps(value), encoding="utf-8")
+                        events_path = output / "protocol/attempt-0001.events.jsonl"
+                        events = [
+                            json.loads(line)
+                            for line in events_path.read_text().splitlines()
+                        ]
+                        for event in events:
+                            event["run_id"] = "different-attempt"
+                        events[-1]["type"] = "run.failed"
+                        events[-1]["payload"] = {
+                            "code": "fixture",
+                            "message": "fixture",
+                        }
+                        events_path.write_text(
+                            "".join(json.dumps(event) + "\n" for event in events),
+                            encoding="utf-8",
+                        )
+                    before = {
+                        path.relative_to(output): path.read_bytes()
+                        for path in output.rglob("*")
+                        if path.is_file() and path.name != ".dci-run.lock"
+                    }
+                    with patch("asterion.dci.run.PiRpcClient") as client:
+                        with self.assertRaisesRegex(
+                            DciRunError, "resume validation failed"
+                        ):
+                            run_pi_research(
+                                paths,
+                                replace(request, resume=True),
+                                output_dir=output,
+                            )
+                    client.assert_not_called()
+                    self.assertEqual(
+                        before,
+                        {
+                            path.relative_to(output): path.read_bytes()
+                            for path in output.rglob("*")
+                            if path.is_file() and path.name != ".dci-run.lock"
+                        },
+                    )
+
     def test_resume_reconstruction_directly_rejects_invalid_candidate_values(
         self,
     ) -> None:
