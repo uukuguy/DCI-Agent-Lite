@@ -326,8 +326,14 @@ class _SafeDirectory:
             raise
         except OSError as error:
             raise DciExportError("destination inventory failed") from error
-        flags = (
-            os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
+        return self.open_child(name)
+
+    def open_child(self, name: str) -> _SafeDirectory:
+        _validate_component(name)
+        if _is_reserved_component(name):
+            raise DciExportError("reserved destination component")
+        flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(
+            os, "O_NOFOLLOW", 0
         )
         try:
             fd = os.open(name, flags, dir_fd=self.fd)
@@ -629,14 +635,18 @@ def export_bcplus_qa(parquet_dir: Path, output: Path, *, decrypt: bool = True) -
         inputs.close()
 
 
-def _existing_names(directory: _SafeDirectory) -> dict[tuple[object, ...], str]:
+def _existing_names(
+    directory: _SafeDirectory, *, allow_controls: bool = False
+) -> dict[tuple[object, ...], str]:
     names: dict[tuple[object, ...], str] = {}
     try:
         values = os.listdir(directory.fd)
     except OSError as error:
         raise DciExportError("destination inventory failed") from error
     for name in values:
-        if name == LOCK_NAME or _is_strict_temporary(name):
+        if allow_controls and name in {LOCK_NAME, COMPLETE_MARKER}:
+            continue
+        if _is_strict_temporary(name):
             continue
         if _is_reserved_component(name):
             raise DciExportError("portable reserved-name collision")
@@ -754,7 +764,7 @@ def _bright_record(
 
 
 def _validate_bright_inputs(inputs: _ParquetInputs) -> None:
-    collision_ledger: dict[tuple[tuple[object, ...], ...], str] = {}
+    collision_ledger: dict[tuple[tuple[object, ...], ...], tuple[str, bytes]] = {}
     for name in inputs.names:
         with inputs.parquet(name) as parquet:
             identity, content = _schema_columns(parquet, (("id",), ("content",)))
@@ -763,13 +773,77 @@ def _validate_bright_inputs(inputs: _ParquetInputs) -> None:
                 for row in parquet.read_row_group(
                     index, columns=[identity, content]
                 ).to_pylist():
-                    relative, _ = _bright_record(row, identity, content)
+                    relative, data = _bright_record(row, identity, content)
                     key = tuple(_portable_key(part) for part in relative.parts)
                     logical = relative.as_posix()
                     previous = collision_ledger.get(key)
-                    if previous is not None and previous != logical:
-                        raise DciExportError("portable document id collision")
-                    collision_ledger[key] = logical
+                    if previous is not None:
+                        if previous[0] != logical:
+                            raise DciExportError("portable document id collision")
+                        if previous[1] != data:
+                            raise DciExportError("duplicate document id")
+                    collision_ledger[key] = (logical, data)
+
+
+def _validate_destination_tree(
+    directory: _SafeDirectory, *, allow_controls: bool = True
+) -> None:
+    for name in _existing_names(
+        directory, allow_controls=allow_controls
+    ).values():
+        try:
+            info = os.stat(name, dir_fd=directory.fd, follow_symlinks=False)
+        except OSError as error:
+            raise DciExportError("destination inventory failed") from error
+        if stat.S_ISREG(info.st_mode):
+            continue
+        if not stat.S_ISDIR(info.st_mode):
+            raise DciExportError("unsafe existing destination")
+        child = directory.open_child(name)
+        try:
+            _validate_destination_tree(child, allow_controls=False)
+        finally:
+            child.close()
+
+
+def _validate_bright_destination(inputs: _ParquetInputs, root: _SafeDirectory) -> None:
+    _validate_destination_tree(root)
+    for source_name in inputs.names:
+        with inputs.parquet(source_name) as parquet:
+            identity, content = _schema_columns(parquet, (("id",), ("content",)))
+            for index in range(parquet.num_row_groups):
+                for row in parquet.read_row_group(
+                    index, columns=[identity, content]
+                ).to_pylist():
+                    relative, data = _bright_record(row, identity, content)
+                    current = root
+                    try:
+                        missing = False
+                        for part in relative.parts[:-1]:
+                            equivalent = _existing_names(
+                                current, allow_controls=current is root
+                            ).get(_portable_key(part))
+                            if equivalent is None:
+                                missing = True
+                                break
+                            if equivalent != part:
+                                raise DciExportError("portable parent collision")
+                            child = current.open_child(part)
+                            if current is not root:
+                                current.close()
+                            current = child
+                        if missing:
+                            continue
+                        equivalent = _existing_names(
+                            current, allow_controls=current is root
+                        ).get(_portable_key(relative.name))
+                        if equivalent is not None and equivalent != relative.name:
+                            raise DciExportError("portable destination collision")
+                        if equivalent is not None and current.read(equivalent) != data:
+                            raise DciExportError("duplicate document id")
+                    finally:
+                        if current is not root:
+                            current.close()
 
 
 def export_subset(source_dir: Path, output_dir: Path) -> int:
@@ -786,6 +860,7 @@ def export_subset(source_dir: Path, output_dir: Path) -> int:
         inputs.close()
         raise
     try:
+        _validate_bright_destination(inputs, root)
         try:
             try:
                 os.unlink(COMPLETE_MARKER, dir_fd=root.fd)
@@ -811,7 +886,9 @@ def export_subset(source_dir: Path, output_dir: Path) -> int:
                             collision_ledger[key] = logical
                             directory, name = _open_relative(root, relative)
                             try:
-                                existing_names = _existing_names(directory)
+                                existing_names = _existing_names(
+                                    directory, allow_controls=directory is root
+                                )
                                 equivalent = existing_names.get(_portable_key(name))
                                 if equivalent is not None and equivalent != name:
                                     raise DciExportError(

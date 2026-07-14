@@ -503,6 +503,17 @@ class AsterionDciExportTests(unittest.TestCase):
                 self.assertEqual(marker.read_text(), "1\n")
                 self.assertEqual(marker.stat().st_ino, marker_inode)
 
+            nested = output / "nested"
+            nested.mkdir()
+            nested_alias = nested / ".DCI_EXPORT_COMPLETE"
+            nested_alias.write_text("KEEP")
+            _parquet(source / "p.parquet", [{"id": "safe.txt", "content": "safe"}])
+            with self.assertRaises(DciExportError):
+                export_subset(source, output)
+            self.assertEqual(nested_alias.read_text(), "KEEP")
+            self.assertEqual(marker.read_text(), "1\n")
+            self.assertEqual(marker.stat().st_ino, marker_inode)
+
             qa_parent = root / "qa"
             qa_parent.mkdir()
             lock = qa_parent / ".asterion-dci-export.lock"
@@ -542,6 +553,14 @@ class AsterionDciExportTests(unittest.TestCase):
                 marker = output / ".dci_export_complete"
                 marker_inode = marker.stat().st_ino
                 marker_content = marker.read_bytes()
+                before = tuple(
+                    (
+                        path.relative_to(output).as_posix(),
+                        path.lstat().st_ino,
+                        path.read_bytes() if path.is_file() else None,
+                    )
+                    for path in sorted(output.rglob("*"))
+                )
                 _parquet(source / "p.parquet", [{"id": alias, "content": "one"}])
                 with self.assertRaises(DciExportError):
                     export_subset(source, output)
@@ -549,6 +568,17 @@ class AsterionDciExportTests(unittest.TestCase):
                 self.assertEqual(sum(path.is_dir() for path in output.iterdir()), 1)
                 self.assertEqual(marker.read_bytes(), marker_content)
                 self.assertEqual(marker.stat().st_ino, marker_inode)
+                self.assertEqual(
+                    tuple(
+                        (
+                            path.relative_to(output).as_posix(),
+                            path.lstat().st_ino,
+                            path.read_bytes() if path.is_file() else None,
+                        )
+                        for path in sorted(output.rglob("*"))
+                    ),
+                    before,
+                )
 
     def test_arbitrary_export_temp_prefix_file_is_preserved_and_fails_closed(
         self,
