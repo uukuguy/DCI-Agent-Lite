@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import json
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from asterion.dci.config import DciPaths
 from asterion.dci.pi_rpc import PiRpcClient
+from asterion.dci.provenance import format_pi_revision_warning
 from asterion.runtime.host import RunEvent
 
 if TYPE_CHECKING:
@@ -145,6 +147,10 @@ def run_pi_research(
 
     client: PiRpcClient | None = None
     try:
+        warning = format_pi_revision_warning(recorder.pi_source)
+        if warning is not None:
+            recorder.add_note(warning)
+            print(f"[runner] WARNING: {warning}", file=sys.stderr)
         client = PiRpcClient(
             package_dir=paths.pi.package_dir,
             cwd=request.cwd,
@@ -168,7 +174,11 @@ def run_pi_research(
             timeout_seconds=request.timeout_seconds,
             on_event=recorder.record_event,
         )
-        normalized_events = recorder.finalize(status="completed", final_text=final_text)
+        stderr_getter = getattr(client, "get_stderr", None)
+        stderr_text = stderr_getter() if callable(stderr_getter) else ""
+        normalized_events = recorder.finalize(
+            status="completed", final_text=final_text, stderr_text=stderr_text
+        )
         return DciRunResult(
             output_dir=destination,
             final_text=final_text,

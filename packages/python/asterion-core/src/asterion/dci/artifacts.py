@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -15,6 +16,7 @@ from typing import Any
 
 from asterion.adapters.pi import PiProtocolAdapter, map_pi_capabilities
 from asterion.dci.config import DciPaths
+from asterion.dci.provenance import collect_pi_provenance
 from asterion.dci.run import DciRunRequest
 from asterion.runtime.host import RunEvent
 from asterion.runtime.protocol import (
@@ -373,6 +375,11 @@ def _safe_tool_stem(value: object) -> str:
     return text[:80]
 
 
+def _bounded_text_tail(value: str, maximum_bytes: int) -> str:
+    encoded = value.encode("utf-8", errors="replace")
+    return encoded[-maximum_bytes:].decode("utf-8", errors="replace")
+
+
 def _validate_recorder_resume_state(
     state: dict[str, Any],
     request: DciRunRequest,
@@ -533,6 +540,8 @@ class DciRunRecorder:
                     "assistant_text": "",
                     "messages": [],
                     "tool_calls": [],
+                    "notes": [],
+                    "attempts": [],
                     "resume_count": 0,
                     "paths": {
                         "events_jsonl": str(self.events_path),
@@ -553,6 +562,8 @@ class DciRunRecorder:
                     "messages": [],
                     "pending_message": None,
                     "final_text": None,
+                    "notes": [],
+                    "pi_source_attempts": [],
                 }
                 self._add_system_prompt()
                 self.latest_model_context = {
@@ -565,9 +576,34 @@ class DciRunRecorder:
                     "request_count": 0,
                     "runtime_context_management": None,
                     "latest": None,
+                    "notes": [],
+                    "pi_source_attempts": [],
                 }
             self._protocol_fd = _open_private_directory_at(self._root_fd, "protocol")
             attempt_stem = f"attempt-{attempt:04d}"
+            self._attempt_stem = attempt_stem
+            self.pi_source = collect_pi_provenance(
+                paths.pi.package_dir,
+                paths.repo_root / "pi-revision.txt",
+                os.environ.get("DCI_PI_REVISION") or None,
+            )
+            for artifact in (self.state, self.conversation_full, self.latest_model_context):
+                snapshots = artifact.setdefault("pi_source_attempts", [])
+                if not isinstance(snapshots, list):
+                    raise DciArtifactError("DCI resume state is invalid")
+                snapshots.append(json.loads(json.dumps(self.pi_source)))
+            attempts = self.state.setdefault("attempts", [])
+            if not isinstance(attempts, list):
+                raise DciArtifactError("DCI resume state is invalid")
+            self._attempt_index = len(attempts)
+            attempts.append(
+                {
+                    "attempt": attempt,
+                    "status": "running",
+                    "command_summary": self._command_summary(),
+                    "stderr_tail_characters": 0,
+                }
+            )
             self._protocol_request_name = f"{attempt_stem}.request.json"
             self._protocol_events_name = f"{attempt_stem}.events.jsonl"
             self.protocol_request_path = self.protocol_dir / self._protocol_request_name
@@ -650,12 +686,19 @@ class DciRunRecorder:
                     "final.txt",
                     answer if answer.endswith("\n") else f"{answer}\n",
                 )
-            if stderr_text:
-                _write_private_text_at(
-                    self._root_fd,
-                    "stderr.txt",
-                    stderr_text[-16384:],
-                )
+            stderr_tail = _bounded_text_tail(stderr_text, 16384)
+            stderr_section = f"[{self._attempt_stem} status={status}]\n{stderr_tail}"
+            if stderr_tail and not stderr_tail.endswith("\n"):
+                stderr_section += "\n"
+            _write_private_text_at(
+                self._root_fd,
+                "stderr.txt",
+                stderr_section,
+                append=self._attempt_index > 0,
+            )
+            attempt_record = self.state["attempts"][self._attempt_index]
+            attempt_record["status"] = status
+            attempt_record["stderr_tail_characters"] = len(stderr_tail)
             self.state["status"] = status
             self.state["assistant_text"] = answer
             self.conversation_full["status"] = status
@@ -663,14 +706,19 @@ class DciRunRecorder:
             self.conversation_full["pending_message"] = None
             self.latest_model_context["status"] = status
             if status == "completed":
-                self.adapter.complete(
-                    artifact={
+                artifact = None
+                if answer:
+                    digest = hashlib.sha256(
+                        answer.encode("utf-8") + (b"" if answer.endswith("\n") else b"\n")
+                    ).hexdigest()
+                    artifact = {
                         "artifact_id": "final-answer",
                         "kind": "answer",
                         "media_type": "text/plain",
                         "uri": "final.txt",
+                        "sha256": digest,
                     }
-                )
+                self.adapter.complete(artifact=artifact)
             else:
                 self.adapter.fail()
             validate_event_stream(self.normalized)
@@ -678,6 +726,17 @@ class DciRunRecorder:
             return tuple(RunEvent.from_mapping(event) for event in self.normalized)
         finally:
             self.close()
+
+    def add_note(self, note: str) -> None:
+        """Persist one caller-generated safe diagnostic note in every native view."""
+
+        self._ensure_open()
+        for artifact in (self.state, self.conversation_full, self.latest_model_context):
+            notes = artifact.setdefault("notes", [])
+            if not isinstance(notes, list):
+                raise DciArtifactError("DCI artifact notes are invalid")
+            notes.append(note)
+        self._write()
 
     def close(self) -> None:
         """Idempotently release this recorder's owned writer lock."""
@@ -703,6 +762,29 @@ class DciRunRecorder:
     def _ensure_open(self) -> None:
         if self._closed:
             raise DciArtifactError("DCI run recorder is closed")
+
+    def _command_summary(self) -> dict[str, object]:
+        option_names = ["--mode"]
+        if self.request.provider is not None:
+            option_names.append("--provider")
+        if self.request.model is not None:
+            option_names.append("--model")
+        if self.request.tools:
+            option_names.append("--tools")
+        if self.request.system_prompt_file is not None:
+            option_names.append("--system-prompt")
+        if self.request.append_system_prompt_file is not None:
+            option_names.append("--append-system-prompt")
+        if not self.request.keep_session:
+            option_names.append("--no-session")
+        typed_count = 1 if self.request.thinking_level is not None else 0
+        return {
+            "executable": "node",
+            "mode": "rpc",
+            "option_names": option_names,
+            "configured_extra_argument_groups": len(self.request.extra_args),
+            "typed_extra_argument_count": typed_count,
+        }
 
     def _write(self) -> None:
         _atomic_write_json_at(self._root_fd, "state.json", self.state)

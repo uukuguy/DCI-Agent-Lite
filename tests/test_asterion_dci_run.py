@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+import hashlib
+import io
 import json
+import os
+import subprocess
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from pathlib import Path
 from unittest.mock import patch
 
@@ -37,6 +42,9 @@ class FixturePiClient:
 
     def stop(self) -> None:
         return None
+
+    def get_stderr(self) -> str:
+        return "".join(self.stderr_chunks)
 
     def prompt_and_wait(self, _: str, *, on_event, **__: object) -> str:
         for event in self.events:
@@ -374,6 +382,10 @@ class AsterionDciRunTests(unittest.TestCase):
             self.assertEqual(result.status, "completed")
             self.assertTrue((output_dir / "protocol/attempt-0002.request.json").is_file())
             self.assertEqual(json.loads((output_dir / "state.json").read_text())["resume_count"], 1)
+            stderr_text = (output_dir / "stderr.txt").read_text(encoding="utf-8")
+            self.assertIn("attempt-0001 status=failed", stderr_text)
+            self.assertIn("attempt-0002 status=completed", stderr_text)
+            self.assertIn("private stderr", stderr_text)
 
     def test_resume_rejects_completed_or_changed_immutable_inputs_before_client_start(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -478,6 +490,98 @@ class AsterionDciRunTests(unittest.TestCase):
             )
             self.assertTrue((result.output_dir / "protocol/attempt-0001.request.json").is_file())
             self.assertTrue((result.output_dir / "protocol/attempt-0001.events.jsonl").is_file())
+            protocol_events = [
+                json.loads(line)
+                for line in (result.output_dir / "protocol/attempt-0001.events.jsonl")
+                .read_text(encoding="utf-8")
+                .splitlines()
+            ]
+            artifact = next(
+                event["payload"]["artifact"]
+                for event in protocol_events
+                if event["type"] == "artifact.created"
+            )
+            self.assertEqual(
+                artifact["sha256"],
+                hashlib.sha256((result.output_dir / "final.txt").read_bytes()).hexdigest(),
+            )
+
+    def test_attempt_provenance_warning_and_command_summary_never_store_credentials(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            repo = root / "pi"
+            package_dir = repo / "packages/coding-agent"
+            package_dir.mkdir(parents=True)
+            subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.email", "fixture@example.invalid"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.name", "Fixture"], cwd=repo, check=True)
+            (package_dir / "marker.txt").write_text("fixture\n", encoding="utf-8")
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-qm", "fixture"], cwd=repo, check=True)
+            actual_revision = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=repo,
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+            sentinels = (
+                "sentinel-user",
+                "sentinel-pass",
+                "sentinel-query",
+                "sentinel-fragment",
+                "sentinel-extra-value",
+            )
+            origin = (
+                "https://sentinel-user:sentinel-pass@example.invalid/repo.git"
+                "?token=sentinel-query#sentinel-fragment"
+            )
+            subprocess.run(["git", "remote", "add", "origin", origin], cwd=repo, check=True)
+            (root / "pi-revision.txt").write_text(f"{'f' * 40}\n", encoding="utf-8")
+            paths = resolve_dci_paths(root)
+            request = DciRunRequest(
+                run_id="run-1",
+                question="question",
+                cwd=root,
+                provider="provider",
+                model="model",
+                extra_args=("--custom sentinel-extra-value",),
+            )
+            warning_stream = io.StringIO()
+            with patch.dict(os.environ, {"DCI_PI_REVISION": ""}, clear=False):
+                with patch("asterion.dci.run.PiRpcClient", FixturePiClient):
+                    with redirect_stderr(warning_stream):
+                        result = run_pi_research(paths, request)
+
+            state = json.loads((result.output_dir / "state.json").read_text())
+            full = json.loads((result.output_dir / "conversation_full.json").read_text())
+            latest = json.loads((result.output_dir / "latest_model_context.json").read_text())
+            for artifact in (state, full, latest):
+                self.assertEqual(artifact["pi_source_attempts"][0]["commit"], actual_revision)
+                self.assertFalse(artifact["pi_source_attempts"][0]["expected_match"])
+            self.assertEqual(
+                state["attempts"][0]["command_summary"],
+                {
+                    "executable": "node",
+                    "mode": "rpc",
+                    "option_names": [
+                        "--mode",
+                        "--provider",
+                        "--model",
+                        "--tools",
+                        "--no-session",
+                    ],
+                    "configured_extra_argument_groups": 1,
+                    "typed_extra_argument_count": 0,
+                },
+            )
+            all_surfaces = warning_stream.getvalue()
+            for path in result.output_dir.rglob("*"):
+                if path.is_file():
+                    all_surfaces += path.read_text(encoding="utf-8")
+            for sentinel in sentinels:
+                self.assertNotIn(sentinel, all_surfaces)
+            self.assertIn("Pi source warning", warning_stream.getvalue())
 
     def test_rejects_a_nonempty_output_and_keeps_failure_detail_out_of_error(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:

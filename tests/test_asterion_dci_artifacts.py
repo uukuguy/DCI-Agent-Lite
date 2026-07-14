@@ -4,6 +4,7 @@ import json
 import os
 import socket
 import stat
+import subprocess
 import tempfile
 import threading
 import unittest
@@ -21,6 +22,7 @@ from asterion.dci.artifacts import (
     atomic_write_json,
 )
 from asterion.dci.config import resolve_dci_paths
+from asterion.dci.provenance import collect_pi_provenance, format_pi_revision_warning
 from asterion.dci.run import DciRunRequest
 from asterion.runtime.protocol import validate_event_stream
 
@@ -38,6 +40,105 @@ class AsterionDciArtifactTests(unittest.TestCase):
             "created_at": "2026-07-14T00:00:00+00:00",
             "owner_token": owner_token,
         }
+
+    def test_pi_provenance_is_revision_exact_and_credential_safe(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            repo = root / "pi"
+            package_dir = repo / "packages/coding-agent"
+            package_dir.mkdir(parents=True)
+            subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.email", "fixture@example.invalid"], cwd=repo, check=True)
+            subprocess.run(["git", "config", "user.name", "Fixture"], cwd=repo, check=True)
+            (package_dir / "marker.txt").write_text("clean\n", encoding="utf-8")
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-qm", "fixture"], cwd=repo, check=True)
+            revision = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=repo,
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+            origin = (
+                "https://sentinel-user:sentinel-pass@example.invalid/"
+                "repo.git?token=sentinel-query#sentinel-fragment"
+            )
+            subprocess.run(["git", "remote", "add", "origin", origin], cwd=repo, check=True)
+            lock_file = root / "pi-revision.txt"
+            lock_file.write_text(f"{revision}\n", encoding="utf-8")
+
+            clean = collect_pi_provenance(package_dir, lock_file, None)
+            override = collect_pi_provenance(package_dir, lock_file, revision)
+            (package_dir / "marker.txt").write_text("dirty\n", encoding="utf-8")
+            dirty = collect_pi_provenance(package_dir, lock_file, None)
+
+        self.assertEqual(clean["commit"], revision)
+        self.assertTrue(clean["managed_git_checkout"])
+        self.assertFalse(clean["dirty"])
+        self.assertTrue(clean["lock_match"])
+        self.assertTrue(clean["expected_match"])
+        self.assertEqual(clean["origin"], {"host": "example.invalid", "path": "/repo.git"})
+        self.assertEqual(override["expected_revision_source"], "DCI_PI_REVISION")
+        self.assertTrue(dirty["dirty"])
+        serialized = json.dumps([clean, override, dirty])
+        for sentinel in (
+            "sentinel-user",
+            "sentinel-pass",
+            "sentinel-query",
+            "sentinel-fragment",
+        ):
+            self.assertNotIn(sentinel, serialized)
+
+    def test_pi_provenance_handles_non_git_and_safe_mismatch_warning(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            package_dir = root / "not-git"
+            package_dir.mkdir()
+            lock_file = root / "pi-revision.txt"
+            lock_revision = "1" * 40
+            actual_revision = "2" * 40
+            lock_file.write_text(f"{lock_revision}\n", encoding="utf-8")
+
+            non_git = collect_pi_provenance(package_dir, lock_file, None)
+            mismatch = {
+                **non_git,
+                "commit": actual_revision,
+                "expected_revision": lock_revision,
+                "expected_revision_source": "pi-revision.txt",
+                "expected_match": False,
+            }
+            warning = format_pi_revision_warning(mismatch)
+
+        self.assertFalse(non_git["managed_git_checkout"])
+        self.assertIsNone(non_git["commit"])
+        self.assertIsNone(non_git["dirty"])
+        self.assertIsNone(non_git["origin"])
+        self.assertIsNone(format_pi_revision_warning(non_git))
+        self.assertIn(actual_revision, warning or "")
+        self.assertIn(lock_revision, warning or "")
+        self.assertNotIn(str(package_dir), warning or "")
+
+    def test_pi_provenance_discards_non_revision_lock_and_override_values(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            package_dir = root / "not-git"
+            package_dir.mkdir()
+            lock_file = root / "pi-revision.txt"
+            lock_file.write_text("sentinel-lock-credential\n", encoding="utf-8")
+
+            provenance = collect_pi_provenance(
+                package_dir,
+                lock_file,
+                "sentinel-override-credential",
+            )
+
+        serialized = json.dumps(provenance)
+        self.assertIsNone(provenance["lock_revision"])
+        self.assertIsNone(provenance["expected_revision"])
+        self.assertIsNone(format_pi_revision_warning(provenance))
+        self.assertNotIn("sentinel-lock-credential", serialized)
+        self.assertNotIn("sentinel-override-credential", serialized)
 
     def test_recorder_creates_private_run_directory_and_json_files(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
