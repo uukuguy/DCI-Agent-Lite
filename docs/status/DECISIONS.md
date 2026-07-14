@@ -372,3 +372,14 @@
 - Rationale: Asterion's former `--context-management-level` mapping made the runtime-context example fail before its prompt. The source runtime-context example itself uses Pi's supported `--thinking` control, so mapping its level to an invented context flag is neither source-compatible nor safe.
 - Boundary: this does not change source DCI or external Pi. Thinking, session, heap, and conversation artifact controls remain effective. An operator may still pass arbitrary Pi arguments with explicit `--extra-arg`, whose validity remains Pi's responsibility.
 - Revalidation trigger: when the selected Pi version documents a runtime context-level control, add a capability test and an exact typed mapping before forwarding it.
+
+## D-040 — Make the native DCI recorder a private single-writer boundary
+
+- Status: ✅ accepted design decision
+- Decided: 2026-07-14
+- Decision: Asterion DCI uses one production recorder for raw events, full and processed conversations, latest provider context, final answer, state, stderr, provenance, notes, and isolated protocol attempts. Native JSON is atomically replaced, run directories are private, and an atomically acquired owner lock prevents concurrent Pi construction and artifact writers.
+- Resume boundary: a same-host lock may be reclaimed only when its recorded PID is demonstrably absent. A live local PID, foreign host, malformed lock, or unsafe/symlink target fails closed. Artifact resume without `keep_session` is directory continuation, not a claim of Pi session identity.
+- Provenance boundary: record revision/match booleans and a sanitized Git origin only. Never persist URL credentials, Git status/diff contents, environment values, arbitrary extra-argument values, or unredacted commands. Framework/application projections remain URI-only.
+- Terminal boundary: `asterion-dci terminal` is a direct TTY-only Pi invocation, returns the child status, and intentionally creates no RPC run artifacts.
+- Rationale: the previous production run path and richer recorder were disconnected, so actual runs lacked promised transcript/context/provenance evidence and could not safely recover from concurrent or interrupted writers.
+- Revalidation trigger: change the locking/staleness or native-evidence privacy model only with a versioned artifact migration and adversarial recovery tests.

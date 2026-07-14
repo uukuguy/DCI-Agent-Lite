@@ -253,9 +253,9 @@
 - Parent objective: Asterion DCI complete capability-package reference product
 - Scope: close remaining source-DCI single-run, terminal, context/resource, artifact, provenance, and resume controls in independently owned Asterion code.
 - Dependencies: AF-220
-- Acceptance: every remaining native operator and artifact behavior is explicitly mapped to Asterion-owned implementation or recorded as an approved unsupported boundary, with executable fixture and small-sample acceptance evidence.
+- Acceptance: every remaining native operator and artifact behavior is explicitly mapped to Asterion-owned implementation or recorded as an approved unsupported boundary; the production path uses one private atomic recorder, credential-safe provenance, isolated attempts, single-writer compatible resume, and a direct TTY-only terminal command, with executable fixture and small-sample acceptance evidence.
 - Design: `docs/superpowers/specs/2026-07-13-asterion-dci-complete-product-parity-design.md`
-- Plan: planning required before implementation; derive a detailed AF-230 plan from the approved product-parity design.
+- Plan: `docs/superpowers/plans/2026-07-14-af-230-native-operator-artifact-parity.md`
 
 ## AF-095 — Asterion framework identity and extraction
 
