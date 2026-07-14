@@ -21,6 +21,7 @@ from asterion.dci.artifacts import (
 from asterion.dci.judge import (
     DciJudgeError,
     JudgeConfig,
+    estimate_judge_cost,
     judge_answer_sync,
     judge_request_fingerprint,
 )
@@ -238,23 +239,12 @@ def _valid_cost(value: object, usage: object, config: JudgeConfig) -> bool:
         and not isinstance(value[name], bool)
         and math.isfinite(value[name])
         and value[name] >= 0
+        and not (value[name] == 0 and math.copysign(1.0, value[name]) < 0)
         for name in names
     ):
         return False
-    details = usage.get("input_tokens_details")
-    cached = details.get("cached_tokens", 0) if isinstance(details, dict) else 0
-    expected = {
-        "input_cost": (usage["input_tokens"] - cached)
-        / 1_000_000
-        * config.input_price_per_1m,
-        "cached_input_cost": cached / 1_000_000 * config.cached_input_price_per_1m,
-        "output_cost": usage["output_tokens"] / 1_000_000 * config.output_price_per_1m,
-    }
-    expected["total_cost"] = sum(expected.values())
-    return all(
-        math.isclose(value[name], expected[name], rel_tol=1e-12, abs_tol=1e-15)
-        for name in names
-    )
+    expected = estimate_judge_cost(usage, config)
+    return all(value[name] == expected[name] for name in names)
 
 
 def _evaluation_summary(

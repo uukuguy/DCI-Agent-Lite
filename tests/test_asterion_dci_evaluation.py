@@ -353,6 +353,32 @@ class AsterionDciEvaluationTests(unittest.TestCase):
             "total_cost": lambda result: result["cost_estimate_usd"].__setitem__(
                 "total_cost", 1.0
             ),
+            "input_cost_nextafter": lambda result: result[
+                "cost_estimate_usd"
+            ].__setitem__(
+                "input_cost",
+                math.nextafter(result["cost_estimate_usd"]["input_cost"], math.inf),
+            ),
+            "cached_cost_nextafter": lambda result: result[
+                "cost_estimate_usd"
+            ].__setitem__(
+                "cached_input_cost",
+                math.nextafter(
+                    result["cost_estimate_usd"]["cached_input_cost"], math.inf
+                ),
+            ),
+            "output_cost_nextafter": lambda result: result[
+                "cost_estimate_usd"
+            ].__setitem__(
+                "output_cost",
+                math.nextafter(result["cost_estimate_usd"]["output_cost"], math.inf),
+            ),
+            "total_cost_nextafter": lambda result: result[
+                "cost_estimate_usd"
+            ].__setitem__(
+                "total_cost",
+                math.nextafter(result["cost_estimate_usd"]["total_cost"], math.inf),
+            ),
             "cost_bool": lambda result: result["cost_estimate_usd"].__setitem__(
                 "total_cost", True
             ),
@@ -378,6 +404,33 @@ class AsterionDciEvaluationTests(unittest.TestCase):
                     )
                     result = json.loads((output_dir / "eval_result.json").read_text())
                     mutate(result)
+                    _write_bound_cache(output_dir, result)
+                    evaluate_run_directory(
+                        output_dir, gold_answer="gold", judge_config=_config()
+                    )
+                self.assertEqual(judge.call_count, 2)
+
+    def test_cache_rejects_noncanonical_negative_zero_costs(self) -> None:
+        for name in (
+            "input_cost",
+            "cached_input_cost",
+            "output_cost",
+            "total_cost",
+        ):
+            with (
+                self.subTest(name=name),
+                tempfile.TemporaryDirectory() as temporary_directory,
+            ):
+                output_dir = _write_native_run(Path(temporary_directory))
+                with patch(
+                    "asterion.dci.evaluation.judge_answer_sync",
+                    return_value=_verdict(),
+                ) as judge:
+                    evaluate_run_directory(
+                        output_dir, gold_answer="gold", judge_config=_config()
+                    )
+                    result = json.loads((output_dir / "eval_result.json").read_text())
+                    result["cost_estimate_usd"][name] = -0.0
                     _write_bound_cache(output_dir, result)
                     evaluate_run_directory(
                         output_dir, gold_answer="gold", judge_config=_config()

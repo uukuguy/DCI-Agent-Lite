@@ -306,7 +306,7 @@ def judge_answer_sync(
         "normalized_prediction": str(parsed.get("normalized_prediction", "")),
         "reason": str(parsed.get("reason", "")),
         "usage": usage,
-        "cost_estimate_usd": _estimate_cost(usage, config),
+        "cost_estimate_usd": estimate_judge_cost(usage, config),
     }
 
 
@@ -555,7 +555,9 @@ def _normalize_usage(value: object) -> dict[str, object] | None:
     return result
 
 
-def _estimate_cost(usage: dict[str, object], config: JudgeConfig) -> dict[str, float]:
+def estimate_judge_cost(
+    usage: dict[str, object], config: JudgeConfig
+) -> dict[str, float]:
     details = usage.get("input_tokens_details")
     cached_tokens = (
         float(details.get("cached_tokens", 0) or 0)
