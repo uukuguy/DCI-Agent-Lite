@@ -260,17 +260,18 @@
 
 ## AF-240 — Complete batch, evaluation, and export parity
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Asterion DCI complete capability-package reference product
 - Scope: transplant concurrent BCPlus, QA, and BRIGHT orchestration, Judge/evaluation behavior, IR metrics, summaries, exports, and result analysis into independently owned Asterion code.
 - Dependencies: AF-230
 - Acceptance: bounded concurrent Asterion batch paths reuse the native run/evaluator boundaries, preserve deterministic cache and per-query state, and reproduce source-product dataset, metric, summary, export, and analysis semantics without importing or launching `src/dci`.
 - Design: `docs/superpowers/specs/2026-07-13-asterion-dci-complete-product-parity-design.md`
 - Plan: `docs/superpowers/plans/2026-07-14-af-240-batch-evaluation-export-parity.md`
+- Closure evidence: AF-240-H-001 through H-004 are confirmed 4/4 and all 533 inventory rows have resolvable executable Asterion evidence. Concurrent QA/IR batches, exact reuse, Judge caching, aggregates, detailed analysis/figures, exports, installed profiles, and all 12 launchers pass 1204 Python, 11 TypeScript, and 19 Rust tests plus compile, Ruff, shell, scope, diff, and isolated-wheel gates. A bounded one-row Pi-plus-Judge batch completed with one correct verdict and 28 credential-clean private artifacts; an exact reuse rerun preserved native/Judge hashes and mtimes, kept one protocol attempt, and created no second generation or external request. No full dataset ran.
 
 ## AF-250 — Product acceptance matrix
 
-- Status: proposed
+- Status: in_progress
 - Parent objective: Asterion DCI complete capability-package reference product
 - Scope: make every complete-product parity matrix row executable and record reproducible local, Pi, and Pi-plus-Judge evidence.
 - Dependencies: AF-240

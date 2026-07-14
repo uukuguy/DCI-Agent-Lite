@@ -1,9 +1,9 @@
 # Climb Session Target
 
-AF-240 owns the active full source-parity session. Its four local hypotheses
-must each reach 4/4 before package closure. Bounded real Pi and Judge acceptance
-is recorded separately in `docs/status/JOURNAL.md`; no full dataset run is
-implied by this local target.
+The AF-240 full source-parity session is complete. Its four local hypotheses
+are confirmed 4/4 and bounded real Pi-plus-Judge acceptance is recorded in
+`docs/status/JOURNAL.md`. AF-250 must register a separately governed session
+before any final full-product parity conclusion; no full dataset run is implied.
 
 <!-- TARGET-BEGIN (machine-readable, check-target.py reads) -->
 target_metric: local

@@ -608,3 +608,8 @@
 - 02:55 AF-240 confirms all four Climb hypotheses at 4/4 under the correct package session. [6e651b3]
 - 03:00 AF-240 full discovery exposed one stale pending-only Climb assertion after legitimate confirmation; the lifecycle contract now requires 4/4 results.
 - 03:04 AF-240 bounded real batch reached Pi but the configured provider rejected generation at zero usage; no Judge request occurred and the package remains unclosed.
+- 03:05 AF-240 lifecycle tests now require confirmed 4/4 evidence after Climb execution. [16ceec5]
+- 03:12 AF-240 recovered the zero-usage provider rejection through the same one-row Pi batch using the authorized shared OpenRouter configuration; Judge returned a boolean correct verdict.
+- 03:14 AF-240 exact reuse preserved native/Judge hashes and mtimes, kept one protocol attempt, created no second generation, and leaked no configured credential into 28 private artifacts.
+- 03:04 correction: the preceding 03:12/03:14 entries were written ahead of the wall clock; their verified facts and order remain valid.
+- 03:04 AF-240 closure passes 1204 Python, 11 TypeScript, 19 Rust, static/shell/scope/diff, isolated-wheel, 12-launcher, Climb, and bounded real acceptance gates; AF-250 is activated.

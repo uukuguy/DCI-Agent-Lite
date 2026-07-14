@@ -5,11 +5,11 @@
 
 ## In-flight / session state
 
-- Phase: implementation
+- Phase: completed
 - Last cycle: 79
 - Next hypothesis: None
 - In flight: none
-- Next action: Trigger Knowledge Layer.
+- Next action: AF-240 is complete; govern and execute AF-250 before any full-parity conclusion.
 
 ## Active hypotheses
 

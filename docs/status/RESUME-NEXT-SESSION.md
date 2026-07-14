@@ -1,38 +1,39 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-15 03:56. **Session remains active — not a final handoff.** AF-240 Task 7 is in progress in the isolated `af-220-shared-dci-config` worktree.
+> Updated: 2026-07-15 03:04 +0800. **Session remains active — not a final handoff.** AF-240 is closed and AF-250 is active in the isolated `af-220-shared-dci-config` worktree.
 
-Active work package: AF-240
+Active work package: AF-250
 
 ## TL;DR
 
-- AF-240 Tasks 0–5 are complete. Task 5 passed independent R4 review after immutable source snapshots, descriptor-relative publication, bounded streaming, namespace collision controls, and crash-safe export recovery were approved.
-- Task 5 verification passed 100 focused tests and a single full run of 1133 Python tests; the complete log ended in `OK`. Ruff, compile, scope, and diff gates also passed.
-- Task 6 is independently approved at `6560057`: installed package-local profiles, 12 one-to-one Pi-default launchers, full Judge overrides, executable per-row evidence, and repository-independent wheel behavior pass 109 focused/governance tests.
-- A root inventory audit found 26 stale Task 3 rows. RED evidence landed at `179cb5d`; `724dedc`/`d6cf738` bound all 26 to executable Asterion replacements, while Task 6 supplied the remaining 40 rows.
-- The batch inventory now has 533/533 implemented rows with resolvable executable evidence. No complete source-product parity claim is valid yet: AF-240 Task 7 and AF-250 remain.
+- AF-220 through AF-240 are completed. AF-240 confirms all four Climb hypotheses 4/4 and maps all 533 batch/evaluation/export inventory rows to executable Asterion evidence.
+- AF-240 final gates passed 1204 Python, 11 TypeScript, and 19 Rust tests; compile, Ruff, 12 launcher shell checks, scope/diff, model-free launcher preflights, and isolated-wheel/resource/help/import checks also passed.
+- One bounded one-row Pi-plus-Judge recovery batch completed with one correct verdict and 28 credential-clean private artifacts. Exact reuse kept native/Judge hashes and mtimes unchanged, retained one protocol attempt, and created no second generation.
+- Full migration is not yet claimed. AF-250 must execute the final cross-product acceptance matrix, including both original example scripts and the installed Pi-default Asterion application.
 
 ## Committed / unpushed state
 
 - Branch: `af-220-shared-dci-config`.
-- Task 5 approval evidence: `c228d6b`; Task 3 inventory repair: `724dedc`/`d6cf738`; Task 6 approval: `6560057`.
-- Commits are local/unpushed unless Git reports otherwise. The Task 6 implementer may have uncommitted RED tests; inspect before editing.
+- AF-240 Climb confirmation: `6e651b3`; lifecycle contract correction: `16ceec5`.
+- AF-240 closure/state changes and the post-commit journal entry are currently uncommitted until closure review completes.
+- Commits are local/unpushed unless Git reports otherwise.
 
 ## Next action
 
-Run AF-240 Task 7 from `docs/superpowers/plans/2026-07-14-af-240-batch-evaluation-export-parity.md`: execute all local/cross-language gates and four Climb hypotheses, exercise every launcher without starting full datasets, then use at most one authorized fresh one-row Pi-plus-Judge batch and prove exact reuse without a second request before closing AF-240.
+Govern AF-250: derive an executable matrix directly from the complete-product design and both runnable products, add a reviewed AF-250 plan/session, then execute every row. Start with source `scripts/examples/dci_basic_example.sh` and `dci_runtime_context_example.sh`, Asterion equivalents, installed `asterion-dci`, and the prior 533-row inventory.
 
-## Open questions
+## Open questions / defects to verify
 
-- None requiring user input. Acceptance fixtures must remain tiny/local; do not download or run full corpora.
-- Only AF-240 Task 7 may consume the authorized bounded one-row real Pi-plus-Judge request.
+- `make check-judge-config` currently invokes the source script without `PYTHONPATH=src`; in this workspace it fails with `ModuleNotFoundError: dci`. AF-250 must test and repair the source runnable surface rather than treating a worklist label as evidence.
+- The root-configured default Provider rejected the AF-240 acceptance at zero usage. The authorized recovery used the existing OpenRouter credential with Pi and completed; do not interpret the default account quota as an Asterion defect.
+- No user decision is currently required. Do not download or start full corpora.
 
 ## Ruled-out paths
 
-- Do not claim completion from WORKLIST labels alone; executable inventory, fixtures, installed-boundary checks, bounded provider evidence, and AF-250 must agree.
-- Do not import, launch, or modify `src/dci`; it is the independent comparison baseline.
-- Do not redirect this Pi-default migration toward Claude provider work.
-- Do not publish aggregates through untrusted path rebinding or accept self-authored cache/result evidence without exact validation.
+- Do not claim full parity from AF-240 closure or inventory counts alone; AF-250 executable evidence is mandatory.
+- Do not import, launch, or modify `src/dci` from Asterion production code. The original DCI stays independently runnable and may receive only bounded compatibility repairs under AF-250.
+- Do not redirect the Pi-default migration to another agent runtime.
+- Do not run full BCPlus/QA/BRIGHT datasets automatically or persist credentials/provider bodies.
 
 ## Ready commands
 
@@ -40,14 +41,15 @@ Run AF-240 Task 7 from `docs/superpowers/plans/2026-07-14-af-240-batch-evaluatio
 python3 tools/project_scope_check.py
 git status --short
 git log --oneline -12
-uv run python -m unittest -q tests.test_asterion_dci_batch_launchers tests.test_asterion_dci_cli
-uv run python -m unittest -q tests.test_asterion_dci_batch
-uv run python -m unittest -q tests.test_climb_tools.Af240InventoryTests
+uv run python -m unittest discover -v
+PYTHONPATH=src uv run python scripts/check_judge.py --config-only
+bash scripts/examples/dci_basic_example.sh
+bash scripts/examples/asterion_dci_basic_example.sh
 ```
 
 ## Guardrails
 
-- Do not edit the external `pi/` checkout or persist credentials/provider bodies.
-- Keep shared normal configuration in root `.env`; keep Asterion output ownership independent.
-- Do not run full external datasets automatically.
-- AF-250 owns the final no-unsupported-row product acceptance matrix and full-parity conclusion.
+- Active package is AF-250; register any Climb hypotheses under AF-250 before running them.
+- Root `.env` is the shared configuration surface; never print or persist its credentials.
+- Treat `pi/` as an external checkout and do not edit it.
+- Keep AF-250 fixtures tiny and reproducible; separate local, Pi-only, and Pi-plus-Judge evidence.
