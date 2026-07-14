@@ -539,11 +539,16 @@ class AsterionDciExportTests(unittest.TestCase):
                 output = root / "output"
                 _parquet(source / "p.parquet", [{"id": first, "content": "one"}])
                 self.assertEqual(export_subset(source, output), 1)
+                marker = output / ".dci_export_complete"
+                marker_inode = marker.stat().st_ino
+                marker_content = marker.read_bytes()
                 _parquet(source / "p.parquet", [{"id": alias, "content": "one"}])
                 with self.assertRaises(DciExportError):
                     export_subset(source, output)
                 self.assertEqual((output / first).read_text(), "one")
                 self.assertEqual(sum(path.is_dir() for path in output.iterdir()), 1)
+                self.assertEqual(marker.read_bytes(), marker_content)
+                self.assertEqual(marker.stat().st_ino, marker_inode)
 
     def test_arbitrary_export_temp_prefix_file_is_preserved_and_fails_closed(
         self,
