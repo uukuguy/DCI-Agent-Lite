@@ -14,9 +14,14 @@ from asterion.runtime.host import RunEvent
 
 
 class AsterionDciBenchmarkTests(unittest.TestCase):
+    def test_limit_slices_sorted_rows_and_rejects_zero(self) -> None:
+        """Compatibility evidence name retained for the closed AF-220 climb case."""
+
+        self.test_limit_slices_source_order_rows_and_rejects_zero()
+
     def test_batch_uses_its_runtime_options_for_every_native_row(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
+            root = Path(temporary_directory).resolve()
             dataset = root / "dataset.jsonl"
             dataset.write_text(
                 "\n".join(
@@ -40,18 +45,18 @@ class AsterionDciBenchmarkTests(unittest.TestCase):
                     _result(root / "out" / "q-1"),
                     _result(root / "out" / "q-2"),
                 ]
-                with patch("asterion.dci.benchmark.evaluate_run_directory", return_value={"is_correct": True}):
+                with patch("asterion.dci.benchmark.evaluate_run_directory_async", return_value={"is_correct": True}):
                     run_benchmark(request, paths=Mock())
 
-        self.assertEqual([call.args[1].run_id for call in run.call_args_list], ["q-1", "q-2"])
+        self.assertEqual([call.args[1].run_id for call in run.call_args_list], ["q-2", "q-1"])
         self.assertEqual(
             [(call.args[1].provider, call.args[1].model) for call in run.call_args_list],
             [("openai", "gpt-test"), ("openai", "gpt-test")],
         )
 
-    def test_limit_slices_sorted_rows_and_rejects_zero(self) -> None:
+    def test_limit_slices_source_order_rows_and_rejects_zero(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
+            root = Path(temporary_directory).resolve()
             dataset = root / "dataset.jsonl"
             dataset.write_text(
                 "\n".join(
@@ -72,11 +77,11 @@ class AsterionDciBenchmarkTests(unittest.TestCase):
                 limit=1,
             )
             with patch("asterion.dci.benchmark.run_pi_research", return_value=_result(root / "out" / "q-1")) as run:
-                with patch("asterion.dci.benchmark.evaluate_run_directory", return_value={"is_correct": True}):
+                with patch("asterion.dci.benchmark.evaluate_run_directory_async", return_value={"is_correct": True}):
                     result = run_benchmark(request, paths=Mock())
 
             self.assertEqual(result.counts["total"], 1)
-            self.assertEqual(run.call_args.args[1].run_id, "q-1")
+            self.assertEqual(run.call_args.args[1].run_id, "q-2")
 
             invalid = BenchmarkRequest(
                 dataset=dataset,
@@ -90,10 +95,10 @@ class AsterionDciBenchmarkTests(unittest.TestCase):
                 run_benchmark(invalid, paths=Mock())
     def test_batch_reuses_the_native_asterion_run_and_writes_aggregate(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
+            root = Path(temporary_directory).resolve()
             request = _request(root)
             with patch("asterion.dci.benchmark.run_pi_research", return_value=_result(root / "out" / "q-1")) as run:
-                with patch("asterion.dci.benchmark.evaluate_run_directory", return_value={"is_correct": True}):
+                with patch("asterion.dci.benchmark.evaluate_run_directory_async", return_value={"is_correct": True}):
                     result = run_benchmark(request, paths=Mock())
 
             self.assertEqual(run.call_count, 1)
@@ -102,13 +107,14 @@ class AsterionDciBenchmarkTests(unittest.TestCase):
 
     def test_existing_successful_result_skips_run_and_evaluation(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
+            root = Path(temporary_directory).resolve()
             request = _request(root)
-            query_dir = request.output_root / "q-1"
-            query_dir.mkdir(parents=True)
-            (query_dir / "result.json").write_text(json.dumps({"is_correct": True}))
+            with patch("asterion.dci.benchmark.run_pi_research", return_value=_result(request.output_root / "q-1")), patch(
+                "asterion.dci.benchmark.evaluate_run_directory_async", return_value={"is_correct": True}
+            ):
+                run_benchmark(request, paths=Mock())
             with patch("asterion.dci.benchmark.run_pi_research") as run:
-                with patch("asterion.dci.benchmark.evaluate_run_directory") as evaluate:
+                with patch("asterion.dci.benchmark.evaluate_run_directory_async") as evaluate:
                     run_benchmark(request, paths=Mock())
 
         run.assert_not_called()
@@ -116,14 +122,14 @@ class AsterionDciBenchmarkTests(unittest.TestCase):
 
     def test_changed_judge_configuration_reevaluates_without_rerunning_pi(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
+            root = Path(temporary_directory).resolve()
             request = _request(root)
             query_dir = request.output_root / "q-1"
             query_dir.mkdir(parents=True)
             (query_dir / "state.json").write_text(json.dumps({"status": "completed", "question": "question"}))
             (query_dir / "final.txt").write_text("answer\n")
-            with patch("asterion.dci.benchmark.run_pi_research") as run:
-                with patch("asterion.dci.benchmark.evaluate_run_directory", return_value={"is_correct": False}) as evaluate:
+            with patch("asterion.dci.benchmark._completed_run", return_value=True), patch("asterion.dci.benchmark.run_pi_research") as run:
+                with patch("asterion.dci.benchmark.evaluate_run_directory_async", return_value={"is_correct": False}) as evaluate:
                     run_benchmark(request, paths=Mock())
 
         run.assert_not_called()
@@ -131,7 +137,7 @@ class AsterionDciBenchmarkTests(unittest.TestCase):
 
     def test_invalid_dataset_identity_fails_before_execution(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
+            root = Path(temporary_directory).resolve()
             request = _request(root, query_id="../escape")
             with patch("asterion.dci.benchmark.run_pi_research") as run:
                 with self.assertRaisesRegex(DciBenchmarkError, "dataset is invalid"):

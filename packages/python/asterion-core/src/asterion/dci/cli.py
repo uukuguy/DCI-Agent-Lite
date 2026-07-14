@@ -86,6 +86,28 @@ def _parser() -> argparse.ArgumentParser:
     benchmark.add_argument("--cwd", type=Path, default=Path("."))
     _add_runtime_option_arguments(benchmark)
     benchmark.add_argument("--limit", type=int)
+    benchmark.add_argument("--mode", choices=("qa", "ir"), default="qa")
+    benchmark.add_argument("--profile")
+    benchmark.add_argument("--corpus", type=Path)
+    benchmark.add_argument("--corpus-hint")
+    benchmark.add_argument("--max-concurrency", type=int, default=1)
+    benchmark.add_argument("--max-turns", type=int)
+    benchmark.add_argument(
+        "--resume-policy", choices=("compatible", "fresh", "reuse"), default="compatible"
+    )
+    benchmark.add_argument("--no-analysis", action="store_true")
+    benchmark.add_argument("--no-figures", action="store_true")
+    benchmark.add_argument("--system-prompt-file", type=Path)
+    benchmark.add_argument("--append-system-prompt-file", type=Path)
+    benchmark.add_argument("--conversation-clear-tool-results", action="store_true")
+    benchmark.add_argument(
+        "--conversation-clear-tool-results-keep-last", type=int, default=3
+    )
+    benchmark.add_argument(
+        "--conversation-externalize-tool-results", action="store_true"
+    )
+    benchmark.add_argument("--conversation-strip-thinking", action="store_true")
+    benchmark.add_argument("--conversation-strip-usage", action="store_true")
     return parser
 
 
@@ -162,6 +184,16 @@ def main(
             )
             if _path_has_symlink(benchmark_output_root):
                 raise ValueError("benchmark destination is unsafe")
+            benchmark_system_prompt = _resolve_resource(
+                args.system_prompt_file,
+                invocation_cwd=invocation_cwd,
+                repo_root=root,
+            )
+            benchmark_append_prompt = _resolve_resource(
+                args.append_system_prompt_file,
+                invocation_cwd=invocation_cwd,
+                repo_root=root,
+            )
             result = run_benchmark(
                 BenchmarkRequest(
                     dataset=args.dataset,
@@ -170,6 +202,28 @@ def main(
                     judge_config=JudgeConfig.from_env(),
                     runtime_options=_runtime_options(args),
                     limit=args.limit,
+                    mode=args.mode,
+                    profile=args.profile,
+                    corpus=(
+                        _absolute_from_invocation(args.corpus, invocation_cwd)
+                        if args.corpus is not None
+                        else None
+                    ),
+                    corpus_hint=args.corpus_hint,
+                    max_concurrency=args.max_concurrency,
+                    max_turns=args.max_turns,
+                    resume_policy=args.resume_policy,
+                    analysis=not args.no_analysis,
+                    figures=not args.no_figures,
+                    system_prompt_file=benchmark_system_prompt,
+                    append_system_prompt_file=benchmark_append_prompt,
+                    conversation_features=DciConversationFeatures(
+                        clear_tool_results=args.conversation_clear_tool_results,
+                        clear_tool_results_keep_last=args.conversation_clear_tool_results_keep_last,
+                        externalize_tool_results=args.conversation_externalize_tool_results,
+                        strip_thinking=args.conversation_strip_thinking,
+                        strip_usage=args.conversation_strip_usage,
+                    ),
                 ),
                 paths=paths,
             )

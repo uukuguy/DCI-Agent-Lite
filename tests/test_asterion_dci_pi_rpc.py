@@ -4,6 +4,7 @@ import io
 import os
 import subprocess
 import tempfile
+import threading
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -411,6 +412,15 @@ class PiRpcCommandTests(unittest.TestCase):
 
 
 class PiRpcLifecycleTests(unittest.TestCase):
+    def test_prompt_cancellation_sends_abort_before_returning(self) -> None:
+        client = make_client()
+        cancelled = threading.Event()
+        cancelled.set()
+        with patch.object(client, "_send") as send:
+            with self.assertRaisesRegex(RuntimeError, "cancelled"):
+                client.prompt_and_wait("question", cancel_event=cancelled)
+        self.assertEqual(send.call_args_list[-1].args[0]["type"], "abort")
+
     def test_waits_for_acknowledgement_and_idle_agent_settled_state(self) -> None:
         client = make_client()
         stdout = io.StringIO()

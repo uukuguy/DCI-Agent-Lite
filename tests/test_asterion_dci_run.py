@@ -492,6 +492,60 @@ class AsterionDciRunTests(unittest.TestCase):
                 thread.join(timeout=5)
             self.assertEqual(len(errors), 1)
 
+    def test_cancellation_finalizes_one_failed_attempt_and_drains_stop_before_unlock(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            paths = resolve_dci_paths(root)
+            output = root / "run"
+            request = DciRunRequest(run_id="run-1", question="question", cwd=root)
+            cancel = threading.Event()
+            entered = threading.Event()
+            stopping = threading.Event()
+            release_stop = threading.Event()
+
+            class CancellableClient(FixturePiClient):
+                def prompt_and_wait(self, _: str, *, cancel_event, **__: object) -> str:
+                    entered.set()
+                    self.assert_event = cancel_event
+                    cancel_event.wait(timeout=5)
+                    raise RuntimeError("cancelled private work")
+
+                def stop(self) -> None:
+                    stopping.set()
+                    release_stop.wait(timeout=5)
+
+            errors: list[Exception] = []
+
+            def invoke() -> None:
+                try:
+                    run_pi_research(
+                        paths, request, output_dir=output, _cancel_event=cancel
+                    )
+                except Exception as error:
+                    errors.append(error)
+
+            with patch("asterion.dci.run.PiRpcClient", CancellableClient):
+                thread = threading.Thread(target=invoke)
+                thread.start()
+                self.assertTrue(entered.wait(timeout=5))
+                cancel.set()
+                self.assertTrue(stopping.wait(timeout=5))
+                with self.assertRaisesRegex(DciRunError, "resume validation failed"):
+                    run_pi_research(
+                        paths, replace(request, resume=True), output_dir=output
+                    )
+                release_stop.set()
+                thread.join(timeout=5)
+
+            self.assertFalse(thread.is_alive())
+            self.assertEqual(len(errors), 1)
+            state = json.loads((output / "state.json").read_text())
+            self.assertEqual(state["status"], "failed")
+            self.assertEqual(len(state["attempts"]), 1)
+            self.assertEqual(state["attempts"][0]["status"], "failed")
+            attempt_requests = tuple((output / "protocol").glob("attempt-*.request.json"))
+            self.assertEqual(len(attempt_requests), 1)
+
     def test_resume_rejects_missing_state_without_creating_a_directory_or_client(
         self,
     ) -> None:

@@ -1215,6 +1215,8 @@ class AsterionDciCliTests(unittest.TestCase):
     ) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
+            (root / "system.md").write_text("system")
+            (root / "append.md").write_text("append")
             with patch("asterion.dci.cli.run_benchmark") as benchmark:
                 benchmark.return_value = type(
                     "Result", (), {"output_root": root / "out", "counts": {"total": 1}}
@@ -1247,6 +1249,20 @@ class AsterionDciCliTests(unittest.TestCase):
                             "--extra-arg=--verbose",
                             "--limit",
                             "1",
+                            "--max-concurrency",
+                            "3",
+                            "--max-turns",
+                            "9",
+                            "--system-prompt-file",
+                            "system.md",
+                            "--append-system-prompt-file",
+                            "append.md",
+                            "--conversation-clear-tool-results",
+                            "--conversation-clear-tool-results-keep-last",
+                            "2",
+                            "--conversation-externalize-tool-results",
+                            "--conversation-strip-thinking",
+                            "--conversation-strip-usage",
                         ],
                         repo_root=root,
                         stdout=io.StringIO(),
@@ -1258,6 +1274,20 @@ class AsterionDciCliTests(unittest.TestCase):
         self.assertTrue(benchmark.called)
         request = benchmark.call_args.args[0]
         self.assertEqual(request.limit, 1)
+        self.assertEqual(request.max_concurrency, 3)
+        self.assertEqual(request.max_turns, 9)
+        self.assertEqual(request.system_prompt_file, (root / "system.md").resolve())
+        self.assertEqual(request.append_system_prompt_file, (root / "append.md").resolve())
+        self.assertEqual(
+            request.conversation_features,
+            DciConversationFeatures(
+                clear_tool_results=True,
+                clear_tool_results_keep_last=2,
+                externalize_tool_results=True,
+                strip_thinking=True,
+                strip_usage=True,
+            ),
+        )
         self.assertEqual(
             (
                 request.runtime_options.provider,

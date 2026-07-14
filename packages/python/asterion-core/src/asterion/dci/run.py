@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import sys
+import threading
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -306,6 +307,7 @@ def run_pi_research(
     *,
     output_dir: Path | None = None,
     conversation_features: DciConversationFeatures | None = None,
+    _cancel_event: threading.Event | None = None,
 ) -> DciRunResult:
     """Run Pi once and persist complete native conversation evidence."""
 
@@ -383,6 +385,7 @@ def run_pi_research(
             max_turns=request.max_turns,
             timeout_seconds=request.timeout_seconds,
             on_event=recorder.record_event,
+            cancel_event=_cancel_event,
         )
         stderr_getter = getattr(client, "get_stderr", None)
         stderr_text = stderr_getter() if callable(stderr_getter) else ""

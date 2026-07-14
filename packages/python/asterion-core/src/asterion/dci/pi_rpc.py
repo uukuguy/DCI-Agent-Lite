@@ -452,6 +452,7 @@ class PiRpcClient:
         max_turns: int | None = None,
         timeout_seconds: float | None = None,
         on_event: Callable[[dict[str, Any]], None] | None = None,
+        cancel_event: threading.Event | None = None,
     ) -> str:
         request_id = self._next_id()
         self._send({"id": request_id, "type": "prompt", "message": message})
@@ -466,12 +467,27 @@ class PiRpcClient:
             else None
         )
         while True:
+            if cancel_event is not None and cancel_event.is_set():
+                try:
+                    self._send({"id": self._next_id(), "type": "abort"})
+                except (BrokenPipeError, RuntimeError):
+                    pass
+                raise RuntimeError("RPC prompt was cancelled")
             try:
                 remaining = (
                     None if deadline is None else max(0.0, deadline - time.monotonic())
                 )
-                event = self._read_json_line(timeout_seconds=remaining)
+                poll_timeout = (
+                    remaining
+                    if cancel_event is None
+                    else 0.1 if remaining is None else min(0.1, remaining)
+                )
+                event = self._read_json_line(timeout_seconds=poll_timeout)
             except TimeoutError as error:
+                if cancel_event is not None and not cancel_event.is_set() and (
+                    deadline is None or time.monotonic() < deadline
+                ):
+                    continue
                 try:
                     self._send({"id": self._next_id(), "type": "abort"})
                 except (BrokenPipeError, RuntimeError):
