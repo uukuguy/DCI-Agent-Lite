@@ -1288,6 +1288,94 @@ class AsterionDciCliTests(unittest.TestCase):
                 strip_usage=True,
             ),
         )
+
+    def test_benchmark_help_exposes_complete_source_and_asterion_controls(self) -> None:
+        stdout = io.StringIO()
+        self.assertEqual(
+            main(
+                ["benchmark", "--help"],
+                repo_root=ROOT,
+                stdout=stdout,
+                stderr=io.StringIO(),
+            ),
+            0,
+        )
+        help_text = stdout.getvalue()
+        for option in (
+            "--dataset", "--output-root", "--profile", "--corpus", "--corpus-dir",
+            "--provider", "--model", "--tools", "--max-turns", "--max-concurrency",
+            "--limit", "--runtime-context-level", "--system-prompt-file",
+            "--append-system-prompt-file", "--extra-arg", "--pi-extra-arg",
+            "--thinking-level", "--pi-thinking-level", "--enable-ir", "--corpus-hint",
+            "--judge-base-url", "--judge-api", "--judge-model", "--judge-api-key-env",
+            "--judge-timeout-seconds", "--judge-max-output-tokens", "--judge-json-mode",
+            "--judge-strict-json-schema", "--judge-responses-store", "--judge-thinking",
+            "--judge-input-price-per-1m", "--judge-cached-input-price-per-1m",
+            "--judge-output-price-per-1m", "--node-max-old-space-size-mb",
+            "--resume-policy", "--no-analysis", "--no-figures", "--package-dir",
+            "--agent-dir",
+        ):
+            with self.subTest(option=option):
+                self.assertIn(option, help_text)
+
+    def test_benchmark_cli_judge_overrides_take_precedence_over_shared_env(self) -> None:
+        environment = {
+            "DCI_EVAL_JUDGE_BASE_URL": "https://env.invalid/v1",
+            "DCI_EVAL_JUDGE_API": "responses",
+            "DCI_EVAL_JUDGE_MODEL": "env-model",
+            "DCI_EVAL_JUDGE_JSON_MODE": "true",
+            "DCI_EVAL_JUDGE_STRICT_JSON_SCHEMA": "false",
+            "DCI_EVAL_JUDGE_RESPONSES_STORE": "true",
+            "OVERRIDE_JUDGE_KEY": "synthetic-secret-key",
+        }
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            dataset = root / "data.jsonl"
+            corpus = root / "corpus"
+            dataset.write_text("{}\n", encoding="utf-8")
+            corpus.mkdir()
+            with patch.dict(os.environ, environment, clear=True), patch(
+                "asterion.dci.cli.run_benchmark"
+            ) as benchmark:
+                benchmark.return_value = type(
+                    "Result", (), {"output_root": root / "out", "counts": {"total": 1}}
+                )()
+                stdout = io.StringIO()
+                stderr = io.StringIO()
+                status = main(
+                    [
+                        "benchmark", "--dataset", str(dataset), "--output-root", "out",
+                        "--corpus", str(corpus), "--judge-base-url", "https://cli.invalid/v1",
+                        "--judge-api", "chat-completions", "--judge-model", "cli-model",
+                        "--judge-api-key-env", "OVERRIDE_JUDGE_KEY",
+                        "--judge-timeout-seconds", "17", "--judge-max-output-tokens", "321",
+                        "--no-judge-json-mode", "--judge-strict-json-schema",
+                        "--no-judge-responses-store", "--judge-thinking", "omit",
+                        "--judge-input-price-per-1m", "1.5",
+                        "--judge-cached-input-price-per-1m", "0.25",
+                        "--judge-output-price-per-1m", "3.75",
+                    ],
+                    repo_root=root,
+                    stdout=stdout,
+                    stderr=stderr,
+                )
+        self.assertEqual(status, 0, stderr.getvalue())
+        config = benchmark.call_args.args[0].judge_config
+        self.assertEqual(config.base_url, "https://cli.invalid/v1")
+        self.assertEqual(config.api, "chat-completions")
+        self.assertEqual(config.model, "cli-model")
+        self.assertEqual(config.api_key_env, "OVERRIDE_JUDGE_KEY")
+        self.assertEqual(config.api_key, "synthetic-secret-key")
+        self.assertEqual(config.timeout_seconds, 17)
+        self.assertEqual(config.max_output_tokens, 321)
+        self.assertFalse(config.json_mode)
+        self.assertTrue(config.strict_json_schema)
+        self.assertFalse(config.responses_store)
+        self.assertEqual(config.thinking, "omit")
+        self.assertEqual(config.input_price_per_1m, 1.5)
+        self.assertEqual(config.cached_input_price_per_1m, 0.25)
+        self.assertEqual(config.output_price_per_1m, 3.75)
+        self.assertNotIn("synthetic-secret", stdout.getvalue() + stderr.getvalue())
         self.assertEqual(
             (
                 request.runtime_options.provider,
