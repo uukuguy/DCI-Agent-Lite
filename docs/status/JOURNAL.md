@@ -649,3 +649,4 @@
 - 04:27 AF-250 Task 3 adds stable independent-product semantic comparisons and executable matrix evidence. [b5ff060]
 - 04:35 AF-250 Task 3 review RED reproduces leaf-only selector spoofing, erased `max_turns`, and synthetic Judge/batch evidence that bypasses native product paths.
 - 04:43 AF-250 Task 3 review repair uses exact fully-qualified selectors and independent native fake Judge/batch executions; the exact focused suite and local gates pass model-free.
+- 04:44 AF-250 Task 3 hardens selector identity, stable configuration, and native cross-product evidence. [2410820]
