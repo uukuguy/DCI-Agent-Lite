@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-15 04:47 +0800. **Session remains active — not a final handoff.** AF-240 is closed and AF-250 is active in the isolated `af-220-shared-dci-config` worktree.
+> Updated: 2026-07-15 05:28 +0800. **Session remains active — not a final handoff.** AF-240 is closed and AF-250 is active in the isolated `af-220-shared-dci-config` worktree.
 
 Active work package: AF-250
 
@@ -13,6 +13,7 @@ Active work package: AF-250
 - AF-250 Task 1 now has a strict eight-row product matrix, real model-free behavior selectors, exact owners, seven body-free provider case IDs, and four pending package-owned Climb hypotheses.
 - AF-250 Task 2 restores both source Judge Make entry points with their own `PYTHONPATH=src` boundary and executes all four source/Asterion examples model-free with exact pairwise argv semantics and single-invocation enforcement.
 - AF-250 Task 3 independently compares native source/Asterion run, Judge/cache, QA/IR batch, and export semantics through product-owned fake transports; its review is clean.
+- AF-250 Task 4 independently proves all eight local/model-free product rows, exact 533+6 selector execution, 12 launcher pairs, and isolated installed wheel/application behavior.
 
 ## Committed / unpushed state
 
@@ -22,11 +23,12 @@ Active work package: AF-250
 - AF-250 Task 1 landed at `447395b`, its review repair at `dac19dc`, and its approval at `0e5b9ba`.
 - AF-250 Task 2 landed at `4f254fd`, review repair at `bff32d7`, and approval at `1894a7c`.
 - AF-250 Task 3 landed at `b5ff060`, review repair at `2410820`, and approval at `feb6441`.
+- AF-250 Task 4 landed at `62395ec`, review repair at `b58f68b`, and approval at `53ec557`.
 - Commits are local/unpushed unless Git reports otherwise.
 
 ## Next action
 
-Execute Task 4 of `docs/superpowers/plans/2026-07-15-af-250-product-acceptance-matrix.md`: prove the 533-row inventory, 12 launcher pairs, isolated wheel, and installed Pi-default application as one product.
+Execute Task 5 of `docs/superpowers/plans/2026-07-15-af-250-product-acceptance-matrix.md`: record bounded real Pi and Judge acceptance in a body-free manifest; do not run full datasets.
 
 ## Open questions / defects to verify
 
@@ -48,6 +50,7 @@ git status --short
 git log --oneline -12
 uv run python -m unittest tests.test_asterion_dci_product_parity tests.test_asterion_dci_batch_launchers tests.test_distribution_boundaries tests.test_builtin_dci_application -v
 python3 tools/verify_asterion_dci_product.py
+uv run python -m unittest tests.test_asterion_dci_product_acceptance -v
 ```
 
 ## Guardrails
