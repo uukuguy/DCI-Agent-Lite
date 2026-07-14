@@ -197,6 +197,27 @@ class AsterionDciArtifactTests(unittest.TestCase):
 
             self.assertFalse(output_dir.exists())
 
+    def test_post_flock_metadata_setup_faults_release_fd_without_publishing(self) -> None:
+        fault_targets = (
+            ("absolute", "asterion.dci.artifacts.Path.absolute"),
+            ("token", "asterion.dci.artifacts.secrets.token_hex"),
+            ("hostname", "asterion.dci.artifacts.socket.gethostname"),
+        )
+        for name, target in fault_targets:
+            with self.subTest(fault=name), tempfile.TemporaryDirectory() as temporary_directory:
+                output_dir = Path(temporary_directory) / "run"
+                with patch(target, side_effect=OSError(f"{name} fault")):
+                    with self.assertRaisesRegex(OSError, f"{name} fault"):
+                        DciRunLock.acquire(output_dir)
+
+                self.assertTrue(output_dir.is_dir())
+                self.assertEqual(list(output_dir.iterdir()), [])
+                try:
+                    next_owner = DciRunLock.acquire(output_dir)
+                except RuntimeError as exc:
+                    self.fail(f"{name} fault leaked the directory lock: {exc}")
+                next_owner.release()
+
     def test_recorder_writes_remain_rooted_to_locked_inode_after_path_rebinding(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)

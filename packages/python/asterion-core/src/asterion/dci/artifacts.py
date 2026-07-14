@@ -252,24 +252,27 @@ class DciRunLock:
     def acquire(cls, output_dir: Path) -> DciRunLock:
         directory = Path(output_dir)
         descriptor = _acquire_directory_fd(directory)
-        lock_path = directory.absolute() / cls.LOCK_NAME
-        owner_token = secrets.token_hex(32)
-        payload = {
-            "pid": os.getpid(),
-            "hostname": socket.gethostname(),
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "owner_token": owner_token,
-        }
         try:
+            lock_path = directory.absolute() / cls.LOCK_NAME
+            owner_token = secrets.token_hex(32)
+            payload = {
+                "pid": os.getpid(),
+                "hostname": socket.gethostname(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "owner_token": owner_token,
+            }
             _validate_lock_metadata_at(descriptor, cls.LOCK_NAME)
             _atomic_write_json_at(descriptor, cls.LOCK_NAME, payload)
+            return cls(path=lock_path, owner_token=owner_token, _directory_fd=descriptor)
         except BaseException:
             try:
-                fcntl.flock(descriptor, fcntl.LOCK_UN)
+                try:
+                    fcntl.flock(descriptor, fcntl.LOCK_UN)
+                except OSError:
+                    pass
             finally:
                 os.close(descriptor)
             raise
-        return cls(path=lock_path, owner_token=owner_token, _directory_fd=descriptor)
 
     def release(self) -> None:
         if self._released:
