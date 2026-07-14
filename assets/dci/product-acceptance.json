@@ -1,0 +1,107 @@
+{
+  "schema": "asterion.dci.product-acceptance/v1",
+  "cases": [
+    {
+      "id": "source-basic",
+      "command_template": "bash scripts/examples/dci_basic_example.sh",
+      "inherited_configuration": ["DCI_PI_DIR", "DCI_PROVIDER", "DCI_MODEL", "DEEPSEEK_API_KEY"],
+      "exit_status": 0,
+      "structural_artifacts": [
+        {"name": "state.json", "mode": "644", "sha256": "1f9c21db016a6ba5a0ccca0808eb4ce007b076813eb8579f787ef1082d0188db"},
+        {"name": "events.jsonl", "mode": "644", "sha256": "5aef442875c3c2e7dcca1e85245a022fc58848d3229377cdc2a8adc6daba1e05"},
+        {"name": "final.txt", "mode": "644", "sha256": "27b69add05ab4e45dd77eab8e25a5391872e7fbd9258629b466bdbf70bf03430"}
+      ],
+      "verdict": null,
+      "counts": {"events": 655, "protocol_attempts": 1, "native_generations": 1, "credential_matches": 0},
+      "timestamp": "2026-07-14T22:49:05Z"
+    },
+    {
+      "id": "source-runtime-context",
+      "command_template": "bash scripts/examples/dci_runtime_context_example.sh high",
+      "inherited_configuration": ["DCI_PI_DIR", "DCI_PROVIDER", "DCI_MODEL", "DEEPSEEK_API_KEY", "DCI_EVAL_JUDGE_API_KEY_ENV"],
+      "exit_status": 0,
+      "structural_artifacts": [
+        {"name": "state.json", "mode": "644", "sha256": "2fcd67f53bc35679311f7a739ca2cfaa921cd4196d9a17aab27956de819baa31"},
+        {"name": "events.jsonl", "mode": "644", "sha256": "e697f71735e507502bce10e828935ce8c63e886f7e88cfa247baff3640ed684d"},
+        {"name": "final.txt", "mode": "644", "sha256": "70e657bbf116b323748081932f5346004d0d275e0d4b4083b4726b60c70ca373"},
+        {"name": "eval_result.json", "mode": "644", "sha256": "e0142d6c8ab69727fa41890c0574e9e93dd66ec4dbc70476b8b8ffc33e18d602"}
+      ],
+      "verdict": true,
+      "counts": {"events": 1072, "protocol_attempts": 1, "native_generations": 1, "credential_matches": 0},
+      "timestamp": "2026-07-14T22:49:05Z"
+    },
+    {
+      "id": "asterion-basic",
+      "command_template": "bash scripts/examples/asterion_dci_basic_example.sh",
+      "inherited_configuration": ["DCI_PI_DIR", "DCI_PROVIDER", "DCI_MODEL", "DEEPSEEK_API_KEY", "ASTERION_DCI_CORPUS_ROOT", "ASTERION_DCI_OUTPUT_ROOT"],
+      "exit_status": 0,
+      "structural_artifacts": [
+        {"name": "state.json", "mode": "600", "sha256": "1fe3c7c72a8809e6f9734333bea968c7a3b7ae9e75f91f5b7dcaec004c5c4ead"},
+        {"name": "events.jsonl", "mode": "600", "sha256": "c55f936f9ab6479247e5ecd7582b89633bc1a241d36c1a1996a5e55c352bfa98"},
+        {"name": "final.txt", "mode": "600", "sha256": "dab58f683e5e7eaebfad3520acdcd65b3ef7cd14ec76ddd92cd79f84bb3d901e"}
+      ],
+      "verdict": null,
+      "counts": {"events": 796, "protocol_attempts": 1, "native_generations": 1, "credential_matches": 0},
+      "timestamp": "2026-07-14T22:49:05Z"
+    },
+    {
+      "id": "asterion-runtime-context",
+      "command_template": "bash scripts/examples/asterion_dci_runtime_context_example.sh high",
+      "inherited_configuration": ["DCI_PI_DIR", "DCI_PROVIDER", "DCI_MODEL", "DEEPSEEK_API_KEY", "ASTERION_DCI_CORPUS_ROOT", "ASTERION_DCI_OUTPUT_ROOT", "DCI_EVAL_JUDGE_API_KEY_ENV"],
+      "exit_status": 0,
+      "structural_artifacts": [
+        {"name": "state.json", "mode": "600", "sha256": "66b7a0241ca7391b9001460071974c1af41aa054c3d585b3c8a023b49ffb4ea7"},
+        {"name": "events.jsonl", "mode": "600", "sha256": "4b32a4e22f2f14692e147c530300f15866d3bae140705a79dbb383ed8c992936"},
+        {"name": "final.txt", "mode": "600", "sha256": "ab711353b12c836738dee1ab0a1fafea51e0f18cc8e0569b67912a5aab162353"},
+        {"name": "eval_result.json", "mode": "600", "sha256": "e52cc984fc3dc822d705b1ccd7bb8df3d85b22d4ef6b8aa672d879bf5338485b"}
+      ],
+      "verdict": true,
+      "counts": {"events": 1455, "protocol_attempts": 1, "native_generations": 1, "credential_matches": 0},
+      "timestamp": "2026-07-14T22:49:05Z"
+    },
+    {
+      "id": "installed-pi-application",
+      "command_template": "uv run asterion run --provider dci-agent-lite --runtime pi.reference --application dci.research-capability@1.0.0",
+      "inherited_configuration": ["DCI_PI_DIR", "DCI_PROVIDER", "DCI_MODEL", "DCI_TOOLS", "DCI_RUNTIME_CONTEXT_LEVEL", "DCI_PI_THINKING_LEVEL", "DEEPSEEK_API_KEY", "ASTERION_RUNTIME_CWD", "ASTERION_DCI_OUTPUT_ROOT"],
+      "exit_status": 0,
+      "structural_artifacts": [
+        {"name": "state.json", "mode": "600", "sha256": "2f3d313c69aa24ba763a99fa9f1b7872a58848dcd95316d16d5af245ac1743dc"},
+        {"name": "events.jsonl", "mode": "600", "sha256": "be7383873a90f108705ed18a5f19dfa67540c28b7ff512340f4c73062b149a52"},
+        {"name": "final.txt", "mode": "600", "sha256": "dd6320c557259229ceb3cffd6a229589bde9c394443650ceaf046dce28629afc"}
+      ],
+      "verdict": null,
+      "counts": {"events": 1091, "protocol_attempts": 1, "native_generations": 1, "body_free_projections": 1, "credential_matches": 0},
+      "timestamp": "2026-07-14T22:49:05Z"
+    },
+    {
+      "id": "one-row-pi-judge",
+      "command_template": "uv run asterion-dci benchmark --mode qa --limit 1",
+      "inherited_configuration": ["DCI_PI_DIR", "DCI_PROVIDER", "DCI_MODEL", "DEEPSEEK_API_KEY", "DCI_EVAL_JUDGE_API_KEY_ENV"],
+      "exit_status": 0,
+      "structural_artifacts": [
+        {"name": "summary.json", "mode": "600", "sha256": "24492a2c2dd1cf0dafab687f1ae9ec3ea06b9eae51ad242c6911b19a391f9d75"},
+        {"name": "result.json", "mode": "600", "sha256": "7470d3b94594ea25f1f52e959beeba07f9a4f5c939230a204b0842c56000c623"},
+        {"name": "eval_result.json", "mode": "600", "sha256": "8d7c1daabf79b2664be6f3444ada2cbc3cebff62c5ab4e38c0fd5c4f05aae58e"},
+        {"name": "events.jsonl", "mode": "600", "sha256": "eead559dee875bd918b6018d421c64ee08bc99d2233a8ce77fd148f325afeef9"},
+        {"name": "protocol/attempt-0001.events.jsonl", "mode": "600", "sha256": "2964157ca716c8a007d955a1b5e27964cf68ae49709a63a2caeed8b2ce7e7d4a"}
+      ],
+      "verdict": true,
+      "counts": {"total": 1, "correct": 1, "private_files": 28, "protocol_attempts": 1, "native_generations": 1, "credential_matches": 0},
+      "timestamp": "2026-07-14T22:49:05Z"
+    },
+    {
+      "id": "one-row-exact-reuse",
+      "command_template": "uv run asterion-dci benchmark --mode qa --limit 1 --resume-policy reuse",
+      "inherited_configuration": ["DCI_PI_DIR", "DCI_PROVIDER", "DCI_MODEL", "DEEPSEEK_API_KEY", "DCI_EVAL_JUDGE_API_KEY_ENV"],
+      "exit_status": 0,
+      "structural_artifacts": [
+        {"name": "events.jsonl", "mode": "600", "sha256": "eead559dee875bd918b6018d421c64ee08bc99d2233a8ce77fd148f325afeef9"},
+        {"name": "eval_result.json", "mode": "600", "sha256": "8d7c1daabf79b2664be6f3444ada2cbc3cebff62c5ab4e38c0fd5c4f05aae58e"},
+        {"name": "protocol/attempt-0001.events.jsonl", "mode": "600", "sha256": "2964157ca716c8a007d955a1b5e27964cf68ae49709a63a2caeed8b2ce7e7d4a"}
+      ],
+      "verdict": true,
+      "counts": {"total": 1, "correct": 1, "unchanged_hashes": 3, "unchanged_mtimes": 3, "protocol_attempts": 1, "native_generations": 1, "credential_matches": 0},
+      "timestamp": "2026-07-14T22:49:05Z"
+    }
+  ]
+}

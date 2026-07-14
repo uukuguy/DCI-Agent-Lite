@@ -5,6 +5,11 @@
     "sha256": "ceec342a6a6c9311d043379067bc33ba6445414dd8c236cff1d8416fcdad2e55",
     "row_count": 533
   },
+  "product_acceptance": {
+    "path": "assets/dci/product-acceptance.json",
+    "sha256": "7c6ee4bb14f7198ff1f973c9c3c4581b66c927261a80e3bc1ea8398fc4b5df4d",
+    "case_count": 7
+  },
   "rows": [
     {
       "id": "configuration-and-pi-argv",

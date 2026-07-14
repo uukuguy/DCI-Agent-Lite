@@ -65,27 +65,39 @@ surface.
 
 ### AF-250 product-acceptance evidence
 
-Run the local, provider-free product matrix verifier before treating a change as
-ready for bounded acceptance:
+Run the local, provider-free product matrix verifier to reproduce the complete
+checked-in acceptance boundary:
 
 ```bash
-python3 tools/verify_asterion_dci_product.py
+uv run python tools/verify_asterion_dci_product.py
 ```
 
 It executes the eight checked-in local/model-free product rows, resolves and
 executes all 533 delegated batch selectors, verifies the twelve source/Asterion
-launcher pairs, and proves the installed wheel/application boundary with a
-local fixture. It deliberately executes zero Pi or Judge provider calls.
+launcher pairs, proves the installed wheel/application boundary with a local
+fixture, and validates the digest-bound seven-case bounded-real record. It
+deliberately executes zero Pi or Judge provider calls.
 
-Bounded real acceptance is a separate, body-free seven-case record. It may be
-written only after every required real case exits successfully and its
-structural artifacts validate; it never contains credentials, private paths,
-or provider bodies. A missing `assets/dci/product-acceptance.json` means that
-full-product acceptance is blocked, not that fixture or local evidence has
-passed. As of the AF-250 final audit, the local matrix is complete but that
-manifest is deliberately absent after bounded real runs failed, so no complete
-source-to-Asterion migration claim is made. Do not rerun providers or datasets
-to change this conclusion without separate operator authorization.
+Bounded real acceptance is a separate, body-free seven-case record. Every case
+exited successfully and its structural artifacts validated; the public record
+contains only command templates, inherited environment-variable names, exit
+codes, modes, hashes, counts, verdict booleans, and timestamps. It contains no
+credentials, private paths, or provider bodies. The verifier checks the
+manifest schema and its product-matrix SHA-256 binding without repeating a
+provider request. To revalidate the record against retained private native
+evidence, set a caller-owned root containing one directory per case and run:
+
+```bash
+uv run python tools/verify_asterion_dci_product.py \
+  --acceptance-root "$AF250_ACCEPTANCE_ROOT" \
+  --validate-only
+```
+
+This mode recomputes every artifact digest and mode, verifies completed state,
+settled events, matching nonempty finals, Judge fingerprints/verdicts/counts,
+exact-reuse hashes and nanosecond mtimes, and scans configured credential values
+without printing them. Full datasets remain deliberate operator commands and
+were not used for AF-250 acceptance.
 
 ```bash
 asterion-dci run \

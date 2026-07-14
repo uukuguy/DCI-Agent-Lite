@@ -1,38 +1,39 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-15 05:57 +0800. **Session remains active — not a final handoff.** AF-250 remains the active, blocked package in the isolated `af-220-shared-dci-config` worktree.
+> Updated: 2026-07-15 06:38 +0800. **Session remains active — not a final handoff.** AF-250 migration implementation and acceptance are complete in the isolated `af-220-shared-dci-config` worktree.
 
 Active work package: AF-250
 
 ## TL;DR
 
-- AF-250 local/model-free implementation evidence is complete: the eight product rows, all 533 delegated batch selectors, twelve launcher pairs, and the isolated installed wheel/application proof pass. The local verifier makes zero provider calls.
-- AF-250-H-001 through H-004 are confirmed 4/4 in Climb cycles 80–83; the generated tree has no pending AF-250 hypothesis.
-- Full-product acceptance is blocked, not complete. Fresh source default/recovery/runtime cases exited 1 with failed native state and no event/final evidence; fresh Asterion basic/runtime and supported `uv run asterion` application cases exited 2 before native state. The one authorized non-default recovery is spent.
-- `assets/dci/product-acceptance.json` is intentionally absent because no truthful, complete seven-case body-free manifest can be written. The untracked negative acceptance test fails for that exact reason and must be preserved.
-- Retained AF-240 one-row Pi-plus-Judge/reuse evidence is credential-clean: only a non-secret environment-variable-name selector matched; credential values matched zero. It supports only `one-row-pi-judge` and `one-row-exact-reuse`.
+- AF-250 implementation and bounded product acceptance are complete: eight product rows, 533 delegated selectors, twelve launcher pairs, six batch extras, isolated installed-wheel/application proof, and seven real source/Asterion/application/Pi-plus-Judge/reuse cases pass.
+- The earlier real-run failures were caused by the isolated worktree lacking the external main-repository `corpus/`, not by a missing Asterion DCI behavior. Explicit shared Pi/corpus paths plus the repository-root `.env` produced successful bounded runs.
+- `assets/dci/product-acceptance.json` contains only commands, inherited variable names, exit codes, modes, hashes, counts, verdict booleans, and timestamps. Credential values matched zero; provider bodies and private paths are excluded. A caller-owned private acceptance root retains all seven native cases for digest/mode/semantic revalidation.
+- The product matrix digest-binds that seven-case manifest. AF-250-H-005 was reconfirmed 4/4 with private-native mutation coverage in cycle 85 after its initial cycle 84, following H-001 through H-004 in cycles 80–83.
 
 ## Verification
 
-- `python3 tools/verify_asterion_dci_product.py`: 8/8 PASS; 533/533 delegated; 12/12 launchers; 6/6 batch extras; zero provider-backed execution.
-- Compile, Ruff, TypeScript (11), Rust (19), shell syntax, scope, and diff checks pass.
-- Full Python discovery has four expected failures: the two direct missing-manifest tests plus AF-095-H-004 and AF-210-H-004 closure-evaluator tests that invoke the full suite. This is a blocked audit, not a closure signal.
+- `uv run python tools/verify_asterion_dci_product.py`: 8/8 rows, 533/533 delegated, 12/12 launchers, 6/6 batch extras, 7/7 bounded acceptance, zero provider execution during verification.
+- With the shared `.env` exported, `--acceptance-root "$AF250_ACCEPTANCE_ROOT" --validate-only` reports private acceptance 7/7 after rehashing artifacts, parsing lifecycle/Judge evidence, comparing reuse mtimes, and scanning actual credential values without printing them.
+- Full discovery passes 1266/1266 Python tests; TypeScript passes 11/11 and Rust passes 19/19.
+- Compile, Ruff, shell syntax, scope, Rust fmt/Clippy, installed wheel/application proof, and diff checks pass.
 
 ## Next action
 
-Do not run another provider, Judge, or dataset command without new operator authorization. Resolve the external provider/runtime failure, then collect successful bounded real evidence for the five failed cases before creating the seven-case manifest and reconsidering AF-250.
+Commit the cohesive AF-250 recovery/acceptance changes after independent review. Keep AF-250 as the terminal active governance anchor until branch integration or a successor package is explicitly selected.
 
 ## Ruled-out paths
 
-- Do not manufacture or backfill the missing manifest from failed runs or retained AF-240 artifacts.
-- Do not claim complete migration or close AF-250 from local/fixture evidence or Climb confirmation.
+- Do not treat the former worktree-local missing `corpus/` condition as a product failure.
+- Do not rerun full datasets to reconfirm bounded acceptance.
 - Do not modify `pi/`, persist credentials, or copy provider bodies/private paths into public evidence.
 
 ## Ready commands
 
 ```bash
 python3 tools/project_scope_check.py
-python3 tools/verify_asterion_dci_product.py
+uv run python tools/verify_asterion_dci_product.py
+uv run python tools/verify_asterion_dci_product.py --acceptance-root "$AF250_ACCEPTANCE_ROOT" --validate-only
 uv run python -m unittest tests.test_asterion_dci_product_acceptance -v
 git status --short
 ```

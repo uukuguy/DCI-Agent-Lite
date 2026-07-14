@@ -151,14 +151,20 @@ use `--no-analysis --no-figures` together when disabling both.
 ## Product-acceptance evidence
 
 AF-250 keeps public acceptance evidence separate from private native artifacts.
-The local verifier records only executable local/model-free matrix results; it
-does not create a provider-backed acceptance record. A
-`product-acceptance.json` manifest is valid only when all seven bounded real
-cases completed successfully with body-free structural checks. It must not
-contain credentials, provider bodies, or private paths.
+`assets/dci/product-acceptance.json` records the seven successful bounded real
+cases using only command templates, inherited environment-variable names, exit
+codes, artifact names/modes/hashes, nonnegative counts, verdict booleans, and
+timestamps. It contains no question, answer, conversation, event, stderr,
+credential value, provider body, or private path.
 
-No manifest is present when any required real case failed. That absence is a
-truthful blocked-acceptance signal, not a missing artifact to reconstruct from
-private native evidence. Retained one-row Pi-plus-Judge/reuse evidence may
-support only its corresponding two case IDs and cannot establish other failed
-example or application cases.
+`assets/dci/product-parity.json` binds that manifest by canonical path,
+SHA-256, and exact case count. `uv run python
+tools/verify_asterion_dci_product.py` validates both records and executes the
+local/model-free matrix without repeating Pi or Judge provider calls. Passing
+`--acceptance-root "$AF250_ACCEPTANCE_ROOT" --validate-only` additionally
+recomputes all recorded modes/digests from caller-owned private case
+directories, parses completion/settlement/Judge evidence, compares exact-reuse
+hashes and nanosecond mtimes, and scans configured credential values without
+printing them. Private native artifacts remain the authority for investigation;
+the public manifest is a reproducible structural projection, not a substitute
+for their bodies.

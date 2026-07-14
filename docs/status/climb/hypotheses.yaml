@@ -1903,3 +1903,42 @@ hypotheses:
     online: null
     verdict: confirmed 4/4
     decision_reason: deterministic local package acceptance
+- id: AF-250-H-005
+  work_package_id: AF-250
+  description: Prove the recovered seven-case provider-backed acceptance record is
+    complete, body-free, digest-bound, and preserves exact Judge reuse.
+  parent_paradigm: dci-product-provider-recovery
+  expected_lift: +1 complete bounded provider-backed product acceptance
+  cost_h: 0.8
+  ranking: 1.0
+  status: confirmed
+  created_at: '2026-07-15T06:10:00+08:00'
+  verification_command: uv run python -m unittest -v tests.test_asterion_dci_product_acceptance.AsterionDciProductAcceptanceTests.test_af250_h005_manifest_is_canonical_and_digest_bound
+    tests.test_asterion_dci_product_acceptance.AsterionDciProductAcceptanceTests.test_af250_h005_all_seven_provider_cases_are_successful
+    tests.test_asterion_dci_product_acceptance.AsterionDciProductAcceptanceTests.test_af250_h005_manifest_rejects_bodies_credentials_and_private_paths
+    tests.test_asterion_dci_product_acceptance.AsterionDciProductAcceptanceTests.test_af250_h005_private_acceptance_recomputes_artifacts_and_semantics
+  results:
+  - session: 2026-07-15-af-250-product-acceptance-matrix
+    cycle: 84
+    run: 20260715-062948-dci-climb-af250h005
+    local: 4
+    local_per_task:
+      manifest_binding: 1
+      successful_cases: 1
+      body_free_evidence: 1
+      exact_reuse: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
+  - session: 2026-07-15-af-250-product-acceptance-matrix
+    cycle: 85
+    run: 20260715-070106-dci-climb-af250h005
+    local: 4
+    local_per_task:
+      manifest_binding: 1
+      successful_cases: 1
+      body_free_evidence: 1
+      private_native_evidence: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance

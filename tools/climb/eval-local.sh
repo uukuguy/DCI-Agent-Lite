@@ -77,7 +77,7 @@ run_closure_dimension() {
             command=(uv run python -m unittest tests.test_distribution_boundaries.SourceDistributionBoundaryTests.test_source_baseline_remains_runnable_without_installation -v)
             ;;
         asterion_examples)
-            command=(uv run python -m unittest tests.test_asterion_structure.AsterionStructureTests.test_examples_build_cli_commands_in_an_isolated_repository -v)
+            command=(uv run python -m unittest tests.test_asterion_structure.AsterionStructureTests.test_examples_execute_with_pairwise_semantic_parity -v)
             ;;
         asterion_architecture)
             command=(uv run python -m unittest tests.test_asterion_structure.AsterionStructureTests.test_layout_guide_defines_framework_ownership -v)
@@ -963,6 +963,16 @@ case "$HYPOTHESIS_ID" in
         repeat_test="tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h004_provider_cases_are_body_free_ids"
         dirty_test="tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h004_local_executor_never_runs_provider_cases"
         override_test="tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h004_matrix_schema_and_inventory_are_finalized"
+        ;;
+    AF-250-H-005)
+        first_dimension="manifest_binding"
+        second_dimension="successful_cases"
+        third_dimension="body_free_evidence"
+        fourth_dimension="private_native_evidence"
+        immutable_test="tests.test_asterion_dci_product_acceptance.AsterionDciProductAcceptanceTests.test_af250_h005_manifest_is_canonical_and_digest_bound"
+        repeat_test="tests.test_asterion_dci_product_acceptance.AsterionDciProductAcceptanceTests.test_af250_h005_all_seven_provider_cases_are_successful"
+        dirty_test="tests.test_asterion_dci_product_acceptance.AsterionDciProductAcceptanceTests.test_af250_h005_manifest_rejects_bodies_credentials_and_private_paths"
+        override_test="tests.test_asterion_dci_product_acceptance.AsterionDciProductAcceptanceTests.test_af250_h005_private_acceptance_recomputes_artifacts_and_semantics"
         ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2

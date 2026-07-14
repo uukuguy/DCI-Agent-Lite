@@ -526,6 +526,29 @@ class AsterionDciProductParityTests(unittest.TestCase):
             inventory["sha256"], hashlib.sha256(path.read_bytes()).hexdigest()
         )
 
+    def test_matrix_binds_complete_body_free_product_acceptance(self) -> None:
+        acceptance = self.document["product_acceptance"]
+        path = ROOT / acceptance["path"]
+        self.assertEqual(acceptance["path"], "assets/dci/product-acceptance.json")
+        self.assertEqual(acceptance["case_count"], 7)
+        self.assertEqual(
+            acceptance["sha256"], hashlib.sha256(path.read_bytes()).hexdigest()
+        )
+        self.assertEqual(
+            product_verifier.validate_acceptance_reference(ROOT, acceptance), 7
+        )
+
+        for field, value, error in (
+            ("path", "assets/dci/missing.json", "canonical"),
+            ("sha256", "0" * 64, "SHA-256"),
+            ("case_count", 6, "case count"),
+        ):
+            with self.subTest(field=field):
+                document = copy.deepcopy(self.document)
+                document["product_acceptance"][field] = value
+                with self.assertRaisesRegex(ValueError, error):
+                    validate_product_matrix(ROOT, document)
+
     def test_inventory_requires_all_533_resolvable_executable_selectors(self) -> None:
         selectors = product_verifier.validate_batch_inventory(
             ROOT, self.document["batch_inventory"]
@@ -601,6 +624,7 @@ class AsterionDciProductParityTests(unittest.TestCase):
 
         with mock.patch("subprocess.run", side_effect=execute):
             result = run_local_evidence(ROOT, rows)
+        self.assertEqual(result["bounded_acceptance"], "7/7")
         self.assertEqual(result["delegated_inventory"], "0/533")
         self.assertEqual(result["launcher_pairs"], "0/12")
         self.assertEqual(result["batch_extra_selectors"], "0/6")

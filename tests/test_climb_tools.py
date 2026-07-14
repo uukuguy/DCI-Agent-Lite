@@ -103,6 +103,12 @@ AF250_MATRIX_TESTS = {
         "test_af250_h004_local_executor_never_runs_provider_cases",
         "test_af250_h004_matrix_schema_and_inventory_are_finalized",
     ),
+    "AF-250-H-005": (
+        "test_af250_h005_manifest_is_canonical_and_digest_bound",
+        "test_af250_h005_all_seven_provider_cases_are_successful",
+        "test_af250_h005_manifest_rejects_bodies_credentials_and_private_paths",
+        "test_af250_h005_private_acceptance_recomputes_artifacts_and_semantics",
+    ),
 }
 
 
@@ -2740,7 +2746,7 @@ class ClimbToolTests(unittest.TestCase):
         train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
 
         all_names = {name for names in AF240_READINESS_TESTS.values() for name in names}
-        self.assertEqual(len(all_names), 16)
+        self.assertEqual(len(all_names), 4 * len(AF240_READINESS_TESTS))
         for hypothesis_id, expected_names in AF240_READINESS_TESTS.items():
             with self.subTest(hypothesis_id=hypothesis_id):
                 marker = f'elif [ "$1" = "{hypothesis_id}" ]; then'
@@ -2877,7 +2883,9 @@ class ClimbToolTests(unittest.TestCase):
             item = indexed[hypothesis_id]
             self.assertEqual(item["work_package_id"], "AF-250")
             self.assertEqual(item["status"], "confirmed")
-            self.assertEqual(len(item.get("results", [])), 1)
+            self.assertEqual(
+                len(item.get("results", [])), 2 if hypothesis_id == "AF-250-H-005" else 1
+            )
             result = item["results"][0]
             self.assertEqual(result["session"], "2026-07-15-af-250-product-acceptance-matrix")
             self.assertEqual(result["cycle"], cycle)
@@ -2887,6 +2895,10 @@ class ClimbToolTests(unittest.TestCase):
             self.assertEqual({name for name in selectors if name in command}, set(selectors))
             commands.append(command)
         self.assertEqual(len(commands), len(set(commands)))
+        recovery = indexed["AF-250-H-005"]["results"][-1]
+        self.assertEqual(recovery["cycle"], 85)
+        self.assertEqual(recovery["local"], 4)
+        self.assertEqual(recovery["verdict"], "confirmed 4/4")
 
         session = json.loads(
             (REPO_ROOT / "docs/status/climb/session-state.json").read_text()
@@ -2900,7 +2912,7 @@ class ClimbToolTests(unittest.TestCase):
     def test_af250_train_registers_distinct_executable_selectors(self) -> None:
         train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
         all_names = {name for names in AF250_MATRIX_TESTS.values() for name in names}
-        self.assertEqual(len(all_names), 16)
+        self.assertEqual(len(all_names), 4 * len(AF250_MATRIX_TESTS))
         for hypothesis_id, selectors in AF250_MATRIX_TESTS.items():
             marker = f'elif [ "$1" = "{hypothesis_id}" ]; then'
             start = train_script.rindex(marker)
@@ -2931,6 +2943,7 @@ class ClimbToolTests(unittest.TestCase):
             "AF-250-H-002": {"stable_semantics", "independent_entries", "batch_inventory", "no_placeholders"},
             "AF-250-H-003": {"installed_rows", "wheel_boundary", "application_assembly", "model_free_install"},
             "AF-250-H-004": {"supported_rows", "provider_case_ids", "provider_skip", "schema_inventory"},
+            "AF-250-H-005": {"manifest_binding", "successful_cases", "body_free_evidence", "private_native_evidence"},
         }
         for hypothesis_id, dimensions in expected_dimensions.items():
             with self.subTest(hypothesis_id=hypothesis_id), tempfile.TemporaryDirectory() as temp_dir:

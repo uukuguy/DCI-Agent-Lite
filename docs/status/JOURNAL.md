@@ -673,3 +673,16 @@
 - 05:57 Full Python discovery ran 1260 tests with exactly four expected failures: two direct absent-manifest tests and the AF-095/AF-210 evaluator tests that intentionally invoke that failing full suite. All other Task 6 gates pass.
 - 05:58 Blocked AF-250 audit commits truthful local evidence, failed bounded acceptance, and Climb state. [14c66fe]
 - 06:02 Independent review approves AF-250's blocked conclusion; no full migration claim is valid until seven-case acceptance succeeds.
+- 06:03 Blocked-audit approval checkpoint committed to preserve the honest AF-250 recovery boundary. [5598576]
+- 06:29 AF-250-H-005 confirmed 4/4; package acceptance recorded.
+- 06:31 AF-250 recovery identified the five fresh-run failures as missing isolated-worktree corpus authority; shared root `.env`, external Pi, and explicit main-repository corpus paths completed all five bounded source/Asterion/application cases without a full dataset.
+- 06:33 Seven successful body-free cases are recorded in a credential-clean acceptance manifest and SHA-256-bound into the executable product matrix; retained one-row Judge/reuse artifacts remain exact.
+- 06:38 AF-250 closure passes 1265 Python, 11 TypeScript, 19 Rust, product 8/8, delegated 533/533, launchers 12/12, batch extras 6/6, bounded acceptance 7/7, compile, Ruff, shell, scope, diff, fmt, and Clippy gates.
+- 06:41 Independent closure review rejected the self-contained manifest check: it did not rehash private artifacts, underconstrained Judge/reuse counts, missed embedded private paths, and did not continuously scan configured credential values. No commit was made.
+- 06:52 All five bounded source/Asterion/application cases reran successfully into a caller-owned private root; retained Judge/reuse evidence was copied with original mtimes. The strengthened verifier rehashes all seven cases, parses completion/settlement/Judge evidence, compares exact-reuse hashes/mtimes, and scans exported credential values without printing them.
+- 06:53 Private native acceptance passes 7/7; mutation tests reject artifact, credential, path, Judge-count, and reuse-mtime tampering.
+- 07:01 AF-250-H-005 confirmed 4/4; package acceptance recorded.
+- 07:02 AF-250-H-005 is reconfirmed in cycle 85 with private-native artifact, semantic, credential, and reuse-mtime mutation coverage; exact reuse claims are strictly three-of-three.
+- 07:03 Independent closure re-review approves the repaired AF-250 acceptance with no Critical, Important, or Minor findings.
+- 07:05 Final full discovery passes 1266/1266 Python tests after the approved review repair.
+- 07:06 Final closure gates pass 11 TypeScript, 19 Rust, compile, Ruff, shell, scope, diff, public product 8/8+533/533+12/12+6/6+7/7, and private native acceptance 7/7.

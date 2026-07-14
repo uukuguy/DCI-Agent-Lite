@@ -14,6 +14,7 @@ import re
 import subprocess
 import sys
 import tempfile
+from datetime import datetime
 from pathlib import Path
 from pathlib import PurePosixPath
 from typing import cast
@@ -21,7 +22,9 @@ from urllib.parse import unquote, urlsplit
 
 
 MATRIX_PATH = Path("assets/dci/product-parity.json")
+ACCEPTANCE_PATH = Path("assets/dci/product-acceptance.json")
 SCHEMA = "asterion.dci.product-parity/v1"
+ACCEPTANCE_SCHEMA = "asterion.dci.product-acceptance/v1"
 REQUIRED_PRODUCT_ROWS = {
     "configuration-and-pi-argv",
     "interactive-run-and-terminal",
@@ -47,6 +50,65 @@ REQUIRED_PROVIDER_CASES = {
     "one-row-pi-judge",
     "one-row-exact-reuse",
 }
+EXPECTED_ACCEPTANCE_ARTIFACTS = {
+    "source-basic": {"state.json", "events.jsonl", "final.txt"},
+    "source-runtime-context": {
+        "state.json",
+        "events.jsonl",
+        "final.txt",
+        "eval_result.json",
+    },
+    "asterion-basic": {"state.json", "events.jsonl", "final.txt"},
+    "asterion-runtime-context": {
+        "state.json",
+        "events.jsonl",
+        "final.txt",
+        "eval_result.json",
+    },
+    "installed-pi-application": {"state.json", "events.jsonl", "final.txt"},
+    "one-row-pi-judge": {
+        "summary.json",
+        "result.json",
+        "eval_result.json",
+        "events.jsonl",
+        "protocol/attempt-0001.events.jsonl",
+    },
+    "one-row-exact-reuse": {
+        "events.jsonl",
+        "eval_result.json",
+        "protocol/attempt-0001.events.jsonl",
+    },
+}
+EXPECTED_ACCEPTANCE_COUNTS = {
+    "source-basic": {"events", "protocol_attempts", "native_generations", "credential_matches"},
+    "source-runtime-context": {"events", "protocol_attempts", "native_generations", "credential_matches"},
+    "asterion-basic": {"events", "protocol_attempts", "native_generations", "credential_matches"},
+    "asterion-runtime-context": {"events", "protocol_attempts", "native_generations", "credential_matches"},
+    "installed-pi-application": {
+        "events",
+        "protocol_attempts",
+        "native_generations",
+        "body_free_projections",
+        "credential_matches",
+    },
+    "one-row-pi-judge": {
+        "total",
+        "correct",
+        "private_files",
+        "protocol_attempts",
+        "native_generations",
+        "credential_matches",
+    },
+    "one-row-exact-reuse": {
+        "total",
+        "correct",
+        "unchanged_hashes",
+        "unchanged_mtimes",
+        "protocol_attempts",
+        "native_generations",
+        "credential_matches",
+    },
+}
 REQUIRED_PRODUCT_OWNERS = {
     "configuration-and-pi-argv": "asterion.dci.config",
     "interactive-run-and-terminal": "asterion.dci.cli",
@@ -59,8 +121,9 @@ REQUIRED_PRODUCT_OWNERS = {
 }
 ALLOWED_TIERS = {"local", "model-free", "provider-backed"}
 FORBIDDEN_TEXT = {"placeholder", "todo", "tbd", "unknown", "n/a"}
-MATRIX_FIELDS = {"schema", "batch_inventory", "rows"}
+MATRIX_FIELDS = {"schema", "batch_inventory", "product_acceptance", "rows"}
 INVENTORY_FIELDS = {"path", "sha256", "row_count"}
+ACCEPTANCE_REFERENCE_FIELDS = {"path", "sha256", "case_count"}
 ROW_FIELDS = {
     "id",
     "owner",
@@ -75,6 +138,16 @@ EVIDENCE_FIELDS = {"id", "tier", "argv", "selectors"}
 SHELL_METACHARACTERS = re.compile(r"[\n\r;&|`$<>]")
 ENVIRONMENT_ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 CASE_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+ENVIRONMENT_NAME = re.compile(r"^[A-Z][A-Z0-9_]*$")
+SHA256 = re.compile(r"^[0-9a-f]{64}$")
+FILE_MODE = re.compile(r"^[0-7]{3}$")
+PRIVATE_PATH = re.compile(r"/(?:private|Users|home)/")
+SECRET_ASSIGNMENT = re.compile(
+    r"(?i)(?:api[_-]?key|token|secret|password)\s*[:=]\s*[^\s\"']+"
+)
+FORBIDDEN_BODY_TEXT = re.compile(
+    r"(?i)(?:provider[_ -]?(?:request|response)|conversation|final[_ -]?answer|stderr)"
+)
 MATRIX_ONLY_TEST_PREFIXES = (
     "test_af250_h",
     "test_product_matrix_",
@@ -145,6 +218,298 @@ def _require_exact_fields(value: dict[str, object], expected: set[str], label: s
     fields = set(value)
     if fields != expected:
         raise ValueError(f"unknown {label} fields: {sorted(fields - expected)}")
+
+
+def _credential_values_from_environment() -> tuple[str, ...]:
+    return tuple(
+        value
+        for name, value in os.environ.items()
+        if value
+        and not name.upper().endswith("_ENV")
+        and any(
+            token in name.upper()
+            for token in ("API_KEY", "TOKEN", "SECRET", "PASSWORD")
+        )
+    )
+
+
+def validate_acceptance_document(
+    document: object, *, credential_values: tuple[str, ...] = ()
+) -> tuple[dict[str, object], ...]:
+    """Validate the body-free record of bounded provider-backed acceptance."""
+    if not isinstance(document, dict) or set(document) != {"schema", "cases"}:
+        raise ValueError("acceptance manifest shape is invalid")
+    if document["schema"] != ACCEPTANCE_SCHEMA:
+        raise ValueError("acceptance manifest schema is invalid")
+    cases = document["cases"]
+    if not isinstance(cases, list):
+        raise ValueError("acceptance manifest cases are invalid")
+    ids = [case.get("id") for case in cases if isinstance(case, dict)]
+    if set(ids) != REQUIRED_PROVIDER_CASES or len(ids) != len(REQUIRED_PROVIDER_CASES):
+        raise ValueError("acceptance manifest cases are incomplete")
+    encoded = json.dumps(document, sort_keys=True)
+    if PRIVATE_PATH.search(encoded):
+        raise ValueError("acceptance manifest contains an absolute private path")
+    if SECRET_ASSIGNMENT.search(encoded):
+        raise ValueError("acceptance manifest contains a plaintext credential")
+    if FORBIDDEN_BODY_TEXT.search(encoded):
+        raise ValueError("acceptance manifest contains a provider body reference")
+    if any(value and value in encoded for value in credential_values):
+        raise ValueError("acceptance manifest contains a configured credential value")
+
+    validated: list[dict[str, object]] = []
+    expected_fields = {
+        "id",
+        "command_template",
+        "inherited_configuration",
+        "exit_status",
+        "structural_artifacts",
+        "verdict",
+        "counts",
+        "timestamp",
+    }
+    for raw_case in cases:
+        if not isinstance(raw_case, dict):
+            raise ValueError("acceptance case must be an object")
+        case = cast(dict[str, object], raw_case)
+        _require_exact_fields(case, expected_fields, "acceptance case")
+        command = case["command_template"]
+        if not isinstance(command, str) or not command.strip():
+            raise ValueError("acceptance command template is invalid")
+        inherited = case["inherited_configuration"]
+        if (
+            not isinstance(inherited, list)
+            or not inherited
+            or len(inherited) != len(set(inherited))
+            or not all(
+                isinstance(name, str) and ENVIRONMENT_NAME.fullmatch(name)
+                for name in inherited
+            )
+        ):
+            raise ValueError("acceptance inherited configuration is invalid")
+        if case["exit_status"] != 0:
+            raise ValueError("acceptance exit status is not successful")
+        artifacts = case["structural_artifacts"]
+        if not isinstance(artifacts, list) or not artifacts:
+            raise ValueError("acceptance case has no structural artifacts")
+        if not all(
+            isinstance(item, dict)
+            and set(item) == {"name", "mode", "sha256"}
+            and isinstance(item["name"], str)
+            and bool(item["name"])
+            and not PurePosixPath(item["name"]).is_absolute()
+            and ".." not in PurePosixPath(item["name"]).parts
+            and isinstance(item["mode"], str)
+            and bool(FILE_MODE.fullmatch(item["mode"]))
+            and isinstance(item["sha256"], str)
+            and bool(SHA256.fullmatch(item["sha256"]))
+            for item in artifacts
+        ):
+            raise ValueError("acceptance structural artifact is invalid")
+        artifact_names = {cast(str, item["name"]) for item in artifacts}
+        if artifact_names != EXPECTED_ACCEPTANCE_ARTIFACTS[cast(str, case["id"])]:
+            raise ValueError("acceptance structural artifact set is incomplete")
+        verdict = case["verdict"]
+        if verdict is not None and type(verdict) is not bool:
+            raise ValueError("acceptance verdict type is invalid")
+        if case["id"] == "one-row-pi-judge" and type(verdict) is not bool:
+            raise ValueError("Judge verdict must be boolean")
+        counts = case["counts"]
+        if (
+            not isinstance(counts, dict)
+            or not counts
+            or not all(
+                isinstance(name, str)
+                and bool(name)
+                and type(value) is int
+                and value >= 0
+                for name, value in counts.items()
+            )
+        ):
+            raise ValueError("acceptance counts are invalid")
+        if set(counts) != EXPECTED_ACCEPTANCE_COUNTS[cast(str, case["id"])]:
+            raise ValueError("acceptance count set is incomplete")
+        if case["id"] not in {"one-row-pi-judge", "one-row-exact-reuse"} and (
+            counts.get("protocol_attempts") != 1
+            or counts.get("native_generations") != 1
+        ):
+            raise ValueError("acceptance run count is invalid")
+        if case["id"] == "one-row-exact-reuse" and (
+            counts.get("protocol_attempts") != 1
+            or counts.get("native_generations") != 1
+            or counts.get("unchanged_hashes") != 3
+            or counts.get("unchanged_mtimes") != 3
+        ):
+            raise ValueError("exact reuse evidence is incomplete")
+        if case["id"] == "one-row-pi-judge" and (
+            counts.get("total") != 1
+            or counts.get("correct") != 1
+            or counts.get("private_files", 0) < 28
+            or counts.get("protocol_attempts") != 1
+            or counts.get("native_generations") != 1
+        ):
+            raise ValueError("Pi-plus-Judge evidence is incomplete")
+        if counts.get("credential_matches", 0) != 0:
+            raise ValueError("acceptance credential scan is not clean")
+        timestamp = case["timestamp"]
+        if not isinstance(timestamp, str) or not timestamp.endswith("Z"):
+            raise ValueError("acceptance timestamp is invalid")
+        try:
+            parsed = datetime.fromisoformat(timestamp.removesuffix("Z") + "+00:00")
+        except ValueError as error:
+            raise ValueError("acceptance timestamp is invalid") from error
+        if parsed.tzinfo is None:
+            raise ValueError("acceptance timestamp is invalid")
+        validated.append(case)
+    return tuple(validated)
+
+
+def _read_json_object(path: Path, label: str) -> dict[str, object]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise ValueError(f"private {label} artifact is invalid") from error
+    if not isinstance(value, dict):
+        raise ValueError(f"private {label} artifact is invalid")
+    return cast(dict[str, object], value)
+
+
+def validate_acceptance_artifacts(
+    acceptance_root: Path,
+    cases: tuple[dict[str, object], ...],
+    *,
+    credential_values: tuple[str, ...] = (),
+) -> int:
+    """Recompute public structural claims against a caller-owned private root."""
+    root = acceptance_root.resolve(strict=True)
+    if not root.is_dir() or root.is_symlink():
+        raise ValueError("private acceptance root is invalid")
+    indexed = {cast(str, case["id"]): case for case in cases}
+    for case_id, case in indexed.items():
+        case_root = root / case_id
+        if not case_root.is_dir() or case_root.is_symlink():
+            raise ValueError(f"private acceptance case is missing: {case_id}")
+        artifact_names: set[str] = set()
+        for artifact in cast(list[dict[str, object]], case["structural_artifacts"]):
+            name = cast(str, artifact["name"])
+            if name in artifact_names:
+                raise ValueError("private acceptance artifact is duplicated")
+            artifact_names.add(name)
+            path = case_root / PurePosixPath(name)
+            if path.is_symlink() or not path.is_file():
+                raise ValueError(f"private acceptance artifact is missing: {case_id}")
+            if not path.resolve().is_relative_to(case_root.resolve()):
+                raise ValueError("private acceptance artifact escapes its case")
+            mode = f"{path.stat().st_mode & 0o777:03o}"
+            content = path.read_bytes()
+            digest = hashlib.sha256(content).hexdigest()
+            if mode != artifact["mode"] or digest != artifact["sha256"]:
+                raise ValueError(f"private acceptance artifact mismatch: {case_id}")
+            if any(
+                value and value.encode("utf-8") in content
+                for value in credential_values
+            ):
+                raise ValueError("private acceptance artifact contains a credential")
+
+        for private_path in case_root.rglob("*"):
+            if private_path.is_symlink():
+                raise ValueError("private acceptance evidence contains a symlink")
+            if private_path.is_file():
+                content = private_path.read_bytes()
+                if any(
+                    value and value.encode("utf-8") in content
+                    for value in credential_values
+                ):
+                    raise ValueError("private acceptance evidence contains a credential")
+
+        if "state.json" in artifact_names:
+            state = _read_json_object(case_root / "state.json", "state")
+            if state.get("status") != "completed" or not state.get("assistant_text"):
+                raise ValueError(f"private acceptance state is incomplete: {case_id}")
+            final = (case_root / "final.txt").read_text(encoding="utf-8").strip()
+            if not final or final != str(state["assistant_text"]).strip():
+                raise ValueError(f"private acceptance final is invalid: {case_id}")
+            lines = (case_root / "events.jsonl").read_text(encoding="utf-8").splitlines()
+            try:
+                events = [json.loads(line) for line in lines if line]
+            except json.JSONDecodeError as error:
+                raise ValueError(f"private acceptance events are invalid: {case_id}") from error
+            if not events or events[-1].get("type") != "agent_settled":
+                raise ValueError(f"private acceptance events are incomplete: {case_id}")
+            if cast(dict[str, object], case["counts"]).get("events") != len(events):
+                raise ValueError(f"private acceptance event count mismatch: {case_id}")
+
+        if "eval_result.json" in artifact_names:
+            evaluation = _read_json_object(case_root / "eval_result.json", "evaluation")
+            fingerprint = evaluation.get("judge_request_fingerprint")
+            if evaluation.get("is_correct") is not True or not (
+                isinstance(fingerprint, str) and SHA256.fullmatch(fingerprint)
+            ):
+                raise ValueError(f"private Judge evidence is invalid: {case_id}")
+
+    judge_root = root / "one-row-pi-judge"
+    private_tree = judge_root / "private-tree"
+    expected_private_files = cast(
+        dict[str, int], indexed["one-row-pi-judge"]["counts"]
+    )["private_files"]
+    if (
+        not private_tree.is_dir()
+        or sum(path.is_file() for path in private_tree.rglob("*"))
+        != expected_private_files
+    ):
+        raise ValueError("private Pi-plus-Judge file inventory is incomplete")
+    summary = _read_json_object(judge_root / "summary.json", "summary")
+    summary_counts = summary.get("counts")
+    result = _read_json_object(judge_root / "result.json", "result")
+    if (
+        not isinstance(summary_counts, dict)
+        or summary_counts.get("total") != 1
+        or summary_counts.get("correct") != 1
+        or result.get("status") != "completed"
+        or result.get("is_correct") is not True
+    ):
+        raise ValueError("private Pi-plus-Judge evidence is incomplete")
+
+    reuse_root = root / "one-row-exact-reuse"
+    for name in (
+        "events.jsonl",
+        "eval_result.json",
+        "protocol/attempt-0001.events.jsonl",
+    ):
+        before = judge_root / name
+        after = reuse_root / name
+        if (
+            hashlib.sha256(before.read_bytes()).hexdigest()
+            != hashlib.sha256(after.read_bytes()).hexdigest()
+            or before.stat().st_mtime_ns != after.stat().st_mtime_ns
+        ):
+            raise ValueError("private exact-reuse evidence changed")
+    return len(cases)
+
+
+def validate_acceptance_reference(root: Path, value: object) -> int:
+    """Resolve the canonical acceptance manifest through its matrix digest binding."""
+    if not isinstance(value, dict):
+        raise ValueError("product acceptance reference must be an object")
+    reference = cast(dict[str, object], value)
+    _require_exact_fields(reference, ACCEPTANCE_REFERENCE_FIELDS, "product acceptance")
+    if reference["path"] != ACCEPTANCE_PATH.as_posix():
+        raise ValueError("product acceptance path is not canonical")
+    path = root / ACCEPTANCE_PATH
+    if not path.is_file():
+        raise ValueError("product acceptance path does not exist")
+    digest = hashlib.sha256(path.read_bytes()).hexdigest()
+    if reference["sha256"] != digest:
+        raise ValueError("product acceptance SHA-256 mismatch")
+    document = json.loads(path.read_text(encoding="utf-8"))
+    cases = validate_acceptance_document(
+        document, credential_values=_credential_values_from_environment()
+    )
+    if reference["case_count"] != len(REQUIRED_PROVIDER_CASES) or len(cases) != len(
+        REQUIRED_PROVIDER_CASES
+    ):
+        raise ValueError("product acceptance case count mismatch")
+    return len(cases)
 
 
 def _safe_repo_file(root: Path, value: object, label: str) -> str:
@@ -380,6 +745,7 @@ def validate_product_matrix(
     if matrix["schema"] != SCHEMA:
         raise ValueError("unsupported product matrix schema")
     inventory_selectors = validate_batch_inventory(root, matrix["batch_inventory"])
+    validate_acceptance_reference(root, matrix["product_acceptance"])
     validate_launcher_pairs(root)
     raw_rows = matrix["rows"]
     if not isinstance(raw_rows, list):
@@ -484,8 +850,10 @@ def run_local_evidence(
     for row in rows:
         for evidence in cast(list[dict[str, object]], row["local_evidence"]):
             _validate_argv(root, evidence.get("argv"))
-    inventory = load_product_matrix(root)["batch_inventory"]
+    matrix = load_product_matrix(root)
+    inventory = matrix["batch_inventory"]
     delegated = validate_batch_inventory(root, inventory)
+    accepted = validate_acceptance_reference(root, matrix["product_acceptance"])
     _validate_batch_evidence_link(rows, delegated)
     results: list[dict[str, object]] = []
     batch_passed = False
@@ -520,6 +888,7 @@ def run_local_evidence(
     return {
         "rows": results,
         "provider_backed_executed": 0,
+        "bounded_acceptance": f"{accepted}/{len(REQUIRED_PROVIDER_CASES)}",
         "delegated_inventory": f"{len(delegated) if batch_passed else 0}/533",
         "launcher_pairs": f"{len(launchers) if batch_passed else 0}/12",
         "batch_extra_selectors": f"{len(BATCH_EXTRA_SELECTORS) if batch_passed else 0}/6",
@@ -758,9 +1127,21 @@ def run_installed_product_proof(root: Path) -> dict[str, object]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--validate-only", action="store_true")
+    parser.add_argument("--acceptance-root", type=Path)
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     rows = validate_product_matrix(root, load_product_matrix(root))
+    if args.acceptance_root is not None:
+        manifest = json.loads((root / ACCEPTANCE_PATH).read_text(encoding="utf-8"))
+        cases = validate_acceptance_document(
+            manifest, credential_values=_credential_values_from_environment()
+        )
+        verified = validate_acceptance_artifacts(
+            args.acceptance_root,
+            cases,
+            credential_values=_credential_values_from_environment(),
+        )
+        print(f"private-acceptance {verified}/{len(REQUIRED_PROVIDER_CASES)}")
     if args.validate_only:
         for row in rows:
             print(f"{row['id']} VALID")
@@ -772,6 +1153,7 @@ def main() -> int:
     print(f"launcher-pairs {result['launcher_pairs']}")
     print(f"batch-extra-selectors {result['batch_extra_selectors']}")
     print(f"provider-backed-executed {result['provider_backed_executed']}")
+    print(f"bounded-acceptance {result['bounded_acceptance']}")
     return 0 if all(row["status"] == "PASS" for row in result["rows"]) else 1
 
 
