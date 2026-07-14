@@ -620,3 +620,5 @@
 - 03:16 AF-240 closure ownership and scope-label repairs are committed after independent review. [b15d5f1]
 - 03:18 AF-240 reviewed recovery boundary now names both closure and repair commits accurately. [f4b074d]
 - 03:24 AF-250 plan defines eight executable product rows, 533 delegated batch rows, seven bounded real cases, and four governed Climb hypotheses.
+- 03:25 AF-250 executable product-matrix plan is committed to govern final migration evidence. [d8a2c0f]
+- 03:28 AF-250 Task 1 plan now includes executable Climb train/eval adapters and ownership regression coverage.

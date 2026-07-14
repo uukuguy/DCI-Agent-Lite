@@ -27,6 +27,9 @@
 - Create: `assets/dci/product-parity.json`
 - Create: `tools/verify_asterion_dci_product.py`
 - Create: `tests/test_asterion_dci_product_parity.py`
+- Modify: `tests/test_climb_tools.py`
+- Modify: `tools/climb/train.sh`
+- Modify: `tools/climb/eval-local.sh`
 - Modify: `docs/status/climb/hypotheses.yaml`
 - Modify: `docs/status/climb/session-state.json`
 - Regenerate: `docs/status/climb/research-tree.md`
@@ -116,6 +119,8 @@ AF-250-H-004 bounded real evidence and final matrix closure
 ```
 
 Use session `2026-07-15-af-250-product-acceptance-matrix`; all hypotheses start `pending`, are parented to AF-250, use distinct verification commands, and may become confirmed only through `tools/climb/cycle.sh`.
+
+Add train/eval adapter branches for all four IDs. Before later tasks exist, each branch must execute four Task-1-owned matrix/governance assertions that genuinely distinguish the hypothesis; later tasks strengthen those selectors before the cycles run. Add tests that reject missing adapter IDs, duplicated selectors, wrong work-package/session ownership, and any local evaluation dimension not backed by an executable selector.
 
 - [ ] **Step 7: Verify and commit**
 
