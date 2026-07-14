@@ -493,3 +493,4 @@
 - 17:42 AF-230 Task 3 records credential-safe per-attempt Pi provenance, digests, summaries, and bounded stderr for auditable resume evidence. [8c30e6b]
 - 17:51 AF-230 Task 3 omits local origins and preserves byte-bounded UTF-8 stderr tails to prevent provenance leakage and overflow. [8f13368]
 - 17:56 AF-230 Task 3 normalizes legacy IPv4 loopbacks while preserving explicit one-character remote aliases for truthful safe provenance. [5609a9d]
+- 18:03 AF-230 Task 3 strictly parses legacy IPv4 widths and rejects overflow or unspecified origins without socket-dependent wrapping. [9e09508]
