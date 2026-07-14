@@ -15,7 +15,9 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from pathlib import PurePosixPath
 from typing import cast
+from urllib.parse import unquote, urlsplit
 
 
 MATRIX_PATH = Path("assets/dci/product-parity.json")
@@ -118,6 +120,16 @@ LAUNCHER_RELATIVES = (
     "qa/run_triviaqa_test_sample50.sh",
 )
 _VERIFIED_DYNAMIC_SELECTORS: set[str] = set()
+BATCH_EXTRA_SELECTORS = (
+    "tests.test_climb_tools.Af240InventoryTests.test_af240_inventory_maps_complete_source_surface",
+    "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_exact_result_is_reused_without_native_or_judge_work",
+    "tests.test_asterion_dci_metrics.AsterionDciMetricTests.test_normalization_matches_source_property_matrix",
+    "tests.test_asterion_dci_export.AsterionDciExportTests.test_cli_failures_are_body_free_and_module_has_no_baseline_import",
+    "tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h002_batch_semantics_keep_counts_ndcg_exports_and_reuse",
+    "tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h002_bcplus_and_bright_export_transforms_match",
+)
+EXPECTED_FAKE_ANSWER = "PRIVATE-FIXTURE-ANSWER"
+EXPECTED_FAKE_QUESTION = "PRIVATE-FIXTURE-QUESTION"
 
 
 def load_product_matrix(root: Path) -> dict[str, object]:
@@ -320,6 +332,43 @@ def _nonempty_strings(value: object, label: str) -> list[str]:
     return cast(list[str], value)
 
 
+def _validate_batch_evidence_link(
+    rows: tuple[dict[str, object], ...] | list[dict[str, object]],
+    inventory_selectors: tuple[str, ...],
+) -> dict[str, object]:
+    matches = [row for row in rows if row.get("id") == "batch-ir-analysis-and-exports"]
+    if len(matches) != 1:
+        raise ValueError("delegated inventory batch row is invalid")
+    evidence_list = matches[0].get("local_evidence")
+    if not isinstance(evidence_list, list) or len(evidence_list) != 1:
+        raise ValueError("delegated inventory evidence is invalid")
+    evidence = evidence_list[0]
+    if not isinstance(evidence, dict):
+        raise ValueError("delegated inventory evidence is invalid")
+    selectors = evidence.get("selectors")
+    argv = evidence.get("argv")
+    expected = (*inventory_selectors, *BATCH_EXTRA_SELECTORS)
+    if (
+        not isinstance(selectors, list)
+        or tuple(selectors) != expected
+        or len(set(selectors)) != len(selectors)
+        or not isinstance(argv, list)
+        or tuple(argv) != (*UNITTEST_PREFIX, *expected)
+    ):
+        raise ValueError("delegated inventory evidence is not exact")
+    launcher_selectors = tuple(
+        selector
+        for selector in inventory_selectors
+        if selector.startswith(
+            "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests."
+        )
+        and "_launcher_" in selector
+    )
+    if len(launcher_selectors) != 12 or len(set(launcher_selectors)) != 12:
+        raise ValueError("delegated inventory launcher selectors are not exact")
+    return evidence
+
+
 def validate_product_matrix(
     root: Path, document: object
 ) -> tuple[dict[str, object], ...]:
@@ -330,7 +379,7 @@ def validate_product_matrix(
     _require_exact_fields(matrix, MATRIX_FIELDS, "matrix")
     if matrix["schema"] != SCHEMA:
         raise ValueError("unsupported product matrix schema")
-    validate_batch_inventory(root, matrix["batch_inventory"])
+    inventory_selectors = validate_batch_inventory(root, matrix["batch_inventory"])
     validate_launcher_pairs(root)
     raw_rows = matrix["rows"]
     if not isinstance(raw_rows, list):
@@ -424,6 +473,7 @@ def validate_product_matrix(
         or set(provider_case_ids) != REQUIRED_PROVIDER_CASES
     ):
         raise ValueError("provider evidence must contain each required case exactly once")
+    _validate_batch_evidence_link(rows, inventory_selectors)
     return tuple(rows)
 
 
@@ -431,7 +481,14 @@ def run_local_evidence(
     root: Path, rows: tuple[dict[str, object], ...]
 ) -> dict[str, object]:
     """Run only validated local/model-free argv and return body-free statuses."""
+    for row in rows:
+        for evidence in cast(list[dict[str, object]], row["local_evidence"]):
+            _validate_argv(root, evidence.get("argv"))
+    inventory = load_product_matrix(root)["batch_inventory"]
+    delegated = validate_batch_inventory(root, inventory)
+    _validate_batch_evidence_link(rows, delegated)
     results: list[dict[str, object]] = []
+    batch_passed = False
     for row in rows:
         statuses: list[int] = []
         for evidence in cast(list[dict[str, object]], row["local_evidence"]):
@@ -457,14 +514,15 @@ def run_local_evidence(
                 "exit_status": max(statuses, default=1),
             }
         )
-    inventory = load_product_matrix(root)["batch_inventory"]
-    delegated = validate_batch_inventory(root, inventory)
+        if row["id"] == "batch-ir-analysis-and-exports":
+            batch_passed = bool(statuses) and all(code == 0 for code in statuses)
     launchers = validate_launcher_pairs(root)
     return {
         "rows": results,
         "provider_backed_executed": 0,
-        "delegated_inventory": f"{len(delegated)}/533",
-        "launcher_pairs": f"{len(launchers)}/12",
+        "delegated_inventory": f"{len(delegated) if batch_passed else 0}/533",
+        "launcher_pairs": f"{len(launchers) if batch_passed else 0}/12",
+        "batch_extra_selectors": f"{len(BATCH_EXTRA_SELECTORS) if batch_passed else 0}/6",
     }
 
 
@@ -507,6 +565,96 @@ def _checked_run(
     if completed.returncode != 0:
         raise RuntimeError("installed product proof command failed")
     return completed
+
+
+def _resolve_installed_artifact(
+    output_root: Path, run_directory: Path, uri: object, expected_name: str
+) -> Path:
+    if not isinstance(uri, str) or not uri:
+        raise RuntimeError("installed product proof artifact URI is invalid")
+    parsed = urlsplit(uri)
+    decoded = unquote(parsed.path)
+    path = PurePosixPath(decoded)
+    if (
+        parsed.scheme
+        or parsed.netloc
+        or parsed.query
+        or parsed.fragment
+        or decoded != expected_name
+        or path.is_absolute()
+        or ".." in path.parts
+        or "\\" in decoded
+    ):
+        raise RuntimeError("installed product proof artifact URI is invalid")
+    candidate = run_directory / expected_name
+    try:
+        resolved = candidate.resolve(strict=True)
+        root = output_root.resolve(strict=True)
+    except OSError as error:
+        raise RuntimeError("installed product proof artifact is missing") from error
+    if candidate.is_symlink() or not resolved.is_file() or not resolved.is_relative_to(root):
+        raise RuntimeError("installed product proof artifact path is invalid")
+    return resolved
+
+
+def validate_installed_application_artifacts(
+    output_root: Path, payload: object, serialized_output: str
+) -> dict[str, object]:
+    """Resolve installed projection references and return body-free proof only."""
+
+    if not isinstance(payload, dict):
+        raise RuntimeError("installed product proof projection is invalid")
+    artifacts = payload.get("artifacts")
+    if not isinstance(artifacts, list) or len(artifacts) != 1:
+        raise RuntimeError("installed product proof projection is invalid")
+    projected = artifacts[0]
+    value = projected.get("value") if isinstance(projected, dict) else None
+    if not isinstance(value, dict):
+        raise RuntimeError("installed product proof projection is invalid")
+    states = tuple(output_root.rglob("state.json"))
+    if len(states) != 1:
+        raise RuntimeError("installed product proof native state is invalid")
+    run_directory = states[0].parent
+    state_path = _resolve_installed_artifact(
+        output_root, run_directory, value.get("state_artifact_uri"), "state.json"
+    )
+    if state_path != states[0].resolve():
+        raise RuntimeError("installed product proof native artifact is mismatched")
+    final_path = _resolve_installed_artifact(
+        output_root, run_directory, value.get("answer_artifact_uri"), "final.txt"
+    )
+    try:
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        final_text = final_path.read_text(encoding="utf-8").strip()
+    except (OSError, UnicodeError, ValueError) as error:
+        raise RuntimeError("installed product proof artifact is invalid") from error
+    expected_options = {
+        "provider": "fixture-provider",
+        "model": "fixture-model",
+        "tools": "read,bash",
+        "runtime_context_level": "level3",
+        "thinking_level": "high",
+    }
+    if (
+        not isinstance(state, dict)
+        or state.get("status") != "completed"
+        or state.get("assistant_text") != EXPECTED_FAKE_ANSWER
+        or final_text != EXPECTED_FAKE_ANSWER
+        or any(state.get(name) != expected for name, expected in expected_options.items())
+    ):
+        raise RuntimeError("installed product proof artifact state is invalid")
+    if any(
+        secret in serialized_output
+        for secret in (EXPECTED_FAKE_QUESTION, EXPECTED_FAKE_ANSWER)
+    ):
+        raise RuntimeError("installed product proof output is not body-free")
+    return {
+        "installed_application": "completed",
+        "answer_artifact_uri": "final.txt",
+        "native_artifact_uri": "state.json",
+        "body_free": True,
+        "runtime_options": expected_options,
+    }
 
 
 def run_installed_product_proof(root: Path) -> dict[str, object]:
@@ -588,36 +736,22 @@ def run_installed_product_proof(root: Path) -> dict[str, object]:
                 "--runtime", "pi.reference",
                 "--application", "dci.research-capability@1.0.0",
                 "--run-id", "installed-fixture",
-                "--input", "PRIVATE-FIXTURE-QUESTION",
+                "--input", EXPECTED_FAKE_QUESTION,
             ],
             cwd=outside,
             environment=environment,
         )
         payload = json.loads(application.stdout)
-        artifact = payload["artifacts"][0]["value"]
-        states = tuple(output_root.rglob("state.json"))
-        if len(states) != 1:
-            raise RuntimeError("installed product proof native state is invalid")
-        state = json.loads(states[0].read_text(encoding="utf-8"))
         serialized = application.stdout + application.stderr
+        artifact_evidence = validate_installed_application_artifacts(
+            output_root, payload, serialized
+        )
         return {
             "dci_importable": False,
             "profiles": int(probe.stdout.strip()),
             "asterion_dci_help": help_result.returncode,
             "asterion_list": list_result.returncode,
-            "installed_application": state["status"],
-            "answer_artifact_uri": artifact["answer_artifact_uri"],
-            "native_artifact_uri": artifact["state_artifact_uri"],
-            "body_free": not any(
-                secret in serialized
-                for secret in ("PRIVATE-FIXTURE-QUESTION", "PRIVATE-FIXTURE-ANSWER")
-            ),
-            "runtime_options": {
-                name: state[name]
-                for name in (
-                    "provider", "model", "tools", "runtime_context_level", "thinking_level"
-                )
-            },
+            **artifact_evidence,
         }
 
 
@@ -636,6 +770,7 @@ def main() -> int:
         print(f"{row['id']} {row['status']} exit={row['exit_status']}")
     print(f"delegated-inventory {result['delegated_inventory']}")
     print(f"launcher-pairs {result['launcher_pairs']}")
+    print(f"batch-extra-selectors {result['batch_extra_selectors']}")
     print(f"provider-backed-executed {result['provider_backed_executed']}")
     return 0 if all(row["status"] == "PASS" for row in result["rows"]) else 1
 

@@ -656,3 +656,6 @@
 - 04:50 AF-250 Task 4 RED confirms the product verifier lacks 533-selector execution, exact 12-pair launcher composition, installed-wheel isolation, and installed fake-Pi application proof.
 - 04:59 AF-250 Task 4 GREEN passes 106 focused tests, all eight model-free product rows, 533/533 delegated selectors, 12/12 launcher pairs, isolated-wheel/application execution, compile, Ruff, scope, and diff gates with zero provider-backed commands.
 - 05:01 AF-250 Task 4 composes installed product proof and all delegated model-free evidence. [62395ec]
+- 05:21 AF-250 Task 4 review RED reproduces unlinked delegated counts and unverified installed artifact URI/file claims.
+- 05:21 AF-250 Task 4 review repair passes 110 focused tests, exact 533+6 linkage, resolved artifacts, static, scope, and diff gates.
+- 05:23 AF-250 Task 4 independent re-review approves exact execution linkage and installed artifact validation with no findings.

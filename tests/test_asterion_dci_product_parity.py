@@ -559,6 +559,52 @@ class AsterionDciProductParityTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "launcher pairs"):
                 product_verifier.validate_launcher_pairs(root)
 
+    def test_batch_row_is_exactly_linked_to_all_delegated_inventory_selectors(
+        self,
+    ) -> None:
+        inventory = tuple(
+            row["current_verification_tests"][0]
+            for row in json.loads(
+                (ROOT / "assets/dci/batch-parity.json").read_text(encoding="utf-8")
+            )["rows"]
+        )
+        mutations = []
+        missing = copy.deepcopy(self.document)
+        missing_evidence = missing["rows"][4]["local_evidence"][0]
+        missing_evidence["selectors"].remove(inventory[10])
+        missing_evidence["argv"].remove(inventory[10])
+        mutations.append(missing)
+        substituted = copy.deepcopy(self.document)
+        substituted_evidence = substituted["rows"][4]["local_evidence"][0]
+        replacement = next(iter(EXPECTED_BEHAVIOR_SELECTORS["configuration-and-pi-argv"]))
+        index = substituted_evidence["selectors"].index(inventory[11])
+        substituted_evidence["selectors"][index] = replacement
+        substituted_evidence["argv"][len(product_verifier.UNITTEST_PREFIX) + index] = replacement
+        mutations.append(substituted)
+        duplicate = copy.deepcopy(self.document)
+        duplicate_evidence = duplicate["rows"][4]["local_evidence"][0]
+        duplicate_evidence["selectors"].append(inventory[12])
+        duplicate_evidence["argv"].append(inventory[12])
+        mutations.append(duplicate)
+        for document in mutations:
+            with self.subTest(kind=mutations.index(document)):
+                with self.assertRaisesRegex(ValueError, "delegated inventory"):
+                    validate_product_matrix(ROOT, document)
+
+    def test_delegated_count_requires_the_linked_batch_command_to_pass(self) -> None:
+        rows = self._validated_rows()
+
+        def execute(argv: object, **_: object) -> subprocess.CompletedProcess[str]:
+            selectors = tuple(argv) if isinstance(argv, tuple) else tuple(argv)
+            status = 1 if len(selectors) > 500 else 0
+            return subprocess.CompletedProcess(selectors, status)
+
+        with mock.patch("subprocess.run", side_effect=execute):
+            result = run_local_evidence(ROOT, rows)
+        self.assertEqual(result["delegated_inventory"], "0/533")
+        self.assertEqual(result["launcher_pairs"], "0/12")
+        self.assertEqual(result["batch_extra_selectors"], "0/6")
+
     def test_matrix_rejects_unknown_fields_and_duplicate_ids(self) -> None:
         unknown = copy.deepcopy(self.document)
         unknown["extra"] = True
@@ -761,6 +807,7 @@ class AsterionDciProductParityTests(unittest.TestCase):
         self.assertNotIn("secret", json.dumps(result))
         self.assertEqual(result["delegated_inventory"], "533/533")
         self.assertEqual(result["launcher_pairs"], "12/12")
+        self.assertEqual(result["batch_extra_selectors"], "6/6")
         for call in run.call_args_list:
             self.assertIs(call.kwargs["shell"], False)
             self.assertEqual(call.kwargs["cwd"], ROOT)
@@ -1274,6 +1321,103 @@ class AsterionDciProductParityTests(unittest.TestCase):
                 "thinking_level": "high",
             },
         )
+
+    def test_installed_artifact_validation_rejects_missing_or_mismatched_files(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output_root = Path(temporary_directory)
+            run = output_root / "installed-fixture"
+            run.mkdir()
+            state = {
+                "status": "completed",
+                "assistant_text": "PRIVATE-FIXTURE-ANSWER",
+                "provider": "fixture-provider",
+                "model": "fixture-model",
+                "tools": "read,bash",
+                "runtime_context_level": "level3",
+                "thinking_level": "high",
+            }
+            payload = {
+                "artifacts": [{"value": {
+                    "answer_artifact_uri": "final.txt",
+                    "state_artifact_uri": "state.json",
+                }}]
+            }
+            (run / "state.json").write_text(json.dumps(state), encoding="utf-8")
+            (run / "final.txt").write_text(
+                "PRIVATE-FIXTURE-ANSWER\n", encoding="utf-8"
+            )
+            evidence = product_verifier.validate_installed_application_artifacts(
+                output_root, payload, "body-free projection"
+            )
+            self.assertTrue(evidence["body_free"])
+            (run / "final.txt").unlink()
+            with self.assertRaisesRegex(RuntimeError, "artifact"):
+                product_verifier.validate_installed_application_artifacts(
+                    output_root, payload, "body-free projection"
+                )
+            (run / "final.txt").write_text(
+                "PRIVATE-FIXTURE-ANSWER\n", encoding="utf-8"
+            )
+            for invalid_uri in (
+                "other.json",
+                "file:///state.json",
+                "../state.json",
+                "%2e%2e/state.json",
+            ):
+                mismatched = copy.deepcopy(payload)
+                mismatched["artifacts"][0]["value"][
+                    "state_artifact_uri"
+                ] = invalid_uri
+                with self.subTest(uri=invalid_uri), self.assertRaisesRegex(
+                    RuntimeError, "artifact"
+                ):
+                    product_verifier.validate_installed_application_artifacts(
+                        output_root, mismatched, "body-free projection"
+                    )
+            (run / "final.txt").write_text("\n", encoding="utf-8")
+            with self.assertRaisesRegex(RuntimeError, "artifact"):
+                product_verifier.validate_installed_application_artifacts(
+                    output_root, payload, "body-free projection"
+                )
+            (run / "final.txt").write_text(
+                "PRIVATE-FIXTURE-ANSWER\n", encoding="utf-8"
+            )
+            (run / "state.json").unlink()
+            with self.assertRaisesRegex(RuntimeError, "state"):
+                product_verifier.validate_installed_application_artifacts(
+                    output_root, payload, "body-free projection"
+                )
+
+    def test_installed_artifact_validation_rejects_body_output(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output_root = Path(temporary_directory)
+            run = output_root / "installed-fixture"
+            run.mkdir()
+            (run / "state.json").write_text(
+                json.dumps({
+                    "status": "completed",
+                    "assistant_text": "PRIVATE-FIXTURE-ANSWER",
+                    "provider": "fixture-provider",
+                    "model": "fixture-model",
+                    "tools": "read,bash",
+                    "runtime_context_level": "level3",
+                    "thinking_level": "high",
+                }),
+                encoding="utf-8",
+            )
+            (run / "final.txt").write_text(
+                "PRIVATE-FIXTURE-ANSWER\n", encoding="utf-8"
+            )
+            payload = {"artifacts": [{"value": {
+                "answer_artifact_uri": "final.txt",
+                "state_artifact_uri": "state.json",
+            }}]}
+            with self.assertRaisesRegex(RuntimeError, "body-free"):
+                product_verifier.validate_installed_application_artifacts(
+                    output_root, payload, "PRIVATE-FIXTURE-ANSWER"
+                )
 
     # AF-250-H-004: bounded evidence and final matrix closure governance.
     def test_af250_h004_all_rows_are_supported(self) -> None:
