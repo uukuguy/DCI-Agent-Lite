@@ -19,6 +19,7 @@ from unittest import mock
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+import asterion.dci.export as export_module
 from asterion.dci.cli import main as cli_main
 from asterion.dci.export import (
     CANARY,
@@ -245,6 +246,40 @@ class AsterionDciExportTests(unittest.TestCase):
             with self.assertRaises(DciExportError): export_subset(source, output)
             _parquet(source / "p.parquet", [{"id": "1", "query": None, "answer": "A"}])
             with self.assertRaises(DciExportError): export_bcplus_qa(source, root / "qa.jsonl", decrypt=False)
+
+    def test_multibyte_names_fit_portable_component_limits(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td).resolve(); source = root / "source"; output = root / "output"
+            _parquet(source / "p.parquet", [
+                {"docid": "文" * 300, "text": f"Title: {'界' * 300}\none", "url": "https://example.com/a"},
+                {"docid": "文" * 299 + "二", "text": f"Title: {'界' * 300}\ntwo", "url": "https://example.com/b"},
+            ])
+            self.assertEqual(export_bcplus(source, output), 2)
+            names = [path.name for path in (output / "example.com").iterdir()]
+            self.assertEqual(len(names), 2)
+            self.assertTrue(all(len(name.encode("utf-8")) <= 240 for name in names))
+            self.assertTrue(all(len(name.encode("utf-16-le")) // 2 <= 240 for name in names))
+
+    def test_qa_publication_keeps_open_directory_authority_across_rebind(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td).resolve(); source = root / "source"; parent = root / "parent"
+            authority = root / "held-parent"; attacker = root / "attacker"; attacker.mkdir()
+            _parquet(source / "p.parquet", [{"id": "1", "query": "q", "answer": "a"}])
+            original = export_module._remove_stale_temporaries
+            rebound = False
+
+            def rebind(directory: object) -> None:
+                nonlocal rebound
+                original(directory)
+                if not rebound:
+                    parent.rename(authority)
+                    parent.symlink_to(attacker, target_is_directory=True)
+                    rebound = True
+
+            with mock.patch.object(export_module, "_remove_stale_temporaries", side_effect=rebind):
+                self.assertEqual(export_bcplus_qa(source, parent / "qa.jsonl", decrypt=False), 1)
+            self.assertEqual(json.loads((authority / "qa.jsonl").read_text())["query"], "q")
+            self.assertFalse((attacker / "qa.jsonl").exists())
 
     def test_cli_failures_are_body_free_and_module_has_no_baseline_import(self) -> None:
         err = io.StringIO(); out = io.StringIO()
