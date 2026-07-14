@@ -477,6 +477,111 @@ class AsterionDciCliTests(unittest.TestCase):
             evaluate.assert_not_called()
             resume.assert_not_called()
 
+    def test_run_and_resume_reject_symlink_output_paths_before_downstream(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            dangling_target = root / "dangling-target"
+            dangling = root / "dangling-output"
+            dangling.symlink_to(dangling_target, target_is_directory=True)
+            real_parent = root / "real-parent"
+            real_parent.mkdir()
+            linked_parent = root / "linked-parent"
+            linked_parent.symlink_to(real_parent, target_is_directory=True)
+            cases = (
+                (dangling, dangling_target),
+                (linked_parent / "run", real_parent / "run"),
+            )
+            for supplied, forbidden_target in cases:
+                with (
+                    self.subTest(command="run", supplied=supplied),
+                    patch("asterion.dci.cli.run_pi_research") as run,
+                ):
+                    stderr = io.StringIO()
+                    code = main(
+                        ["run", "--output-dir", str(supplied), "question"],
+                        repo_root=root,
+                        stdin=io.StringIO(),
+                        stdout=io.StringIO(),
+                        stderr=stderr,
+                    )
+                    self.assertEqual(code, 2)
+                    self.assertEqual(stderr.getvalue(), "DCI Pi execution failed\n")
+                    run.assert_not_called()
+                    self.assertFalse(forbidden_target.exists())
+
+                with (
+                    self.subTest(command="resume", supplied=supplied),
+                    patch("asterion.dci.cli.resume_request_from_output_dir") as resume,
+                    patch("asterion.dci.cli.run_pi_research") as run,
+                ):
+                    stderr = io.StringIO()
+                    code = main(
+                        ["resume", "--output-dir", str(supplied)],
+                        repo_root=root,
+                        stdout=io.StringIO(),
+                        stderr=stderr,
+                    )
+                    self.assertEqual(code, 2)
+                    self.assertEqual(stderr.getvalue(), "DCI Pi execution failed\n")
+                    resume.assert_not_called()
+                    run.assert_not_called()
+                    self.assertFalse(forbidden_target.exists())
+
+    def test_default_and_benchmark_output_roots_preserve_symlinks_for_rejection(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            run_target = root / "run-target"
+            run_link = root / "run-link"
+            run_link.symlink_to(run_target, target_is_directory=True)
+            with (
+                patch.dict(
+                    os.environ,
+                    {"ASTERION_DCI_OUTPUT_ROOT": str(run_link)},
+                    clear=True,
+                ),
+                patch("asterion.dci.cli.run_pi_research") as run,
+            ):
+                stderr = io.StringIO()
+                self.assertEqual(
+                    main(
+                        ["run", "question"],
+                        repo_root=root,
+                        stdin=io.StringIO(),
+                        stdout=io.StringIO(),
+                        stderr=stderr,
+                    ),
+                    2,
+                )
+                self.assertEqual(stderr.getvalue(), "DCI Pi execution failed\n")
+                run.assert_not_called()
+                self.assertFalse(run_target.exists())
+
+            benchmark_target = root / "benchmark-target"
+            benchmark_link = root / "benchmark-link"
+            benchmark_link.symlink_to(benchmark_target, target_is_directory=True)
+            with patch("asterion.dci.cli.run_benchmark") as benchmark:
+                stderr = io.StringIO()
+                self.assertEqual(
+                    main(
+                        [
+                            "benchmark",
+                            "--dataset",
+                            "data.jsonl",
+                            "--output-root",
+                            str(benchmark_link),
+                        ],
+                        repo_root=root,
+                        stdout=io.StringIO(),
+                        stderr=stderr,
+                    ),
+                    2,
+                )
+                self.assertEqual(stderr.getvalue(), "DCI benchmark failed\n")
+                benchmark.assert_not_called()
+                self.assertFalse(benchmark_target.exists())
+
     def test_asterion_examples_use_shared_env_and_package_command(self) -> None:
         for path in (
             ROOT / "scripts/examples/asterion_dci_basic_example.sh",
@@ -745,7 +850,7 @@ class AsterionDciCliTests(unittest.TestCase):
 
     def test_resume_maps_existing_run_directory_to_a_resume_request(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
+            root = Path(temporary_directory).resolve()
             output_dir = root / "run"
             output_dir.mkdir()
             (output_dir / "state.json").write_text(

@@ -71,7 +71,7 @@ def resolve_dci_paths(repo_root: Path) -> DciPaths:
         pi_dir / ".pi" / "agent",
         root=root,
     )
-    output_root = _configured_path(
+    output_root = _configured_output_path(
         "ASTERION_DCI_OUTPUT_ROOT", root / "outputs" / "asterion-dci-runs", root=root
     )
     return DciPaths(
@@ -96,12 +96,16 @@ def resolve_dci_runtime_options(
         model=_override_or_env(values, "model", "DCI_MODEL"),
         tools=str(_override_or_env(values, "tools", "DCI_TOOLS", "read,bash")),
         timeout_seconds=_timeout_value(
-            _override_or_env(values, "timeout_seconds", "DCI_RPC_TIMEOUT_SECONDS", "3600")
+            _override_or_env(
+                values, "timeout_seconds", "DCI_RPC_TIMEOUT_SECONDS", "3600"
+            )
         ),
         runtime_context_level=_override_or_env(
             values, "runtime_context_level", "DCI_RUNTIME_CONTEXT_LEVEL"
         ),
-        thinking_level=_override_or_env(values, "thinking_level", "DCI_PI_THINKING_LEVEL"),
+        thinking_level=_override_or_env(
+            values, "thinking_level", "DCI_PI_THINKING_LEVEL"
+        ),
         node_max_old_space_size_mb=_optional_positive_int(
             _override_or_env(
                 values, "node_max_old_space_size_mb", "DCI_NODE_MAX_OLD_SPACE_SIZE_MB"
@@ -113,7 +117,10 @@ def resolve_dci_runtime_options(
 
 
 def _override_or_env(
-    values: Mapping[str, object], key: str, environment_name: str, default: object = None
+    values: Mapping[str, object],
+    key: str,
+    environment_name: str,
+    default: object = None,
 ) -> object:
     if key in values:
         return values[key]
@@ -154,10 +161,23 @@ def _configured_path(name: str, default: Path, *, root: Path) -> Path:
     return path.resolve()
 
 
+def _configured_output_path(name: str, default: Path, *, root: Path) -> Path:
+    """Resolve destination syntax without following security-relevant symlinks."""
+
+    value = os.environ.get(name, "").strip()
+    path = Path(value).expanduser() if value else default
+    if not path.is_absolute():
+        path = root / path
+    return Path(os.path.normpath(path))
+
+
 def _configured_path_shared(
     shared_name: str, alias_name: str, default: Path, *, root: Path
 ) -> Path:
-    value = os.environ.get(shared_name, "").strip() or os.environ.get(alias_name, "").strip()
+    value = (
+        os.environ.get(shared_name, "").strip()
+        or os.environ.get(alias_name, "").strip()
+    )
     path = Path(value).expanduser() if value else default
     if not path.is_absolute():
         path = root / path

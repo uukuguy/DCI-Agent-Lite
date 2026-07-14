@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import secrets
 import stat
 import sys
@@ -133,10 +134,15 @@ def main(
         return 0
     if args.command == "benchmark":
         try:
+            benchmark_output_root = _output_path_from_invocation(
+                args.output_root, invocation_cwd
+            )
+            if _path_has_symlink(benchmark_output_root):
+                raise ValueError("benchmark destination is unsafe")
             result = run_benchmark(
                 BenchmarkRequest(
                     dataset=args.dataset,
-                    output_root=args.output_root,
+                    output_root=benchmark_output_root,
                     cwd=_absolute_from_invocation(args.cwd, invocation_cwd),
                     judge_config=JudgeConfig.from_env(),
                     runtime_options=_runtime_options(args),
@@ -177,7 +183,9 @@ def main(
             return 2
     if args.command == "resume":
         try:
-            output_dir = _absolute_from_invocation(args.output_dir, invocation_cwd)
+            output_dir = _output_path_from_invocation(args.output_dir, invocation_cwd)
+            if _path_has_symlink(output_dir):
+                raise ValueError("run destination is unsafe")
             request = resume_request_from_output_dir(output_dir)
             result = run_pi_research(paths, request, output_dir=output_dir)
         except (DciRunError, OSError, ValueError):
@@ -247,11 +255,11 @@ def main(
         run_id = args.run_id or _new_run_id()
         request = replace(request, run_id=run_id)
         output_dir = (
-            _absolute_from_invocation(args.output_dir, invocation_cwd)
+            _output_path_from_invocation(args.output_dir, invocation_cwd)
             if args.output_dir is not None
             else paths.output_root / run_id
         )
-        if output_dir.exists() or output_dir.is_symlink():
+        if _path_has_symlink(output_dir) or output_dir.exists():
             raise ValueError("run destination already exists")
     except (OSError, RuntimeError, ValueError):
         stderr.write("DCI Pi execution failed\n")
@@ -299,6 +307,15 @@ def _absolute_from_invocation(path: Path, invocation_cwd: Path) -> Path:
     if not candidate.is_absolute():
         candidate = invocation_cwd / candidate
     return candidate.resolve()
+
+
+def _output_path_from_invocation(path: Path, invocation_cwd: Path) -> Path:
+    """Make a destination absolute without erasing security-relevant links."""
+
+    candidate = path.expanduser()
+    if not candidate.is_absolute():
+        candidate = invocation_cwd / candidate
+    return Path(os.path.normpath(candidate))
 
 
 def _resolve_resource(

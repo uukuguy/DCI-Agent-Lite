@@ -83,6 +83,9 @@ boundary before prompt rendering.
 Omitting `--run-id` creates a collision-resistant UTC-and-random identifier
 under `outputs/asterion-dci-runs/`. An explicit `--run-id` remains stable, and
 an existing explicit ID or `--output-dir` is rejected rather than reused.
+Run, resume, configured default, and benchmark destination paths preserve their
+original directory entries for no-follow checks; dangling links and symlinked
+ancestors are rejected instead of being resolved to their targets.
 
 The following `run`-only controls shape `conversation.json` without changing
 the complete evidence in `conversation_full.json`:
