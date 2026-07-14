@@ -383,6 +383,42 @@ class AsterionDciExportTests(unittest.TestCase):
             with self.assertRaises(DciExportError):
                 export_bcplus_qa(source, root / "qa.jsonl", decrypt=False)
 
+    def test_nested_interrupted_files_recover_and_reserved_names_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td).resolve()
+            source = root / "source"
+            output = root / "output"
+            nested = output / "nested"
+            nested.mkdir(parents=True)
+            (nested / ".asterion-dci-export-tmp-crashed").write_text("partial")
+            (nested / ".tmp-user-work").write_text("unrelated")
+            _parquet(
+                source / "p.parquet",
+                [{"id": "nested/a.txt", "content": "A"}],
+            )
+            self.assertEqual(export_subset(source, output), 1)
+            self.assertFalse(
+                (nested / ".asterion-dci-export-tmp-crashed").exists()
+            )
+            self.assertEqual((nested / ".tmp-user-work").read_text(), "unrelated")
+            _parquet(
+                source / "p.parquet",
+                [{"id": ".dci_export_complete", "content": "forged"}],
+            )
+            with self.assertRaises(DciExportError):
+                export_subset(source, output)
+            self.assertFalse((output / ".dci_export_complete").exists())
+            _parquet(
+                source / "p.parquet",
+                [{"id": "1", "query": "q", "answer": "a"}],
+            )
+            with self.assertRaises(DciExportError):
+                export_bcplus_qa(
+                    source,
+                    root / ".asterion-dci-export.lock",
+                    decrypt=False,
+                )
+
     def test_multibyte_names_fit_portable_component_limits(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             root = Path(td).resolve()
