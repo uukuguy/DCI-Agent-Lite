@@ -714,7 +714,7 @@ class Af240InventoryTests(unittest.TestCase):
         owner["rows"][0].update(
             implementation_status="implemented",
             current_asterion_owner="asterion.dci.analysis",
-            current_symbol="compute_detailed_analysis",
+            current_symbol="absent_symbol",
             current_verification_tests=[
                 "tests.test_climb_tools.Af240InventoryTests.test_af240_h003_analysis_mapping_readiness"
             ],

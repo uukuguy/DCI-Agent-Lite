@@ -215,11 +215,15 @@ name = "asterion"
 version = "0.1.0"
 source = { editable = "packages/python/asterion-core" }
 dependencies = [
+    { name = "matplotlib" },
     { name = "python-dotenv" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "python-dotenv", specifier = ">=1.0.0" }]
+requires-dist = [
+    { name = "matplotlib", specifier = ">=3.8.0" },
+    { name = "python-dotenv", specifier = ">=1.0.0" },
+]
 
 [[package]]
 name = "asterion-workspace"

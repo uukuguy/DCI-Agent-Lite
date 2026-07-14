@@ -11,6 +11,7 @@ import secrets
 import stat
 import threading
 from dataclasses import dataclass, replace
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -35,6 +36,12 @@ from asterion.dci.evaluation import (
     evaluate_run_directory_async,
 )
 from asterion.dci.judge import JudgeConfig, judge_request_fingerprint
+from asterion.dci.analysis import (
+    aggregate_results,
+    gather_query_metrics,
+    write_analysis_artifacts,
+)
+from asterion.dci.metrics import compute_ir_ndcg
 from asterion.dci.run import (
     DciRunResult,
     request_from_runtime_options,
@@ -119,14 +126,19 @@ async def run_benchmark_async(
 
         async def worker(index: int, row: BenchmarkRow) -> tuple[int, dict[str, object]]:
             async with semaphore:
-                return index, await _run_row(
+                started_at = _utc_now()
+                prior_timing = _read_query_timing(lock, row.query_id)
+                value = await _run_row(
                     request,
                     paths,
                     lock,
                     row,
                     row_documents[index],
                     snapshot_authority,
+                    timing_started_at=started_at,
+                    prior_timing=prior_timing,
                 )
+                return index, value
 
         tasks = [
             asyncio.create_task(worker(index, row)) for index, row in enumerate(rows)
@@ -139,8 +151,11 @@ async def run_benchmark_async(
             for task in done:
                 index, value = task.result()
                 results[index] = value
-            _publish_aggregates(lock, results)
+            _publish_aggregates(lock, results, request=request, rows=rows)
         counts = _counts(results)
+        _publish_aggregates(
+            lock, results, request=request, rows=rows, include_analysis=True
+        )
         _publish_batch_state(lock, "completed", results)
         return BenchmarkResult(output_root=output_root, counts=counts)
     except asyncio.CancelledError:
@@ -157,7 +172,9 @@ async def run_benchmark_async(
             trusted=results,
             missing_status="not_started",
         )
-        _publish_aggregates(lock, results)
+        _publish_aggregates(
+            lock, results, request=request, rows=rows, include_analysis=True
+        )
         _publish_batch_state(lock, "cancelled", results)
         raise
     except BaseException:
@@ -174,7 +191,9 @@ async def run_benchmark_async(
             trusted=results,
             missing_status="not_started",
         )
-        _publish_aggregates(lock, results)
+        _publish_aggregates(
+            lock, results, request=request, rows=rows, include_analysis=True
+        )
         _publish_batch_state(lock, "failed", results)
         raise
     finally:
@@ -220,6 +239,8 @@ def _prepare(
         raise DciBenchmarkError("DCI benchmark limit is invalid")
     if request.resume_policy not in {"compatible", "fresh", "reuse"}:
         raise DciBenchmarkError("DCI benchmark resume policy is invalid")
+    if request.figures and not request.analysis:
+        raise DciBenchmarkError("DCI benchmark figures require analysis")
     try:
         dataset_raw = _read_input_snapshot(request.dataset)
         rows = load_benchmark_rows_bytes(dataset_raw)
@@ -316,8 +337,13 @@ async def _run_row(
     row: BenchmarkRow,
     item: dict[str, object],
     snapshots: _SnapshotAuthority,
+    *,
+    timing_started_at: str,
+    prior_timing: dict[str, Any] | None,
 ) -> dict[str, object]:
     query = lock.open_query(row.query_id)
+    agent_started_at: str | None = None
+    agent_finished_at: str | None = None
     try:
         existing_item = query.read_optional_json("item.json")
         if existing_item is not None:
@@ -354,6 +380,15 @@ async def _run_row(
                 except _StaleJudgeResult:
                     pass
                 else:
+                    _write_query_timing(
+                        query,
+                        existing,
+                        prior_timing=prior_timing,
+                        started_at=timing_started_at,
+                        finished_at=_utc_now(),
+                        agent_started_at=agent_started_at,
+                        agent_finished_at=agent_finished_at,
+                    )
                     return existing
             finally:
                 native.close()
@@ -361,6 +396,15 @@ async def _run_row(
         if request.resume_policy == "reuse":
             result = _failed_result(row.query_id, item["row_fingerprint"], "failed")
             query.write_json("result.json", result)
+            _write_query_timing(
+                query,
+                result,
+                prior_timing=prior_timing,
+                started_at=timing_started_at,
+                finished_at=_utc_now(),
+                agent_started_at=agent_started_at,
+                agent_finished_at=agent_finished_at,
+            )
             return result
 
         if request.resume_policy == "fresh" or generation is None:
@@ -399,17 +443,21 @@ async def _run_row(
                         extra_args=request.runtime_options.extra_args,
                         _directory_fd=native_authority.fd,
                     )
-                await _run_pi_async(
-                    paths,
-                    native_request,
-                    output_dir=native_dir,
-                    output_directory_fd=native_authority.fd,
-                    resource_fds=snapshots.fds,
-                    system_prompt_override=snapshots.paths.get("system_prompt_file"),
-                    append_system_prompt_override=snapshots.paths.get(
-                        "append_system_prompt_file"
-                    ),
-                )
+                agent_started_at = _utc_now()
+                try:
+                    await _run_pi_async(
+                        paths,
+                        native_request,
+                        output_dir=native_dir,
+                        output_directory_fd=native_authority.fd,
+                        resource_fds=snapshots.fds,
+                        system_prompt_override=snapshots.paths.get("system_prompt_file"),
+                        append_system_prompt_override=snapshots.paths.get(
+                            "append_system_prompt_file"
+                        ),
+                    )
+                finally:
+                    agent_finished_at = _utc_now()
             result: dict[str, object] = {
                 "schema": "asterion.dci.batch-result/v1",
                 "query_id": row.query_id,
@@ -434,6 +482,15 @@ async def _run_row(
                     "judge_request_fingerprint"
                 ]
             query.write_json("result.json", result)
+            _write_query_timing(
+                query,
+                result,
+                prior_timing=prior_timing,
+                started_at=timing_started_at,
+                finished_at=_utc_now(),
+                agent_started_at=agent_started_at,
+                agent_finished_at=agent_finished_at,
+            )
             return result
         finally:
             native_authority.close()
@@ -905,10 +962,204 @@ def _counts(results: dict[int, dict[str, object]]) -> dict[str, int]:
     return {"total": len(values), "correct": sum(value.get("is_correct") is True for value in values), "failed": sum(value.get("status") != "completed" for value in values)}
 
 
-def _publish_aggregates(lock: _BatchLock, results: dict[int, dict[str, object]]) -> None:
+def _publish_aggregates(
+    lock: _BatchLock,
+    results: dict[int, dict[str, object]],
+    *,
+    request: BenchmarkRequest,
+    rows: tuple[BenchmarkRow, ...],
+    include_analysis: bool = False,
+) -> None:
     ordered = [results[index] for index in sorted(results)]
     lock.write_text("results.jsonl", "".join(json.dumps(value, ensure_ascii=False, sort_keys=True) + "\n" for value in ordered))
-    lock.write_json("summary.json", {"schema": "asterion.dci.batch-summary/v1", "counts": _counts(results)})
+    metrics = _analysis_results(lock, ordered, rows, request)
+    summary = aggregate_results(metrics)
+    lock.write_json("summary.json", summary)
+    if include_analysis and request.analysis:
+        artifacts = write_analysis_artifacts(
+            results=metrics,
+            rows=[row.as_dict() for row in rows],
+            summary=summary,
+            include_figures=request.figures,
+        )
+        for name, value in artifacts.items():
+            if "/" not in name:
+                lock.write_bytes(name, value)
+                continue
+            directory_name, leaf = name.split("/", 1)
+            directory = lock.open_query(directory_name)
+            try:
+                directory.write_bytes(leaf, value)
+            finally:
+                directory.close()
+
+
+def _analysis_results(
+    lock: _BatchLock,
+    results: list[dict[str, object]],
+    rows: tuple[BenchmarkRow, ...],
+    request: BenchmarkRequest,
+) -> list[dict[str, Any]]:
+    row_by_id = {row.query_id: row for row in rows}
+    metrics: list[dict[str, Any]] = []
+    for result in results:
+        query_id = str(result["query_id"])
+        row = row_by_id[query_id]
+        state: dict[str, Any] = {"status": result.get("status")}
+        context: dict[str, Any] = {}
+        final_text = stderr_text = ""
+        judge_result: dict[str, Any] | None = None
+        timing = _read_query_timing(lock, query_id)
+        generation = result.get("native_generation")
+        if isinstance(generation, str):
+            query = _open_analysis_query(lock, query_id, result)
+            if query is None:
+                raise DciBenchmarkError("DCI benchmark analysis evidence is invalid")
+            try:
+                timing = _validate_timing(query.read_optional_json("timing.json"))
+                native = query.open_existing_query(generation)
+                if native is None:
+                    raise DciBenchmarkError("DCI benchmark analysis evidence is invalid")
+                try:
+                    state = native.read_optional_json("state.json") or state
+                    context = native.read_optional_json("latest_model_context.json") or {}
+                    final_text = native.read_optional_text("final.txt") or str(state.get("assistant_text") or "")
+                    stderr_text = native.read_optional_text("stderr.txt") or ""
+                    judge_result = native.read_optional_json("eval_result.json")
+                finally:
+                    native.close()
+            finally:
+                query.close()
+        if judge_result is None and type(result.get("is_correct")) is bool:
+            judge_result = {"is_correct": result["is_correct"]}
+        ndcg = (
+            compute_ir_ndcg(final_text, row, request.corpus, 10)
+            if request.mode == "ir" and result.get("status") == "completed"
+            else None
+        )
+        metrics.append(
+            gather_query_metrics(
+                row=row.as_dict(),
+                state=state,
+                latest_model_context=context,
+                final_text=final_text,
+                stderr_text=stderr_text,
+                judge_result=judge_result,
+                ndcg_at_10=ndcg,
+                started_at=str(timing.get("started_at")) if timing else None,
+                finished_at=str(timing.get("finished_at")) if timing else None,
+                launcher_started_at=str(timing.get("launcher_started_at")) if timing else None,
+                launcher_finished_at=str(timing.get("launcher_finished_at")) if timing else None,
+                launcher_returncode=(
+                    0 if result.get("status") == "completed" else None
+                ),
+            )
+        )
+    return metrics
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _read_query_timing(lock: _BatchLock, query_id: str) -> dict[str, Any] | None:
+    query = lock.open_existing_query(query_id)
+    if query is None:
+        return None
+    try:
+        value = query.read_optional_json("timing.json")
+    finally:
+        query.close()
+    return _validate_timing(value)
+
+
+def _validate_timing(value: dict[str, Any] | None) -> dict[str, Any] | None:
+    if value is None:
+        return None
+    if (
+        set(value)
+        != {
+            "schema", "native_generation", "started_at", "finished_at",
+            "launcher_started_at", "launcher_finished_at",
+        }
+        or value.get("schema") != "asterion.dci.batch-timing/v1"
+        or not isinstance(value.get("native_generation"), str)
+        or not _NATIVE_GENERATION_PATTERN.fullmatch(value["native_generation"])
+        or any(
+            item is not None and not isinstance(item, str)
+            for item in (
+                value.get("started_at"), value.get("finished_at"),
+                value.get("launcher_started_at"), value.get("launcher_finished_at"),
+            )
+        )
+    ):
+        raise DciBenchmarkError("DCI benchmark timing evidence is invalid")
+    return value
+
+
+def _open_analysis_query(
+    lock: _BatchLock, query_id: str, result: dict[str, object]
+) -> _Directory | None:
+    direct = lock.open_existing_query(query_id)
+    if direct is not None:
+        try:
+            if direct.read_optional_json("result.json") == result:
+                return direct
+        except DciBenchmarkError:
+            pass
+        direct.close()
+    matches: list[_Directory] = []
+    for name in sorted(lock.list_names()):
+        if name == query_id:
+            continue
+        try:
+            candidate = lock.open_existing_query(name)
+        except DciBenchmarkError:
+            continue
+        if candidate is None:
+            continue
+        try:
+            candidate_result = candidate.read_optional_json("result.json")
+        except DciBenchmarkError:
+            candidate.close()
+            continue
+        if candidate_result == result:
+            matches.append(candidate)
+        else:
+            candidate.close()
+    if len(matches) != 1:
+        for match in matches:
+            match.close()
+        return None
+    return matches[0]
+
+
+def _write_query_timing(
+    query: _Directory,
+    result: dict[str, object],
+    *,
+    prior_timing: dict[str, Any] | None,
+    started_at: str,
+    finished_at: str,
+    agent_started_at: str | None,
+    agent_finished_at: str | None,
+) -> None:
+    generation = result.get("native_generation")
+    if not isinstance(generation, str):
+        return
+    if prior_timing is not None and prior_timing.get("native_generation") == generation:
+        return
+    query.write_json(
+        "timing.json",
+        {
+            "schema": "asterion.dci.batch-timing/v1",
+            "native_generation": generation,
+            "started_at": agent_started_at,
+            "finished_at": agent_finished_at,
+            "launcher_started_at": started_at,
+            "launcher_finished_at": finished_at,
+        },
+    )
 
 
 def _publish_batch_state(
@@ -1047,6 +1298,28 @@ class _Directory:
         if not isinstance(value, dict):
             raise DciBenchmarkError("DCI benchmark evidence is invalid")
         return value
+
+    def read_optional_text(self, name: str) -> str | None:
+        _validate_component(name)
+        try:
+            fd = os.open(
+                name,
+                os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+                dir_fd=self.fd,
+            )
+        except FileNotFoundError:
+            return None
+        try:
+            if not stat.S_ISREG(os.fstat(fd).st_mode):
+                raise DciBenchmarkError("DCI benchmark evidence is invalid")
+            with os.fdopen(fd, encoding="utf-8") as handle:
+                fd = -1
+                return handle.read()
+        except (OSError, UnicodeError) as error:
+            raise DciBenchmarkError("DCI benchmark evidence is invalid") from error
+        finally:
+            if fd >= 0:
+                os.close(fd)
 
     def write_json(self, name: str, value: object) -> None:
         self.write_text(name, json.dumps(value, ensure_ascii=False, indent=2) + "\n")

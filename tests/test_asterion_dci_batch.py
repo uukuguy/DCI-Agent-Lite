@@ -511,7 +511,16 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(item["schema"], "asterion.dci.batch-item/v1")
             self.assertEqual(item["query_id"], "q-0")
             self.assertEqual((result.output_root / "q-0" / "input_question.txt").read_text(), "question 0")
-            self.assertEqual(summary["counts"], result.counts)
+            self.assertEqual(
+                summary["counts"],
+                {
+                    "total": 4,
+                    "judged": 4,
+                    "correct": 4,
+                    "incorrect_or_unjudged": 0,
+                    "failed_runs": 0,
+                },
+            )
             self.assertEqual((result.output_root.stat().st_mode & 0o777), 0o700)
             private_files = [
                 result.output_root / name
