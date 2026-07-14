@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import asyncio
 import json
 import math
 import os
@@ -10,8 +11,11 @@ import re
 import urllib.error
 import urllib.parse
 import urllib.request
+import threading
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from typing import Any
 
 
@@ -58,11 +62,17 @@ class JudgeConfig:
         try:
             parsed.port
         except ValueError as error:
-            raise ValueError("Judge base URL must be an absolute HTTP(S) URL with a host") from error
+            raise ValueError(
+                "Judge base URL must be an absolute HTTP(S) URL with a host"
+            ) from error
         if parsed.scheme not in {"http", "https"} or parsed.hostname is None:
-            raise ValueError("Judge base URL must be an absolute HTTP(S) URL with a host")
+            raise ValueError(
+                "Judge base URL must be an absolute HTTP(S) URL with a host"
+            )
         if parsed.username or parsed.password or parsed.query or parsed.fragment:
-            raise ValueError("Judge base URL must not include credentials, query data, or fragments")
+            raise ValueError(
+                "Judge base URL must not include credentials, query data, or fragments"
+            )
         if not self.model.strip():
             raise ValueError("Judge model must not be empty")
         if (
@@ -71,7 +81,9 @@ class JudgeConfig:
             or self.timeout_seconds <= 0
             or self.max_output_tokens <= 0
         ):
-            raise ValueError("Judge timeout and output token limit must be greater than zero")
+            raise ValueError(
+                "Judge timeout and output token limit must be greater than zero"
+            )
         if self.thinking.strip().lower() not in {"auto", "enabled", "disabled", "omit"}:
             raise ValueError("Judge thinking mode is not recognized")
         prices = (
@@ -103,7 +115,9 @@ class JudgeConfig:
             responses_store=_judge_env_bool("RESPONSES_STORE", False),
             thinking=_judge_env("THINKING", "auto"),
             input_price_per_1m=_judge_env_float("INPUT_PRICE_PER_1M", 0.20),
-            cached_input_price_per_1m=_judge_env_float("CACHED_INPUT_PRICE_PER_1M", 0.02),
+            cached_input_price_per_1m=_judge_env_float(
+                "CACHED_INPUT_PRICE_PER_1M", 0.02
+            ),
             output_price_per_1m=_judge_env_float("OUTPUT_PRICE_PER_1M", 1.25),
             api_key_env=api_key_env,
             api_key=os.environ.get("DCI_EVAL_JUDGE_API_KEY", "").strip()
@@ -171,7 +185,7 @@ def build_judge_request(
             "max_output_tokens": config.max_output_tokens,
             "input": messages,
         }
-        if config.base_url == DEFAULT_JUDGE_BASE_URL:
+        if config.base_url == DEFAULT_JUDGE_BASE_URL or config.responses_store:
             payload["store"] = config.responses_store
         if config.strict_json_schema:
             payload["text"] = {
@@ -183,7 +197,11 @@ def build_judge_request(
                 }
             }
         return payload
-    payload = {"model": config.model, "max_tokens": config.max_output_tokens, "messages": messages}
+    payload = {
+        "model": config.model,
+        "max_tokens": config.max_output_tokens,
+        "messages": messages,
+    }
     if config.json_mode:
         payload["response_format"] = {"type": "json_object"}
     if config.effective_thinking is not None:
@@ -194,37 +212,91 @@ def build_judge_request(
 def judge_request_fingerprint(
     *, config: JudgeConfig, question: str, gold_answer: str, predicted_answer: str
 ) -> str:
-    return _fingerprint(config, build_judge_request(config, question=question, gold_answer=gold_answer, predicted_answer=predicted_answer))
+    return _fingerprint(
+        config,
+        build_judge_request(
+            config,
+            question=question,
+            gold_answer=gold_answer,
+            predicted_answer=predicted_answer,
+        ),
+    )
 
 
 def judge_answer_sync(
-    *, config: JudgeConfig, question: str, gold_answer: str, predicted_answer: str
+    *,
+    config: JudgeConfig,
+    question: str,
+    gold_answer: str,
+    predicted_answer: str,
+    cancel_event: threading.Event | None = None,
 ) -> dict[str, object]:
-    """Send one judge request and return only validated, safe result fields."""
+    """Use one bounded retry budget and return only validated safe fields."""
 
-    request_payload = build_judge_request(config, question=question, gold_answer=gold_answer, predicted_answer=predicted_answer)
+    request_payload = build_judge_request(
+        config,
+        question=question,
+        gold_answer=gold_answer,
+        predicted_answer=predicted_answer,
+    )
     fingerprint = _fingerprint(config, request_payload)
     headers = {"Content-Type": "application/json"}
     if config.api_key:
         headers["Authorization"] = f"Bearer {config.api_key}"
-    request = urllib.request.Request(config.endpoint, data=json.dumps(request_payload).encode("utf-8"), headers=headers, method="POST")
-    response_payload: dict[str, object] = {}
+    request = urllib.request.Request(
+        config.endpoint,
+        data=json.dumps(request_payload).encode("utf-8"),
+        headers=headers,
+        method="POST",
+    )
     parsed: dict[str, object] | None = None
-    for attempts in range(1, 3):
+    usage: dict[str, object] | None = None
+    last_failure = "response"
+    for attempts in range(1, 4):
+        if cancel_event is not None and cancel_event.is_set():
+            raise DciJudgeError("DCI judge request was cancelled")
         try:
-            with _open_judge_request(request, timeout_seconds=config.timeout_seconds) as response:
+            with _open_judge_request(
+                request, timeout_seconds=config.timeout_seconds
+            ) as response:
                 candidate = json.loads(response.read().decode("utf-8"))
-        except (OSError, ValueError, urllib.error.HTTPError, urllib.error.URLError) as error:
-            raise DciJudgeError("DCI judge transport failed") from error
-        if not isinstance(candidate, dict):
+        except urllib.error.HTTPError as error:
+            retry_after = error.headers.get("Retry-After") if error.headers else None
+            error.close()
+            if not _retryable_http_status(error.code):
+                raise DciJudgeError("DCI judge request was rejected") from error
+            last_failure = "transport"
+            if attempts == 3:
+                break
+            _wait_before_retry(
+                _retry_delay(attempts, retry_after),
+                cancel_event,
+            )
             continue
-        response_payload = candidate
+        except (OSError, ValueError, urllib.error.URLError):
+            last_failure = "transport"
+            if attempts == 3:
+                break
+            _wait_before_retry(_retry_delay(attempts, None), cancel_event)
+            continue
+        if cancel_event is not None and cancel_event.is_set():
+            raise DciJudgeError("DCI judge request was cancelled")
+        if not isinstance(candidate, dict):
+            if attempts < 3:
+                _wait_before_retry(_retry_delay(attempts, None), cancel_event)
+            continue
         parsed = _parse_verdict(candidate, config.api)
-        if parsed is not None:
+        usage = _normalize_usage(candidate.get("usage"))
+        if parsed is not None and usage is not None:
             break
+        parsed = None
+        if attempts < 3:
+            _wait_before_retry(_retry_delay(attempts, None), cancel_event)
     if parsed is None:
+        if last_failure == "transport":
+            raise DciJudgeError("DCI judge transport failed")
         raise DciJudgeError("DCI judge response was invalid")
-    usage = _normalize_usage(response_payload.get("usage"))
+    assert usage is not None
     return {
         **config.public_dict(),
         "judged_at": datetime.now(timezone.utc).isoformat(),
@@ -236,6 +308,78 @@ def judge_answer_sync(
         "usage": usage,
         "cost_estimate_usd": _estimate_cost(usage, config),
     }
+
+
+async def judge_answer_async(
+    *, config: JudgeConfig, question: str, gold_answer: str, predicted_answer: str
+) -> dict[str, object]:
+    """Run the blocking transport without releasing cancellation before it closes."""
+
+    cancel_event = threading.Event()
+    work = asyncio.create_task(
+        asyncio.to_thread(
+            judge_answer_sync,
+            config=config,
+            question=question,
+            gold_answer=gold_answer,
+            predicted_answer=predicted_answer,
+            cancel_event=cancel_event,
+        )
+    )
+    try:
+        await asyncio.wait({work})
+        return work.result()
+    except asyncio.CancelledError:
+        cancel_event.set()
+        await _drain_cancelled_work(work)
+        raise
+
+
+async def _drain_cancelled_work(work: asyncio.Task[object]) -> None:
+    """Consume repeated cancellation until the already-started thread has closed."""
+
+    while not work.done():
+        current = asyncio.current_task()
+        if current is not None:
+            current.uncancel()
+        try:
+            await asyncio.wait({work})
+        except asyncio.CancelledError:
+            continue
+    try:
+        work.result()
+    except Exception:
+        pass
+
+
+def _retryable_http_status(status: int) -> bool:
+    return status in {408, 409, 429} or 500 <= status <= 599
+
+
+def _retry_delay(attempt: int, retry_after: str | None) -> float:
+    fallback = min(30.0, 0.25 * (2 ** (attempt - 1)))
+    if retry_after is None:
+        return fallback
+    try:
+        seconds = float(retry_after.strip())
+    except ValueError:
+        try:
+            parsed = parsedate_to_datetime(retry_after)
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            seconds = (parsed - datetime.now(timezone.utc)).total_seconds()
+        except (TypeError, ValueError, OverflowError):
+            return fallback
+    if not math.isfinite(seconds) or seconds < 0 or seconds > 30:
+        return fallback
+    return seconds
+
+
+def _wait_before_retry(seconds: float, cancel_event: threading.Event | None) -> None:
+    if cancel_event is None:
+        time.sleep(seconds)
+    elif cancel_event.wait(seconds):
+        raise DciJudgeError("DCI judge request was cancelled")
 
 
 def _normalize_api(value: str) -> str:
@@ -281,22 +425,43 @@ def _judge_env_bool(name: str, default: bool) -> bool:
 
 
 def _fingerprint(config: JudgeConfig, request_payload: dict[str, object]) -> str:
-    canonical = json.dumps({"configuration": config.public_dict(), "endpoint": config.endpoint, "request": request_payload}, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+    canonical = json.dumps(
+        {
+            "configuration": config.public_dict(),
+            "endpoint": config.endpoint,
+            "request": request_payload,
+        },
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-def _open_judge_request(request: urllib.request.Request, *, timeout_seconds: int) -> Any:
+def _open_judge_request(
+    request: urllib.request.Request, *, timeout_seconds: int
+) -> Any:
     opener = urllib.request.build_opener(_RejectRedirect())
     return opener.open(request, timeout=timeout_seconds)
 
 
 class _RejectRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, request: urllib.request.Request, *_: object) -> urllib.request.Request:
-        raise urllib.error.HTTPError(request.full_url, 302, "Judge redirects are not permitted", None, None)
+    def redirect_request(
+        self, request: urllib.request.Request, *_: object
+    ) -> urllib.request.Request:
+        raise urllib.error.HTTPError(
+            request.full_url, 302, "Judge redirects are not permitted", None, None
+        )
 
 
-def _parse_verdict(response_payload: dict[str, object], api: str) -> dict[str, object] | None:
-    text = _responses_content(response_payload) if api == "responses" else _chat_content(response_payload)
+def _parse_verdict(
+    response_payload: dict[str, object], api: str
+) -> dict[str, object] | None:
+    text = (
+        _responses_content(response_payload)
+        if api == "responses"
+        else _chat_content(response_payload)
+    )
     if not isinstance(text, str):
         return None
     match = re.search(r"\{.*\}", text, flags=re.DOTALL)
@@ -306,7 +471,13 @@ def _parse_verdict(response_payload: dict[str, object], api: str) -> dict[str, o
         value = json.loads(match.group(0))
     except json.JSONDecodeError:
         return None
-    if not isinstance(value, dict) or not isinstance(value.get("is_correct"), bool):
+    if (
+        not isinstance(value, dict)
+        or set(value) != {"is_correct", "normalized_prediction", "reason"}
+        or not isinstance(value.get("is_correct"), bool)
+        or not isinstance(value.get("normalized_prediction"), str)
+        or not isinstance(value.get("reason"), str)
+    ):
         return None
     return value
 
@@ -347,26 +518,54 @@ def _chat_content(response_payload: dict[str, object]) -> object:
     )
 
 
-def _normalize_usage(value: object) -> dict[str, object]:
+def _normalize_usage(value: object) -> dict[str, object] | None:
     raw = value if isinstance(value, dict) else {}
     input_tokens = raw.get("input_tokens", raw.get("prompt_tokens", 0)) or 0
     output_tokens = raw.get("output_tokens", raw.get("completion_tokens", 0)) or 0
     details = raw.get("input_tokens_details", raw.get("prompt_tokens_details", {}))
+    numeric_values = (
+        input_tokens,
+        output_tokens,
+        raw.get("total_tokens", input_tokens + output_tokens) or 0,
+    )
+    if any(
+        isinstance(item, bool)
+        or not isinstance(item, (int, float))
+        or not math.isfinite(item)
+        or item < 0
+        for item in numeric_values
+    ):
+        return None
     result: dict[str, object] = {
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,
-        "total_tokens": raw.get("total_tokens", input_tokens + output_tokens) or 0,
+        "total_tokens": numeric_values[2],
     }
     if isinstance(details, dict):
-        result["input_tokens_details"] = details
+        cached = details.get("cached_tokens", 0) or 0
+        if (
+            isinstance(cached, bool)
+            or not isinstance(cached, (int, float))
+            or not math.isfinite(cached)
+            or cached < 0
+            or cached > input_tokens
+        ):
+            return None
+        result["input_tokens_details"] = {"cached_tokens": cached}
     return result
 
 
 def _estimate_cost(usage: dict[str, object], config: JudgeConfig) -> dict[str, float]:
     details = usage.get("input_tokens_details")
-    cached_tokens = float(details.get("cached_tokens", 0) or 0) if isinstance(details, dict) else 0.0
+    cached_tokens = (
+        float(details.get("cached_tokens", 0) or 0)
+        if isinstance(details, dict)
+        else 0.0
+    )
     input_tokens = float(usage["input_tokens"])
-    input_cost = max(0.0, input_tokens - cached_tokens) / 1_000_000 * config.input_price_per_1m
+    input_cost = (
+        max(0.0, input_tokens - cached_tokens) / 1_000_000 * config.input_price_per_1m
+    )
     cached_input_cost = cached_tokens / 1_000_000 * config.cached_input_price_per_1m
     output_cost = float(usage["output_tokens"]) / 1_000_000 * config.output_price_per_1m
     return {

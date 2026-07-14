@@ -352,12 +352,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cache_rule",
       "source_name": "completed-native-run-judge-only",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.evaluation",
       "target_asterion_owner": "asterion.dci.evaluation",
       "target_symbol": "completed-native-run-judge-only",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "evaluate_run_directory",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_evaluation.AsterionDciEvaluationTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cache_rule_completed_native_run_judge_only"
+      ],
       "target_task": "AF-240 Task 2",
       "future_acceptance": {
         "task": "AF-240 Task 2",
@@ -373,12 +375,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cache_rule",
       "source_name": "completed-result-exact-judge-config",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.evaluation",
       "target_asterion_owner": "asterion.dci.evaluation",
       "target_symbol": "completed-result-exact-judge-config",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "evaluate_run_directory",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_evaluation.AsterionDciEvaluationTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cache_rule_completed_result_exact_judge_config"
+      ],
       "target_task": "AF-240 Task 2",
       "future_acceptance": {
         "task": "AF-240 Task 2",
@@ -1572,12 +1576,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "function",
       "source_name": "build_failed_judge_result",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.evaluation",
       "target_asterion_owner": "asterion.dci.evaluation",
       "target_symbol": "build_failed_judge_result",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "DciEvaluationError",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_evaluation.AsterionDciEvaluationTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_build_failed_judge_result"
+      ],
       "target_task": "AF-240 Task 2",
       "future_acceptance": {
         "task": "AF-240 Task 2",
@@ -2019,12 +2025,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "function",
       "source_name": "judge_answer_async",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.judge",
       "target_asterion_owner": "asterion.dci.evaluation",
       "target_symbol": "judge_answer_async",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "judge_answer_async",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_judge.AsterionDciJudgeTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_judge_answer_async"
+      ],
       "target_task": "AF-240 Task 2",
       "future_acceptance": {
         "task": "AF-240 Task 2",
@@ -2040,12 +2048,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "function",
       "source_name": "judge_result_succeeded",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.evaluation",
       "target_asterion_owner": "asterion.dci.evaluation",
       "target_symbol": "judge_result_succeeded",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "_valid_verdict",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_evaluation.AsterionDciEvaluationTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_judge_result_succeeded"
+      ],
       "target_task": "AF-240 Task 2",
       "future_acceptance": {
         "task": "AF-240 Task 2",
@@ -2082,12 +2092,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "function",
       "source_name": "load_judge_config_from_args",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.judge",
       "target_asterion_owner": "asterion.dci.judge",
       "target_symbol": "load_judge_config_from_args",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "JudgeConfig.from_env",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_judge.AsterionDciJudgeTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_load_judge_config_from_args"
+      ],
       "target_task": "AF-240 Task 2",
       "future_acceptance": {
         "task": "AF-240 Task 2",

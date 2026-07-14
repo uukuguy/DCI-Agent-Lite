@@ -74,6 +74,17 @@ def _read_json_object_at(directory_fd: int, name: str) -> dict[str, Any]:
     return value
 
 
+def _read_optional_json_object_at(
+    directory_fd: int, name: str
+) -> dict[str, Any] | None:
+    _validate_leaf_name(name)
+    try:
+        os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
+    except FileNotFoundError:
+        return None
+    return _read_json_object_at(directory_fd, name)
+
+
 def _reject_symlink_at(directory_fd: int, name: str, *, label: str) -> None:
     _validate_leaf_name(name)
     try:
@@ -275,7 +286,7 @@ def _lock_payload(path: Path) -> dict[str, Any]:
     return _validate_lock_payload(_read_json_object(path))
 
 
-def _acquire_directory_fd(path: Path, *, create: bool) -> int:
+def _acquire_directory_fd(path: Path, *, create: bool, wait: bool = False) -> int:
     """Open, verify, privatize, and exclusively lock one run directory."""
 
     if fcntl is None:
@@ -291,7 +302,8 @@ def _acquire_directory_fd(path: Path, *, create: bool) -> int:
         raise DciArtifactError("DCI output directory is invalid") from exc
     try:
         os.fchmod(descriptor, 0o700)
-        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        operation = fcntl.LOCK_EX | (0 if wait else fcntl.LOCK_NB)
+        fcntl.flock(descriptor, operation)
     except BlockingIOError as exc:
         os.close(descriptor)
         raise DciArtifactError("DCI run directory is locked") from exc
@@ -302,6 +314,29 @@ def _acquire_directory_fd(path: Path, *, create: bool) -> int:
             pass
         raise DciArtifactError("DCI run locking failed") from exc
     return descriptor
+
+
+def _acquire_existing_directory_fd_nofollow(path: Path, *, wait: bool) -> int:
+    """Walk every existing directory component without following links, then lock it."""
+
+    if fcntl is None:
+        raise DciArtifactError("DCI run locking is unavailable")
+    absolute = Path(os.path.abspath(path))
+    descriptor = os.open("/", os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        for component in absolute.parts[1:]:
+            next_descriptor = _open_existing_directory_at(descriptor, component)
+            os.close(descriptor)
+            descriptor = next_descriptor
+        os.fchmod(descriptor, 0o700)
+        fcntl.flock(descriptor, fcntl.LOCK_EX | (0 if wait else fcntl.LOCK_NB))
+        return descriptor
+    except BlockingIOError as exc:
+        os.close(descriptor)
+        raise DciArtifactError("DCI run directory is locked") from exc
+    except BaseException:
+        os.close(descriptor)
+        raise
 
 
 def _validate_lock_metadata_at(directory_fd: int, name: str) -> None:
@@ -353,6 +388,45 @@ class DciRunLock:
                 os.close(descriptor)
             raise
 
+    @classmethod
+    def acquire_existing(cls, output_dir: Path, *, wait: bool = True) -> DciRunLock:
+        """Acquire the recorder's writer authority without creating run evidence."""
+
+        directory = Path(output_dir)
+        descriptor = _acquire_existing_directory_fd_nofollow(directory, wait=wait)
+        try:
+            _validate_lock_metadata_at(descriptor, cls.LOCK_NAME)
+            metadata = _lock_payload_at(descriptor, cls.LOCK_NAME)
+            return cls(
+                path=directory.absolute() / cls.LOCK_NAME,
+                owner_token=str(metadata["owner_token"]),
+                _directory_fd=descriptor,
+            )
+        except BaseException:
+            try:
+                fcntl.flock(descriptor, fcntl.LOCK_UN)
+            finally:
+                os.close(descriptor)
+            raise
+
+    def read_json(self, name: str) -> dict[str, Any]:
+        return _read_json_object_at(self._directory_fd, name)
+
+    def read_optional_json(self, name: str) -> dict[str, Any] | None:
+        return _read_optional_json_object_at(self._directory_fd, name)
+
+    def read_text(self, name: str) -> str:
+        return _read_text_at(self._directory_fd, name)
+
+    def read_jsonl(self, name: str) -> list[dict[str, Any]]:
+        return _read_jsonl_at(self._directory_fd, name)
+
+    def write_json(self, name: str, payload: Any) -> None:
+        _atomic_write_json_at(self._directory_fd, name, payload)
+
+    def open_directory(self, name: str) -> int:
+        return _open_existing_directory_at(self._directory_fd, name)
+
     def release(self) -> None:
         if self._released:
             return
@@ -365,6 +439,132 @@ class DciRunLock:
             except OSError:
                 pass
             self._released = True
+
+
+def validate_completed_run_evidence(
+    lock: DciRunLock,
+) -> tuple[dict[str, Any], str, str]:
+    """Validate a completed native run from the held descriptor authority."""
+
+    state = lock.read_json("state.json")
+    question_text = lock.read_text("question.txt")
+    final_text = lock.read_text("final.txt")
+    raw_events = lock.read_jsonl("events.jsonl")
+    conversation = lock.read_json("conversation.json")
+    conversation_full = lock.read_json("conversation_full.json")
+    latest_context = lock.read_json("latest_model_context.json")
+    lock.read_text("stderr.txt")
+    question = state.get("question")
+    attempts = state.get("attempts")
+    answer = state.get("assistant_text")
+    run_id = state.get("run_id")
+    tools = state.get("tools")
+    if (
+        state.get("status") != "completed"
+        or not isinstance(question, str)
+        or not question
+        or question_text != f"{question}\n"
+        or not isinstance(answer, str)
+        or not isinstance(run_id, str)
+        or not run_id
+        or not isinstance(tools, str)
+        or final_text != (answer if answer.endswith("\n") else f"{answer}\n")
+        or not isinstance(attempts, list)
+        or not attempts
+        or state.get("resume_count") != len(attempts) - 1
+        or state.get("event_count") != len(raw_events)
+        or state.get("last_event_type")
+        != (raw_events[-1].get("type") if raw_events else None)
+        or conversation.get("status") != "completed"
+        or conversation_full.get("status") != "completed"
+        or latest_context.get("status") != "completed"
+        or conversation_full.get("question") != question
+        or latest_context.get("question") != question
+        or conversation_full.get("final_text") != answer
+        or conversation_full.get("conversation_features")
+        != state.get("conversation_features")
+        or latest_context.get("conversation_features")
+        != state.get("conversation_features")
+        or conversation_full.get("notes") != state.get("notes")
+        or latest_context.get("notes") != state.get("notes")
+        or conversation_full.get("pi_source_attempts")
+        != state.get("pi_source_attempts")
+        or latest_context.get("pi_source_attempts") != state.get("pi_source_attempts")
+    ):
+        raise DciArtifactError("DCI completed run evidence is invalid")
+    protocol_fd = lock.open_directory("protocol")
+    try:
+        expected_names: set[str] = set()
+        for number, raw_attempt in enumerate(attempts, 1):
+            attempt = _validate_attempt_record(raw_attempt, number)
+            stem = f"attempt-{number:04d}"
+            request_name = f"{stem}.request.json"
+            events_name = f"{stem}.events.jsonl"
+            expected_names.update((request_name, events_name))
+            protocol_request = _read_json_object_at(protocol_fd, request_name)
+            validate_run_request(protocol_request)
+            expected_request: dict[str, object] = {
+                "protocol": PROTOCOL_VERSION,
+                "run_id": f"{run_id}-attempt-{number:04d}",
+                "input": {"text": question},
+                "requested_capabilities": map_pi_capabilities(tools),
+            }
+            timeout = attempt["timeout_seconds"]
+            if timeout is not None and timeout > 0:
+                deadline_ms = int(round(timeout * 1000))
+                if deadline_ms <= MAX_DEADLINE_MS:
+                    expected_request["deadline_ms"] = max(1, deadline_ms)
+            if protocol_request != expected_request:
+                raise DciArtifactError("DCI completed run evidence is invalid")
+            protocol_events = _read_jsonl_at(protocol_fd, events_name)
+            validate_event_stream(protocol_events)
+            if not protocol_events or any(
+                event.get("run_id") != protocol_request.get("run_id")
+                for event in protocol_events
+            ):
+                raise DciArtifactError("DCI completed run evidence is invalid")
+            terminal = protocol_events[-1]
+            expected_status = (
+                "completed" if number == len(attempts) else attempt["status"]
+            )
+            if (
+                attempt["status"] != expected_status
+                or (number == len(attempts) and terminal.get("type") != "run.completed")
+                or (
+                    number < len(attempts)
+                    and (
+                        attempt["status"] not in {"failed", "incomplete"}
+                        or terminal.get("type") != "run.failed"
+                    )
+                )
+            ):
+                raise DciArtifactError("DCI completed run evidence is invalid")
+            if number == len(attempts):
+                artifacts = [
+                    event.get("payload", {}).get("artifact")
+                    for event in protocol_events
+                    if event.get("type") == "artifact.created"
+                    and isinstance(event.get("payload"), dict)
+                ]
+                expected_digest = hashlib.sha256(final_text.encode("utf-8")).hexdigest()
+                if (
+                    len(artifacts) != 1
+                    or not isinstance(artifacts[0], dict)
+                    or (
+                        artifacts[0].get("uri") != "final.txt"
+                        or artifacts[0].get("sha256") != expected_digest
+                    )
+                ):
+                    raise DciArtifactError("DCI completed run evidence is invalid")
+        if set(os.listdir(protocol_fd)) != expected_names:
+            raise DciArtifactError("DCI completed run evidence is invalid")
+    except (DciArtifactError, ValueError):
+        raise
+    except (OSError, TypeError) as exc:
+        raise DciArtifactError("DCI completed run evidence is invalid") from exc
+    finally:
+        os.close(protocol_fd)
+    return state, question, final_text.rstrip("\n")
 
 
 @dataclass(frozen=True)
