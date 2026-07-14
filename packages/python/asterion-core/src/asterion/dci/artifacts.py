@@ -85,6 +85,87 @@ def _read_optional_json_object_at(
     return _read_json_object_at(directory_fd, name)
 
 
+def _read_optional_json_document_at(
+    directory_fd: int, name: str
+) -> tuple[dict[str, Any], bytes] | None:
+    _validate_leaf_name(name)
+    try:
+        descriptor = os.open(name, _open_flags(os.O_RDONLY), dir_fd=directory_fd)
+    except FileNotFoundError:
+        return None
+    try:
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            raise DciArtifactError("DCI artifact JSON is invalid")
+        with os.fdopen(descriptor, "rb") as handle:
+            descriptor = -1
+            raw = handle.read()
+        value = json.loads(raw.decode("utf-8"))
+    except DciArtifactError:
+        raise
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise DciArtifactError("DCI artifact JSON is invalid") from exc
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+    if not isinstance(value, dict):
+        raise DciArtifactError("DCI artifact JSON is invalid")
+    return value, raw
+
+
+def json_document_bytes(payload: Any) -> bytes:
+    """Serialize one native private JSON document exactly as the recorder writes it."""
+
+    return (json.dumps(payload, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+
+
+def _prepare_json_at(directory_fd: int, target: str, payload: Any) -> str:
+    _validate_leaf_name(target)
+    _reject_symlink_at(directory_fd, target, label="JSON target")
+    temporary = f".{target}.{secrets.token_hex(16)}.evaluation-tmp"
+    descriptor = os.open(
+        temporary,
+        _open_flags(os.O_CREAT | os.O_EXCL | os.O_WRONLY),
+        0o600,
+        dir_fd=directory_fd,
+    )
+    completed = False
+    try:
+        os.fchmod(descriptor, 0o600)
+        data = json_document_bytes(payload)
+        _write_prepared_bytes(descriptor, data)
+        completed = True
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+        if not completed:
+            try:
+                os.unlink(temporary, dir_fd=directory_fd)
+            except FileNotFoundError:
+                pass
+    return temporary
+
+
+def _write_prepared_bytes(descriptor: int, data: bytes) -> None:
+    offset = 0
+    while offset < len(data):
+        written = os.write(descriptor, data[offset:])
+        if written <= 0:
+            raise OSError("DCI evaluation prepare write failed")
+        offset += written
+    os.fsync(descriptor)
+
+
+def _publish_prepared_at(directory_fd: int, temporary: str, target: str) -> None:
+    _validate_leaf_name(temporary)
+    _validate_leaf_name(target)
+    _reject_symlink_at(directory_fd, target, label="JSON target")
+    os.replace(temporary, target, src_dir_fd=directory_fd, dst_dir_fd=directory_fd)
+
+
+def _fsync_directory(directory_fd: int) -> None:
+    os.fsync(directory_fd)
+
+
 def _reject_symlink_at(directory_fd: int, name: str, *, label: str) -> None:
     _validate_leaf_name(name)
     try:
@@ -415,6 +496,11 @@ class DciRunLock:
     def read_optional_json(self, name: str) -> dict[str, Any] | None:
         return _read_optional_json_object_at(self._directory_fd, name)
 
+    def read_optional_json_document(
+        self, name: str
+    ) -> tuple[dict[str, Any], bytes] | None:
+        return _read_optional_json_document_at(self._directory_fd, name)
+
     def read_text(self, name: str) -> str:
         return _read_text_at(self._directory_fd, name)
 
@@ -423,6 +509,42 @@ class DciRunLock:
 
     def write_json(self, name: str, payload: Any) -> None:
         _atomic_write_json_at(self._directory_fd, name, payload)
+
+    def publish_json_pair(
+        self,
+        *,
+        state: dict[str, Any],
+        evaluation: dict[str, Any],
+    ) -> None:
+        """Publish state binding first and the evaluation commit document last."""
+
+        state_tmp: str | None = None
+        evaluation_tmp: str | None = None
+        try:
+            evaluation_tmp = _prepare_json_at(
+                self._directory_fd, "eval_result.json", evaluation
+            )
+            state_tmp = _prepare_json_at(self._directory_fd, "state.json", state)
+            _publish_prepared_at(self._directory_fd, state_tmp, "state.json")
+            state_tmp = None
+            _publish_prepared_at(self._directory_fd, evaluation_tmp, "eval_result.json")
+            evaluation_tmp = None
+            _fsync_directory(self._directory_fd)
+        finally:
+            for temporary in (state_tmp, evaluation_tmp):
+                if temporary is not None:
+                    try:
+                        os.unlink(temporary, dir_fd=self._directory_fd)
+                    except FileNotFoundError:
+                        pass
+
+    def cleanup_evaluation_temps(self) -> None:
+        for name in os.listdir(self._directory_fd):
+            if re.fullmatch(
+                r"\.(?:state|eval_result)\.json\.[0-9a-f]{32}\.evaluation-tmp",
+                name,
+            ):
+                os.unlink(name, dir_fd=self._directory_fd)
 
     def open_directory(self, name: str) -> int:
         return _open_existing_directory_at(self._directory_fd, name)
@@ -492,9 +614,13 @@ def validate_completed_run_evidence(
         or latest_context.get("pi_source_attempts") != state.get("pi_source_attempts")
     ):
         raise DciArtifactError("DCI completed run evidence is invalid")
+    _validate_completed_view_shapes(
+        state, conversation, conversation_full, latest_context, raw_events
+    )
     protocol_fd = lock.open_directory("protocol")
     try:
         expected_names: set[str] = set()
+        protocol_answer_parts: list[str] = []
         for number, raw_attempt in enumerate(attempts, 1):
             attempt = _validate_attempt_record(raw_attempt, number)
             stem = f"attempt-{number:04d}"
@@ -518,6 +644,13 @@ def validate_completed_run_evidence(
                 raise DciArtifactError("DCI completed run evidence is invalid")
             protocol_events = _read_jsonl_at(protocol_fd, events_name)
             validate_event_stream(protocol_events)
+            protocol_answer_parts.extend(
+                event["payload"]["text"]
+                for event in protocol_events
+                if event.get("type") == "text.delta"
+                and isinstance(event.get("payload"), dict)
+                and isinstance(event["payload"].get("text"), str)
+            )
             if not protocol_events or any(
                 event.get("run_id") != protocol_request.get("run_id")
                 for event in protocol_events
@@ -529,7 +662,13 @@ def validate_completed_run_evidence(
             )
             if (
                 attempt["status"] != expected_status
-                or (number == len(attempts) and terminal.get("type") != "run.completed")
+                or (
+                    number == len(attempts)
+                    and (
+                        terminal.get("type") != "run.completed"
+                        or terminal.get("payload") != {"status": "completed"}
+                    )
+                )
                 or (
                     number < len(attempts)
                     and (
@@ -558,6 +697,8 @@ def validate_completed_run_evidence(
                     raise DciArtifactError("DCI completed run evidence is invalid")
         if set(os.listdir(protocol_fd)) != expected_names:
             raise DciArtifactError("DCI completed run evidence is invalid")
+        if "".join(protocol_answer_parts) != answer:
+            raise DciArtifactError("DCI completed run evidence is invalid")
     except (DciArtifactError, ValueError):
         raise
     except (OSError, TypeError) as exc:
@@ -565,6 +706,131 @@ def validate_completed_run_evidence(
     finally:
         os.close(protocol_fd)
     return state, question, final_text.rstrip("\n")
+
+
+def _validate_completed_view_shapes(
+    state: dict[str, Any],
+    conversation: dict[str, Any],
+    conversation_full: dict[str, Any],
+    latest_context: dict[str, Any],
+    raw_events: list[dict[str, Any]],
+) -> None:
+    base_names = {
+        "status",
+        "question",
+        "cwd",
+        "provider",
+        "model",
+        "conversation_features",
+        "messages",
+        "pending_message",
+        "final_text",
+        "notes",
+        "pi_source_attempts",
+    }
+    latest_names = {
+        "status",
+        "question",
+        "cwd",
+        "provider",
+        "model",
+        "conversation_features",
+        "request_count",
+        "runtime_context_management",
+        "latest",
+        "notes",
+        "pi_source_attempts",
+    }
+    if (
+        set(conversation) != base_names
+        or set(conversation_full) != base_names
+        or set(latest_context) != latest_names
+        or any(
+            not isinstance(state.get(name), list)
+            for name in ("messages", "tool_calls", "notes", "pi_source_attempts")
+        )
+        or any(not isinstance(item, dict) for item in state["messages"])
+        or any(not isinstance(item, dict) for item in state["tool_calls"])
+        or not isinstance(state.get("paths"), dict)
+        or not isinstance(conversation["messages"], list)
+        or not isinstance(conversation_full["messages"], list)
+        or any(not isinstance(item, dict) for item in conversation["messages"])
+        or any(not isinstance(item, dict) for item in conversation_full["messages"])
+        or conversation["pending_message"] is not None
+        or conversation_full["pending_message"] is not None
+        or not isinstance(conversation["notes"], list)
+        or not isinstance(conversation["pi_source_attempts"], list)
+        or not isinstance(latest_context["notes"], list)
+        or not isinstance(latest_context["pi_source_attempts"], list)
+        or isinstance(latest_context["request_count"], bool)
+        or not isinstance(latest_context["request_count"], int)
+        or latest_context["request_count"] < 0
+        or (
+            latest_context["latest"] is not None
+            and not isinstance(latest_context["latest"], dict)
+        )
+    ):
+        raise DciArtifactError("DCI completed run evidence is invalid")
+    shared = (
+        "status",
+        "question",
+        "cwd",
+        "provider",
+        "model",
+        "conversation_features",
+        "notes",
+        "pi_source_attempts",
+    )
+    if any(
+        conversation[name] != conversation_full[name]
+        or conversation_full[name] != latest_context[name]
+        or conversation_full[name] != state.get(name)
+        for name in shared
+    ):
+        raise DciArtifactError("DCI completed run evidence is invalid")
+    features = DciConversationFeatures.from_mapping(state["conversation_features"])
+    if (
+        not any(
+            (
+                features.clear_tool_results,
+                features.externalize_tool_results,
+                features.strip_thinking,
+                features.strip_usage,
+            )
+        )
+        and conversation != conversation_full
+    ):
+        raise DciArtifactError("DCI completed run evidence is invalid")
+    if len(conversation["messages"]) != len(conversation_full["messages"]):
+        raise DciArtifactError("DCI completed run evidence is invalid")
+    for processed, full in zip(
+        conversation["messages"], conversation_full["messages"], strict=True
+    ):
+        for identity in ("role", "toolCallId", "toolName"):
+            if processed.get(identity) != full.get(identity):
+                raise DciArtifactError("DCI completed run evidence is invalid")
+    expected_state_messages = [
+        {"event": event["type"], "message": event.get("message")}
+        for event in raw_events
+        if event.get("type") in {"message_start", "message_end"}
+    ]
+    raw_answer_parts: list[str] = []
+    for event in raw_events:
+        assistant = event.get("assistantMessageEvent")
+        if (
+            event.get("type") == "message_update"
+            and isinstance(assistant, dict)
+            and assistant.get("type") == "text_delta"
+            and isinstance(assistant.get("delta"), str)
+        ):
+            raw_answer_parts.append(assistant["delta"])
+    if (
+        state["messages"] != expected_state_messages
+        or "".join(raw_answer_parts) != state["assistant_text"]
+        or conversation["final_text"] != state["assistant_text"]
+        or conversation_full["final_text"] != state["assistant_text"]
+    ):
+        raise DciArtifactError("DCI completed run evidence is invalid")
 
 
 @dataclass(frozen=True)

@@ -1580,7 +1580,7 @@
       "target_asterion_owner": "asterion.dci.evaluation",
       "target_symbol": "build_failed_judge_result",
       "implementation_status": "implemented",
-      "current_symbol": "DciEvaluationError",
+      "current_symbol": "evaluate_run_directory",
       "current_verification_tests": [
         "tests.test_asterion_dci_evaluation.AsterionDciEvaluationTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_build_failed_judge_result"
       ],
