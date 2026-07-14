@@ -58,6 +58,22 @@ class AsterionDciArtifactTests(unittest.TestCase):
                     0o600,
                 )
 
+    def test_conversation_features_validate_and_round_trip(self) -> None:
+        features = DciConversationFeatures(
+            clear_tool_results=True,
+            clear_tool_results_keep_last=2,
+            externalize_tool_results=True,
+            strip_thinking=True,
+            strip_usage=True,
+        )
+
+        self.assertEqual(
+            DciConversationFeatures.from_mapping(features.to_mapping()),
+            features,
+        )
+        with self.assertRaisesRegex(ValueError, "keep_last must be >= 0"):
+            DciConversationFeatures(clear_tool_results_keep_last=-1)
+
     def test_lock_rejects_output_directory_and_lock_symlinks(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -524,6 +540,69 @@ class AsterionDciArtifactTests(unittest.TestCase):
             self.assertTrue((output_dir / "protocol/attempt-0002.request.json").is_file())
             self.assertEqual(json.loads((output_dir / "state.json").read_text())["resume_count"], 1)
 
+    def test_resume_rebuilds_pending_tool_timing_index(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            output_dir = root / "run"
+            first = DciRunRecorder(
+                output_dir=output_dir,
+                request=request(root),
+                paths=resolve_dci_paths(root),
+            )
+            first.record_event(
+                {
+                    "type": "tool_execution_start",
+                    "toolCallId": "call-completed",
+                    "toolName": "read",
+                    "args": {"path": "done"},
+                }
+            )
+            first.record_event(
+                {
+                    "type": "tool_execution_end",
+                    "toolCallId": "call-completed",
+                    "toolName": "read",
+                    "isError": False,
+                    "result": "done",
+                }
+            )
+            first.record_event(
+                {
+                    "type": "message_end",
+                    "message": {
+                        "role": "toolResult",
+                        "toolCallId": "call-completed",
+                        "toolName": "read",
+                        "content": [{"type": "text", "text": "done"}],
+                    },
+                }
+            )
+            first.record_event(
+                {
+                    "type": "tool_execution_start",
+                    "toolCallId": "call-resume",
+                    "toolName": "read",
+                    "args": {"path": "item"},
+                }
+            )
+            first.finalize(status="failed")
+
+            resumed = DciRunRecorder(
+                output_dir=output_dir,
+                request=request(root),
+                paths=resolve_dci_paths(root),
+                resume=True,
+            )
+            self.assertIn("call-resume", resumed._pending_tool_starts)
+            self.assertIn("call-completed", resumed._completed_tool_timings)
+            resumed.finalize(status="failed")
+
+            conversation = json.loads((output_dir / "conversation_full.json").read_text())
+            timing = conversation["messages"][-1]["tool_execution"]
+            self.assertEqual(timing["status"], "completed")
+            self.assertEqual(timing["tool_call_id"], "call-completed")
+            self.assertGreaterEqual(timing["duration_ms"], 0)
+
     def test_recorder_writes_original_durable_artifact_set(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -559,6 +638,7 @@ class AsterionDciArtifactTests(unittest.TestCase):
                 features=DciConversationFeatures(
                     externalize_tool_results=True,
                     clear_tool_results=True,
+                    clear_tool_results_keep_last=0,
                 ),
             )
             recorder.record_event(
@@ -582,6 +662,98 @@ class AsterionDciArtifactTests(unittest.TestCase):
                 "SECRET-TOOL-BODY",
                 (output_dir / "conversation_full.json").read_text(),
             )
+
+    def test_processed_view_keeps_full_evidence_private_and_uses_safe_collision_names(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            output_dir = root / "run"
+            recorder = DciRunRecorder(
+                output_dir=output_dir,
+                request=request(root),
+                paths=resolve_dci_paths(root),
+                features=DciConversationFeatures(
+                    externalize_tool_results=True,
+                    clear_tool_results=True,
+                    clear_tool_results_keep_last=2,
+                    strip_thinking=True,
+                    strip_usage=True,
+                ),
+            )
+            call_ids = ("../escape", "..\\escape", "call-3", "call-4")
+            for index, call_id in enumerate(call_ids, 1):
+                recorder.record_event(
+                    {
+                        "type": "tool_execution_start",
+                        "toolCallId": call_id,
+                        "toolName": "read",
+                        "args": {"path": f"secret-{index}"},
+                    }
+                )
+                recorder.record_event(
+                    {
+                        "type": "tool_execution_end",
+                        "toolCallId": call_id,
+                        "toolName": "read",
+                        "isError": False,
+                        "result": f"body-{index}",
+                    }
+                )
+                recorder.record_event(
+                    {
+                        "type": "message_end",
+                        "message": {
+                            "role": "toolResult",
+                            "toolCallId": call_id,
+                            "toolName": "read",
+                            "content": [{"type": "text", "text": f"SECRET-BODY-{index}"}],
+                        },
+                    }
+                )
+            recorder.record_event(
+                {
+                    "type": "message_end",
+                    "message": {
+                        "role": "assistant",
+                        "content": [
+                            {"type": "thinking", "thinking": "PRIVATE-THINKING"},
+                            {"type": "text", "text": "answer"},
+                        ],
+                        "usage": {"input": 10, "output": 2},
+                    },
+                }
+            )
+            recorder.finalize(status="completed", final_text="answer")
+
+            full = json.loads((output_dir / "conversation_full.json").read_text())
+            processed = json.loads((output_dir / "conversation.json").read_text())
+            full_text = json.dumps(full)
+            processed_text = json.dumps(processed)
+            self.assertIn("PRIVATE-THINKING", full_text)
+            self.assertIn('"usage"', full_text)
+            self.assertNotIn("PRIVATE-THINKING", processed_text)
+            self.assertNotIn('"usage"', processed_text)
+            full_tools = [m for m in full["messages"] if m.get("role") == "toolResult"]
+            processed_tools = [m for m in processed["messages"] if m.get("role") == "toolResult"]
+            self.assertEqual(len(full_tools), 4)
+            self.assertTrue(all("SECRET-BODY" in json.dumps(message) for message in full_tools))
+            self.assertTrue(all("tool_execution" in message for message in full_tools))
+            self.assertTrue(all("externalized" in m["context_management"]["tool_result"] for m in processed_tools))
+            self.assertTrue(all(m["context_management"]["tool_result"].get("status") == "cleared" for m in processed_tools[:2]))
+            self.assertTrue(all("SECRET-BODY" not in json.dumps(message) for message in processed_tools[:2]))
+            self.assertTrue(all("SECRET-BODY" in json.dumps(message) for message in processed_tools[2:]))
+
+            relative_paths = [
+                m["context_management"]["tool_result"]["externalized"]["path"]
+                for m in processed_tools
+            ]
+            self.assertEqual(len(relative_paths), len(set(relative_paths)))
+            for relative in relative_paths:
+                path = Path(relative)
+                self.assertFalse(path.is_absolute())
+                self.assertNotIn("..", path.parts)
+                self.assertEqual((output_dir / path).resolve().parent, (output_dir / "tool_results").resolve())
+                self.assertLessEqual(len(path.name), 96)
+                self.assertTrue((output_dir / path).is_file())
 
 
 if __name__ == "__main__":

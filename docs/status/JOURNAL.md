@@ -486,3 +486,4 @@
 - 16:50 AF-230 directory-descriptor flock replaces metadata authority to guarantee one writer across metadata races. [e2ba6c9]
 - 16:58 AF-230 recorder I/O now stays descriptor-relative to prevent path rebinding from redirecting locked writers. [38ebedf]
 - 17:03 AF-230 post-flock setup now always releases its directory FD on metadata-construction failures. [d1b88b3]
+- 17:28 AF-230 Task 2 unified the real Pi run path with the locked descriptor-relative recorder; complete pending/final message evidence, tool timing with resume restoration, latest provider context, system-prompt sources, and privacy-separated processed controls pass focused and URI-only application projection tests without external calls. [pending Task 2 commit]

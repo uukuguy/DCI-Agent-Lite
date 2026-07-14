@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import secrets
 import socket
 import stat
@@ -298,6 +299,55 @@ class DciConversationFeatures:
     strip_thinking: bool = False
     strip_usage: bool = False
 
+    def __post_init__(self) -> None:
+        keep_last = self.clear_tool_results_keep_last
+        if isinstance(keep_last, bool) or not isinstance(keep_last, int) or keep_last < 0:
+            raise ValueError("clear_tool_results_keep_last must be >= 0")
+
+    def to_mapping(self) -> dict[str, object]:
+        return {
+            "clear_tool_results": self.clear_tool_results,
+            "clear_tool_results_keep_last": self.clear_tool_results_keep_last,
+            "externalize_tool_results": self.externalize_tool_results,
+            "strip_thinking": self.strip_thinking,
+            "strip_usage": self.strip_usage,
+        }
+
+    @classmethod
+    def from_mapping(cls, value: object) -> DciConversationFeatures:
+        if value is None:
+            return cls()
+        if not isinstance(value, dict):
+            raise ValueError("DCI conversation features are invalid")
+        return cls(
+            clear_tool_results=bool(value.get("clear_tool_results", False)),
+            clear_tool_results_keep_last=value.get("clear_tool_results_keep_last", 3),
+            externalize_tool_results=bool(value.get("externalize_tool_results", False)),
+            strip_thinking=bool(value.get("strip_thinking", False)),
+            strip_usage=bool(value.get("strip_usage", False)),
+        )
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _duration_seconds(started_at: object, finished_at: object) -> float | None:
+    if not isinstance(started_at, str) or not isinstance(finished_at, str):
+        return None
+    try:
+        duration = datetime.fromisoformat(finished_at) - datetime.fromisoformat(started_at)
+    except ValueError:
+        return None
+    return max(0.0, duration.total_seconds())
+
+
+def _safe_tool_stem(value: object) -> str:
+    text = value if isinstance(value, str) else "event"
+    text = re.sub(r"[^A-Za-z0-9._-]+", "-", text.replace("\\", "/"))
+    text = text.strip(".-_") or "event"
+    return text[:80]
+
 
 def _write_private_text_at(
     directory_fd: int,
@@ -365,6 +415,10 @@ class DciRunRecorder:
             self._protocol_fd = _open_private_directory_at(self._root_fd, "protocol")
             if resume:
                 self.state = _read_json_object_at(self._root_fd, "state.json")
+                if features is None:
+                    self.features = DciConversationFeatures.from_mapping(
+                        self.state.get("conversation_features")
+                    )
                 self.conversation_full = _read_json_object_at(
                     self._root_fd,
                     "conversation_full.json",
@@ -381,6 +435,7 @@ class DciRunRecorder:
                 self.state["status"] = "running"
                 self.conversation_full["status"] = "running"
                 self.latest_model_context["status"] = "running"
+                self.conversation_full["pending_message"] = None
             else:
                 attempt = 1
                 _write_private_text_at(self._root_fd, "events.jsonl", "")
@@ -388,13 +443,43 @@ class DciRunRecorder:
                 self.state = {
                     "run_id": request.run_id,
                     "status": "running",
+                    "question_path": str(self.question_path),
+                    "final_path": str(self.final_path),
+                    "events_path": str(self.events_path),
+                    "stderr_path": str(self.stderr_path),
                     "question": request.question,
                     "cwd": str(request.cwd),
                     "provider": request.provider,
                     "model": request.model,
                     "tools": request.tools,
+                    "max_turns": request.max_turns,
+                    "runtime_context_level": request.runtime_context_level,
+                    "runtime_context_control": (
+                        {
+                            "requested_level": request.runtime_context_level,
+                            "effective_pi_control": None,
+                            "status": "unsupported",
+                        }
+                        if request.runtime_context_level is not None
+                        else None
+                    ),
+                    "thinking_level": request.thinking_level,
+                    "node_max_old_space_size_mb": request.node_max_old_space_size_mb,
+                    "keep_session": request.keep_session,
+                    "system_prompt_file": (
+                        str(request.system_prompt_file) if request.system_prompt_file else None
+                    ),
+                    "append_system_prompt_file": (
+                        str(request.append_system_prompt_file)
+                        if request.append_system_prompt_file
+                        else None
+                    ),
+                    "conversation_features": self.features.to_mapping(),
                     "event_count": 0,
+                    "last_event_type": None,
                     "assistant_text": "",
+                    "messages": [],
+                    "tool_calls": [],
                     "resume_count": 0,
                     "paths": {
                         "events_jsonl": str(self.events_path),
@@ -408,10 +493,26 @@ class DciRunRecorder:
                 self.conversation_full = {
                     "status": "running",
                     "question": request.question,
+                    "cwd": str(request.cwd),
+                    "provider": request.provider,
+                    "model": request.model,
+                    "conversation_features": self.features.to_mapping(),
                     "messages": [],
+                    "pending_message": None,
                     "final_text": None,
                 }
-                self.latest_model_context = {"status": "running", "latest": None}
+                self._add_system_prompt()
+                self.latest_model_context = {
+                    "status": "running",
+                    "question": request.question,
+                    "cwd": str(request.cwd),
+                    "provider": request.provider,
+                    "model": request.model,
+                    "conversation_features": self.features.to_mapping(),
+                    "request_count": 0,
+                    "runtime_context_management": None,
+                    "latest": None,
+                }
             attempt_stem = f"attempt-{attempt:04d}"
             self._protocol_request_name = f"{attempt_stem}.request.json"
             self._protocol_events_name = f"{attempt_stem}.events.jsonl"
@@ -419,6 +520,7 @@ class DciRunRecorder:
             self.protocol_events_path = self.protocol_dir / self._protocol_events_name
             _write_private_text_at(self._protocol_fd, self._protocol_events_name, "")
             self.normalized: list[dict[str, object]] = []
+            self._restore_tool_timing_indexes()
             capabilities = map_pi_capabilities(request.tools)
             protocol_request: dict[str, object] = {
                 "protocol": PROTOCOL_VERSION,
@@ -449,16 +551,32 @@ class DciRunRecorder:
             self._append_at(self._root_fd, "events.jsonl", event)
             self.adapter.consume(event)
             self.state["event_count"] += 1
-            if event.get("type") == "message_update":
+            event_type = event.get("type")
+            self.state["last_event_type"] = event_type
+            recorded_at = _utc_now()
+            if event_type in {"message_start", "message_end"}:
+                message = event.get("message")
+                self.state["messages"].append(
+                    {"event": event_type, "message": json.loads(json.dumps(message))}
+                )
+                if event_type == "message_start":
+                    self.conversation_full["pending_message"] = self._annotate_message(message)
+                elif isinstance(message, dict):
+                    self.conversation_full["messages"].append(self._annotate_message(message))
+                    self.conversation_full["pending_message"] = None
+            elif event_type == "message_update":
                 assistant = event.get("assistantMessageEvent")
                 if isinstance(assistant, dict) and assistant.get("type") == "text_delta":
                     delta = assistant.get("delta")
                     if isinstance(delta, str):
                         self.state["assistant_text"] += delta
-            if event.get("type") == "message_end":
-                message = event.get("message")
-                if isinstance(message, dict):
-                    self.conversation_full["messages"].append(json.loads(json.dumps(message)))
+                    partial = assistant.get("partial")
+                    if isinstance(partial, dict):
+                        self.conversation_full["pending_message"] = self._annotate_message(partial)
+            elif event_type in {"tool_execution_start", "tool_execution_end"}:
+                self._record_tool_timing(event, recorded_at=recorded_at)
+            elif event_type == "provider_request_context":
+                self._record_latest_model_context(event)
             self._write()
         except BaseException:
             self.close()
@@ -484,6 +602,8 @@ class DciRunRecorder:
             self.state["assistant_text"] = answer
             self.conversation_full["status"] = status
             self.conversation_full["final_text"] = answer
+            self.conversation_full["pending_message"] = None
+            self.latest_model_context["status"] = status
             if status == "completed":
                 self.adapter.complete(
                     artifact={
@@ -542,23 +662,245 @@ class DciRunRecorder:
 
     def _processed_conversation(self) -> dict[str, Any]:
         conversation = json.loads(json.dumps(self.conversation_full))
-        for message in conversation["messages"]:
-            if message.get("role") != "toolResult":
-                continue
-            if self.features.externalize_tool_results:
-                call_id = str(message.get("toolCallId") or "event")
-                tool_results_fd = _open_private_directory_at(self._root_fd, "tool_results")
-                try:
-                    _atomic_write_json_at(
-                        tool_results_fd,
-                        f"{call_id}.json",
-                        {"message": message},
-                    )
-                finally:
-                    os.close(tool_results_fd)
-            if self.features.clear_tool_results:
-                message["content"] = [{"type": "text", "text": "[tool result cleared from conversation context]"}]
+        messages = conversation.get("messages", [])
+        if not isinstance(messages, list):
+            return conversation
+        tool_messages = [message for message in messages if message.get("role") == "toolResult"]
+        tool_names = self._tool_result_names(tool_messages)
+        if self.features.externalize_tool_results and tool_messages:
+            tool_results_fd = _open_private_directory_at(self._root_fd, "tool_results")
+            try:
+                for message, name in zip(tool_messages, tool_names, strict=True):
+                    stats = self._tool_result_stats(message)
+                    payload = {"saved_at": _utc_now(), "message": json.loads(json.dumps(message))}
+                    _atomic_write_json_at(tool_results_fd, name, payload)
+                    context = self._tool_result_context(message)
+                    context["externalized"] = {
+                        "path": f"tool_results/{name}",
+                        "saved_at": payload["saved_at"],
+                        "stats": stats,
+                    }
+            finally:
+                os.close(tool_results_fd)
+        if self.features.clear_tool_results:
+            clear_count = max(0, len(tool_messages) - self.features.clear_tool_results_keep_last)
+            for message in tool_messages[:clear_count]:
+                self._clear_tool_result(message)
+        for message in messages:
+            self._strip_processed_assistant_fields(message)
+        pending = conversation.get("pending_message")
+        if isinstance(pending, dict):
+            self._strip_processed_assistant_fields(pending)
         return conversation
+
+    def _add_system_prompt(self) -> None:
+        parts: list[str] = []
+        for path in (self.request.system_prompt_file, self.request.append_system_prompt_file):
+            if path is not None:
+                parts.append(Path(path).read_text(encoding="utf-8").strip("\n"))
+        if not parts:
+            return
+        self.conversation_full["messages"].append(
+            {
+                "role": "system",
+                "content": [{"type": "text", "text": "\n\n".join(parts)}],
+                "sources": {
+                    "system_prompt_file": (
+                        str(self.request.system_prompt_file) if self.request.system_prompt_file else None
+                    ),
+                    "append_system_prompt_file": (
+                        str(self.request.append_system_prompt_file)
+                        if self.request.append_system_prompt_file
+                        else None
+                    ),
+                },
+            }
+        )
+
+    def _restore_tool_timing_indexes(self) -> None:
+        self._pending_tool_starts: dict[str, str] = {}
+        self._completed_tool_timings: dict[str, dict[str, object]] = {}
+        for entry in self.state.get("tool_calls", []):
+            if not isinstance(entry, dict):
+                continue
+            call_id = entry.get("toolCallId")
+            if not isinstance(call_id, str) or not call_id:
+                continue
+            if entry.get("event") == "tool_execution_start" and isinstance(
+                entry.get("recorded_at"), str
+            ):
+                self._pending_tool_starts[call_id] = str(entry["recorded_at"])
+            elif entry.get("event") == "tool_execution_end":
+                timing = self._tool_timing(
+                    call_id,
+                    entry.get("started_at"),
+                    entry.get("finished_at") or entry.get("recorded_at"),
+                )
+                if timing is not None:
+                    self._completed_tool_timings[call_id] = timing
+                self._pending_tool_starts.pop(call_id, None)
+        self._refresh_tool_annotations()
+
+    def _record_tool_timing(self, event: dict[str, object], *, recorded_at: str) -> None:
+        call_id = event.get("toolCallId")
+        started_at: str | None = None
+        finished_at: str | None = None
+        timing: dict[str, object] | None = None
+        if isinstance(call_id, str) and call_id:
+            if event.get("type") == "tool_execution_start":
+                started_at = recorded_at
+                self._pending_tool_starts[call_id] = recorded_at
+            else:
+                started_at = self._pending_tool_starts.pop(call_id, None)
+                finished_at = recorded_at
+                timing = self._tool_timing(call_id, started_at, finished_at)
+                if timing is not None:
+                    self._completed_tool_timings[call_id] = timing
+        self.state["tool_calls"].append(
+            {
+                "recorded_at": recorded_at,
+                "event": event.get("type"),
+                "toolCallId": call_id,
+                "toolName": event.get("toolName"),
+                "args": event.get("args"),
+                "isError": event.get("isError"),
+                "result": event.get("result"),
+                "started_at": started_at,
+                "finished_at": finished_at,
+                "duration_seconds": timing.get("duration_seconds") if timing else None,
+            }
+        )
+        self._refresh_tool_annotations()
+
+    @staticmethod
+    def _tool_timing(
+        call_id: str, started_at: object, finished_at: object
+    ) -> dict[str, object] | None:
+        duration = _duration_seconds(started_at, finished_at)
+        if duration is None or not isinstance(started_at, str) or not isinstance(finished_at, str):
+            return None
+        return {
+            "tool_call_id": call_id,
+            "status": "completed",
+            "started_at": started_at,
+            "finished_at": finished_at,
+            "duration_seconds": duration,
+            "duration_ms": int(round(duration * 1000)),
+        }
+
+    def _annotate_message(self, message: object) -> dict[str, Any] | None:
+        if not isinstance(message, dict):
+            return None
+        result = json.loads(json.dumps(message))
+        call_id = result.get("toolCallId")
+        if result.get("role") == "toolResult" and isinstance(call_id, str):
+            timing = self._completed_tool_timings.get(call_id)
+            if timing is not None:
+                result["tool_execution"] = json.loads(json.dumps(timing))
+        return result
+
+    def _refresh_tool_annotations(self) -> None:
+        messages = self.conversation_full.get("messages", [])
+        if isinstance(messages, list):
+            self.conversation_full["messages"] = [
+                self._annotate_message(message) or message for message in messages
+            ]
+        pending = self.conversation_full.get("pending_message")
+        if isinstance(pending, dict):
+            self.conversation_full["pending_message"] = self._annotate_message(pending)
+        latest = self.latest_model_context.get("latest") if hasattr(self, "latest_model_context") else None
+        if isinstance(latest, dict) and isinstance(latest.get("messages"), list):
+            latest["messages"] = [
+                self._annotate_message(message) or message for message in latest["messages"]
+            ]
+
+    def _record_latest_model_context(self, event: dict[str, object]) -> None:
+        messages = event.get("messages")
+        annotated = (
+            [self._annotate_message(message) or message for message in messages]
+            if isinstance(messages, list)
+            else []
+        )
+        index = event.get("requestIndex")
+        prior = self.latest_model_context.get("request_count", 0)
+        self.latest_model_context["request_count"] = max(
+            prior if isinstance(prior, int) else 0,
+            index if isinstance(index, int) else 0,
+        )
+        runtime = json.loads(json.dumps(event.get("runtimeContextManagement")))
+        self.latest_model_context["runtime_context_management"] = runtime
+        self.latest_model_context["latest"] = {
+            "captured_at": _utc_now(),
+            "request_index": index,
+            "model": event.get("model"),
+            "runtime_context_management": runtime,
+            "message_count": len(annotated),
+            "messages": annotated,
+            "payload": json.loads(json.dumps(event.get("payload"))),
+        }
+
+    @staticmethod
+    def _tool_result_context(message: dict[str, Any]) -> dict[str, Any]:
+        context = message.setdefault("context_management", {})
+        return context.setdefault("tool_result", {})
+
+    @staticmethod
+    def _tool_result_stats(message: dict[str, Any]) -> dict[str, int]:
+        texts = [
+            part.get("text", "")
+            for part in message.get("content", [])
+            if isinstance(part, dict) and part.get("type") == "text"
+        ]
+        text = "\n\n".join(value for value in texts if isinstance(value, str))
+        return {
+            "chars": len(text),
+            "lines": len(text.splitlines()) if text else 0,
+            "content_blocks": len(message.get("content", [])),
+        }
+
+    @staticmethod
+    def _tool_result_names(messages: list[dict[str, Any]]) -> list[str]:
+        counts: dict[str, int] = {}
+        names: list[str] = []
+        for message in messages:
+            stem = _safe_tool_stem(message.get("toolCallId"))
+            collision_key = stem.casefold()
+            counts[collision_key] = counts.get(collision_key, 0) + 1
+            suffix = "" if counts[collision_key] == 1 else f"-{counts[collision_key]}"
+            names.append(f"{stem}{suffix}.json")
+        return names
+
+    def _clear_tool_result(self, message: dict[str, Any]) -> None:
+        context = self._tool_result_context(message)
+        stats = context.get("externalized", {}).get("stats") or self._tool_result_stats(message)
+        context.update(
+            {
+                "status": "cleared",
+                "stats": stats,
+                "cleared_at": _utc_now(),
+                "keep_last": self.features.clear_tool_results_keep_last,
+            }
+        )
+        summary = [
+            "[tool result cleared from conversation context]",
+            f"tool={message.get('toolName', 'unknown')}",
+            f"chars={stats.get('chars', 0)}",
+            f"lines={stats.get('lines', 0)}",
+        ]
+        externalized = context.get("externalized")
+        if isinstance(externalized, dict) and externalized.get("path"):
+            summary.append(f"full_output={externalized['path']}")
+        message["content"] = [{"type": "text", "text": "\n".join(summary)}]
+
+    def _strip_processed_assistant_fields(self, message: dict[str, Any]) -> None:
+        if message.get("role") != "assistant":
+            return
+        if self.features.strip_thinking and isinstance(message.get("content"), list):
+            message["content"] = [
+                part for part in message["content"] if part.get("type") != "thinking"
+            ]
+        if self.features.strip_usage:
+            message.pop("usage", None)
 
     def _protocol_directory_fd(self) -> int:
         if self._protocol_fd is None:

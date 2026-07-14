@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from asterion.dci.config import DciRuntimeOptions, resolve_dci_paths
+from asterion.dci.artifacts import DciConversationFeatures
 from asterion.dci.run import (
     DciRunError,
     DciRunRequest,
@@ -48,7 +49,168 @@ class FailingPiClient(FixturePiClient):
         raise RuntimeError("provider response and private stderr")
 
 
+class LifecyclePiClient(FixturePiClient):
+    output_dir: Path
+
+    def prompt_and_wait(self, _: str, *, on_event, **__: object) -> str:
+        tool_ids = ("../escape", "..\\escape", "call-3", "call-4")
+        events: list[dict[str, object]] = [
+            {"type": "response", "id": "py-1", "success": True},
+            {
+                "type": "message_start",
+                "message": {"role": "assistant", "content": []},
+            },
+            {
+                "type": "message_update",
+                "assistantMessageEvent": {
+                    "type": "text_delta",
+                    "delta": "answer",
+                    "partial": {
+                        "role": "assistant",
+                        "content": [{"type": "text", "text": "answer"}],
+                    },
+                },
+            },
+        ]
+        for index, call_id in enumerate(tool_ids, 1):
+            events.extend(
+                [
+                    {
+                        "type": "tool_execution_start",
+                        "toolCallId": call_id,
+                        "toolName": "read",
+                        "args": {"path": f"item-{index}"},
+                    },
+                    {
+                        "type": "tool_execution_end",
+                        "toolCallId": call_id,
+                        "toolName": "read",
+                        "isError": False,
+                        "result": f"body-{index}",
+                    },
+                    {
+                        "type": "message_end",
+                        "message": {
+                            "role": "toolResult",
+                            "toolCallId": call_id,
+                            "toolName": "read",
+                            "content": [{"type": "text", "text": f"SECRET-BODY-{index}"}],
+                        },
+                    },
+                ]
+            )
+        events.extend(
+            [
+                {
+                    "type": "provider_request_context",
+                    "requestIndex": 1,
+                    "model": "provider/model-old",
+                    "messages": [{"role": "user", "content": "old"}],
+                    "payload": {"private": "old-payload"},
+                    "runtimeContextManagement": {"level": "level2"},
+                },
+                {
+                    "type": "provider_request_context",
+                    "requestIndex": 2,
+                    "model": "provider/model-latest",
+                    "messages": [{"role": "user", "content": "latest"}],
+                    "payload": {"private": "latest-payload"},
+                    "runtimeContextManagement": {"level": "level3"},
+                },
+                {
+                    "type": "message_end",
+                    "message": {
+                        "role": "assistant",
+                        "content": [
+                            {"type": "thinking", "thinking": "PRIVATE-THINKING"},
+                            {"type": "text", "text": "answer"},
+                        ],
+                        "usage": {"input": 10, "output": 2},
+                    },
+                },
+                {"type": "agent_end"},
+                {"type": "agent_settled"},
+            ]
+        )
+        for event in events:
+            on_event(event)
+            state = json.loads((self.output_dir / "state.json").read_text())
+            assert state["status"] == "running"
+            conversation = json.loads((self.output_dir / "conversation_full.json").read_text())
+            if event["type"] == "message_start":
+                assert conversation["pending_message"]["role"] == "assistant"
+            if event["type"] == "message_update":
+                assert conversation["pending_message"]["content"][0]["text"] == "answer"
+        return "answer"
+
+
 class AsterionDciRunTests(unittest.TestCase):
+    def test_production_path_records_complete_conversation_and_latest_context(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            paths = resolve_dci_paths(root)
+            output_dir = root / "run"
+            LifecyclePiClient.output_dir = output_dir
+            system_prompt = root / "system.txt"
+            append_prompt = root / "append.txt"
+            system_prompt.write_text("system base", encoding="utf-8")
+            append_prompt.write_text("system append", encoding="utf-8")
+            request = DciRunRequest(
+                run_id="run-1",
+                question="question",
+                cwd=root,
+                system_prompt_file=system_prompt,
+                append_system_prompt_file=append_prompt,
+            )
+            features = DciConversationFeatures(
+                externalize_tool_results=True,
+                clear_tool_results=True,
+                clear_tool_results_keep_last=2,
+                strip_thinking=True,
+                strip_usage=True,
+            )
+            with patch("asterion.dci.run.PiRpcClient", LifecyclePiClient):
+                result = run_pi_research(
+                    paths,
+                    request,
+                    output_dir=output_dir,
+                    conversation_features=features,
+                )
+
+            state = json.loads((output_dir / "state.json").read_text())
+            full = json.loads((output_dir / "conversation_full.json").read_text())
+            latest = json.loads((output_dir / "latest_model_context.json").read_text())
+            self.assertEqual(result.status, "completed")
+            self.assertEqual(state["status"], "completed")
+            self.assertEqual(state["event_count"], 20)
+            self.assertEqual(state["assistant_text"], "answer")
+            self.assertEqual(len(state["tool_calls"]), 8)
+            self.assertTrue(
+                all(
+                    entry["started_at"] is not None
+                    and entry["finished_at"] is not None
+                    and entry["duration_seconds"] >= 0
+                    for entry in state["tool_calls"]
+                    if entry["event"] == "tool_execution_end"
+                )
+            )
+            self.assertEqual(latest["request_count"], 2)
+            self.assertEqual(latest["latest"]["model"], "provider/model-latest")
+            self.assertEqual(latest["latest"]["payload"], {"private": "latest-payload"})
+            self.assertEqual(latest["runtime_context_management"], {"level": "level3"})
+            self.assertEqual(full["messages"][0]["role"], "system")
+            self.assertEqual(
+                [message["role"] for message in full["messages"]],
+                ["system", "toolResult", "toolResult", "toolResult", "toolResult", "assistant"],
+            )
+            self.assertEqual(
+                full["messages"][0]["sources"],
+                {
+                    "system_prompt_file": str(system_prompt),
+                    "append_system_prompt_file": str(append_prompt),
+                },
+            )
+            self.assertIsNone(full["pending_message"])
     def test_runtime_context_request_is_recorded_without_fabricating_a_pi_flag(self) -> None:
         request = DciRunRequest(
             run_id="run-1",
