@@ -555,3 +555,4 @@
 - 01:14 AF-240 adds a RED regression proving blank runtime charts passed acceptance. [1f0f506]
 - 01:14 AF-240 restores runtime chart semantics and kills blank PNG mutations. [cea5306]
 - 01:18 AF-240 Task 4 R5 approves terminal evidence, executable analysis parity, and deterministic figures. [cea5306; R5]
+- 01:22 AF-240 checkpoint advances recovery to Task 5 after analysis parity approval. [74e4097]
