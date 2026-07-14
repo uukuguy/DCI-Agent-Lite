@@ -252,10 +252,13 @@ The benchmark scripts use the following dataset and retrieval-corpus pairs. `Avg
 ## Asterion batch profiles and launchers
 
 The installed `asterion-dci` wheel contains immutable mappings for the two
-BCPlus launch modes, six QA datasets, and four BRIGHT IR datasets. Normal
-provider, model, Pi, Node, and Judge defaults come from the same repository
-`.env` and `DCI_*` variables used by source DCI. Command-line values take
-precedence; credentials are never accepted as literal command-line values.
+BCPlus launch modes, six QA datasets, and four BRIGHT IR datasets. Those
+source-parity profiles intentionally carry each source launcher's provider,
+model, tools, Node heap, and runtime values; explicit command-line values
+override them. Custom commands without `--profile` inherit normal provider,
+model, Pi, Node, and Judge defaults from the same repository `.env` and
+`DCI_*` variables used by source DCI. Credentials are never accepted as literal
+command-line values.
 
 Use a profile directly or its one-to-one wrapper:
 
