@@ -510,3 +510,12 @@
 - 19:26 AF-230 terminal adds verified Node>=20 selection and literal TTY Pi launch without RPC artifacts. [295c601]
 - 19:36 AF-230 terminal now redacts parse/probe failures and preflights Node, prompt rendering, and cwd before Pi. [6aa575f]
 - 19:42 AF-230 Task 7 registers all four native operator hypotheses in the deterministic Climb adapter; focused adapter tests, shell syntax, scope, and diff checks pass. [pending adapter commit]
+- 19:44 AF-230-H-001 confirmed 4/4; package acceptance recorded.
+- 19:44 AF-230-H-002 confirmed 4/4; package acceptance recorded.
+- 19:44 AF-230-H-003 confirmed 4/4; package acceptance recorded.
+- 19:44 AF-230-H-004 confirmed 4/4; package acceptance recorded.
+- 19:48 AF-230 full local closure passed 529 Python, 11 Node, and 19 Rust tests plus compile, Ruff, shell, scope, and diff gates.
+- 19:48 AF-230 bounded acceptance first rejected a logical `/var` temporary path before run creation or Pi/provider startup because macOS exposes `/var` as a symlink; using its physical `/private/var` path preserved the no-follow contract.
+- 19:48 AF-230 authorized Pi-default acceptance used one actual provider-backed `asterion-dci run` and no Judge request; it completed with 314 raw events, 40 valid protocol events, five protected/externalized tool results, private parseable artifacts, safe provenance, exact final digest, and body-free projection.
+- 19:48 AF-230 fixture resume and no-TTY terminal/Node command-construction acceptance passed; no second provider request was used to manufacture failure.
+- 19:48 AF-230 closed after all native operator/artifact rows and approved boundaries passed; AF-240 activated for governed batch, evaluation, and export planning. [pending closure commit]

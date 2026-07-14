@@ -1587,12 +1587,23 @@ hypotheses:
   expected_lift: +1 unified durable artifact boundary
   cost_h: 1.2
   ranking: 0.9
-  status: pending
+  status: confirmed
   created_at: '2026-07-14T16:19:41+08:00'
-  verification_command: uv run python -m unittest -v tests.test_asterion_dci_run
-    tests.test_asterion_dci_artifacts tests.test_asterion_dci_application_executor
-    tests.test_builtin_dci_application
-  results: []
+  verification_command: uv run python -m unittest -v tests.test_asterion_dci_run tests.test_asterion_dci_artifacts
+    tests.test_asterion_dci_application_executor tests.test_builtin_dci_application
+  results:
+  - session: 2026-07-14-af-230-native-operator-artifact-parity
+    cycle: 72
+    run: 20260714-194356-dci-climb-af230h001
+    local: 4
+    local_per_task:
+      private_atomic_recorder: 1
+      unified_production_path: 1
+      resume_writer_safety: 1
+      application_projection: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-230-H-002
   work_package_id: AF-230
   description: Preserve complete native evidence while deriving privacy-safe processed
@@ -1601,11 +1612,23 @@ hypotheses:
   expected_lift: +1 complete protected evidence boundary
   cost_h: 1.1
   ranking: 0.8
-  status: pending
+  status: confirmed
   created_at: '2026-07-14T16:19:41+08:00'
   verification_command: uv run python -m unittest -v tests.test_asterion_dci_artifacts
     tests.test_asterion_dci_run
-  results: []
+  results:
+  - session: 2026-07-14-af-230-native-operator-artifact-parity
+    cycle: 73
+    run: 20260714-194400-dci-climb-af230h002
+    local: 4
+    local_per_task:
+      full_processed_separation: 1
+      safe_tool_externalization: 1
+      latest_provider_context: 1
+      protocol_digest: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-230-H-003
   work_package_id: AF-230
   description: Record credential-safe Pi provenance and isolate compatible resume
@@ -1614,11 +1637,23 @@ hypotheses:
   expected_lift: +1 provenance and resume safety boundary
   cost_h: 1.0
   ranking: 0.7
-  status: pending
+  status: confirmed
   created_at: '2026-07-14T16:19:41+08:00'
   verification_command: uv run python -m unittest -v tests.test_asterion_dci_artifacts
     tests.test_asterion_dci_run
-  results: []
+  results:
+  - session: 2026-07-14-af-230-native-operator-artifact-parity
+    cycle: 74
+    run: 20260714-194405-dci-climb-af230h003
+    local: 4
+    local_per_task:
+      credential_safe_provenance: 1
+      attempt_isolation: 1
+      terminal_status_validation: 1
+      lock_lifetime: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-230-H-004
   work_package_id: AF-230
   description: Complete package-local run inputs, resource resolution, and direct
@@ -1627,8 +1662,20 @@ hypotheses:
   expected_lift: +1 native operator parity boundary
   cost_h: 0.9
   ranking: 0.6
-  status: pending
+  status: confirmed
   created_at: '2026-07-14T16:19:41+08:00'
   verification_command: uv run python -m unittest -v tests.test_asterion_dci_pi_rpc
     tests.test_asterion_dci_cli
-  results: []
+  results:
+  - session: 2026-07-14-af-230-native-operator-artifact-parity
+    cycle: 75
+    run: 20260714-194409-dci-climb-af230h004
+    local: 4
+    local_per_task:
+      run_input_resources: 1
+      conversation_controls: 1
+      terminal_literal_boundary: 1
+      node_selection: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance

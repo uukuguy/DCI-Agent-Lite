@@ -1,22 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (70 runs).
+> Deterministic summary generated from tracked state (74 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
-- Phase: implementation
-- Last cycle: 71
-- Next hypothesis: AF-230-H-001
+- Phase: completed
+- Last cycle: 75
+- Next hypothesis: None
 - In flight: none
-- Next action: Start AF-230-H-001.
+- Next action: AF-230 is complete; plan and review AF-240 before implementation.
 
 ## Active hypotheses
 
-- **AF-230-H-001** (pending, rank 0.90): Make one private atomic recorder the only production owner of native DCI run and resume artifacts.
-- **AF-230-H-002** (pending, rank 0.80): Preserve complete native evidence while deriving privacy-safe processed conversation, tool-result, and provider-context views.
-- **AF-230-H-003** (pending, rank 0.70): Record credential-safe Pi provenance and isolate compatible resume attempts behind a fail-closed single-writer boundary.
-- **AF-230-H-004** (pending, rank 0.60): Complete package-local run inputs, resource resolution, and direct TTY-only Pi terminal parity without RPC artifacts.
 
 ## Run ladder
 
@@ -92,6 +88,10 @@
 | 20260714-011904-dci-climb-af220h002 | AF-220-H-002 | 4 | confirmed 4/4 |
 | 20260714-011904-dci-climb-af220h003 | AF-220-H-003 | 4 | confirmed 4/4 |
 | 20260714-011905-dci-climb-af220h004 | AF-220-H-004 | 4 | confirmed 4/4 |
+| 20260714-194356-dci-climb-af230h001 | AF-230-H-001 | 4 | confirmed 4/4 |
+| 20260714-194400-dci-climb-af230h002 | AF-230-H-002 | 4 | confirmed 4/4 |
+| 20260714-194405-dci-climb-af230h003 | AF-230-H-003 | 4 | confirmed 4/4 |
+| 20260714-194409-dci-climb-af230h004 | AF-230-H-004 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

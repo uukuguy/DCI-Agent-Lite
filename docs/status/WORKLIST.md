@@ -249,13 +249,34 @@
 
 ## AF-230 — Complete native operator and artifact parity
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Asterion DCI complete capability-package reference product
 - Scope: close remaining source-DCI single-run, terminal, context/resource, artifact, provenance, and resume controls in independently owned Asterion code.
 - Dependencies: AF-220
 - Acceptance: every remaining native operator and artifact behavior is explicitly mapped to Asterion-owned implementation or recorded as an approved unsupported boundary; the production path uses one private atomic recorder, credential-safe provenance, isolated attempts, single-writer compatible resume, and a direct TTY-only terminal command, with executable fixture and small-sample acceptance evidence.
 - Design: `docs/superpowers/specs/2026-07-13-asterion-dci-complete-product-parity-design.md`
 - Plan: `docs/superpowers/plans/2026-07-14-af-230-native-operator-artifact-parity.md`
+- Closure evidence: AF-230-H-001 through H-004 are confirmed 4/4. The sole production path uses a private descriptor-relative atomic recorder, complete and processed conversation views, credential-safe Pi provenance, digest-bound isolated protocol attempts, strict single-writer resume validation, complete package-local inputs/resources, and a literal TTY-only Pi terminal command. Full closure passes 529 Python, 11 Node, and 19 Rust tests plus compile, Ruff, shell, scope, and diff gates. One authorized Pi-default `asterion-dci run` completed with 314 raw events, 40 valid protocol events, five externalized tool results, private parseable artifacts, truthful completed latest-context state, safe provenance, a matching final digest, and a body-free application projection; no Judge request was used.
+
+## AF-240 — Complete batch, evaluation, and export parity
+
+- Status: in_progress
+- Parent objective: Asterion DCI complete capability-package reference product
+- Scope: transplant concurrent BCPlus, QA, and BRIGHT orchestration, Judge/evaluation behavior, IR metrics, summaries, exports, and result analysis into independently owned Asterion code.
+- Dependencies: AF-230
+- Acceptance: bounded concurrent Asterion batch paths reuse the native run/evaluator boundaries, preserve deterministic cache and per-query state, and reproduce source-product dataset, metric, summary, export, and analysis semantics without importing or launching `src/dci`.
+- Design: `docs/superpowers/specs/2026-07-13-asterion-dci-complete-product-parity-design.md`
+- Plan: successor planning and review are the active package work; no AF-240 implementation may start before the detailed plan is committed.
+
+## AF-250 — Product acceptance matrix
+
+- Status: proposed
+- Parent objective: Asterion DCI complete capability-package reference product
+- Scope: make every complete-product parity matrix row executable and record reproducible local, Pi, and Pi-plus-Judge evidence.
+- Dependencies: AF-240
+- Acceptance: the checked-in matrix has no unsupported source behavior and every row has reproducible fixture or bounded provider-backed evidence before any full-parity conclusion.
+- Design: `docs/superpowers/specs/2026-07-13-asterion-dci-complete-product-parity-design.md`
+- Plan: governed after AF-240 closure.
 
 ## AF-095 — Asterion framework identity and extraction
 

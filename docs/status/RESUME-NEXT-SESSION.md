@@ -1,23 +1,33 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-14. AF-220 is closed; AF-230 is the active successor in the isolated `af-220-shared-dci-config` worktree.
+> Updated: 2026-07-14. AF-230 is closed; AF-240 is the active successor in the isolated `af-220-shared-dci-config` worktree.
 
-Active work package: AF-230
+Active work package: AF-240
 
 ## TL;DR
 
-- AF-220 is complete: all four local hypotheses remain confirmed 4/4, and all authorized bounded real checks passed using process-local shared configuration only.
-- Safe real evidence: model-free Pi RPC/Judge-config prerequisites exited zero; basic Pi example completed native `question.txt`/`events.jsonl`/`final.txt`/`state.json`; runtime-context Pi-plus-Judge example completed with boolean `eval_result.json.is_correct`; the application completed through `uv run --project packages/python/asterion-core asterion` because the direct binary is not on the worktree PATH, producing exactly one body-free JSON object and native shared provider/model/tools fields; one-row benchmark produced one native query directory, `result.json`, `summary.json` total 1, and boolean verdict.
-- Temporary acceptance roots are under the system temporary directory with prefixes `af220-basic-output.`, `af220-context-retry-output.`, `af220-application-final-output.`, and `af220-benchmark.`. Status documents contain no credentials or provider bodies.
-- AF-230 is now active. It has no implementation plan or Climb hypotheses yet; do not begin code changes before creating its detailed plan and registering its parented hypotheses.
+- AF-230 is complete. AF-230-H-001 through H-004 are confirmed 4/4 and the deterministic research tree records cycles 72–75.
+- Full closure passed 529 Python, 11 Node, and 19 Rust tests plus Asterion compile, Ruff, Climb shell syntax, scope, and diff checks.
+- One actual provider-backed Pi-default `asterion-dci run` completed under the physical system temporary path; no Judge request was made. Offline validation proved `0700` run/`0600` files, complete parseable artifacts, 314 raw and 40 valid protocol events, five full-versus-processed externalized tool results, completed truthful latest-context state, credential-safe provenance, exact final digest, and body-free application projection.
+- A preceding logical `/var` output-path attempt was rejected before run creation and Pi/provider startup because `/var` is a symlink on macOS. This confirms the no-follow destination boundary and did not consume a provider request.
+- Fixture-only failed resume and terminal Node/Pi command construction passed; no second provider request manufactured a failure, and no terminal child was launched without a TTY.
 
 ## Next action
 
-Derive and review the AF-230 implementation plan from the approved complete-product-parity design, covering native operator controls, artifact/provenance semantics, and resume behavior against source DCI. Then register AF-230 Climb state, rerun scope preflight, and begin implementation only through the approved plan.
+Write and review the detailed AF-240 plan from the approved complete-product-parity design. Map source BCPlus, QA, and BRIGHT batch orchestration, evaluation, metrics, summaries, exports, and result analysis to Asterion-owned implementations before registering AF-240 Climb hypotheses or changing code.
+
+## Ready commands
+
+```bash
+python3 tools/project_scope_check.py
+git status --short
+git log --oneline -8
+```
 
 ## Guardrails
 
-- Do not modify or import `src/dci`; Asterion retains independent runtime ownership.
-- Do not edit the external Pi checkout or copy/symlink configuration, Pi, or corpus data into the worktree.
-- `DCI_*` remains the shared normal `.env` surface; `ASTERION_DCI_OUTPUT_ROOT` remains product-local.
-- Do not print/store credentials or provider bodies, and do not run full external datasets without new authorization.
+- Do not import, launch, or modify `src/dci`; it remains the independent comparison baseline.
+- Do not edit the external `pi/` checkout or persist credentials/provider bodies.
+- Keep shared normal configuration in root `.env`; keep Asterion output ownership independent.
+- Do not run full external datasets automatically. AF-240 needs an approved detailed plan and parented hypotheses before implementation or Climb dispatch.
+- AF-250 remains proposed and owns the final no-unsupported-row product acceptance matrix; AF-230 closure is not a complete source-product parity claim.
