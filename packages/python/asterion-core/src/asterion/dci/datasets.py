@@ -38,6 +38,8 @@ _AGGREGATE_RESERVED = frozenset(
 )
 _WINDOWS_INVALID = frozenset('<>:"|?*')
 _DISALLOWED_UNICODE_CATEGORIES = frozenset({"Cc", "Cf", "Cs"})
+_PORTABLE_COMPONENT_MAX_UTF8_BYTES = 255
+_PORTABLE_COMPONENT_MAX_UTF16_UNITS = 255
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,6 +68,8 @@ class BenchmarkRow:
 def _require_nonempty_string(value: Any, *, field: str) -> str:
     if type(value) is not str or not value.strip():
         raise DatasetError(f"DCI dataset {field} must be a non-empty string")
+    if any(unicodedata.category(character) == "Cs" for character in value):
+        raise DatasetError(f"DCI dataset {field} must contain Unicode scalar values")
     return value
 
 
@@ -103,6 +107,25 @@ def _validate_portable_characters(value: str) -> None:
         raise DatasetError("DCI dataset query ID is not portable")
 
 
+def _validate_portable_component_length(value: str) -> None:
+    try:
+        utf8_length = len(value.encode("utf-8"))
+        utf16_units = len(value.encode("utf-16-le")) // 2
+    except UnicodeEncodeError as error:
+        raise DatasetError("DCI dataset query ID is not portable") from error
+    if (
+        utf8_length > _PORTABLE_COMPONENT_MAX_UTF8_BYTES
+        or utf16_units > _PORTABLE_COMPONENT_MAX_UTF16_UNITS
+    ):
+        raise DatasetError("DCI dataset query ID is too long")
+
+
+def _natural_digit_identity(match: re.Match[str]) -> str:
+    digits = match.group(0)
+    significant = digits.lstrip("0") or "0"
+    return f"#{len(significant)}:{significant}#"
+
+
 def portable_query_id_key(query_id: str) -> str:
     """Validate an ID and return its reusable portable collision identity."""
 
@@ -110,17 +133,19 @@ def portable_query_id_key(query_id: str) -> str:
     if query_id in {".", ".."} or query_id[-1] in {".", " "}:
         raise DatasetError("DCI dataset query ID is not portable")
     _validate_portable_characters(query_id)
+    _validate_portable_component_length(query_id)
 
     portable = unicodedata.normalize("NFKC", query_id)
     if portable in {".", ".."} or portable[-1] in {".", " "}:
         raise DatasetError("DCI dataset query ID is not portable")
     _validate_portable_characters(portable)
+    _validate_portable_component_length(portable)
     normalized = portable.casefold()
     reserved_stem = normalized.split(".", 1)[0].upper()
     if reserved_stem in _WINDOWS_RESERVED or normalized in _AGGREGATE_RESERVED:
         raise DatasetError("DCI dataset query ID is reserved")
 
-    return re.sub(r"\d+", lambda match: f"#{int(match.group(0))}#", normalized)
+    return re.sub(r"[0-9]+", _natural_digit_identity, normalized)
 
 
 def _object_without_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -279,6 +304,10 @@ def build_ir_prompt(
     corpus = _safe_corpus_identity(corpus_dir)
     if corpus_hint is not None and type(corpus_hint) is not str:
         raise DatasetError("DCI corpus_hint must be a string")
+    if corpus_hint is not None and any(
+        unicodedata.category(character) == "Cs" for character in corpus_hint
+    ):
+        raise DatasetError("DCI corpus_hint must contain Unicode scalar values")
     corpus_hint_section = f"CORPUS STRUCTURE:\n{corpus_hint}\n\n" if corpus_hint else ""
     return (
         f"You are a careful research assistant. Answer the question below using ONLY documents in @{corpus}.\n"

@@ -86,6 +86,54 @@ class AsterionDciDatasetTests(unittest.TestCase):
             with self.subTest(payload=payload), self.assertRaises(DatasetError):
                 load_benchmark_rows(self._dataset(payload))
 
+    def test_all_accepted_text_ingress_is_strict_utf8_durable(self) -> None:
+        accepted = {
+            "query_id": "utf8-row",
+            "query": "question\x00\u0085\u2028\u2029",
+            "answer": "answer\x01\u2028",
+        }
+        row = load_benchmark_rows(
+            self._dataset((json.dumps(accepted) + "\n").encode("utf-8"))
+        )[0]
+        json.dumps(row.as_dict(), ensure_ascii=False).encode("utf-8")
+
+        ir = {
+            "query_id": "utf8-ir",
+            "query": "question\u2029",
+            "gold_docs": ["document\x01\u2028.txt"],
+        }
+        ir_row = load_benchmark_rows(
+            self._dataset((json.dumps(ir) + "\n").encode("utf-8"))
+        )[0]
+        json.dumps(ir_row.as_dict(), ensure_ascii=False).encode("utf-8")
+
+        qa_prompt = build_qa_prompt("question\x00\u2028", Path("/tmp/corpus"))
+        ir_prompt = build_ir_prompt(
+            "question\u2029", Path("/tmp/corpus"), "hint\x01\u2028"
+        )
+        qa_prompt.encode("utf-8")
+        ir_prompt.encode("utf-8")
+
+    def test_rejects_lone_surrogates_at_every_durable_text_ingress(self) -> None:
+        invalid_rows = (
+            {"query_id": "q", "query": "bad\ud800", "answer": "a"},
+            {"query_id": "q", "query": "q", "answer": "bad\udfff"},
+            {"query_id": "q", "query": "q", "gold_docs": ["bad\ud800"]},
+            {"query_id": "q", "query": "q", "gold_ids": ["bad\udfff"]},
+        )
+        for value in invalid_rows:
+            with self.subTest(value=repr(value)), self.assertRaises(DatasetError):
+                load_benchmark_rows(
+                    self._dataset((json.dumps(value) + "\n").encode("utf-8"))
+                )
+        for prompt in (
+            lambda: build_qa_prompt("bad\ud800", Path("/tmp/corpus")),
+            lambda: build_ir_prompt("bad\udfff", Path("/tmp/corpus")),
+            lambda: build_ir_prompt("q", Path("/tmp/corpus"), "bad\ud800"),
+        ):
+            with self.assertRaises(DatasetError):
+                prompt()
+
     def test_requires_exact_nonempty_strings_and_mode_specific_gold(self) -> None:
         invalid_objects = [
             {"query_id": True, "query": "q", "answer": "a"},
@@ -174,6 +222,30 @@ class AsterionDciDatasetTests(unittest.TestCase):
             ):
                 with self.assertRaises(DatasetError):
                     portable_query_id_key(f"a{character}b")
+
+    def test_portable_query_id_enforces_cross_platform_component_boundaries(
+        self,
+    ) -> None:
+        accepted = (
+            "a" * 255,
+            "é" * 127,
+            "e\u0301" * 85,
+            "😀" * 63,
+        )
+        rejected = (
+            "a" * 256,
+            "é" * 128,
+            "e\u0301" * 86,
+            "😀" * 64,
+            "query-" + "9" * 5000,
+        )
+        for query_id in accepted:
+            with self.subTest(accepted=(len(query_id), repr(query_id[:4]))):
+                self.assertTrue(portable_query_id_key(query_id))
+        for query_id in rejected:
+            with self.subTest(rejected=(len(query_id), repr(query_id[:4]))):
+                with self.assertRaises(DatasetError):
+                    portable_query_id_key(query_id)
 
     def test_jsonl_uses_physical_newlines_and_reports_physical_line_numbers(
         self,
