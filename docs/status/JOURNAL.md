@@ -638,3 +638,5 @@
 - 04:03 AF-250 Task 2 restores independent source Judge entry points and model-free exact argv parity across all four source/Asterion example scripts.
 - 04:03 AF-250 Task 2 GREEN passes 57 focused tests, compile, Ruff, four-script Bash syntax, scope, and diff gates without provider or Judge requests.
 - 04:04 AF-250 Task 2 restores independent Judge Make entry points and exact model-free example parity. [4f254fd]
+- 04:10 AF-250 Task 2 review RED proves the overwrite-based `uv` shim hides a second invocation by returning zero and replacing the first argv.
+- 04:10 AF-250 Task 2 review hardens exact argv evidence with atomic single-invocation claims and advances the recovery baton to Task 3.

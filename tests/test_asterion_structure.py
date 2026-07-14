@@ -11,6 +11,39 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _write_example_uv_shim(path: Path) -> None:
+    path.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        'printf "%s\\0" "$#" "$@" >> "$UV_ARGS_LOG"\n'
+        'if ! mkdir "${UV_ARGS_LOG}.claimed" 2>/dev/null; then\n'
+        "  printf 'uv shim invoked more than once\\n' >&2\n"
+        "  exit 97\n"
+        "fi\n"
+    )
+    path.chmod(0o755)
+
+
+def _read_example_uv_invocations(path: Path) -> list[list[str]]:
+    fields = path.read_bytes().split(b"\0")
+    if not fields or fields.pop() != b"":
+        raise AssertionError("uv argv log is not NUL terminated")
+    invocations: list[list[str]] = []
+    index = 0
+    while index < len(fields):
+        try:
+            argument_count = int(fields[index])
+        except ValueError as exc:
+            raise AssertionError("uv argv log has an invalid argument count") from exc
+        index += 1
+        end = index + argument_count
+        if end > len(fields):
+            raise AssertionError("uv argv log has a truncated invocation")
+        invocations.append([item.decode() for item in fields[index:end]])
+        index = end
+    return invocations
+
+
 class AsterionStructureTests(unittest.TestCase):
     def test_runtime_objects_are_independent_and_wire_compatible(self) -> None:
         from asterion.runtime.host import AgentRuntimeClient as NewClient
@@ -149,6 +182,37 @@ class AsterionStructureTests(unittest.TestCase):
             )
             self.assertIn('source "$REPO_ROOT/.env"', source)
 
+    def test_example_uv_shim_rejects_a_hidden_second_invocation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir).resolve()
+            shim = root / "uv"
+            log = root / "uv.argv"
+            _write_example_uv_shim(shim)
+            env = {**os.environ, "UV_ARGS_LOG": str(log)}
+
+            first = subprocess.run(
+                [str(shim), "run", "argument with spaces"],
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+            second = subprocess.run(
+                [str(shim), "hidden", "provider invocation"],
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(first.returncode, 0, first.stderr)
+            self.assertEqual(second.returncode, 97, second.stderr)
+            self.assertEqual(
+                _read_example_uv_invocations(log),
+                [
+                    ["run", "argument with spaces"],
+                    ["hidden", "provider invocation"],
+                ],
+            )
+
     def test_examples_execute_with_pairwise_semantic_parity(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             repo = Path(temp_dir).resolve()
@@ -159,10 +223,7 @@ class AsterionStructureTests(unittest.TestCase):
             bin_dir = repo / "bin"
             bin_dir.mkdir()
             uv = bin_dir / "uv"
-            uv.write_text(
-                '#!/usr/bin/env bash\nprintf "%s\\0" "$@" > "$UV_ARGS_LOG"\n'
-            )
-            uv.chmod(0o755)
+            _write_example_uv_shim(uv)
             base_env = {
                 **os.environ,
                 "PATH": f"{bin_dir}:{os.environ['PATH']}",
@@ -197,9 +258,13 @@ class AsterionStructureTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertNotIn("synthetic-provider", result.stdout + result.stderr)
                 self.assertNotIn("synthetic-model", result.stdout + result.stderr)
-                commands[name] = [
-                    item.decode() for item in log.read_bytes().split(b"\0") if item
-                ]
+                invocations = _read_example_uv_invocations(log)
+                self.assertEqual(
+                    len(invocations),
+                    1,
+                    f"{name} must invoke uv exactly once: {invocations!r}",
+                )
+                commands[name] = invocations[0]
 
             basic_question = (
                 "Answer the following question using only wiki_dump.jsonl in the "
