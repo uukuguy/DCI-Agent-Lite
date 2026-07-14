@@ -8,9 +8,18 @@ import threading
 import time
 import unittest
 from dataclasses import replace
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+from asterion.dci.analysis import (
+    aggregate_results,
+    compute_run_batch_timing,
+    extract_agent_usage_metrics,
+    extract_tool_metrics,
+    gather_query_metrics,
+    seconds_between,
+)
 from asterion.dci.benchmark import (
     BenchmarkRequest,
     DciBenchmarkError,
@@ -18,12 +27,14 @@ from asterion.dci.benchmark import (
     _next_generation,
     _prepare,
     _run_pi_async as _real_run_pi_async,
+    _utc_now,
     run_benchmark_async,
 )
 from asterion.dci.artifacts import DciConversationFeatures
 from asterion.dci.config import DciRuntimeOptions, resolve_dci_paths
 from asterion.dci.judge import JudgeConfig
 from asterion.dci.evaluation import evaluate_run_directory_async as _real_evaluate
+from asterion.dci.pi_rpc import _pi_child_environment, expand_extra_args
 from asterion.dci.run import DciRunResult
 from asterion.runtime.host import RunEvent
 
@@ -119,6 +130,26 @@ async def _recorded_fixture_evaluate(*args: object, **kwargs: object) -> dict[st
 
 
 class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
+    def test_af240_task3_inventory_rows_have_executable_evidence(self) -> None:
+        inventory = json.loads(
+            (
+                Path(__file__).resolve().parents[1]
+                / "assets/dci/batch-parity.json"
+            ).read_text(encoding="utf-8")
+        )
+        rows = [
+            row
+            for row in inventory["rows"]
+            if row.get("target_task") == "AF-240 Task 3"
+        ]
+        self.assertTrue(rows)
+        for row in rows:
+            with self.subTest(row=row["id"]):
+                self.assertEqual(row["implementation_status"], "implemented")
+                self.assertTrue(row["current_asterion_owner"])
+                self.assertTrue(row["current_symbol"])
+                self.assertEqual(len(row["current_verification_tests"]), 1)
+
     async def test_failed_post_result_state_mutation_fails_analysis_closed(self) -> None:
         from asterion.dci import benchmark as benchmark_module
 
@@ -727,6 +758,15 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
     async def test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_stderr_txt(self) -> None:
         await self.test_batch_native_worker_preserves_the_complete_run_artifact_boundary()
 
+    async def test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_eval_result_json(self) -> None:
+        await self.test_exact_result_is_reused_without_native_or_judge_work()
+
+    async def test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_launcher_stderr_txt(self) -> None:
+        await self._assert_direct_transport_log_replacement()
+
+    async def test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_launcher_stdout_txt(self) -> None:
+        await self._assert_direct_transport_log_replacement()
+
     async def test_scripts_bcplus_eval_run_bcplus_eval_py_function_aggregate_results(self) -> None:
         await self.test_bounds_live_native_calls_and_orders_incremental_results()
 
@@ -768,6 +808,238 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_scripts_bcplus_eval_run_bcplus_eval_py_function_write_jsonl(self) -> None:
         await self.test_bounds_live_native_calls_and_orders_incremental_results()
+
+    async def test_scripts_bcplus_eval_run_bcplus_eval_py_function_build_run_command(self) -> None:
+        await self._assert_native_request_replaces_source_subprocess_command()
+
+    def test_scripts_bcplus_eval_run_bcplus_eval_py_function_build_subprocess_env(self) -> None:
+        with patch.dict(os.environ, {"NODE_OPTIONS": "--trace-warnings"}, clear=True):
+            environment = _pi_child_environment(
+                agent_dir=Path("/private/fixture-agent"),
+                node_bin="/private/fixture-node",
+                node_max_old_space_size_mb=4096,
+            )
+        self.assertEqual(
+            environment["NODE_OPTIONS"],
+            "--trace-warnings --max-old-space-size=4096",
+        )
+        self.assertEqual(environment["PI_CODING_AGENT_DIR"], "/private/fixture-agent")
+        self.assertEqual(environment["PATH"].split(os.pathsep)[0], "/private")
+
+    def test_scripts_bcplus_eval_run_bcplus_eval_py_function_compute_run_batch_timing(self) -> None:
+        self.assertEqual(
+            compute_run_batch_timing(
+                [
+                    {
+                        "agent_started_at": "2026-07-14T01:00:02+00:00",
+                        "agent_finished_at": "2026-07-14T01:00:05+00:00",
+                    },
+                    {
+                        "agent_started_at": "2026-07-14T01:00:00+00:00",
+                        "agent_finished_at": "2026-07-14T01:00:09+00:00",
+                    },
+                ]
+            ),
+            {
+                "started_at": "2026-07-14T01:00:00+00:00",
+                "finished_at": "2026-07-14T01:00:09+00:00",
+                "elapsed_wall_clock_seconds": 9.0,
+            },
+        )
+
+    def test_scripts_bcplus_eval_run_bcplus_eval_py_function_expand_extra_args(self) -> None:
+        self.assertEqual(
+            expand_extra_args(("--thinking high", "--flag='two words'")),
+            ["--thinking", "high", "--flag=two words"],
+        )
+
+    def test_scripts_bcplus_eval_run_bcplus_eval_py_function_extract_agent_usage_metrics(self) -> None:
+        state = {
+            "messages": [
+                {
+                    "event": "message_end",
+                    "message": {
+                        "role": "assistant",
+                        "usage": {"input": 7, "output": 3, "totalTokens": 10},
+                    },
+                }
+            ]
+        }
+        self.assertEqual(extract_agent_usage_metrics(state)["total_tokens"], 10.0)
+
+    def test_scripts_bcplus_eval_run_bcplus_eval_py_function_extract_tool_metrics(self) -> None:
+        state = {
+            "tool_calls": [
+                {
+                    "event": "tool_execution_start",
+                    "toolCallId": "t1",
+                    "toolName": "read",
+                    "recorded_at": "2026-07-14T01:00:00+00:00",
+                },
+                {
+                    "event": "tool_execution_end",
+                    "toolCallId": "t1",
+                    "toolName": "read",
+                    "recorded_at": "2026-07-14T01:00:02+00:00",
+                    "isError": False,
+                },
+            ]
+        }
+        self.assertEqual(extract_tool_metrics(state)["duration_seconds"], 2.0)
+
+    def test_scripts_bcplus_eval_run_bcplus_eval_py_function_gather_query_metrics(self) -> None:
+        metrics = gather_query_metrics(
+            row={"query_id": "q", "query": "question", "answer": "answer"},
+            state={
+                "status": "completed",
+                "started_at": "2026-07-14T01:00:00+00:00",
+                "finished_at": "2026-07-14T01:00:03+00:00",
+                "messages": [],
+                "tool_calls": [],
+            },
+            latest_model_context={"request_count": 2},
+            final_text=" answer ",
+        )
+        self.assertEqual(metrics["final_text"], "answer")
+        self.assertEqual(metrics["wall_time_seconds"], 3.0)
+        self.assertEqual(metrics["request_count"], 2)
+
+    def test_scripts_bcplus_eval_run_bcplus_eval_py_function_parse_args(self) -> None:
+        from asterion.dci.cli import _parser
+
+        arguments = _parser().parse_args(
+            [
+                "benchmark",
+                "--dataset",
+                "fixture.jsonl",
+                "--output-root",
+                "out",
+                "--max-concurrency",
+                "3",
+            ]
+        )
+        self.assertEqual(arguments.command, "benchmark")
+        self.assertEqual(arguments.dataset, Path("fixture.jsonl"))
+        self.assertEqual(arguments.max_concurrency, 3)
+
+    def test_scripts_bcplus_eval_run_bcplus_eval_py_function_parse_iso8601(self) -> None:
+        self.assertEqual(
+            seconds_between("2026-07-14T01:00:00Z", "2026-07-14T01:00:01Z"),
+            1.0,
+        )
+        self.assertIsNone(seconds_between("not-a-date", "2026-07-14T01:00:01Z"))
+
+    def test_scripts_bcplus_eval_run_bcplus_eval_py_function_read_json_if_exists(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            directory = _Directory(os.open(root, os.O_RDONLY))
+            try:
+                self.assertIsNone(directory.read_optional_json("result.json"))
+                directory.write_json("result.json", {"status": "completed"})
+                self.assertEqual(
+                    directory.read_optional_json("result.json"),
+                    {"status": "completed"},
+                )
+            finally:
+                directory.close()
+
+    def test_scripts_bcplus_eval_run_bcplus_eval_py_function_read_text_if_exists(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            directory = _Directory(os.open(root, os.O_RDONLY))
+            try:
+                self.assertIsNone(directory.read_optional_text("final.txt"))
+                directory.write_text("final.txt", "answer")
+                self.assertEqual(directory.read_optional_text("final.txt"), "answer")
+            finally:
+                directory.close()
+
+    def test_scripts_bcplus_eval_run_bcplus_eval_py_function_resolve_repo_relative_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            request = _request(root)
+            rows, output_root, _config, _items, _snapshots = _prepare(request)
+        self.assertEqual(output_root, request.output_root)
+        self.assertEqual(rows[0].query_id, "q-0")
+
+    def test_scripts_bcplus_eval_run_bcplus_eval_py_function_seconds_between(self) -> None:
+        self.assertEqual(
+            seconds_between(
+                "2026-07-14T01:00:03+00:00",
+                "2026-07-14T01:00:01+00:00",
+            ),
+            0.0,
+        )
+
+    def test_scripts_bcplus_eval_run_bcplus_eval_py_function_sum_dict_numbers(self) -> None:
+        first = {"run_status": "completed", "wall_time_seconds": 2.0}
+        second = {"run_status": "completed", "wall_time_seconds": 3.0}
+        self.assertEqual(
+            aggregate_results([first, second])["totals"]["wall_time_seconds"],
+            5.0,
+        )
+
+    def test_scripts_bcplus_eval_run_bcplus_eval_py_function_utc_now(self) -> None:
+        value = _utc_now()
+        parsed = datetime.fromisoformat(value)
+        self.assertIsNotNone(parsed.tzinfo)
+        self.assertEqual(parsed.utcoffset(), timezone.utc.utcoffset(parsed))
+
+    async def _assert_direct_transport_log_replacement(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            request = _request(root)
+            with patch("asterion.dci.run.PiRpcClient", _FixtureClient), patch(
+                "asterion.dci.evaluation.judge_answer_sync",
+                return_value=_verdict(request.judge_config),
+            ):
+                await run_benchmark_async(request, paths=resolve_dci_paths(root))
+            result = json.loads(
+                (request.output_root / "q-0" / "result.json").read_text()
+            )
+            native = request.output_root / "q-0" / result["native_generation"]
+            self.assertTrue((native / "events.jsonl").is_file())
+            self.assertTrue((native / "stderr.txt").is_file())
+            self.assertFalse((native / "launcher_stdout.txt").exists())
+            self.assertFalse((native / "launcher_stderr.txt").exists())
+
+    async def _assert_native_request_replaces_source_subprocess_command(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            runtime = DciRuntimeOptions(
+                "openai",
+                "fixture-model",
+                tools="read,bash",
+                runtime_context_level="level3",
+                thinking_level="high",
+                node_max_old_space_size_mb=4096,
+                extra_args=("--custom value",),
+            )
+            request = replace(_request(root), runtime_options=runtime, max_turns=7)
+            captured: list[object] = []
+
+            async def run_native(
+                paths: object, native_request: object, **kwargs: object
+            ) -> DciRunResult:
+                captured.append(native_request)
+                return await _recorded_fixture_run(paths, native_request, **kwargs)
+
+            with patch(
+                "asterion.dci.benchmark._run_pi_async", side_effect=run_native
+            ), patch(
+                "asterion.dci.benchmark.evaluate_run_directory_async",
+                side_effect=_recorded_fixture_evaluate,
+            ):
+                await run_benchmark_async(request, paths=resolve_dci_paths(root))
+            native = captured[0]
+            self.assertEqual(native.provider, "openai")
+            self.assertEqual(native.model, "fixture-model")
+            self.assertEqual(native.tools, "read,bash")
+            self.assertEqual(native.runtime_context_level, "level3")
+            self.assertEqual(native.thinking_level, "high")
+            self.assertEqual(native.node_max_old_space_size_mb, 4096)
+            self.assertEqual(native.extra_args, ("--custom value",))
+            self.assertEqual(native.max_turns, 7)
 
     async def test_bounds_live_native_calls_and_orders_incremental_results(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
