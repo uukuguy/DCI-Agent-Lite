@@ -534,6 +534,37 @@ class AsterionDciExportTests(unittest.TestCase):
             fcntl.flock(lock_stream, fcntl.LOCK_UN)
             lock_stream.close()
 
+    def test_bright_preflight_rejects_nonregular_control_and_temp_entries(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td).resolve()
+            source = root / "source"
+            output = root / "output"
+            outside = root / "outside"
+            outside.write_text("KEEP")
+            output.mkdir()
+            marker = output / ".dci_export_complete"
+            marker.symlink_to(outside)
+            _parquet(source / "p.parquet", [{"id": "safe.txt", "content": "safe"}])
+            with self.assertRaises(DciExportError):
+                export_subset(source, output)
+            self.assertTrue(marker.is_symlink())
+            self.assertEqual(outside.read_text(), "KEEP")
+
+            marker.unlink()
+            self.assertEqual(export_subset(source, output), 1)
+            marker_inode = marker.stat().st_ino
+            nested = output / "nested"
+            nested.mkdir()
+            residue = nested / (".asterion-dci-export-tmp-doc-" + "c" * 32)
+            residue.mkdir()
+            with self.assertRaises(DciExportError):
+                export_subset(source, output)
+            self.assertTrue(residue.is_dir())
+            self.assertEqual(marker.read_text(), "1\n")
+            self.assertEqual(marker.stat().st_ino, marker_inode)
+
     def test_bright_parent_portable_collisions_fail_across_reruns(self) -> None:
         pairs = (
             ("a/x.txt", "A/x.txt"),
@@ -697,6 +728,33 @@ class AsterionDciExportTests(unittest.TestCase):
                 (output / "example.com/Safe.txt").read_text(), "Title: Safe\nsafe"
             )
             self.assertFalse((output / "evil.test").exists())
+
+    def test_bright_preflight_keeps_parquet_authority_through_publication(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td).resolve()
+            source = root / "source"
+            output = root / "output"
+            parquet = source / "p.parquet"
+            _parquet(parquet, [{"id": "safe.txt", "content": "safe"}])
+            self.assertEqual(export_subset(source, output), 1)
+            original = export_module._validate_bright_destination
+
+            def replace_after_preflight(inputs: object, directory: object) -> None:
+                original(inputs, directory)
+                replacement = source / "replacement.parquet"
+                _parquet(replacement, [{"other": "attacker"}])
+                os.replace(replacement, parquet)
+
+            with mock.patch.object(
+                export_module,
+                "_validate_bright_destination",
+                side_effect=replace_after_preflight,
+            ):
+                self.assertEqual(export_subset(source, output), 1)
+            self.assertEqual((output / "safe.txt").read_text(), "safe")
+            self.assertEqual((output / ".dci_export_complete").read_text(), "1\n")
 
     def test_cli_failures_are_body_free_and_module_has_no_baseline_import(self) -> None:
         err = io.StringIO()
