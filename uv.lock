@@ -216,12 +216,14 @@ version = "0.1.0"
 source = { editable = "packages/python/asterion-core" }
 dependencies = [
     { name = "matplotlib" },
+    { name = "pyarrow" },
     { name = "python-dotenv" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "matplotlib", specifier = ">=3.8.0" },
+    { name = "pyarrow", specifier = ">=18.0.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
 ]
 

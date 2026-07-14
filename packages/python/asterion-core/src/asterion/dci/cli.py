@@ -23,6 +23,13 @@ from asterion.dci.config import (
 from asterion.dci.benchmark import BenchmarkRequest, DciBenchmarkError, run_benchmark
 from asterion.dci.artifacts import DciConversationFeatures
 from asterion.dci.evaluation import DciEvaluationError, evaluate_run_directory
+from asterion.dci.export import (
+    BRIGHT_SUBSETS,
+    DciExportError,
+    export_bcplus,
+    export_bcplus_qa,
+    export_bright,
+)
 from asterion.dci.judge import JudgeConfig
 from asterion.dci.pi_rpc import run_pi_terminal, validate_terminal_cwd
 from asterion.dci.run import (
@@ -108,6 +115,19 @@ def _parser() -> argparse.ArgumentParser:
     )
     benchmark.add_argument("--conversation-strip-thinking", action="store_true")
     benchmark.add_argument("--conversation-strip-usage", action="store_true")
+    export = commands.add_parser("export")
+    exporters = export.add_subparsers(dest="export_kind", required=True)
+    bcplus = exporters.add_parser("bcplus")
+    bcplus.add_argument("--source-dir", type=Path, required=True)
+    bcplus.add_argument("--output-dir", type=Path, required=True)
+    bright = exporters.add_parser("bright")
+    bright.add_argument("--source-root", type=Path, required=True)
+    bright.add_argument("--output-root", type=Path, required=True)
+    bright.add_argument("--subset", action="append", choices=BRIGHT_SUBSETS)
+    qa = exporters.add_parser("bcplus-qa")
+    qa.add_argument("--parquet-dir", type=Path, required=True)
+    qa.add_argument("--output", type=Path, required=True)
+    qa.add_argument("--no-decrypt", action="store_true")
     return parser
 
 
@@ -162,6 +182,30 @@ def main(
     except (OSError, ValueError):
         _write_command_failure(stderr, args.command)
         return 2
+    if args.command == "export":
+        try:
+            if args.export_kind == "bcplus":
+                total = export_bcplus(
+                    _path_from_invocation(args.source_dir, invocation_cwd),
+                    _output_path_from_invocation(args.output_dir, invocation_cwd),
+                )
+            elif args.export_kind == "bright":
+                total = export_bright(
+                    _path_from_invocation(args.source_root, invocation_cwd),
+                    _output_path_from_invocation(args.output_root, invocation_cwd),
+                    args.subset,
+                )
+            else:
+                total = export_bcplus_qa(
+                    _path_from_invocation(args.parquet_dir, invocation_cwd),
+                    _output_path_from_invocation(args.output, invocation_cwd),
+                    decrypt=not args.no_decrypt,
+                )
+        except (DciExportError, OSError, ValueError):
+            stderr.write("DCI export failed\n")
+            return 2
+        stdout.write(f"exported={total}\n")
+        return 0
     if args.command == "evaluate":
         try:
             result = evaluate_run_directory(
