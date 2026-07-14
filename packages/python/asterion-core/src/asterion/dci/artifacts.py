@@ -6,6 +6,7 @@ import json
 import os
 import secrets
 import socket
+import stat
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -32,36 +33,113 @@ def _reject_symlink(path: Path, *, label: str) -> None:
         raise DciArtifactError(f"DCI {label} must not be a symlink")
 
 
-def _private_directory(path: Path) -> None:
-    _reject_symlink(path, label="directory")
-    path.mkdir(parents=True, mode=0o700, exist_ok=True)
-    _reject_symlink(path, label="directory")
-    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
-    try:
-        descriptor = os.open(path, _open_flags(flags))
-    except OSError as exc:
-        raise DciArtifactError("DCI artifact directory is invalid") from exc
-    try:
-        os.fchmod(descriptor, 0o700)
-    finally:
-        os.close(descriptor)
-
-
 def _open_flags(flags: int) -> int:
     return flags | getattr(os, "O_NOFOLLOW", 0)
 
 
-def _read_json_object(path: Path) -> dict[str, Any]:
-    _reject_symlink(path, label="JSON file")
+def _validate_leaf_name(name: str) -> None:
+    if not name or name in {".", ".."} or Path(name).name != name:
+        raise DciArtifactError("DCI artifact name is invalid")
+
+
+def _read_json_object_at(directory_fd: int, name: str) -> dict[str, Any]:
+    _validate_leaf_name(name)
+    descriptor: int | None = None
     try:
-        descriptor = os.open(path, _open_flags(os.O_RDONLY))
-        with os.fdopen(descriptor, encoding="utf-8") as handle:
+        descriptor = os.open(name, _open_flags(os.O_RDONLY), dir_fd=directory_fd)
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            raise DciArtifactError("DCI artifact JSON is invalid")
+        handle = os.fdopen(descriptor, encoding="utf-8")
+        descriptor = None
+        with handle:
             value = json.load(handle)
+    except DciArtifactError:
+        raise
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         raise DciArtifactError("DCI artifact JSON is invalid") from exc
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
     if not isinstance(value, dict):
         raise DciArtifactError("DCI artifact JSON is invalid")
     return value
+
+
+def _reject_symlink_at(directory_fd: int, name: str, *, label: str) -> None:
+    _validate_leaf_name(name)
+    try:
+        entry = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
+    except FileNotFoundError:
+        return
+    if stat.S_ISLNK(entry.st_mode):
+        raise DciArtifactError(f"DCI {label} must not be a symlink")
+
+
+def _atomic_write_json_at(directory_fd: int, name: str, payload: Any) -> None:
+    _validate_leaf_name(name)
+    _reject_symlink_at(directory_fd, name, label="JSON target")
+    temporary = f".{name}.{secrets.token_hex(16)}.tmp"
+    descriptor: int | None = None
+    try:
+        descriptor = os.open(
+            temporary,
+            _open_flags(os.O_CREAT | os.O_EXCL | os.O_WRONLY),
+            0o600,
+            dir_fd=directory_fd,
+        )
+        os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            descriptor = None
+            json.dump(payload, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(
+            temporary,
+            name,
+            src_dir_fd=directory_fd,
+            dst_dir_fd=directory_fd,
+        )
+        try:
+            os.fsync(directory_fd)
+        except OSError:
+            # Some filesystems do not support directory fsync; the file itself is durable.
+            pass
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        try:
+            os.unlink(temporary, dir_fd=directory_fd)
+        except FileNotFoundError:
+            pass
+
+
+def _open_directory(path: Path) -> int:
+    _reject_symlink(path, label="directory")
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    try:
+        return os.open(path, _open_flags(flags))
+    except OSError as exc:
+        raise DciArtifactError("DCI artifact directory is invalid") from exc
+
+
+def _open_private_directory_at(parent_fd: int, name: str) -> int:
+    _validate_leaf_name(name)
+    try:
+        os.mkdir(name, 0o700, dir_fd=parent_fd)
+    except FileExistsError:
+        pass
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    try:
+        descriptor = os.open(name, _open_flags(flags), dir_fd=parent_fd)
+    except OSError as exc:
+        raise DciArtifactError("DCI artifact directory is invalid") from exc
+    try:
+        os.fchmod(descriptor, 0o700)
+    except BaseException:
+        os.close(descriptor)
+        raise
+    return descriptor
 
 
 def atomic_write_json(path: Path, payload: Any) -> None:
@@ -76,44 +154,22 @@ def atomic_write_json(path: Path, payload: Any) -> None:
         raise DciArtifactError("DCI JSON parent is invalid") from exc
     if not resolved_parent.is_dir():
         raise DciArtifactError("DCI JSON parent is invalid")
-    destination = resolved_parent / destination.name
-    _reject_symlink(destination, label="JSON target")
-    temporary = resolved_parent / f".{destination.name}.{secrets.token_hex(16)}.tmp"
-    descriptor: int | None = None
+    directory_fd = _open_directory(resolved_parent)
     try:
-        descriptor = os.open(
-            temporary,
-            _open_flags(os.O_CREAT | os.O_EXCL | os.O_WRONLY),
-            0o600,
-        )
-        os.fchmod(descriptor, 0o600)
-        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
-            descriptor = None
-            json.dump(payload, handle, ensure_ascii=False, indent=2)
-            handle.write("\n")
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temporary, destination)
-        try:
-            directory_descriptor = os.open(resolved_parent, os.O_RDONLY)
-            try:
-                os.fsync(directory_descriptor)
-            finally:
-                os.close(directory_descriptor)
-        except OSError:
-            # Some filesystems do not support directory fsync; the file itself is durable.
-            pass
+        _atomic_write_json_at(directory_fd, destination.name, payload)
     finally:
-        if descriptor is not None:
-            os.close(descriptor)
-        try:
-            temporary.unlink()
-        except FileNotFoundError:
-            pass
+        os.close(directory_fd)
 
 
-def _lock_payload(path: Path) -> dict[str, Any]:
-    payload = _read_json_object(path)
+def _read_json_object(path: Path) -> dict[str, Any]:
+    directory_fd = _open_directory(path.parent)
+    try:
+        return _read_json_object_at(directory_fd, path.name)
+    finally:
+        os.close(directory_fd)
+
+
+def _validate_lock_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if set(payload) != {"pid", "hostname", "created_at", "owner_token"}:
         raise DciArtifactError("DCI run lock is invalid")
     pid = payload["pid"]
@@ -133,6 +189,14 @@ def _lock_payload(path: Path) -> dict[str, Any]:
     if timestamp.tzinfo is None:
         raise DciArtifactError("DCI run lock is invalid")
     return payload
+
+
+def _lock_payload_at(directory_fd: int, name: str) -> dict[str, Any]:
+    return _validate_lock_payload(_read_json_object_at(directory_fd, name))
+
+
+def _lock_payload(path: Path) -> dict[str, Any]:
+    return _validate_lock_payload(_read_json_object(path))
 
 
 def _acquire_directory_fd(path: Path) -> int:
@@ -163,10 +227,12 @@ def _acquire_directory_fd(path: Path) -> int:
     return descriptor
 
 
-def _validate_lock_metadata(path: Path) -> None:
-    if not path.exists() and not path.is_symlink():
+def _validate_lock_metadata_at(directory_fd: int, name: str) -> None:
+    try:
+        os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
+    except FileNotFoundError:
         return
-    metadata = _lock_payload(path)
+    metadata = _lock_payload_at(directory_fd, name)
     if metadata["hostname"] != socket.gethostname():
         raise DciArtifactError("DCI run lock metadata is foreign")
 
@@ -186,8 +252,7 @@ class DciRunLock:
     def acquire(cls, output_dir: Path) -> DciRunLock:
         directory = Path(output_dir)
         descriptor = _acquire_directory_fd(directory)
-        resolved_directory = directory.resolve(strict=True)
-        lock_path = resolved_directory / cls.LOCK_NAME
+        lock_path = directory.absolute() / cls.LOCK_NAME
         owner_token = secrets.token_hex(32)
         payload = {
             "pid": os.getpid(),
@@ -196,8 +261,8 @@ class DciRunLock:
             "owner_token": owner_token,
         }
         try:
-            _validate_lock_metadata(lock_path)
-            atomic_write_json(lock_path, payload)
+            _validate_lock_metadata_at(descriptor, cls.LOCK_NAME)
+            _atomic_write_json_at(descriptor, cls.LOCK_NAME, payload)
         except BaseException:
             try:
                 fcntl.flock(descriptor, fcntl.LOCK_UN)
@@ -231,11 +296,17 @@ class DciConversationFeatures:
     strip_usage: bool = False
 
 
-def _write_private_text(path: Path, value: str, *, append: bool = False) -> None:
-    destination = Path(path)
-    _reject_symlink(destination, label="artifact target")
+def _write_private_text_at(
+    directory_fd: int,
+    name: str,
+    value: str,
+    *,
+    append: bool = False,
+) -> None:
+    _validate_leaf_name(name)
+    _reject_symlink_at(directory_fd, name, label="artifact target")
     flags = os.O_CREAT | os.O_WRONLY | (os.O_APPEND if append else os.O_TRUNC)
-    descriptor = os.open(destination, _open_flags(flags), 0o600)
+    descriptor = os.open(name, _open_flags(flags), 0o600, dir_fd=directory_fd)
     try:
         os.fchmod(descriptor, 0o600)
         with os.fdopen(descriptor, "a" if append else "w", encoding="utf-8") as handle:
@@ -247,6 +318,15 @@ def _write_private_text(path: Path, value: str, *, append: bool = False) -> None
         except OSError:
             pass
         raise
+
+
+def _write_private_text(path: Path, value: str, *, append: bool = False) -> None:
+    destination = Path(path)
+    directory_fd = _open_directory(destination.parent)
+    try:
+        _write_private_text_at(directory_fd, destination.name, value, append=append)
+    finally:
+        os.close(directory_fd)
 
 
 class DciRunRecorder:
@@ -266,6 +346,8 @@ class DciRunRecorder:
         self.paths = paths
         self.features = features or DciConversationFeatures()
         self.lock = DciRunLock.acquire(self.output_dir)
+        self._root_fd = self.lock._directory_fd
+        self._protocol_fd: int | None = None
         self._closed = False
         self.events_path = self.output_dir / "events.jsonl"
         self.state_path = self.output_dir / "state.json"
@@ -277,11 +359,17 @@ class DciRunRecorder:
         self.latest_model_context_path = self.output_dir / "latest_model_context.json"
         self.protocol_dir = self.output_dir / "protocol"
         try:
-            _private_directory(self.protocol_dir)
+            self._protocol_fd = _open_private_directory_at(self._root_fd, "protocol")
             if resume:
-                self.state = _read_json_object(self.state_path)
-                self.conversation_full = _read_json_object(self.conversation_full_path)
-                self.latest_model_context = _read_json_object(self.latest_model_context_path)
+                self.state = _read_json_object_at(self._root_fd, "state.json")
+                self.conversation_full = _read_json_object_at(
+                    self._root_fd,
+                    "conversation_full.json",
+                )
+                self.latest_model_context = _read_json_object_at(
+                    self._root_fd,
+                    "latest_model_context.json",
+                )
                 prior_resume_count = self.state.get("resume_count", 0)
                 if isinstance(prior_resume_count, bool) or not isinstance(prior_resume_count, int):
                     raise DciArtifactError("DCI resume state is invalid")
@@ -292,8 +380,8 @@ class DciRunRecorder:
                 self.latest_model_context["status"] = "running"
             else:
                 attempt = 1
-                _write_private_text(self.events_path, "")
-                _write_private_text(self.question_path, f"{request.question}\n")
+                _write_private_text_at(self._root_fd, "events.jsonl", "")
+                _write_private_text_at(self._root_fd, "question.txt", f"{request.question}\n")
                 self.state = {
                     "run_id": request.run_id,
                     "status": "running",
@@ -322,9 +410,11 @@ class DciRunRecorder:
                 }
                 self.latest_model_context = {"status": "running", "latest": None}
             attempt_stem = f"attempt-{attempt:04d}"
-            self.protocol_request_path = self.protocol_dir / f"{attempt_stem}.request.json"
-            self.protocol_events_path = self.protocol_dir / f"{attempt_stem}.events.jsonl"
-            _write_private_text(self.protocol_events_path, "")
+            self._protocol_request_name = f"{attempt_stem}.request.json"
+            self._protocol_events_name = f"{attempt_stem}.events.jsonl"
+            self.protocol_request_path = self.protocol_dir / self._protocol_request_name
+            self.protocol_events_path = self.protocol_dir / self._protocol_events_name
+            _write_private_text_at(self._protocol_fd, self._protocol_events_name, "")
             self.normalized: list[dict[str, object]] = []
             capabilities = map_pi_capabilities(request.tools)
             protocol_request: dict[str, object] = {
@@ -334,7 +424,7 @@ class DciRunRecorder:
                 "requested_capabilities": capabilities,
             }
             validate_run_request(protocol_request)
-            atomic_write_json(self.protocol_request_path, protocol_request)
+            _atomic_write_json_at(self._protocol_fd, self._protocol_request_name, protocol_request)
             self.adapter = PiProtocolAdapter(
                 run_id=str(protocol_request["run_id"]),
                 capabilities=capabilities,
@@ -343,17 +433,17 @@ class DciRunRecorder:
             self.adapter.start()
             self._write()
         except BaseException:
-            self.lock.release()
+            self.close()
             raise
 
     def _emit_normalized(self, event: dict[str, object]) -> None:
         self.normalized.append(dict(event))
-        self._append(self.protocol_events_path, event)
+        self._append_at(self._protocol_directory_fd(), self._protocol_events_name, event)
 
     def record_event(self, event: dict[str, object]) -> None:
         self._ensure_open()
         try:
-            self._append(self.events_path, event)
+            self._append_at(self._root_fd, "events.jsonl", event)
             self.adapter.consume(event)
             self.state["event_count"] += 1
             if event.get("type") == "message_update":
@@ -376,12 +466,17 @@ class DciRunRecorder:
         try:
             answer = final_text or self.state["assistant_text"]
             if answer:
-                _write_private_text(
-                    self._contained_path(self.final_path),
+                _write_private_text_at(
+                    self._root_fd,
+                    "final.txt",
                     answer if answer.endswith("\n") else f"{answer}\n",
                 )
             if stderr_text:
-                _write_private_text(self._contained_path(self.stderr_path), stderr_text[-16384:])
+                _write_private_text_at(
+                    self._root_fd,
+                    "stderr.txt",
+                    stderr_text[-16384:],
+                )
             self.state["status"] = status
             self.state["assistant_text"] = answer
             self.conversation_full["status"] = status
@@ -408,6 +503,12 @@ class DciRunRecorder:
 
         if self._closed:
             return
+        if self._protocol_fd is not None:
+            try:
+                os.close(self._protocol_fd)
+            except OSError:
+                pass
+            self._protocol_fd = None
         self.lock.release()
         self._closed = True
 
@@ -423,10 +524,18 @@ class DciRunRecorder:
             raise DciArtifactError("DCI run recorder is closed")
 
     def _write(self) -> None:
-        self._json(self.state_path, self.state)
-        self._json(self.conversation_full_path, self.conversation_full)
-        self._json(self.latest_model_context_path, self.latest_model_context)
-        self._json(self.conversation_path, self._processed_conversation())
+        _atomic_write_json_at(self._root_fd, "state.json", self.state)
+        _atomic_write_json_at(self._root_fd, "conversation_full.json", self.conversation_full)
+        _atomic_write_json_at(
+            self._root_fd,
+            "latest_model_context.json",
+            self.latest_model_context,
+        )
+        _atomic_write_json_at(
+            self._root_fd,
+            "conversation.json",
+            self._processed_conversation(),
+        )
 
     def _processed_conversation(self) -> dict[str, Any]:
         conversation = json.loads(json.dumps(self.conversation_full))
@@ -435,30 +544,29 @@ class DciRunRecorder:
                 continue
             if self.features.externalize_tool_results:
                 call_id = str(message.get("toolCallId") or "event")
-                directory = self.output_dir / "tool_results"
-                _private_directory(directory)
-                self._json(directory / f"{call_id}.json", {"message": message})
+                tool_results_fd = _open_private_directory_at(self._root_fd, "tool_results")
+                try:
+                    _atomic_write_json_at(
+                        tool_results_fd,
+                        f"{call_id}.json",
+                        {"message": message},
+                    )
+                finally:
+                    os.close(tool_results_fd)
             if self.features.clear_tool_results:
                 message["content"] = [{"type": "text", "text": "[tool result cleared from conversation context]"}]
         return conversation
 
-    def _contained_path(self, path: Path) -> Path:
-        root = self.output_dir.resolve(strict=True)
-        try:
-            parent = path.parent.resolve(strict=True)
-            parent.relative_to(root)
-        except (OSError, ValueError) as exc:
-            raise DciArtifactError("DCI artifact path escapes the run directory") from exc
-        destination = parent / path.name
-        _reject_symlink(destination, label="artifact target")
-        return destination
+    def _protocol_directory_fd(self) -> int:
+        if self._protocol_fd is None:
+            raise DciArtifactError("DCI run recorder is closed")
+        return self._protocol_fd
 
-    def _append(self, path: Path, value: dict[str, object]) -> None:
-        _write_private_text(
-            self._contained_path(path),
+    @staticmethod
+    def _append_at(directory_fd: int, name: str, value: dict[str, object]) -> None:
+        _write_private_text_at(
+            directory_fd,
+            name,
             json.dumps(value, ensure_ascii=False) + "\n",
             append=True,
         )
-
-    def _json(self, path: Path, value: dict[str, Any]) -> None:
-        atomic_write_json(self._contained_path(path), value)

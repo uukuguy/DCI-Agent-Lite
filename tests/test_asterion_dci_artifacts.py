@@ -137,15 +137,15 @@ class AsterionDciArtifactTests(unittest.TestCase):
                 json.dumps(self._lock_payload(pid=999_999_999, owner_token="stale-owner")),
                 encoding="utf-8",
             )
-            original_reader = artifacts._lock_payload
+            original_reader = artifacts._lock_payload_at
             metadata_read_started = threading.Event()
             continue_metadata_read = threading.Event()
 
-            def delay_b_metadata(path: Path) -> dict[str, object]:
+            def delay_b_metadata(directory_fd: int, name: str) -> dict[str, object]:
                 if threading.current_thread().name == "owner-b":
                     metadata_read_started.set()
                     continue_metadata_read.wait(timeout=5)
-                return original_reader(path)
+                return original_reader(directory_fd, name)
 
             result: list[DciRunLock | BaseException] = []
 
@@ -155,7 +155,7 @@ class AsterionDciArtifactTests(unittest.TestCase):
                 except BaseException as exc:
                     result.append(exc)
 
-            with patch("asterion.dci.artifacts._lock_payload", side_effect=delay_b_metadata):
+            with patch("asterion.dci.artifacts._lock_payload_at", side_effect=delay_b_metadata):
                 owner_b_thread = threading.Thread(target=acquire_b, name="owner-b")
                 owner_b_thread.start()
                 self.assertTrue(metadata_read_started.wait(timeout=5))
@@ -196,6 +196,87 @@ class AsterionDciArtifactTests(unittest.TestCase):
                     DciRunLock.acquire(output_dir)
 
             self.assertFalse(output_dir.exists())
+
+    def test_recorder_writes_remain_rooted_to_locked_inode_after_path_rebinding(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            output_dir = root / "run"
+            moved_output = root / "moved-original-run"
+            recorder_a = DciRunRecorder(
+                output_dir=output_dir,
+                request=request(root),
+                paths=resolve_dci_paths(root),
+            )
+            output_dir.rename(moved_output)
+            recorder_b = DciRunRecorder(
+                output_dir=output_dir,
+                request=DciRunRequest(run_id="run-b", question="question-b", cwd=root),
+                paths=resolve_dci_paths(root),
+            )
+            try:
+                inode_a = os.fstat(recorder_a.lock._directory_fd).st_ino
+                inode_b = os.fstat(recorder_b.lock._directory_fd).st_ino
+                before_b_events = (output_dir / "events.jsonl").read_text(encoding="utf-8")
+
+                recorder_a.record_event({"type": "agent_start"})
+
+                self.assertNotEqual(inode_a, inode_b)
+                self.assertEqual(
+                    (output_dir / "events.jsonl").read_text(encoding="utf-8"),
+                    before_b_events,
+                )
+                self.assertIn(
+                    '"type": "agent_start"',
+                    (moved_output / "events.jsonl").read_text(encoding="utf-8"),
+                )
+                self.assertEqual(
+                    json.loads((output_dir / "state.json").read_text(encoding="utf-8"))["run_id"],
+                    "run-b",
+                )
+                self.assertEqual(
+                    json.loads((moved_output / "state.json").read_text(encoding="utf-8"))["run_id"],
+                    "durable-run",
+                )
+            finally:
+                recorder_a.close()
+                recorder_b.close()
+
+    def test_recorder_rejects_nested_protocol_and_tool_result_symlinks(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            external = root / "external"
+            external.mkdir()
+            protocol_output = root / "protocol-run"
+            protocol_output.mkdir()
+            (protocol_output / "protocol").symlink_to(external, target_is_directory=True)
+
+            with self.assertRaises(RuntimeError):
+                DciRunRecorder(
+                    output_dir=protocol_output,
+                    request=request(root),
+                    paths=resolve_dci_paths(root),
+                )
+
+            tool_output = root / "tool-run"
+            recorder = DciRunRecorder(
+                output_dir=tool_output,
+                request=request(root),
+                paths=resolve_dci_paths(root),
+                features=DciConversationFeatures(externalize_tool_results=True),
+            )
+            (tool_output / "tool_results").symlink_to(external, target_is_directory=True)
+            with self.assertRaises(RuntimeError):
+                recorder.record_event(
+                    {
+                        "type": "message_end",
+                        "message": {
+                            "role": "toolResult",
+                            "toolCallId": "call-1",
+                            "content": [{"type": "text", "text": "body"}],
+                        },
+                    }
+                )
+            self.assertEqual(list(external.iterdir()), [])
 
     def test_same_host_dead_pid_lock_is_reclaimed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -329,10 +410,11 @@ class AsterionDciArtifactTests(unittest.TestCase):
             os.chmod(external, 0o644)
             real_replace = os.replace
 
-            def swap_after_replace(source: Path, target: Path) -> None:
-                real_replace(source, target)
-                Path(target).unlink()
-                Path(target).symlink_to(external)
+            def swap_after_replace(source: str, target: str, **kwargs) -> None:
+                real_replace(source, target, **kwargs)
+                destination_fd = kwargs["dst_dir_fd"]
+                os.unlink(target, dir_fd=destination_fd)
+                os.symlink(external, target, dir_fd=destination_fd)
 
             with patch("asterion.dci.artifacts.os.replace", side_effect=swap_after_replace):
                 atomic_write_json(destination, {"status": "new"})
@@ -362,7 +444,7 @@ class AsterionDciArtifactTests(unittest.TestCase):
             )
 
             with patch(
-                "asterion.dci.artifacts.atomic_write_json",
+                "asterion.dci.artifacts._atomic_write_json_at",
                 side_effect=OSError("injected record failure"),
             ):
                 with self.assertRaisesRegex(OSError, "injected record failure"):
