@@ -97,6 +97,19 @@ def _judge(correct: bool) -> dict[str, object]:
 
 
 class AsterionDciAnalysisTests(unittest.TestCase):
+    def test_exact_safe_float_inventory_acceptance_rejects_wrong_implementation(self) -> None:
+        import io
+        from asterion.dci import analysis as analysis_module
+
+        result = unittest.TestResult()
+        case = AsterionDciAnalysisTests(
+            "test_scripts_bcplus_eval_run_bcplus_eval_py_function_safe_float"
+        )
+        with patch.object(analysis_module, "safe_float", return_value=999999.0):
+            case.run(result)
+        self.assertEqual(result.testsRun, 1)
+        self.assertTrue(result.failures or result.errors)
+
     def test_independent_surface_rejects_metric_and_artifact_mutations(self) -> None:
         source = _source_behavior_surface()
         for path, bad_value in (

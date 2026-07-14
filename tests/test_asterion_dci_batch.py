@@ -119,6 +119,91 @@ async def _recorded_fixture_evaluate(*args: object, **kwargs: object) -> dict[st
 
 
 class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
+    async def test_failed_post_result_state_mutation_fails_analysis_closed(self) -> None:
+        from asterion.dci import benchmark as benchmark_module
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            request = _request(root)
+            publish = benchmark_module._publish_aggregates
+
+            def mutate_then_publish(*args: object, **kwargs: object) -> None:
+                result = json.loads(
+                    (request.output_root / "q-0" / "result.json").read_text()
+                )
+                native = request.output_root / "q-0" / result["native_generation"]
+                state_path = native / "state.json"
+                state = json.loads(state_path.read_text())
+                state["started_at"] = "2000-01-01T00:00:00+00:00"
+                state_path.write_text(json.dumps(state))
+                publish(*args, **kwargs)
+
+            with (
+                patch("asterion.dci.run.PiRpcClient", _MeasuredFailingFixtureClient),
+                patch(
+                    "asterion.dci.benchmark._publish_aggregates",
+                    side_effect=mutate_then_publish,
+                ),
+                self.assertRaisesRegex(DciBenchmarkError, "analysis evidence is invalid"),
+            ):
+                await run_benchmark_async(request, paths=resolve_dci_paths(root))
+
+    async def test_terminal_fingerprint_missing_and_mismatch_fail_closed(self) -> None:
+        for mutation in ("missing", "mismatch"):
+            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory).resolve()
+                request = _request(root)
+                with patch("asterion.dci.run.PiRpcClient", _MeasuredFailingFixtureClient):
+                    await run_benchmark_async(request, paths=resolve_dci_paths(root))
+                result_path = request.output_root / "q-0" / "result.json"
+                result = json.loads(result_path.read_text())
+                if mutation == "missing":
+                    result.pop("native_evidence_fingerprint")
+                else:
+                    result["native_evidence_fingerprint"] = "0" * 64
+                result_path.write_text(json.dumps(result))
+                with (
+                    patch("asterion.dci.benchmark._run_pi_async") as run,
+                    self.assertRaisesRegex(DciBenchmarkError, "terminal result is invalid"),
+                ):
+                    await run_benchmark_async(request, paths=resolve_dci_paths(root))
+                run.assert_not_called()
+
+    async def test_cancelled_post_result_message_mutation_fails_analysis_closed(self) -> None:
+        from asterion.dci import benchmark as benchmark_module
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            request = _request(root)
+            publish = benchmark_module._publish_aggregates
+            _MeasuredCancellingFixtureClient.entered.clear()
+
+            def mutate_then_publish(*args: object, **kwargs: object) -> None:
+                result = json.loads(
+                    (request.output_root / "q-0" / "result.json").read_text()
+                )
+                native = request.output_root / "q-0" / result["native_generation"]
+                state_path = native / "state.json"
+                state = json.loads(state_path.read_text())
+                state["messages"][0]["message"]["usage"]["input"] = 999999
+                state_path.write_text(json.dumps(state))
+                publish(*args, **kwargs)
+
+            with (
+                patch("asterion.dci.run.PiRpcClient", _MeasuredCancellingFixtureClient),
+                patch(
+                    "asterion.dci.benchmark._publish_aggregates",
+                    side_effect=mutate_then_publish,
+                ),
+            ):
+                task = asyncio.create_task(
+                    run_benchmark_async(request, paths=resolve_dci_paths(root))
+                )
+                await asyncio.to_thread(_MeasuredCancellingFixtureClient.entered.wait)
+                task.cancel()
+                with self.assertRaisesRegex(DciBenchmarkError, "analysis evidence is invalid"):
+                    await task
+
     async def test_query_rename_and_replacement_fails_analysis_closed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory).resolve()
