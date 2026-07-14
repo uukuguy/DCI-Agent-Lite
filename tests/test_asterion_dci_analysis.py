@@ -130,21 +130,25 @@ class AsterionDciAnalysisTests(unittest.TestCase):
                 AsterionDciAnalysisTests(method).run(result)
                 self.assertTrue(result.failures or result.errors)
 
-        _golden_behavior_surface.cache_clear()
-        try:
-            with patch(
-                f"{__name__}.write_analysis_artifacts",
-                lambda **_kwargs: {
-                    "analysis_figures/scatter_overview.png": blank.getvalue()
-                },
-            ):
-                result = unittest.TestResult()
-                AsterionDciAnalysisTests(
-                    "test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_analysis_figures_scatter_overview_png"
-                ).run(result)
-                self.assertTrue(result.failures or result.errors)
-        finally:
-            _golden_behavior_surface.cache_clear()
+        png_methods = {
+            "analysis_figures/scatter_overview.png": "test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_analysis_figures_scatter_overview_png",
+            "analysis_figures/runtime_breakdown.png": "test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_analysis_figures_runtime_breakdown_png",
+            "analysis_figures/metric_distributions.png": "test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_analysis_figures_metric_distributions_png",
+            "analysis_figures/tool_summary.png": "test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_analysis_figures_tool_summary_png",
+        }
+        for name, method in png_methods.items():
+            with self.subTest(name=name):
+                _golden_behavior_surface.cache_clear()
+                try:
+                    with patch(
+                        f"{__name__}.write_analysis_artifacts",
+                        lambda **_kwargs: {name: blank.getvalue()},
+                    ):
+                        result = unittest.TestResult()
+                        AsterionDciAnalysisTests(method).run(result)
+                        self.assertTrue(result.failures or result.errors)
+                finally:
+                    _golden_behavior_surface.cache_clear()
 
     def test_independent_surface_rejects_metric_and_artifact_mutations(self) -> None:
         source = _source_behavior_surface()
