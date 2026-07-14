@@ -508,3 +508,4 @@
 - 19:07 AF-230 Task 5 defers cwd resolution into protected setup, preventing parser-time error leakage. [f0afbde]
 - 19:13 AF-230 Task 5 preserves output symlinks for no-follow rejection before run, resume, or benchmark. [e533481]
 - 19:26 AF-230 terminal adds verified Node>=20 selection and literal TTY Pi launch without RPC artifacts. [295c601]
+- 19:36 AF-230 terminal now redacts parse/probe failures and preflights Node, prompt rendering, and cwd before Pi. [6aa575f]
