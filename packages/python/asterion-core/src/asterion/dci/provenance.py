@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 import re
 import subprocess
 from pathlib import Path
@@ -10,6 +11,7 @@ from urllib.parse import urlsplit
 
 _REVISION_PATTERN = re.compile(r"[0-9a-fA-F]{40,64}")
 _SCP_ORIGIN_PATTERN = re.compile(r"^(?:[^@/:]+@)?(?P<host>[^/:]+):(?P<path>.+)$")
+_REMOTE_ORIGIN_SCHEMES = frozenset({"git", "http", "https", "ssh"})
 
 
 def _safe_revision(value: str | None) -> str | None:
@@ -38,14 +40,35 @@ def _sanitized_origin(value: str | None) -> dict[str, str] | None:
     if not value:
         return None
     parsed = urlsplit(value)
-    if parsed.hostname:
-        path = parsed.path or "/"
-        return {"host": parsed.hostname.lower(), "path": path}
+    if parsed.scheme:
+        if parsed.scheme.lower() not in _REMOTE_ORIGIN_SCHEMES:
+            return None
+        host = parsed.hostname
+        if not _is_remote_host(host) or "\\" in parsed.path:
+            return None
+        return {"host": str(host).lower(), "path": parsed.path or "/"}
+    if value.startswith(("/", "./", "../", "~", "\\")):
+        return None
     scp_match = _SCP_ORIGIN_PATTERN.fullmatch(value)
     if scp_match is None:
         return None
+    host = scp_match.group("host")
     path = scp_match.group("path").split("?", 1)[0].split("#", 1)[0]
-    return {"host": scp_match.group("host").lower(), "path": f"/{path.lstrip('/')}"}
+    if not _is_remote_host(host) or "\\" in path:
+        return None
+    return {"host": host.lower(), "path": f"/{path.lstrip('/')}"}
+
+
+def _is_remote_host(value: str | None) -> bool:
+    if not value:
+        return False
+    host = value.lower().rstrip(".")
+    if host == "localhost" or host.endswith(".localhost") or len(host) == 1:
+        return False
+    try:
+        return not ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return True
 
 
 def collect_pi_provenance(

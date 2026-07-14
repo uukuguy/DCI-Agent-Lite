@@ -377,7 +377,7 @@ def _safe_tool_stem(value: object) -> str:
 
 def _bounded_text_tail(value: str, maximum_bytes: int) -> str:
     encoded = value.encode("utf-8", errors="replace")
-    return encoded[-maximum_bytes:].decode("utf-8", errors="replace")
+    return encoded[-maximum_bytes:].decode("utf-8", errors="ignore")
 
 
 def _validate_recorder_resume_state(

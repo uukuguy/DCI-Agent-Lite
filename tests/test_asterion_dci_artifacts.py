@@ -19,6 +19,7 @@ from asterion.dci.artifacts import (
     DciConversationFeatures,
     DciRunLock,
     DciRunRecorder,
+    _bounded_text_tail,
     atomic_write_json,
 )
 from asterion.dci.config import resolve_dci_paths
@@ -139,6 +140,129 @@ class AsterionDciArtifactTests(unittest.TestCase):
         self.assertIsNone(format_pi_revision_warning(provenance))
         self.assertNotIn("sentinel-lock-credential", serialized)
         self.assertNotIn("sentinel-override-credential", serialized)
+
+    def test_pi_provenance_rejects_every_local_origin_form(self) -> None:
+        local_origins = (
+            "file:///sentinel-absolute/pi.git",
+            "file://localhost/sentinel-localhost/pi.git",
+            "file://example.invalid/sentinel-file-remotehost/pi.git",
+            "file:sentinel-file-relative/pi.git",
+            "/sentinel-root/pi.git",
+            "../sentinel-relative/pi.git",
+            r"C:\sentinel-windows\pi.git",
+            "file:C:/sentinel-file-drive/pi.git",
+            r"\\localhost\sentinel-unc\pi.git",
+            "localhost:/sentinel-scp-local/pi.git",
+            "sentinel-user@localhost:sentinel-scp-user/pi.git",
+        )
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            repo = root / "pi"
+            package_dir = repo / "packages/coding-agent"
+            package_dir.mkdir(parents=True)
+            subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+            subprocess.run(
+                ["git", "config", "user.email", "fixture@example.invalid"],
+                cwd=repo,
+                check=True,
+            )
+            subprocess.run(["git", "config", "user.name", "Fixture"], cwd=repo, check=True)
+            (package_dir / "marker.txt").write_text("fixture\n", encoding="utf-8")
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-qm", "fixture"], cwd=repo, check=True)
+            revision = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=repo,
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+            lock_file = root / "pi-revision.txt"
+            lock_file.write_text(f"{revision}\n", encoding="utf-8")
+            subprocess.run(
+                ["git", "remote", "add", "origin", "https://example.invalid/repo.git"],
+                cwd=repo,
+                check=True,
+            )
+
+            for origin in local_origins:
+                with self.subTest(origin=origin):
+                    subprocess.run(
+                        ["git", "remote", "set-url", "origin", origin],
+                        cwd=repo,
+                        check=True,
+                    )
+                    provenance = collect_pi_provenance(package_dir, lock_file, None)
+                    serialized = json.dumps(provenance)
+                    self.assertIsNone(provenance["origin"])
+                    self.assertNotIn("sentinel", serialized.lower())
+                    self.assertNotEqual(provenance["origin"], {"host": "file"})
+
+    def test_pi_provenance_accepts_only_credential_free_remote_origin_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            repo = root / "pi"
+            package_dir = repo / "packages/coding-agent"
+            package_dir.mkdir(parents=True)
+            subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+            subprocess.run(
+                ["git", "config", "user.email", "fixture@example.invalid"],
+                cwd=repo,
+                check=True,
+            )
+            subprocess.run(["git", "config", "user.name", "Fixture"], cwd=repo, check=True)
+            (package_dir / "marker.txt").write_text("fixture\n", encoding="utf-8")
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-qm", "fixture"], cwd=repo, check=True)
+            revision = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=repo,
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+            lock_file = root / "pi-revision.txt"
+            lock_file.write_text(f"{revision}\n", encoding="utf-8")
+            subprocess.run(
+                ["git", "remote", "add", "origin", "git@example.invalid:team/repo.git"],
+                cwd=repo,
+                check=True,
+            )
+
+            provenance = collect_pi_provenance(package_dir, lock_file, None)
+
+        self.assertEqual(
+            provenance["origin"],
+            {"host": "example.invalid", "path": "/team/repo.git"},
+        )
+
+    def test_stderr_tail_is_exactly_utf8_bounded_for_multibyte_text(self) -> None:
+        cases = (
+            ("ascii", "x" * 20_000, "x" * 16_384),
+            ("two-byte", "¢" * 10_000 + "a", "¢" * 8_191 + "a"),
+            ("euro", "€" * 10_000, "€" * 5_461),
+            ("emoji", "🙂" * 10_000, "🙂" * 4_096),
+            ("mixed", "€" * 6_000 + "🙂a", "€" * 5_459 + "🙂a"),
+            ("surrogate", "\ud800" * 20_000, "?" * 16_384),
+        )
+        for name, stderr_text, expected in cases:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                output_dir = root / "run"
+                recorder = DciRunRecorder(
+                    output_dir=output_dir,
+                    request=request(root),
+                    paths=resolve_dci_paths(root),
+                )
+                recorder.finalize(status="failed", stderr_text=stderr_text)
+
+                persisted = (output_dir / "stderr.txt").read_text(encoding="utf-8")
+                header, framed_body = persisted.split("\n", 1)
+                body = framed_body.removesuffix("\n")
+                self.assertEqual(header, "[attempt-0001 status=failed]")
+                self.assertEqual(body, expected)
+                self.assertEqual(_bounded_text_tail(stderr_text, 16_384), expected)
+                self.assertLessEqual(len(body.encode("utf-8")), 16_384)
 
     def test_recorder_creates_private_run_directory_and_json_files(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:

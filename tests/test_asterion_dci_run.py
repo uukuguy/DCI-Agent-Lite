@@ -53,6 +53,9 @@ class FixturePiClient:
 
 
 class FailingPiClient(FixturePiClient):
+    def __init__(self, **_: object) -> None:
+        self.stderr_chunks = ["failure stderr"]
+
     def prompt_and_wait(self, _: str, **__: object) -> str:
         raise RuntimeError("provider response and private stderr")
 
@@ -385,7 +388,9 @@ class AsterionDciRunTests(unittest.TestCase):
             stderr_text = (output_dir / "stderr.txt").read_text(encoding="utf-8")
             self.assertIn("attempt-0001 status=failed", stderr_text)
             self.assertIn("attempt-0002 status=completed", stderr_text)
+            self.assertIn("failure stderr", stderr_text)
             self.assertIn("private stderr", stderr_text)
+            self.assertLess(stderr_text.index("failure stderr"), stderr_text.index("private stderr"))
 
     def test_resume_rejects_completed_or_changed_immutable_inputs_before_client_start(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -582,6 +587,71 @@ class AsterionDciRunTests(unittest.TestCase):
             for sentinel in sentinels:
                 self.assertNotIn(sentinel, all_surfaces)
             self.assertIn("Pi source warning", warning_stream.getvalue())
+
+    def test_local_origin_path_sentinels_are_absent_from_every_run_surface(self) -> None:
+        local_origins = (
+            "file:///sentinel-file-absolute/pi.git",
+            "file://localhost/sentinel-file-localhost/pi.git",
+            "/sentinel-local-absolute/pi.git",
+            "../sentinel-local-relative/pi.git",
+            r"C:\sentinel-local-windows\pi.git",
+            "localhost:/sentinel-local-scp/pi.git",
+        )
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            repo = root / "pi"
+            package_dir = repo / "packages/coding-agent"
+            package_dir.mkdir(parents=True)
+            subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+            subprocess.run(
+                ["git", "config", "user.email", "fixture@example.invalid"],
+                cwd=repo,
+                check=True,
+            )
+            subprocess.run(["git", "config", "user.name", "Fixture"], cwd=repo, check=True)
+            (package_dir / "marker.txt").write_text("fixture\n", encoding="utf-8")
+            subprocess.run(["git", "add", "."], cwd=repo, check=True)
+            subprocess.run(["git", "commit", "-qm", "fixture"], cwd=repo, check=True)
+            revision = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=repo,
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+            (root / "pi-revision.txt").write_text(f"{revision}\n", encoding="utf-8")
+            subprocess.run(
+                ["git", "remote", "add", "origin", "https://example.invalid/repo.git"],
+                cwd=repo,
+                check=True,
+            )
+            paths = resolve_dci_paths(root)
+
+            for index, origin in enumerate(local_origins):
+                with self.subTest(origin=origin):
+                    subprocess.run(
+                        ["git", "remote", "set-url", "origin", origin],
+                        cwd=repo,
+                        check=True,
+                    )
+                    warning_stream = io.StringIO()
+                    with patch("asterion.dci.run.PiRpcClient", FixturePiClient):
+                        with redirect_stderr(warning_stream):
+                            result = run_pi_research(
+                                paths,
+                                DciRunRequest(
+                                    run_id=f"local-origin-{index}",
+                                    question="question",
+                                    cwd=root,
+                                ),
+                            )
+                    surfaces = warning_stream.getvalue()
+                    for artifact_path in result.output_dir.rglob("*"):
+                        if artifact_path.is_file():
+                            surfaces += artifact_path.read_text(encoding="utf-8")
+                    self.assertNotIn("sentinel", surfaces.lower())
+                    state = json.loads((result.output_dir / "state.json").read_text())
+                    self.assertIsNone(state["pi_source_attempts"][0]["origin"])
 
     def test_rejects_a_nonempty_output_and_keeps_failure_detail_out_of_error(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
