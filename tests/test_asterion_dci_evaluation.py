@@ -556,6 +556,85 @@ class AsterionDciEvaluationTests(unittest.TestCase):
             self.assertFalse(manifest.exists())
             _assert_committed_pair(output_dir)
 
+    def test_forged_manifest_cannot_publish_changed_immutable_state(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output_dir = _write_native_run(Path(temporary_directory))
+            original_state = (output_dir / "state.json").read_bytes()
+            with patch(
+                "asterion.dci.evaluation.judge_answer_sync", return_value=_verdict()
+            ):
+                evaluate_run_directory(
+                    output_dir, gold_answer="gold", judge_config=_config()
+                )
+            candidate_state = json.loads((output_dir / "state.json").read_text())
+            candidate_state["status"] = "failed"
+            candidate_eval = (output_dir / "eval_result.json").read_bytes()
+            eval_value = json.loads(candidate_eval)
+            (output_dir / "state.json").write_bytes(original_state)
+            (output_dir / "eval_result.json").unlink()
+            state_temp = ".state.json.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.evaluation-tmp"
+            eval_temp = (
+                ".eval_result.json.bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.evaluation-tmp"
+            )
+            state_bytes = artifacts.json_document_bytes(candidate_state)
+            (output_dir / state_temp).write_bytes(state_bytes)
+            (output_dir / eval_temp).write_bytes(candidate_eval)
+            manifest = {
+                "schema": "dci.evaluation-transaction/v1",
+                "commit_id": eval_value["evaluation_commit_id"],
+                "judge_request_fingerprint": eval_value["judge_request_fingerprint"],
+                "state_temp": state_temp,
+                "evaluation_temp": eval_temp,
+                "state_sha256": hashlib.sha256(state_bytes).hexdigest(),
+                "evaluation_sha256": hashlib.sha256(candidate_eval).hexdigest(),
+            }
+            manifest_path = output_dir / DciRunLock.EVALUATION_TRANSACTION_NAME
+            manifest_path.write_bytes(artifacts.json_document_bytes(manifest))
+            for path in (
+                output_dir / state_temp,
+                output_dir / eval_temp,
+                manifest_path,
+            ):
+                path.chmod(0o600)
+            before = _tree_snapshot(output_dir)
+            with patch("asterion.dci.evaluation.judge_answer_sync") as judge:
+                with self.assertRaises(DciEvaluationError):
+                    evaluate_run_directory(
+                        output_dir, gold_answer="gold", judge_config=_config()
+                    )
+            judge.assert_not_called()
+            self.assertEqual(before, _tree_snapshot(output_dir))
+
+    def test_externalized_tool_evidence_is_exact_private_and_nofollow(self) -> None:
+        for mutation in ("missing", "symlink", "forged"):
+            with (
+                self.subTest(mutation=mutation),
+                tempfile.TemporaryDirectory() as temporary_directory,
+            ):
+                root = Path(temporary_directory)
+                output_dir = _write_feature_native_run(
+                    root, (False, True, False, False)
+                )
+                tool_path = output_dir / "tool_results/call-1.json"
+                if mutation == "missing":
+                    tool_path.unlink()
+                elif mutation == "symlink":
+                    tool_path.unlink()
+                    tool_path.symlink_to(root / "SECRET-outside.json")
+                else:
+                    value = json.loads(tool_path.read_text())
+                    value["message"]["content"][0]["text"] = "SECRET-FORGED"
+                    tool_path.write_bytes(artifacts.json_document_bytes(value))
+                before = _tree_snapshot(output_dir)
+                with patch("asterion.dci.evaluation.judge_answer_sync") as judge:
+                    with self.assertRaises(DciEvaluationError) as raised:
+                        evaluate_run_directory(
+                            output_dir, gold_answer="gold", judge_config=_config()
+                        )
+                judge.assert_not_called()
+                self.assertEqual(before, _tree_snapshot(output_dir))
+                self.assertNotIn("SECRET", str(raised.exception))
+
     def test_async_cancellation_drains_http_before_releasing_writer_lock(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             output_dir = _write_native_run(Path(temporary_directory))

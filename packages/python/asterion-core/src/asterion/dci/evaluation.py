@@ -46,7 +46,9 @@ def evaluate_run_directory(
     try:
         lock = DciRunLock.acquire_existing(Path(output_dir), wait=True)
         state, question, durable_prediction = validate_completed_run_evidence(lock)
-        if lock.recover_evaluation_transaction():
+        if lock.recover_evaluation_transaction(
+            validate_candidate=_valid_transaction_candidate
+        ):
             state, question, durable_prediction = validate_completed_run_evidence(lock)
         prediction = (
             predicted_answer if predicted_answer is not None else durable_prediction
@@ -274,3 +276,37 @@ def _evaluation_summary(
             "evaluation_commit_id",
         )
     } | {"eval_result_sha256": evaluation_digest}
+
+
+def _valid_transaction_candidate(
+    state_document: tuple[dict[str, Any], bytes],
+    evaluation_document: tuple[dict[str, Any], bytes],
+) -> bool:
+    state, _ = state_document
+    result, raw = evaluation_document
+    thinking = result.get("judge_thinking")
+    try:
+        config = JudgeConfig(
+            base_url=result["judge_base_url"],
+            api=result["judge_api"],
+            model=result["judge_model"],
+            timeout_seconds=result["judge_timeout_seconds"],
+            max_output_tokens=result["judge_max_output_tokens"],
+            json_mode=result["judge_json_mode"],
+            strict_json_schema=result["judge_strict_json_schema"],
+            responses_store=result["judge_responses_store"],
+            thinking="omit" if thinking is None else thinking,
+            input_price_per_1m=result["judge_input_price_per_1m"],
+            cached_input_price_per_1m=result["judge_cached_input_price_per_1m"],
+            output_price_per_1m=result["judge_output_price_per_1m"],
+            api_key_env=result["judge_api_key_env"],
+        )
+        fingerprint = result["judge_request_fingerprint"]
+    except (KeyError, TypeError, ValueError):
+        return False
+    digest = hashlib.sha256(raw).hexdigest()
+    return (
+        isinstance(fingerprint, str)
+        and _valid_verdict(result, fingerprint, config)
+        and state.get("evaluation") == _evaluation_summary(result, digest)
+    )

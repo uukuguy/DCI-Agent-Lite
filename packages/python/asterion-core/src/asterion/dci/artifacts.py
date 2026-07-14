@@ -13,7 +13,7 @@ import stat
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from asterion.adapters.pi import PiProtocolAdapter, map_pi_capabilities
 from asterion.dci.config import DciPaths
@@ -576,7 +576,13 @@ class DciRunLock:
                         except FileNotFoundError:
                             pass
 
-    def recover_evaluation_transaction(self) -> bool:
+    def recover_evaluation_transaction(
+        self,
+        *,
+        validate_candidate: Callable[
+            [tuple[dict[str, Any], bytes], tuple[dict[str, Any], bytes]], bool
+        ],
+    ) -> bool:
         """Validate and finish one explicitly owned pending pair transaction."""
 
         document = self.read_optional_json_document(self.EVALUATION_TRANSACTION_NAME)
@@ -626,7 +632,7 @@ class DciRunLock:
         evaluation_target = _read_optional_json_document_at(
             self._directory_fd, "eval_result.json"
         )
-        _select_transaction_document(
+        state_source = _select_transaction_document(
             state_temp,
             state_target,
             digest=manifest["state_sha256"],
@@ -641,8 +647,14 @@ class DciRunLock:
             state=False,
         )
         if (
-            evaluation_source[0].get("judge_request_fingerprint")
-            != manifest["judge_request_fingerprint"]
+            state_target is None
+            or _state_without_evaluation(state_source[0])
+            != _state_without_evaluation(state_target[0])
+            or not validate_candidate(state_source, evaluation_source)
+            or (
+                evaluation_source[0].get("judge_request_fingerprint")
+                != manifest["judge_request_fingerprint"]
+            )
         ):
             raise DciArtifactError("DCI evaluation transaction is invalid")
         if state_temp is not None:
@@ -708,6 +720,12 @@ def _select_transaction_document(
     return candidate
 
 
+def _state_without_evaluation(value: dict[str, Any]) -> dict[str, Any]:
+    projected = dict(value)
+    projected.pop("evaluation", None)
+    return projected
+
+
 def validate_completed_run_evidence(
     lock: DciRunLock,
 ) -> tuple[dict[str, Any], str, str]:
@@ -760,7 +778,12 @@ def validate_completed_run_evidence(
     ):
         raise DciArtifactError("DCI completed run evidence is invalid")
     _validate_completed_view_shapes(
-        state, conversation, conversation_full, latest_context, raw_events
+        lock._directory_fd,
+        state,
+        conversation,
+        conversation_full,
+        latest_context,
+        raw_events,
     )
     protocol_fd = lock.open_directory("protocol")
     try:
@@ -867,6 +890,7 @@ def validate_completed_run_evidence(
 
 
 def _validate_completed_view_shapes(
+    directory_fd: int,
     state: dict[str, Any],
     conversation: dict[str, Any],
     conversation_full: dict[str, Any],
@@ -963,7 +987,7 @@ def _validate_completed_view_shapes(
         state, raw_events, conversation_full, timings
     )
     _validate_processed_conversation_projection(
-        conversation_full, conversation, features
+        directory_fd, conversation_full, conversation, features
     )
     _validate_latest_context_projection(raw_events, latest_context, timings)
 
@@ -1173,6 +1197,7 @@ def _validate_full_conversation_projection(
 
 
 def _validate_processed_conversation_projection(
+    directory_fd: int,
     full: dict[str, Any],
     processed: dict[str, Any],
     features: DciConversationFeatures,
@@ -1188,6 +1213,22 @@ def _validate_processed_conversation_projection(
     names = DciRunRecorder._tool_result_names(
         [messages[index] for index in tool_indexes]
     )
+    externalized_documents: dict[str, dict[str, Any]] = {}
+    if features.externalize_tool_results and names:
+        tool_results_fd = _open_existing_directory_at(directory_fd, "tool_results")
+        try:
+            entry = os.fstat(tool_results_fd)
+            if stat.S_IMODE(entry.st_mode) != 0o700 or set(
+                os.listdir(tool_results_fd)
+            ) != set(names):
+                raise DciArtifactError("DCI completed run evidence is invalid")
+            for name in names:
+                document = _read_optional_json_document_at(tool_results_fd, name)
+                if document is None:
+                    raise DciArtifactError("DCI completed run evidence is invalid")
+                externalized_documents[name] = document[0]
+        finally:
+            os.close(tool_results_fd)
     if len(actual_messages) != len(messages):
         raise DciArtifactError("DCI completed run evidence is invalid")
     for tool_position, (index, name) in enumerate(
@@ -1195,6 +1236,7 @@ def _validate_processed_conversation_projection(
     ):
         message = messages[index]
         actual = actual_messages[index]
+        original_message = json.loads(json.dumps(message))
         clear_count = max(0, len(tool_indexes) - features.clear_tool_results_keep_last)
         will_clear = features.clear_tool_results and tool_position < clear_count
         context = (
@@ -1203,6 +1245,7 @@ def _validate_processed_conversation_projection(
             else None
         )
         if features.externalize_tool_results:
+            externalized_document = externalized_documents[name]
             actual_externalized = (
                 actual.get("context_management", {})
                 .get("tool_result", {})
@@ -1211,6 +1254,10 @@ def _validate_processed_conversation_projection(
             stats = DciRunRecorder._tool_result_stats(message)
             if (
                 not isinstance(actual_externalized, dict)
+                or set(externalized_document) != {"saved_at", "message"}
+                or externalized_document.get("message") != original_message
+                or externalized_document.get("saved_at")
+                != actual_externalized.get("saved_at")
                 or actual_externalized.get("path") != f"tool_results/{name}"
                 or actual_externalized.get("stats") != stats
                 or not _valid_timestamp(actual_externalized.get("saved_at"))
