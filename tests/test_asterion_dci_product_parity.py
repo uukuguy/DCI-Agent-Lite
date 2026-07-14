@@ -28,6 +28,65 @@ REQUIRED_PRODUCT_ROWS = {
     "installed-wheel-boundary",
     "installed-pi-application",
 }
+REQUIRED_PROVIDER_CASES = {
+    "source-basic",
+    "source-runtime-context",
+    "asterion-basic",
+    "asterion-runtime-context",
+    "installed-pi-application",
+    "one-row-pi-judge",
+    "one-row-exact-reuse",
+}
+REQUIRED_PRODUCT_OWNERS = {
+    "configuration-and-pi-argv": "asterion.dci.config",
+    "interactive-run-and-terminal": "asterion.dci.cli",
+    "native-artifacts-and-resume": "asterion.dci.artifacts",
+    "judge-and-exact-cache": "asterion.dci.evaluation",
+    "batch-ir-analysis-and-exports": "asterion.dci.benchmark",
+    "source-and-asterion-examples": "asterion.dci.cli",
+    "installed-wheel-boundary": "asterion.distribution",
+    "installed-pi-application": "asterion.applications.dci_agent_lite",
+}
+EXPECTED_BEHAVIOR_SELECTORS = {
+    "configuration-and-pi-argv": {
+        "tests.test_config.PiPathConfigTests.test_environment_can_override_all_pi_paths",
+        "tests.test_asterion_dci_config.AsterionDciConfigTests.test_runtime_options_merge_shared_env_and_explicit_values",
+        "tests.test_asterion_dci_run.AsterionDciRunTests.test_runtime_options_map_to_native_pi_request",
+    },
+    "interactive-run-and-terminal": {
+        "tests.test_pi_rpc_runner.PiRpcLifecycleTests.test_waits_for_agent_settled",
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_terminal_maps_operator_controls_without_artifacts",
+        "tests.test_asterion_dci_pi_rpc.PiRpcCommandTests.test_terminal_uses_literal_argv_inherited_heap_and_exit_status",
+    },
+    "native-artifacts-and-resume": {
+        "tests.test_pi_rpc_runner.PiRpcLifecycleTests.test_run_recorder_isolates_protocol_attempts_on_resume",
+        "tests.test_asterion_dci_artifacts.AsterionDciArtifactTests.test_recorder_writes_original_durable_artifact_set",
+        "tests.test_asterion_dci_run.AsterionDciRunTests.test_resume_reuses_failed_directory_and_creates_a_second_protocol_attempt",
+    },
+    "judge-and-exact-cache": {
+        "tests.test_judge.JudgeTransportTests.test_judge_request_fingerprint_is_deterministic_and_endpoint_sensitive",
+        "tests.test_judge.JudgeResultReuseTests.test_backend_identity_is_part_of_result_reuse",
+        "tests.test_asterion_dci_evaluation.AsterionDciEvaluationTests.test_reuses_only_an_exact_judge_request_fingerprint",
+    },
+    "batch-ir-analysis-and-exports": {
+        "tests.test_climb_tools.Af240InventoryTests.test_af240_inventory_maps_complete_source_surface",
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_exact_result_is_reused_without_native_or_judge_work",
+        "tests.test_asterion_dci_metrics.AsterionDciMetricTests.test_normalization_matches_source_property_matrix",
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_cli_failures_are_body_free_and_module_has_no_baseline_import",
+    },
+    "source-and-asterion-examples": {
+        "tests.test_asterion_structure.AsterionStructureTests.test_examples_build_cli_commands_in_an_isolated_repository",
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_asterion_examples_use_shared_env_and_package_command",
+    },
+    "installed-wheel-boundary": {
+        "tests.test_distribution_boundaries.BuiltDistributionBoundaryTests.test_asterion_is_the_only_buildable_wheel",
+        "tests.test_distribution_boundaries.SourceDistributionBoundaryTests.test_asterion_core_never_imports_the_dci_baseline",
+    },
+    "installed-pi-application": {
+        "tests.test_builtin_dci_application.BuiltinDciApplicationTests.test_selected_provider_uses_one_asterion_resource_root",
+        "tests.test_asterion_dci_application_executor.AsterionDciApplicationExecutorTests.test_maps_runtime_cwd_and_native_paths_to_one_pi_run",
+    },
+}
 
 
 def _resolve_selector(selector: str) -> bool:
@@ -101,6 +160,116 @@ class AsterionDciProductParityTests(unittest.TestCase):
         document = copy.deepcopy(self.document)
         document["rows"][0]["local_evidence"][0]["response_body"] = "forbidden"
         with self.assertRaisesRegex(ValueError, "unknown local evidence fields"):
+            validate_product_matrix(ROOT, document)
+
+    def test_bash_syntax_evidence_rejects_option_injection_without_execution(self) -> None:
+        bypass = ["bash", "-n", "+n", "-c", "printf BYPASS"]
+        document = copy.deepcopy(self.document)
+        document["rows"][0]["local_evidence"][0]["argv"] = bypass
+        with self.assertRaisesRegex(ValueError, "unsafe bash syntax argv"):
+            validate_product_matrix(ROOT, document)
+
+        row = copy.deepcopy(self.document["rows"][0])
+        row["local_evidence"][0]["argv"] = bypass
+        with mock.patch("subprocess.run") as run:
+            with self.assertRaisesRegex(ValueError, "unsafe bash syntax argv"):
+                run_local_evidence(ROOT, (row,))
+        run.assert_not_called()
+
+    def test_bash_syntax_evidence_requires_normalized_existing_shell_files(self) -> None:
+        invalid_suffixes = (
+            ["bash", "-n"],
+            ["bash", "-n", "-c", "true"],
+            ["bash", "-n", "+n", "scripts/examples/dci_basic_example.sh"],
+            ["bash", "-n", "../outside.sh"],
+            ["bash", "-n", "/tmp/outside.sh"],
+            ["bash", "-n", "tools/verify_asterion_dci_product.py"],
+            ["bash", "-n", "scripts//examples/dci_basic_example.sh"],
+        )
+        for argv in invalid_suffixes:
+            with self.subTest(argv=argv):
+                document = copy.deepcopy(self.document)
+                document["rows"][0]["local_evidence"][0]["argv"] = argv
+                with self.assertRaisesRegex(ValueError, "unsafe bash syntax argv"):
+                    validate_product_matrix(ROOT, document)
+        valid = copy.deepcopy(self.document)
+        valid["rows"][0]["local_evidence"][0]["argv"] = [
+            "bash",
+            "-n",
+            "scripts/examples/dci_basic_example.sh",
+            "scripts/examples/dci_runtime_context_example.sh",
+        ]
+        validate_product_matrix(ROOT, valid)
+
+    def test_rows_require_exact_nonplaceholder_asterion_owners(self) -> None:
+        self.assertEqual(
+            {row["id"]: row["owner"] for row in self.document["rows"]},
+            REQUIRED_PRODUCT_OWNERS,
+        )
+        for owner in ("", "unknown", "TODO-owner", "placeholder"):
+            with self.subTest(owner=owner):
+                document = copy.deepcopy(self.document)
+                document["rows"][0]["owner"] = owner
+                with self.assertRaisesRegex(ValueError, "owner"):
+                    validate_product_matrix(ROOT, document)
+
+    def test_rows_bind_exact_unique_provider_case_union(self) -> None:
+        rows = self._validated_rows()
+        cases = [case for row in rows for case in row["provider_evidence"]]
+        self.assertEqual(set(cases), REQUIRED_PROVIDER_CASES)
+        self.assertEqual(len(cases), len(set(cases)))
+        examples = {row["id"]: row for row in rows}["source-and-asterion-examples"]
+        self.assertEqual(
+            set(examples["provider_evidence"]),
+            {
+                "source-basic",
+                "source-runtime-context",
+                "asterion-basic",
+                "asterion-runtime-context",
+            },
+        )
+
+    def test_provider_case_lists_reject_missing_duplicate_and_unknown_ids(self) -> None:
+        mutations = []
+        missing = copy.deepcopy(self.document)
+        missing["rows"][5]["provider_evidence"] = []
+        mutations.append(missing)
+        duplicate = copy.deepcopy(self.document)
+        duplicate["rows"][0]["provider_evidence"] = ["source-basic"]
+        mutations.append(duplicate)
+        unknown = copy.deepcopy(self.document)
+        unknown["rows"][0]["provider_evidence"] = ["unregistered-case"]
+        mutations.append(unknown)
+        for document in mutations:
+            with self.assertRaisesRegex(ValueError, "provider evidence"):
+                validate_product_matrix(ROOT, document)
+
+    def test_rows_execute_claimed_behavior_not_matrix_governance(self) -> None:
+        rows = self._validated_rows()
+        for row in rows:
+            selectors = {
+                selector
+                for evidence in row["local_evidence"]
+                for selector in evidence["selectors"]
+            }
+            self.assertEqual(selectors, EXPECTED_BEHAVIOR_SELECTORS[row["id"]])
+            self.assertFalse(
+                any(
+                    selector.startswith("tests.test_asterion_dci_product_parity")
+                    for selector in selectors
+                )
+            )
+
+    def test_behavior_rows_reject_matrix_governance_selectors(self) -> None:
+        selector = (
+            "tests.test_asterion_dci_product_parity.AsterionDciProductParityTests."
+            "test_af250_h001_exact_product_row_surface"
+        )
+        document = copy.deepcopy(self.document)
+        evidence = document["rows"][0]["local_evidence"][0]
+        evidence["argv"] = ["uv", "run", "python", "-m", "unittest", selector]
+        evidence["selectors"] = [selector]
+        with self.assertRaisesRegex(ValueError, "matrix governance selector"):
             validate_product_matrix(ROOT, document)
 
     def test_matrix_rejects_missing_paths_empty_selectors_and_placeholders(self) -> None:
@@ -214,8 +383,9 @@ class AsterionDciProductParityTests(unittest.TestCase):
 
     def test_af250_h004_provider_cases_are_body_free_ids(self) -> None:
         for row in self._validated_rows():
-            case_id = row["provider_evidence"]
-            self.assertTrue(case_id is None or (isinstance(case_id, str) and case_id))
+            case_ids = row["provider_evidence"]
+            self.assertIsInstance(case_ids, list)
+            self.assertTrue(all(isinstance(case_id, str) and case_id for case_id in case_ids))
 
     def test_af250_h004_local_executor_never_runs_provider_cases(self) -> None:
         rows = self._validated_rows()

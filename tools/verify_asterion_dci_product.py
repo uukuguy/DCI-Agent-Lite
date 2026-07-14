@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import importlib
 import json
@@ -26,17 +27,38 @@ REQUIRED_PRODUCT_ROWS = {
     "installed-wheel-boundary",
     "installed-pi-application",
 }
-ALLOWED_PREFIXES = (
-    ("uv", "run", "python", "-m", "unittest"),
-    ("python3", "tools/verify_asterion_dci_product.py", "--validate-only"),
-    ("bash", "-n"),
+UNITTEST_PREFIX = ("uv", "run", "python", "-m", "unittest")
+VALIDATE_ONLY_ARGV = (
+    "python3",
+    "tools/verify_asterion_dci_product.py",
+    "--validate-only",
 )
+REQUIRED_PROVIDER_CASES = {
+    "source-basic",
+    "source-runtime-context",
+    "asterion-basic",
+    "asterion-runtime-context",
+    "installed-pi-application",
+    "one-row-pi-judge",
+    "one-row-exact-reuse",
+}
+REQUIRED_PRODUCT_OWNERS = {
+    "configuration-and-pi-argv": "asterion.dci.config",
+    "interactive-run-and-terminal": "asterion.dci.cli",
+    "native-artifacts-and-resume": "asterion.dci.artifacts",
+    "judge-and-exact-cache": "asterion.dci.evaluation",
+    "batch-ir-analysis-and-exports": "asterion.dci.benchmark",
+    "source-and-asterion-examples": "asterion.dci.cli",
+    "installed-wheel-boundary": "asterion.distribution",
+    "installed-pi-application": "asterion.applications.dci_agent_lite",
+}
 ALLOWED_TIERS = {"local", "model-free", "provider-backed"}
 FORBIDDEN_TEXT = {"placeholder", "todo", "tbd", "unknown", "n/a"}
 MATRIX_FIELDS = {"schema", "batch_inventory", "rows"}
 INVENTORY_FIELDS = {"path", "sha256", "row_count"}
 ROW_FIELDS = {
     "id",
+    "owner",
     "source_entry_points",
     "asterion_entry_points",
     "stable_semantics",
@@ -48,6 +70,17 @@ EVIDENCE_FIELDS = {"id", "tier", "argv", "selectors"}
 SHELL_METACHARACTERS = re.compile(r"[\n\r;&|`$<>]")
 ENVIRONMENT_ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 CASE_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+MATRIX_ONLY_TEST_PREFIXES = (
+    "test_af250_h",
+    "test_product_matrix_",
+    "test_matrix_",
+    "test_rows_",
+    "test_provider_",
+    "test_behavior_",
+    "test_bash_",
+    "test_default_executor_",
+    "test_validate_only_",
+)
 
 
 def load_product_matrix(root: Path) -> dict[str, object]:
@@ -75,12 +108,25 @@ def _safe_repo_file(root: Path, value: object, label: str) -> str:
 
 
 def _resolve_selector(root: Path, selector: str) -> bool:
+    parts = selector.split(".")
+    if len(parts) == 4 and parts[0] == "tests":
+        path = root / "tests" / f"{parts[1]}.py"
+        if not path.is_file():
+            return False
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in tree.body:
+            if isinstance(node, ast.ClassDef) and node.name == parts[2]:
+                return any(
+                    isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    and child.name == parts[3]
+                    for child in node.body
+                )
+        return False
     root_text = str(root)
     added_root = root_text not in sys.path
     if added_root:
         sys.path.insert(0, root_text)
     try:
-        parts = selector.split(".")
         for index in range(len(parts), 0, -1):
             try:
                 value: object = importlib.import_module(".".join(parts[:index]))
@@ -98,7 +144,7 @@ def _resolve_selector(root: Path, selector: str) -> bool:
             sys.path.remove(root_text)
 
 
-def _validate_argv(value: object) -> tuple[str, ...]:
+def _validate_argv(root: Path, value: object) -> tuple[str, ...]:
     if not isinstance(value, list) or not value or not all(isinstance(arg, str) and arg for arg in value):
         raise ValueError("unsafe argv: expected non-empty string array")
     argv = tuple(value)
@@ -108,9 +154,31 @@ def _validate_argv(value: object) -> tuple[str, ...]:
         raise ValueError("unsafe environment assignment in argv")
     if any(SHELL_METACHARACTERS.search(arg) for arg in argv):
         raise ValueError("unsafe shell metacharacter in argv")
-    if not any(argv[: len(prefix)] == prefix for prefix in ALLOWED_PREFIXES):
-        raise ValueError("argv prefix is not allowlisted")
-    return argv
+    if argv[: len(UNITTEST_PREFIX)] == UNITTEST_PREFIX and len(argv) > len(
+        UNITTEST_PREFIX
+    ):
+        return argv
+    if argv == VALIDATE_ONLY_ARGV:
+        return argv
+    if argv[:2] == ("bash", "-n"):
+        paths = argv[2:]
+        if not paths:
+            raise ValueError("unsafe bash syntax argv")
+        for raw_path in paths:
+            path = Path(raw_path)
+            if (
+                raw_path.startswith(("-", "+"))
+                or path.is_absolute()
+                or ".." in path.parts
+                or path.suffix != ".sh"
+                or path.as_posix() != raw_path
+                or not (root / path).is_file()
+            ):
+                raise ValueError("unsafe bash syntax argv")
+        return argv
+    if argv and argv[0] == "bash":
+        raise ValueError("unsafe bash syntax argv")
+    raise ValueError("argv shape is not allowlisted")
 
 
 def _validate_inventory(root: Path, value: object) -> None:
@@ -160,6 +228,7 @@ def validate_product_matrix(
     rows: list[dict[str, object]] = []
     row_ids: list[str] = []
     evidence_ids: set[str] = set()
+    provider_case_ids: list[str] = []
     for raw_row in raw_rows:
         if not isinstance(raw_row, dict):
             raise ValueError("product row must be an object")
@@ -169,6 +238,9 @@ def validate_product_matrix(
         if not isinstance(row_id, str) or row_id not in REQUIRED_PRODUCT_ROWS:
             raise ValueError("invalid product row id")
         row_ids.append(row_id)
+        owner = row["owner"]
+        if owner != REQUIRED_PRODUCT_OWNERS[row_id]:
+            raise ValueError(f"invalid product owner: {owner!r}")
         if row["unsupported"] is not False:
             raise ValueError(f"unsupported product row: {row_id}")
         for field in ("source_entry_points", "asterion_entry_points"):
@@ -197,26 +269,41 @@ def validate_product_matrix(
                 raise ValueError(f"invalid evidence tier: {tier}")
             if tier == "provider-backed":
                 raise ValueError("provider-backed command is forbidden in local_evidence")
-            argv = _validate_argv(evidence["argv"])
+            argv = _validate_argv(root, evidence["argv"])
             selectors = _nonempty_strings(evidence["selectors"], "selectors")
-            if argv[:5] == ALLOWED_PREFIXES[0] and tuple(selectors) != argv[5:]:
+            if argv[: len(UNITTEST_PREFIX)] == UNITTEST_PREFIX and tuple(
+                selectors
+            ) != argv[len(UNITTEST_PREFIX) :]:
                 raise ValueError("selectors do not match unittest argv")
+            if any(
+                selector.startswith("tests.test_asterion_dci_product_parity")
+                and selector.rsplit(".", 1)[-1].startswith(MATRIX_ONLY_TEST_PREFIXES)
+                for selector in selectors
+            ):
+                raise ValueError("matrix governance selector cannot prove product behavior")
             if not all(
                 selector.startswith("tests.") and _resolve_selector(root, selector)
                 for selector in selectors
             ):
                 raise ValueError("selectors must resolve to executable tests")
-        provider_case = row["provider_evidence"]
-        if provider_case is not None and (
-            not isinstance(provider_case, str) or not CASE_ID.fullmatch(provider_case)
+        provider_cases = row["provider_evidence"]
+        if not isinstance(provider_cases, list) or not all(
+            isinstance(case_id, str) and CASE_ID.fullmatch(case_id)
+            for case_id in provider_cases
         ):
-            raise ValueError("provider evidence must be a body-free case id")
+            raise ValueError("provider evidence must be a body-free case id list")
+        provider_case_ids.extend(provider_cases)
         rows.append(row)
 
     if len(row_ids) != len(set(row_ids)):
         raise ValueError("duplicate product row id")
     if set(row_ids) != REQUIRED_PRODUCT_ROWS or len(row_ids) != len(REQUIRED_PRODUCT_ROWS):
         raise ValueError("product matrix must contain exactly the required rows")
+    if (
+        len(provider_case_ids) != len(set(provider_case_ids))
+        or set(provider_case_ids) != REQUIRED_PROVIDER_CASES
+    ):
+        raise ValueError("provider evidence must contain each required case exactly once")
     return tuple(rows)
 
 
@@ -233,7 +320,7 @@ def run_local_evidence(
                 continue
             if tier not in {"local", "model-free"}:
                 raise ValueError(f"invalid evidence tier: {tier}")
-            argv = _validate_argv(evidence.get("argv"))
+            argv = _validate_argv(root, evidence.get("argv"))
             completed = subprocess.run(
                 argv,
                 cwd=root,

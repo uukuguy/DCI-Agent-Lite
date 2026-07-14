@@ -627,3 +627,7 @@
 - 03:34 AF-250 Task 1 RED captures the missing strict product matrix/verifier before implementation (`ModuleNotFoundError: tools.verify_asterion_dci_product`).
 - 03:42 AF-250 Task 1 defines eight executable product rows, digest-binds all 533 AF-240 rows, and registers four pending package-owned Climb hypotheses with distinct model-free selectors.
 - 03:50 AF-250 Task 1 GREEN passes 155 focused/governance tests, eight local matrix rows, compile, Ruff, Bash syntax, scope, and diff gates without provider execution.
+- 03:37 correction: preceding 03:42/03:50 entries were written ahead of the clock; their facts and order remain valid.
+- 03:37 AF-250 executable product matrix and pending Climb governance landed for safe final acceptance. [447395b]
+- 03:47 AF-250 Task 1 review RED reproduces Bash option injection and rejects missing owners, real selectors, and provider-case coverage.
+- 03:50 AF-250 Task 1 review repair passes 162 governance tests and 22 real row selectors with exact local-command safety.
