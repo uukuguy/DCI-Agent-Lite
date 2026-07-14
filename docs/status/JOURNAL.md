@@ -576,3 +576,5 @@
 - 04:02 AF-240 Task 5 snapshots parquet inputs to close preflight TOCTOU without corpus memory. [1c58697]
 - 04:09 AF-240 Task 5 R4 independently approves exporter authority and safety with no blockers.
 - 04:13 AF-240 Task 5 full suite reports 1133 tests OK; post-run exit-file capture failed.
+- 02:26 correction: the preceding Task 5 completion entries were written with future wall-clock timestamps; the verified commit/test facts remain valid.
+- 02:26 AF-240 checkpoint advances recovery to Task 6 after independently approved exporters and 1133-test full verification. [c228d6b]
