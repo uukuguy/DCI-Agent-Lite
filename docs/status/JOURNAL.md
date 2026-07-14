@@ -539,3 +539,4 @@
 - 22:59 AF-240 Task 3 adds bounded durable batches and cooperative Pi cancellation to prevent orphaned work. [e6d0eea]
 - 23:58 AF-240 Task 3 hardens evidence reuse, descriptor authority, snapshots, cancellation, and fresh generations. [82b31b1]
 - 23:29 correction: preceding AF-240 Task 3 hardening landed at 23:29, not 23:58.
+- 23:41 AF-240 Task 3 root review rejected forged native-generation path traversal; descriptor-relative evidence names now require one safe component, generation evidence follows exact canonical grammar beyond 9999, and traversal, absolute, nested, and symlink regressions pass with 61 batch, 257 Asterion DCI, and 665 full Python tests plus Ruff, compile, scope, and diff gates. [pending repair commit]

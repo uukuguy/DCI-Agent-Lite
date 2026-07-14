@@ -12,6 +12,8 @@ from unittest.mock import Mock, patch
 from asterion.dci.benchmark import (
     BenchmarkRequest,
     DciBenchmarkError,
+    _Directory,
+    _next_generation,
     _prepare,
     run_benchmark_async,
 )
@@ -55,6 +57,50 @@ class _FailingFixtureClient(_FixtureClient):
 
 
 class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
+    async def test_forged_native_generation_cannot_escape_query_authority(self) -> None:
+        for attack in ("../foreign", "/absolute/foreign", "nested/foreign"):
+            with self.subTest(attack=attack), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory).resolve()
+                request = _request(root, mode="ir", ir=True)
+                with patch("asterion.dci.run.PiRpcClient", _FixtureClient):
+                    await run_benchmark_async(request, paths=resolve_dci_paths(root))
+                result_path = request.output_root / "q-0" / "result.json"
+                result = json.loads(result_path.read_text())
+                native = request.output_root / "q-0" / result["native_generation"]
+                if attack == "../foreign":
+                    native.rename(request.output_root / "foreign")
+                elif attack.startswith("/"):
+                    foreign = root / "absolute-foreign"
+                    native.rename(foreign)
+                    attack = str(foreign)
+                else:
+                    nested = request.output_root / "q-0" / "nested"
+                    nested.mkdir()
+                    native.rename(nested / "foreign")
+                result["native_generation"] = attack
+                result_path.write_text(json.dumps(result))
+                with self.assertRaisesRegex(DciBenchmarkError, "result evidence is invalid"):
+                    await run_benchmark_async(request, paths=resolve_dci_paths(root))
+
+    async def test_native_generation_symlink_is_rejected_but_safe_component_reuses(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            request = _request(root, mode="ir", ir=True)
+            with patch("asterion.dci.run.PiRpcClient", _FixtureClient):
+                await run_benchmark_async(request, paths=resolve_dci_paths(root))
+            result_path = request.output_root / "q-0" / "result.json"
+            result = json.loads(result_path.read_text())
+            safe_generation = result["native_generation"]
+            with patch("asterion.dci.benchmark._run_pi_async") as run:
+                await run_benchmark_async(request, paths=resolve_dci_paths(root))
+            run.assert_not_called()
+            symlink_generation = "native-generation-9999"
+            (request.output_root / "q-0" / symlink_generation).symlink_to(safe_generation)
+            result["native_generation"] = symlink_generation
+            result_path.write_text(json.dumps(result))
+            with self.assertRaisesRegex(DciBenchmarkError, "destination is unsafe"):
+                await run_benchmark_async(request, paths=resolve_dci_paths(root))
+
     async def test_forged_result_never_reuses_without_native_evaluation_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             request = _request(Path(temporary_directory))
@@ -661,6 +707,47 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
 
 
 class AsterionDciBatchValidationTests(unittest.TestCase):
+    def test_descriptor_relative_name_apis_require_one_safe_component(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            descriptor = os.open(root, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+            directory = _Directory(descriptor)
+            try:
+                attacks = ("", ".", "..", "../foreign", "nested/foreign", str(root / "absolute"), "nul\0name")
+                operations = (
+                    lambda name: directory.read_optional_json(name),
+                    lambda name: directory.write_json(name, {}),
+                    lambda name: directory.write_text(name, "value"),
+                    lambda name: directory.write_bytes(name, b"value"),
+                    lambda name: directory.open_query(name),
+                    lambda name: directory.open_existing_query(name),
+                )
+                for name in attacks:
+                    for operation in operations:
+                        with self.subTest(name=name, operation=operation):
+                            with self.assertRaises(DciBenchmarkError):
+                                operation(name)
+                directory.write_json("safe.json", {"safe": True})
+                self.assertEqual(directory.read_optional_json("safe.json"), {"safe": True})
+                child = directory.open_query("safe-child")
+                child.close()
+                (root / "unsafe-child").symlink_to(root / "safe-child", target_is_directory=True)
+                with self.assertRaises(DciBenchmarkError):
+                    directory.open_existing_query("unsafe-child")
+            finally:
+                directory.close()
+
+    def test_generation_allocation_remains_in_grammar_after_9999(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            for name in ("native-generation-9998", "native-generation-9999"):
+                (root / name).mkdir()
+            directory = _Directory(os.open(root, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)))
+            try:
+                self.assertEqual(_next_generation(directory), "native-generation-10000")
+            finally:
+                directory.close()
+
     def test_every_run_and_row_control_changes_its_schema_fingerprint(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory).resolve()

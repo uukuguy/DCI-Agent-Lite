@@ -690,12 +690,20 @@ def _result_generation(value: object) -> str | None:
     return None
 
 
+_NATIVE_GENERATION_PATTERN = re.compile(
+    r"native-generation-(?:[0-9]{4}|[1-9][0-9]{4,})"
+)
+
+
 def _generation_names(query: _Directory) -> tuple[str, ...]:
     return tuple(
         sorted(
-            name
-            for name in query.list_names()
-            if re.fullmatch(r"native-generation-[0-9]{4}", name)
+            (
+                name
+                for name in query.list_names()
+                if _NATIVE_GENERATION_PATTERN.fullmatch(name)
+            ),
+            key=lambda name: int(name.rsplit("-", 1)[1]),
         )
     )
 
@@ -755,6 +763,7 @@ def _validate_result_shape(
         or value.get("status") != "completed"
         or value.get("mode") != mode
         or not isinstance(value.get("native_generation"), str)
+        or not _NATIVE_GENERATION_PATTERN.fullmatch(value["native_generation"])
         or (mode == "qa" and type(value.get("is_correct")) is not bool)
     ):
         raise DciBenchmarkError("DCI benchmark result evidence is invalid")
@@ -1002,11 +1011,24 @@ def _open_or_create_output_directory(path: Path) -> int:
         raise
 
 
+def _validate_component(name: str) -> None:
+    if (
+        not name
+        or name in {".", ".."}
+        or "\0" in name
+        or "/" in name
+        or (os.altsep is not None and os.altsep in name)
+        or os.path.isabs(name)
+    ):
+        raise DciBenchmarkError("DCI benchmark evidence name is invalid")
+
+
 class _Directory:
     def __init__(self, fd: int) -> None:
         self.fd = fd
 
     def read_optional_json(self, name: str) -> dict[str, Any] | None:
+        _validate_component(name)
         try:
             fd = os.open(name, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0), dir_fd=self.fd)
         except FileNotFoundError:
@@ -1033,6 +1055,7 @@ class _Directory:
         self.write_bytes(name, value.encode("utf-8"))
 
     def write_bytes(self, name: str, value: bytes) -> None:
+        _validate_component(name)
         temporary = f".{name}.{secrets.token_hex(16)}.tmp"
         fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600, dir_fd=self.fd)
         try:
@@ -1062,6 +1085,7 @@ class _Directory:
         return set(os.listdir(self.fd))
 
     def open_query(self, name: str) -> _Directory:
+        _validate_component(name)
         try:
             os.mkdir(name, 0o700, dir_fd=self.fd)
         except FileExistsError:
@@ -1082,6 +1106,7 @@ class _Directory:
             ) from error
 
     def open_existing_query(self, name: str) -> _Directory | None:
+        _validate_component(name)
         try:
             descriptor = os.open(
                 name,
@@ -1131,6 +1156,7 @@ class _BatchLock(_Directory):
             raise DciBenchmarkError("DCI benchmark is already running") from error
 
     def open_query(self, name: str) -> _Directory:
+        _validate_component(name)
         try:
             os.mkdir(name, 0o700, dir_fd=self.fd)
         except FileExistsError:
@@ -1143,6 +1169,7 @@ class _BatchLock(_Directory):
             raise DciBenchmarkError("DCI benchmark query destination is unsafe") from error
 
     def open_existing_query(self, name: str) -> _Directory | None:
+        _validate_component(name)
         try:
             fd = os.open(name, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0), dir_fd=self.fd)
         except FileNotFoundError:
