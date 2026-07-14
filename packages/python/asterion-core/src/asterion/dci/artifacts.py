@@ -81,6 +81,7 @@ def atomic_write_json(path: Path, payload: Any) -> None:
             _open_flags(os.O_CREAT | os.O_EXCL | os.O_WRONLY),
             0o600,
         )
+        os.fchmod(descriptor, 0o600)
         with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
             descriptor = None
             json.dump(payload, handle, ensure_ascii=False, indent=2)
@@ -88,7 +89,6 @@ def atomic_write_json(path: Path, payload: Any) -> None:
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(temporary, destination)
-        os.chmod(destination, 0o600)
         try:
             directory_descriptor = os.open(resolved_parent, os.O_RDONLY)
             try:
@@ -142,21 +142,98 @@ def _pid_is_alive(pid: int) -> bool:
     return True
 
 
-def _unlink_matching_lock(path: Path, owner_token: str, expected_stat: os.stat_result) -> bool:
+def _restore_quarantined_lock(quarantined: Path, live_path: Path) -> bool:
+    """Restore without overwriting a new live owner."""
+
     try:
-        current_stat = path.stat(follow_symlinks=False)
-        if (current_stat.st_dev, current_stat.st_ino) != (expected_stat.st_dev, expected_stat.st_ino):
+        os.link(quarantined, live_path, follow_symlinks=False)
+    except FileExistsError:
+        return False
+    quarantined.unlink()
+    return True
+
+
+def _remove_owned_lock(path: Path, owner_token: str, expected_stat: os.stat_result) -> bool:
+    """Atomically detach a lock name, then delete only the verified owned object."""
+
+    quarantine_dir = path.parent / f".{path.name}.quarantine-{secrets.token_hex(16)}"
+    quarantine_dir.mkdir(mode=0o700)
+    quarantined = quarantine_dir / "lock"
+    try:
+        try:
+            os.rename(path, quarantined)
+        except FileNotFoundError:
             return False
-        payload = _lock_payload(path)
+        try:
+            moved_stat = quarantined.stat(follow_symlinks=False)
+            payload = _lock_payload(quarantined)
+        except (FileNotFoundError, DciArtifactError):
+            if quarantined.exists() or quarantined.is_symlink():
+                _restore_quarantined_lock(quarantined, path)
+            return False
+        matches_inode = (moved_stat.st_dev, moved_stat.st_ino) == (
+            expected_stat.st_dev,
+            expected_stat.st_ino,
+        )
+        if not matches_inode or payload["owner_token"] != owner_token:
+            _restore_quarantined_lock(quarantined, path)
+            return False
+        quarantined.unlink()
+        return True
+    finally:
+        try:
+            quarantine_dir.rmdir()
+        except OSError:
+            # Preserve an unverified raced object rather than deleting it.
+            pass
+
+
+def _stat_lock(path: Path) -> os.stat_result:
+    _reject_symlink(path, label="run lock")
+    try:
+        return path.stat(follow_symlinks=False)
+    except FileNotFoundError:
+        raise
+    except OSError as exc:
+        raise DciArtifactError("DCI run lock is invalid") from exc
+
+
+def _existing_lock(path: Path) -> tuple[os.stat_result, dict[str, Any]]:
+    observed_stat = _stat_lock(path)
+    payload = _lock_payload(path)
+    current_stat = _stat_lock(path)
+    if (current_stat.st_dev, current_stat.st_ino) != (
+        observed_stat.st_dev,
+        observed_stat.st_ino,
+    ):
+        raise DciArtifactError("DCI run lock changed during validation")
+    return observed_stat, payload
+
+
+def _write_lock_payload(descriptor: int, payload: dict[str, Any]) -> None:
+    try:
+        os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle, ensure_ascii=True, indent=2)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+    except BaseException:
+        try:
+            os.close(descriptor)
+        except OSError:
+            pass
+        raise
+
+
+def _release_lock(path: Path, owner_token: str) -> bool:
+    try:
+        observed_stat, payload = _existing_lock(path)
     except (FileNotFoundError, DciArtifactError):
         return False
     if payload["owner_token"] != owner_token:
         return False
-    try:
-        path.unlink()
-    except FileNotFoundError:
-        return False
-    return True
+    return _remove_owned_lock(path, owner_token, observed_stat)
 
 
 @dataclass
@@ -190,36 +267,22 @@ class DciRunLock:
                     0o600,
                 )
             except FileExistsError:
-                _reject_symlink(lock_path, label="run lock")
                 try:
-                    observed_stat = lock_path.stat(follow_symlinks=False)
-                    existing = _lock_payload(lock_path)
+                    observed_stat, existing = _existing_lock(lock_path)
                 except FileNotFoundError:
                     continue
                 if existing["hostname"] != socket.gethostname():
                     raise DciArtifactError("DCI run directory is locked")
                 if _pid_is_alive(existing["pid"]):
                     raise DciArtifactError("DCI run directory is locked")
-                if not _unlink_matching_lock(lock_path, existing["owner_token"], observed_stat):
+                if not _remove_owned_lock(lock_path, existing["owner_token"], observed_stat):
                     raise DciArtifactError("DCI run lock changed during acquisition")
                 continue
             created_stat = os.fstat(descriptor)
             try:
-                with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
-                    json.dump(payload, handle, ensure_ascii=True, indent=2)
-                    handle.write("\n")
-                    handle.flush()
-                    os.fsync(handle.fileno())
+                _write_lock_payload(descriptor, payload)
             except BaseException:
-                try:
-                    current_stat = lock_path.stat(follow_symlinks=False)
-                    if (current_stat.st_dev, current_stat.st_ino) == (
-                        created_stat.st_dev,
-                        created_stat.st_ino,
-                    ):
-                        lock_path.unlink()
-                except FileNotFoundError:
-                    pass
+                _remove_owned_lock(lock_path, owner_token, created_stat)
                 raise
             return cls(path=lock_path, owner_token=owner_token)
         raise DciArtifactError("DCI run lock could not be acquired")
@@ -227,11 +290,7 @@ class DciRunLock:
     def release(self) -> None:
         if self._released:
             return
-        try:
-            observed_stat = self.path.stat(follow_symlinks=False)
-            _unlink_matching_lock(self.path, self.owner_token, observed_stat)
-        except FileNotFoundError:
-            pass
+        _release_lock(self.path, self.owner_token)
         self._released = True
 
 
@@ -251,10 +310,17 @@ def _write_private_text(path: Path, value: str, *, append: bool = False) -> None
     _reject_symlink(destination, label="artifact target")
     flags = os.O_CREAT | os.O_WRONLY | (os.O_APPEND if append else os.O_TRUNC)
     descriptor = os.open(destination, _open_flags(flags), 0o600)
-    with os.fdopen(descriptor, "a" if append else "w", encoding="utf-8") as handle:
-        handle.write(value)
-        handle.flush()
-    os.chmod(destination, 0o600)
+    try:
+        os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "a" if append else "w", encoding="utf-8") as handle:
+            handle.write(value)
+            handle.flush()
+    except BaseException:
+        try:
+            os.close(descriptor)
+        except OSError:
+            pass
+        raise
 
 
 class DciRunRecorder:
@@ -274,6 +340,7 @@ class DciRunRecorder:
         self.paths = paths
         self.features = features or DciConversationFeatures()
         self.lock = DciRunLock.acquire(self.output_dir)
+        self._closed = False
         self.events_path = self.output_dir / "events.jsonl"
         self.state_path = self.output_dir / "state.json"
         self.question_path = self.output_dir / "question.txt"
@@ -358,22 +425,28 @@ class DciRunRecorder:
         self._append(self.protocol_events_path, event)
 
     def record_event(self, event: dict[str, object]) -> None:
-        self._append(self.events_path, event)
-        self.adapter.consume(event)
-        self.state["event_count"] += 1
-        if event.get("type") == "message_update":
-            assistant = event.get("assistantMessageEvent")
-            if isinstance(assistant, dict) and assistant.get("type") == "text_delta":
-                delta = assistant.get("delta")
-                if isinstance(delta, str):
-                    self.state["assistant_text"] += delta
-        if event.get("type") == "message_end":
-            message = event.get("message")
-            if isinstance(message, dict):
-                self.conversation_full["messages"].append(json.loads(json.dumps(message)))
-        self._write()
+        self._ensure_open()
+        try:
+            self._append(self.events_path, event)
+            self.adapter.consume(event)
+            self.state["event_count"] += 1
+            if event.get("type") == "message_update":
+                assistant = event.get("assistantMessageEvent")
+                if isinstance(assistant, dict) and assistant.get("type") == "text_delta":
+                    delta = assistant.get("delta")
+                    if isinstance(delta, str):
+                        self.state["assistant_text"] += delta
+            if event.get("type") == "message_end":
+                message = event.get("message")
+                if isinstance(message, dict):
+                    self.conversation_full["messages"].append(json.loads(json.dumps(message)))
+            self._write()
+        except BaseException:
+            self.close()
+            raise
 
     def finalize(self, *, status: str, final_text: str = "", stderr_text: str = "") -> tuple[RunEvent, ...]:
+        self._ensure_open()
         try:
             answer = final_text or self.state["assistant_text"]
             if answer:
@@ -402,7 +475,26 @@ class DciRunRecorder:
             self._write()
             return tuple(RunEvent.from_mapping(event) for event in self.normalized)
         finally:
-            self.lock.release()
+            self.close()
+
+    def close(self) -> None:
+        """Idempotently release this recorder's owned writer lock."""
+
+        if self._closed:
+            return
+        self.lock.release()
+        self._closed = True
+
+    def __enter__(self) -> DciRunRecorder:
+        self._ensure_open()
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        self.close()
+
+    def _ensure_open(self) -> None:
+        if self._closed:
+            raise DciArtifactError("DCI run recorder is closed")
 
     def _write(self) -> None:
         self._json(self.state_path, self.state)

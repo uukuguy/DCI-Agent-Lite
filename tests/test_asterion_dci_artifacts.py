@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from unittest.mock import patch
 
+import asterion.dci.artifacts as artifacts
 from asterion.dci.artifacts import (
     DciConversationFeatures,
     DciRunLock,
@@ -27,6 +28,15 @@ def request(root: Path) -> DciRunRequest:
 
 
 class AsterionDciArtifactTests(unittest.TestCase):
+    @staticmethod
+    def _lock_payload(*, pid: int, owner_token: str) -> dict[str, object]:
+        return {
+            "pid": pid,
+            "hostname": socket.gethostname(),
+            "created_at": "2026-07-14T00:00:00+00:00",
+            "owner_token": owner_token,
+        }
+
     def test_recorder_creates_private_run_directory_and_json_files(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -153,6 +163,82 @@ class AsterionDciArtifactTests(unittest.TestCase):
                 "replacement-owner",
             )
 
+    def test_release_does_not_unlink_a_replacement_raced_after_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output_dir = Path(temporary_directory) / "run"
+            owner = DciRunLock.acquire(output_dir)
+            lock_path = output_dir / DciRunLock.LOCK_NAME
+            original_reader = artifacts._lock_payload
+            replacement = self._lock_payload(pid=os.getpid(), owner_token="replacement-owner")
+
+            def replace_after_read(path: Path) -> dict[str, object]:
+                payload = original_reader(path)
+                replacement_path = output_dir / ".replacement"
+                replacement_path.write_text(json.dumps(replacement), encoding="utf-8")
+                os.replace(replacement_path, lock_path)
+                return payload
+
+            with patch("asterion.dci.artifacts._lock_payload", side_effect=replace_after_read):
+                owner.release()
+
+            self.assertTrue(lock_path.is_file(), "release deleted the raced replacement lock")
+            self.assertEqual(json.loads(lock_path.read_text(encoding="utf-8")), replacement)
+
+    def test_stale_reclaim_does_not_unlink_a_replacement_raced_after_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output_dir = Path(temporary_directory) / "run"
+            output_dir.mkdir(mode=0o700)
+            lock_path = output_dir / DciRunLock.LOCK_NAME
+            lock_path.write_text(
+                json.dumps(self._lock_payload(pid=999_999_999, owner_token="dead-owner")),
+                encoding="utf-8",
+            )
+            original_reader = artifacts._lock_payload
+            replacement = self._lock_payload(pid=os.getpid(), owner_token="replacement-owner")
+            read_count = 0
+
+            def replace_on_removal_read(path: Path) -> dict[str, object]:
+                nonlocal read_count
+                payload = original_reader(path)
+                read_count += 1
+                if read_count == 2:
+                    replacement_path = output_dir / ".replacement"
+                    replacement_path.write_text(json.dumps(replacement), encoding="utf-8")
+                    os.replace(replacement_path, lock_path)
+                return payload
+
+            with patch(
+                "asterion.dci.artifacts._lock_payload",
+                side_effect=replace_on_removal_read,
+            ):
+                with self.assertRaises(RuntimeError):
+                    DciRunLock.acquire(output_dir)
+
+            self.assertEqual(json.loads(lock_path.read_text(encoding="utf-8")), replacement)
+
+    def test_acquisition_error_cleanup_preserves_a_changed_owner_token(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output_dir = Path(temporary_directory) / "run"
+            real_dump = json.dump
+
+            def change_token_then_fail(payload, handle, **kwargs) -> None:
+                changed = dict(payload)
+                changed["owner_token"] = "replacement-owner"
+                real_dump(changed, handle, **kwargs)
+                handle.flush()
+                raise OSError("injected lock write failure")
+
+            with patch("asterion.dci.artifacts.json.dump", side_effect=change_token_then_fail):
+                with self.assertRaisesRegex(OSError, "injected lock write failure"):
+                    DciRunLock.acquire(output_dir)
+
+            lock_path = output_dir / DciRunLock.LOCK_NAME
+            self.assertTrue(lock_path.is_file(), "cleanup deleted the changed-owner lock")
+            self.assertEqual(
+                json.loads(lock_path.read_text(encoding="utf-8"))["owner_token"],
+                "replacement-owner",
+            )
+
     def test_atomic_json_failure_before_replace_preserves_previous_document(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             path = Path(temporary_directory) / "state.json"
@@ -163,6 +249,80 @@ class AsterionDciArtifactTests(unittest.TestCase):
                     atomic_write_json(path, {"status": "replacement"})
 
             self.assertEqual(json.loads(path.read_text(encoding="utf-8")), {"status": "previous"})
+
+    def test_atomic_json_does_not_chmod_a_symlink_swapped_after_replace(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            destination = root / "state.json"
+            external = root / "external.txt"
+            external.write_text("external", encoding="utf-8")
+            os.chmod(external, 0o644)
+            real_replace = os.replace
+
+            def swap_after_replace(source: Path, target: Path) -> None:
+                real_replace(source, target)
+                Path(target).unlink()
+                Path(target).symlink_to(external)
+
+            with patch("asterion.dci.artifacts.os.replace", side_effect=swap_after_replace):
+                atomic_write_json(destination, {"status": "new"})
+
+            self.assertEqual(stat.S_IMODE(external.stat().st_mode), 0o644)
+
+    def test_private_text_sets_mode_without_path_based_chmod(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            destination = Path(temporary_directory) / "event.jsonl"
+
+            with patch(
+                "asterion.dci.artifacts.os.chmod",
+                side_effect=AssertionError("path chmod is unsafe"),
+            ):
+                artifacts._write_private_text(destination, "{}\n")
+
+            self.assertEqual(stat.S_IMODE(destination.stat().st_mode), 0o600)
+
+    def test_record_event_failure_releases_the_recorder_lock(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            output_dir = root / "run"
+            recorder = DciRunRecorder(
+                output_dir=output_dir,
+                request=request(root),
+                paths=resolve_dci_paths(root),
+            )
+
+            with patch(
+                "asterion.dci.artifacts.atomic_write_json",
+                side_effect=OSError("injected record failure"),
+            ):
+                with self.assertRaisesRegex(OSError, "injected record failure"):
+                    recorder.record_event({"type": "agent_start"})
+
+            try:
+                next_owner = DciRunLock.acquire(output_dir)
+            except RuntimeError as exc:
+                self.fail(f"record_event failure stranded the recorder lock: {exc}")
+            next_owner.release()
+
+    def test_recorder_context_exit_and_close_release_idempotently(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            output_dir = root / "run"
+
+            self.assertTrue(hasattr(DciRunRecorder, "__enter__"))
+            self.assertTrue(hasattr(DciRunRecorder, "__exit__"))
+            self.assertTrue(hasattr(DciRunRecorder, "close"))
+            with self.assertRaisesRegex(ValueError, "boom"):
+                with DciRunRecorder(
+                    output_dir=output_dir,
+                    request=request(root),
+                    paths=resolve_dci_paths(root),
+                ) as recorder:
+                    raise ValueError("boom")
+            recorder.close()
+
+            next_owner = DciRunLock.acquire(output_dir)
+            next_owner.release()
 
     def test_resume_preserves_raw_events_and_creates_a_new_protocol_attempt(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
