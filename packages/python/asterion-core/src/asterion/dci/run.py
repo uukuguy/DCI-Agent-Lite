@@ -190,6 +190,7 @@ def resume_request_from_output_dir(
     *,
     extra_args: tuple[str, ...] | None = None,
     timeout_seconds: float | None | object = _RESUME_TIMEOUT_UNSET,
+    _directory_fd: int | None = None,
 ) -> DciRunRequest:
     """Reconstruct a safe immutable resume request from native run state."""
 
@@ -203,7 +204,13 @@ def resume_request_from_output_dir(
 
     lock = None
     try:
-        lock = DciRunLock.acquire(Path(output_dir).absolute(), create=False)
+        lock = (
+            DciRunLock.acquire(Path(output_dir).absolute(), create=False)
+            if _directory_fd is None
+            else DciRunLock.acquire_fd(
+                _directory_fd, path=Path(output_dir).absolute(), wait=False
+            )
+        )
         state = _read_json_object_at(lock._directory_fd, "state.json")
     except (DciArtifactError, OSError, ValueError):
         raise DciRunError("DCI resume validation failed") from None
@@ -308,6 +315,10 @@ def run_pi_research(
     output_dir: Path | None = None,
     conversation_features: DciConversationFeatures | None = None,
     _cancel_event: threading.Event | None = None,
+    _output_directory_fd: int | None = None,
+    _resource_fds: tuple[int, ...] = (),
+    _system_prompt_override: Path | None = None,
+    _append_system_prompt_override: Path | None = None,
 ) -> DciRunResult:
     """Run Pi once and persist complete native conversation evidence."""
 
@@ -345,6 +356,7 @@ def run_pi_research(
             paths=paths,
             features=request.conversation_features,
             resume=request.resume,
+            directory_fd=_output_directory_fd,
         )
     except DciArtifactError as exc:
         message = "DCI resume validation failed" if request.resume else str(exc)
@@ -371,13 +383,22 @@ def run_pi_research(
             model=request.model,
             tools=request.tools,
             show_tools=request.show_tools,
-            system_prompt_file=request.system_prompt_file,
-            append_system_prompt_file=request.append_system_prompt_file,
+            system_prompt_file=(
+                _system_prompt_override
+                if _system_prompt_override is not None
+                else request.system_prompt_file
+            ),
+            append_system_prompt_file=(
+                _append_system_prompt_override
+                if _append_system_prompt_override is not None
+                else request.append_system_prompt_file
+            ),
             extra_args=request.extra_args,
             literal_extra_args=_pi_extra_args(request),
             keep_session=request.keep_session,
             node_max_old_space_size_mb=request.node_max_old_space_size_mb,
             stream_text=request.stream_text,
+            inherited_fds=_resource_fds,
         )
         client.start()
         final_text = client.prompt_and_wait(

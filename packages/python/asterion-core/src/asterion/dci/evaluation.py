@@ -38,6 +38,7 @@ def evaluate_run_directory(
     judge_config: JudgeConfig,
     predicted_answer: str | None = None,
     _cancel_event: threading.Event | None = None,
+    _directory_fd: int | None = None,
 ) -> dict[str, object]:
     """Evaluate one completed native run under its recorder writer authority."""
 
@@ -45,7 +46,13 @@ def evaluate_run_directory(
         raise DciEvaluationError("DCI evaluation input is invalid")
     lock: DciRunLock | None = None
     try:
-        lock = DciRunLock.acquire_existing(Path(output_dir), wait=True)
+        lock = (
+            DciRunLock.acquire_existing(Path(output_dir), wait=True)
+            if _directory_fd is None
+            else DciRunLock.acquire_fd(
+                _directory_fd, path=Path(output_dir), wait=True
+            )
+        )
         state, question, durable_prediction = validate_completed_run_evidence(lock)
         if lock.recover_evaluation_transaction(
             validate_candidate=_valid_transaction_candidate
@@ -98,6 +105,7 @@ async def evaluate_run_directory_async(
     gold_answer: str,
     judge_config: JudgeConfig,
     predicted_answer: str | None = None,
+    _directory_fd: int | None = None,
 ) -> dict[str, object]:
     """Evaluate asynchronously, draining a started blocking transport on cancellation."""
 
@@ -110,6 +118,7 @@ async def evaluate_run_directory_async(
             judge_config=judge_config,
             predicted_answer=predicted_answer,
             _cancel_event=cancel_event,
+            _directory_fd=_directory_fd,
         )
     )
     try:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import tempfile
 import unittest
 from dataclasses import replace
@@ -21,7 +22,241 @@ from asterion.dci.run import DciRunResult
 from asterion.runtime.host import RunEvent
 
 
+class _FixtureClient:
+    def __init__(self, **_kwargs: object) -> None:
+        pass
+
+    def start(self) -> None:
+        pass
+
+    def prompt_and_wait(self, _message: str, *, on_event, **_kwargs: object) -> str:
+        for event in (
+            {"type": "response", "id": "py-1", "success": True},
+            {"type": "agent_start"},
+            {
+                "type": "message_update",
+                "assistantMessageEvent": {"type": "text_delta", "delta": "answer"},
+            },
+            {"type": "agent_end"},
+        ):
+            on_event(event)
+        return "answer"
+
+    def get_stderr(self) -> str:
+        return ""
+
+    def stop(self) -> None:
+        pass
+
+
+class _FailingFixtureClient(_FixtureClient):
+    def prompt_and_wait(self, _message: str, *, on_event, **_kwargs: object) -> str:
+        raise RuntimeError("fixture failure")
+
+
 class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
+    async def test_forged_result_never_reuses_without_native_evaluation_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            request = _request(Path(temporary_directory))
+            _rows, _root, config, items, _snapshots = _prepare(request)
+            request.output_root.mkdir(mode=0o700)
+            query = request.output_root / "q-0"
+            query.mkdir(mode=0o700)
+            (request.output_root / "config.json").write_text(json.dumps(config))
+            (query / "item.json").write_text(json.dumps(items[0]))
+            (query / "result.json").write_text(json.dumps({
+                "schema": "wrong", "query_id": "attacker", "status": "completed",
+                "row_fingerprint": items[0]["row_fingerprint"], "is_correct": True,
+                "judge_configuration_fingerprint": items[0]["judge_configuration_fingerprint"],
+                "extra": "forged",
+            }))
+            with patch("asterion.dci.benchmark._run_pi_async") as run, patch(
+                "asterion.dci.benchmark.evaluate_run_directory_async"
+            ) as evaluate:
+                with self.assertRaises(DciBenchmarkError):
+                    await run_benchmark_async(request, paths=Mock())
+            run.assert_not_called()
+            evaluate.assert_not_called()
+
+    async def test_root_rebinding_keeps_native_and_aggregates_on_locked_inode(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            request = _request(root)
+            moved = root / "moved"
+
+            async def run_native(_paths: object, native_request: object, *, output_dir: Path, **_kwargs: object) -> DciRunResult:
+                request.output_root.rename(moved)
+                request.output_root.mkdir(mode=0o700)
+                descriptor = os.open(
+                    "provider-marker",
+                    os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                    0o600,
+                    dir_fd=_kwargs["output_directory_fd"],
+                )
+                os.write(descriptor, b"provider")
+                os.close(descriptor)
+                return _result(Path(output_dir))
+
+            with patch("asterion.dci.benchmark._run_pi_async", side_effect=run_native), patch(
+                "asterion.dci.benchmark.evaluate_run_directory_async",
+                return_value={"is_correct": True, "judge_request_fingerprint": "f" * 64},
+            ):
+                await run_benchmark_async(request, paths=Mock())
+            self.assertTrue((moved / "summary.json").is_file())
+            self.assertTrue(tuple(moved.glob("q-0/**/provider-marker")))
+            self.assertFalse(tuple(request.output_root.glob("q-0/**/provider-marker")))
+
+    async def test_query_rebinding_keeps_result_on_locked_query_inode(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            request = _request(root)
+            moved_query = request.output_root / "moved-query"
+
+            async def run_native(
+                _paths: object,
+                _native_request: object,
+                *,
+                output_dir: Path,
+                **kwargs: object,
+            ) -> DciRunResult:
+                (request.output_root / "q-0").rename(moved_query)
+                (request.output_root / "q-0").mkdir(mode=0o700)
+                descriptor = os.open(
+                    "provider-marker",
+                    os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                    0o600,
+                    dir_fd=kwargs["output_directory_fd"],
+                )
+                os.write(descriptor, b"provider")
+                os.close(descriptor)
+                return _result(Path(output_dir))
+
+            with patch("asterion.dci.benchmark._run_pi_async", side_effect=run_native), patch(
+                "asterion.dci.benchmark.evaluate_run_directory_async",
+                return_value={"is_correct": True, "judge_request_fingerprint": "f" * 64},
+            ):
+                await run_benchmark_async(request, paths=Mock())
+            self.assertTrue((moved_query / "result.json").is_file())
+            self.assertTrue(tuple(moved_query.glob("native-generation-*/provider-marker")))
+            self.assertFalse((request.output_root / "q-0" / "result.json").exists())
+
+    async def test_cancellation_publishes_terminal_batch_and_not_started_rows(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            request = _request(Path(temporary_directory), rows=2, max_concurrency=1)
+            entered = asyncio.Event()
+
+            async def run_native(*_args: object, **_kwargs: object) -> DciRunResult:
+                entered.set()
+                await asyncio.Future()
+
+            with patch("asterion.dci.benchmark._run_pi_async", side_effect=run_native):
+                task = asyncio.create_task(run_benchmark_async(request, paths=Mock()))
+                await entered.wait()
+                task.cancel()
+                with self.assertRaises(asyncio.CancelledError):
+                    await task
+            state = json.loads((request.output_root / "batch-state.json").read_text())
+            results = [json.loads(line) for line in (request.output_root / "results.jsonl").read_text().splitlines()]
+            self.assertEqual(state["status"], "cancelled")
+            self.assertEqual([row["status"] for row in results], ["cancelled", "not_started"])
+
+    async def test_cancelled_batch_compatible_rerun_completes_without_forged_reuse(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            request = _request(Path(temporary_directory))
+            entered = asyncio.Event()
+
+            async def block(*_args: object, **_kwargs: object) -> DciRunResult:
+                entered.set()
+                await asyncio.Future()
+
+            with patch("asterion.dci.benchmark._run_pi_async", side_effect=block):
+                task = asyncio.create_task(run_benchmark_async(request, paths=Mock()))
+                await entered.wait()
+                task.cancel()
+                with self.assertRaises(asyncio.CancelledError):
+                    await task
+
+            calls: list[Path] = []
+
+            async def complete(
+                _paths: object,
+                _native_request: object,
+                *,
+                output_dir: Path,
+                **_kwargs: object,
+            ) -> DciRunResult:
+                calls.append(output_dir)
+                return _result(output_dir)
+
+            with patch("asterion.dci.benchmark._run_pi_async", side_effect=complete), patch(
+                "asterion.dci.benchmark.evaluate_run_directory_async",
+                return_value={"is_correct": True, "judge_request_fingerprint": "f" * 64},
+            ):
+                result = await run_benchmark_async(request, paths=Mock())
+            durable = json.loads((request.output_root / "q-0" / "result.json").read_text())
+            self.assertEqual(len(calls), 1)
+            self.assertEqual(durable["status"], "completed")
+            self.assertEqual(result.counts, {"total": 1, "correct": 1, "failed": 0})
+
+    async def test_fresh_policy_creates_new_generation_and_never_reuses(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            request = _request(Path(temporary_directory))
+            calls: list[Path] = []
+
+            async def run_native(_paths: object, _native_request: object, *, output_dir: Path, **_kwargs: object) -> DciRunResult:
+                calls.append(Path(output_dir))
+                return _result(Path(output_dir))
+
+            with patch("asterion.dci.benchmark._run_pi_async", side_effect=run_native), patch(
+                "asterion.dci.benchmark.evaluate_run_directory_async",
+                return_value={"is_correct": True, "judge_request_fingerprint": "f" * 64},
+            ):
+                await run_benchmark_async(request, paths=Mock())
+                await run_benchmark_async(replace(request, resume_policy="fresh"), paths=Mock())
+            self.assertEqual(len(calls), 2)
+            self.assertNotEqual(calls[0], calls[1])
+
+    async def test_prompt_resources_are_immutable_private_snapshots(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            prompt = root / "system.md"
+            prompt.write_text("trusted")
+            request = replace(_request(root), system_prompt_file=prompt)
+
+            async def run_native(_paths: object, native_request: object, **_kwargs: object) -> DciRunResult:
+                prompt.write_text("changed-after-fingerprint")
+                snapshot = _kwargs["system_prompt_override"]
+                self.assertEqual(snapshot.read_text(), "trusted")
+                self.assertEqual(native_request.system_prompt_file, prompt)
+                return _result(Path(_kwargs["output_dir"]))
+
+            with patch("asterion.dci.benchmark._run_pi_async", side_effect=run_native), patch(
+                "asterion.dci.benchmark.evaluate_run_directory_async",
+                return_value={"is_correct": True, "judge_request_fingerprint": "f" * 64},
+            ):
+                await run_benchmark_async(request, paths=Mock())
+
+    async def test_config_and_item_self_fingerprint_forgery_fails_before_overwrite(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            request = _request(Path(temporary_directory))
+            with patch("asterion.dci.benchmark._run_pi_async", return_value=_result(request.output_root / "q-0")), patch(
+                "asterion.dci.benchmark.evaluate_run_directory_async",
+                return_value={"is_correct": True, "judge_request_fingerprint": "f" * 64},
+            ):
+                await run_benchmark_async(request, paths=Mock())
+            config_path = request.output_root / "config.json"
+            item_path = request.output_root / "q-0" / "item.json"
+            config = json.loads(config_path.read_text())
+            item = json.loads(item_path.read_text())
+            config["runtime"]["provider"] = "attacker"
+            item["prompt"] = "attacker prompt"
+            config_path.write_text(json.dumps(config))
+            item_path.write_text(json.dumps(item))
+            with patch("asterion.dci.benchmark._run_pi_async") as run:
+                with self.assertRaises(DciBenchmarkError):
+                    await run_benchmark_async(request, paths=Mock())
+            run.assert_not_called()
+
     async def test_batch_native_worker_preserves_the_complete_run_artifact_boundary(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory).resolve()
@@ -55,7 +290,8 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
                 return_value={"is_correct": True, "judge_request_fingerprint": "f" * 64},
             ):
                 await run_benchmark_async(request, paths=resolve_dci_paths(root))
-            query = request.output_root / "q-0" / "native"
+            result = json.loads((request.output_root / "q-0" / "result.json").read_text())
+            query = request.output_root / "q-0" / result["native_generation"]
             for name in (
                 "conversation_full.json",
                 "conversation.json",
@@ -282,60 +518,66 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_exact_result_is_reused_without_native_or_judge_work(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
-            request = _request(Path(temporary_directory))
-            with patch("asterion.dci.benchmark._run_pi_async", return_value=_result(request.output_root / "q-0")), patch(
-                "asterion.dci.benchmark.evaluate_run_directory_async",
-                return_value={"is_correct": True, "judge_request_fingerprint": "f" * 64},
+            root = Path(temporary_directory).resolve()
+            request = _request(root)
+            with patch("asterion.dci.run.PiRpcClient", _FixtureClient), patch(
+                "asterion.dci.evaluation.judge_answer_sync",
+                return_value=_verdict(request.judge_config),
             ):
-                await run_benchmark_async(request, paths=Mock())
+                await run_benchmark_async(request, paths=resolve_dci_paths(root))
             with patch("asterion.dci.benchmark._run_pi_async") as run, patch(
                 "asterion.dci.benchmark.evaluate_run_directory_async"
             ) as evaluate:
-                result = await run_benchmark_async(request, paths=Mock())
+                result = await run_benchmark_async(request, paths=resolve_dci_paths(root))
             run.assert_not_called()
             evaluate.assert_not_called()
             self.assertEqual(result.counts["correct"], 1)
 
     async def test_stale_judge_configuration_is_judge_only(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
-            request = _request(Path(temporary_directory))
-            with patch("asterion.dci.benchmark._run_pi_async", return_value=_result(request.output_root / "q-0")), patch(
-                "asterion.dci.benchmark.evaluate_run_directory_async",
-                return_value={"is_correct": True, "judge_request_fingerprint": "f" * 64},
+            root = Path(temporary_directory).resolve()
+            request = _request(root)
+            with patch("asterion.dci.run.PiRpcClient", _FixtureClient), patch(
+                "asterion.dci.evaluation.judge_answer_sync",
+                return_value=_verdict(request.judge_config),
             ):
-                await run_benchmark_async(request, paths=Mock())
+                await run_benchmark_async(request, paths=resolve_dci_paths(root))
             changed = replace(request, judge_config=JudgeConfig(base_url="https://other.example.test/v1"))
-            with patch("asterion.dci.benchmark._completed_run", return_value=True), patch(
-                "asterion.dci.benchmark._run_pi_async"
-            ) as run, patch(
-                "asterion.dci.benchmark.evaluate_run_directory_async",
-                return_value={"is_correct": False, "judge_request_fingerprint": "e" * 64},
+            with patch("asterion.dci.benchmark._run_pi_async") as run, patch(
+                "asterion.dci.evaluation.judge_answer_sync",
+                return_value=_verdict(changed.judge_config, correct=False),
             ) as evaluate:
-                result = await run_benchmark_async(changed, paths=Mock())
+                result = await run_benchmark_async(changed, paths=resolve_dci_paths(root))
             run.assert_not_called()
             evaluate.assert_called_once()
             self.assertEqual(result.counts["correct"], 0)
 
     async def test_completed_run_without_result_is_judge_only(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
-            request = _request(Path(temporary_directory))
-            request.output_root.mkdir(mode=0o700)
-            with patch("asterion.dci.benchmark._completed_run", return_value=True), patch(
-                "asterion.dci.benchmark._run_pi_async"
-            ) as run, patch(
+            root = Path(temporary_directory).resolve()
+            request = _request(root)
+            with patch("asterion.dci.run.PiRpcClient", _FixtureClient), patch(
+                "asterion.dci.evaluation.judge_answer_sync",
+                return_value=_verdict(request.judge_config),
+            ):
+                await run_benchmark_async(request, paths=resolve_dci_paths(root))
+            (request.output_root / "q-0" / "result.json").unlink()
+            with patch("asterion.dci.benchmark._run_pi_async") as run, patch(
                 "asterion.dci.benchmark.evaluate_run_directory_async",
                 return_value={"is_correct": True, "judge_request_fingerprint": "f" * 64},
             ) as evaluate:
-                await run_benchmark_async(request, paths=Mock())
+                await run_benchmark_async(request, paths=resolve_dci_paths(root))
             run.assert_not_called()
             evaluate.assert_called_once()
 
     async def test_compatible_failed_run_resupplies_private_args_to_resume(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
-            request = _request(Path(temporary_directory), extra_args=("--private value",))
-            request.output_root.mkdir(mode=0o700)
+            root = Path(temporary_directory).resolve()
+            request = _request(root, extra_args=("--private value",))
+            with patch("asterion.dci.run.PiRpcClient", _FailingFixtureClient):
+                await run_benchmark_async(request, paths=resolve_dci_paths(root))
             resumed = Mock(run_id="q-0")
-            with patch("asterion.dci.benchmark._resumable_run", return_value=True), patch(
+            with patch(
                 "asterion.dci.benchmark.resume_request_from_output_dir", return_value=resumed
             ) as reconstruct, patch(
                 "asterion.dci.benchmark._run_pi_async", return_value=_result(request.output_root / "q-0")
@@ -343,19 +585,26 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
                 "asterion.dci.benchmark.evaluate_run_directory_async",
                 return_value={"is_correct": True, "judge_request_fingerprint": "f" * 64},
             ):
-                await run_benchmark_async(request, paths=Mock())
+                await run_benchmark_async(request, paths=resolve_dci_paths(root))
             self.assertEqual(reconstruct.call_args.kwargs["extra_args"], ("--private value",))
             self.assertIs(run.call_args.args[1], resumed)
 
     async def test_malformed_completed_evidence_becomes_safe_failed_result(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
-            request = _request(Path(temporary_directory))
-            query = request.output_root / "q-0" / "native"
-            query.mkdir(parents=True, mode=0o700)
+            root = Path(temporary_directory).resolve()
+            request = _request(root)
+            with patch("asterion.dci.run.PiRpcClient", _FixtureClient), patch(
+                "asterion.dci.evaluation.judge_answer_sync",
+                return_value=_verdict(request.judge_config),
+            ):
+                await run_benchmark_async(request, paths=resolve_dci_paths(root))
+            result_path = request.output_root / "q-0" / "result.json"
+            result = json.loads(result_path.read_text())
+            query = request.output_root / "q-0" / result["native_generation"]
             (query / "state.json").write_text(json.dumps({"status": "completed"}))
-            (query / "final.txt").write_text("forged")
+            result_path.unlink()
             with patch("asterion.dci.benchmark._run_pi_async") as run:
-                result = await run_benchmark_async(request, paths=Mock())
+                result = await run_benchmark_async(request, paths=resolve_dci_paths(root))
             run.assert_not_called()
             self.assertEqual(result.counts["failed"], 1)
             self.assertNotIn("private", (request.output_root / "q-0" / "result.json").read_text())
@@ -429,7 +678,7 @@ class AsterionDciBatchValidationTests(unittest.TestCase):
                 system_prompt_file=system,
                 append_system_prompt_file=append,
             )
-            _rows, _output, base_config, base_items = _prepare(base)
+            _rows, _output, base_config, base_items, _snapshots = _prepare(base)
             base_run = base_config["run_fingerprint"]
             base_row = base_items[0]["row_fingerprint"]
             runtime = base.runtime_options
@@ -457,21 +706,23 @@ class AsterionDciBatchValidationTests(unittest.TestCase):
             }
             for name, changed in mutations.items():
                 with self.subTest(name=name):
-                    _rows, _output, config, items = _prepare(changed)
-                    self.assertNotEqual(config["run_fingerprint"], base_run)
-                    if name != "resume_policy":
+                    _rows, _output, config, items, _snapshots = _prepare(changed)
+                    if name == "resume_policy":
+                        self.assertEqual(config["run_fingerprint"], base_run)
+                    else:
+                        self.assertNotEqual(config["run_fingerprint"], base_run)
                         self.assertNotEqual(items[0]["row_fingerprint"], base_row)
             system.write_text("system two")
-            _rows, _output, config, items = _prepare(base)
+            _rows, _output, config, items, _snapshots = _prepare(base)
             self.assertNotEqual(config["run_fingerprint"], base_run)
             self.assertNotEqual(items[0]["row_fingerprint"], base_row)
             system.write_text("system one")
             append.write_text("append two")
-            _rows, _output, config, items = _prepare(base)
+            _rows, _output, config, items, _snapshots = _prepare(base)
             self.assertNotEqual(config["run_fingerprint"], base_run)
             self.assertNotEqual(items[0]["row_fingerprint"], base_row)
             ir = replace(_request(root, mode="ir", ir=True), corpus=corpus_a)
-            _rows, _output, ir_config, ir_items = _prepare(ir)
+            _rows, _output, ir_config, ir_items, _snapshots = _prepare(ir)
             self.assertNotEqual(ir_config["run_fingerprint"], base_run)
             self.assertNotEqual(ir_items[0]["row_fingerprint"], base_row)
 
@@ -527,3 +778,22 @@ def _request(root: Path, *, rows: int = 1, max_concurrency: int = 1, mode: str =
 
 def _result(output_dir: Path) -> DciRunResult:
     return DciRunResult(output_dir=output_dir, final_text="answer", events=(RunEvent("r", 1, "run.completed", {"status": "completed"}),), status="completed")
+
+
+def _verdict(config: JudgeConfig, *, correct: bool = True) -> dict[str, object]:
+    return {
+        **config.public_dict(),
+        "judged_at": "2026-07-14T00:00:00+00:00",
+        "attempts": 1,
+        "judge_request_fingerprint": "replaced-by-evaluator",
+        "is_correct": correct,
+        "normalized_prediction": "answer",
+        "reason": "fixture",
+        "usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+        "cost_estimate_usd": {
+            "input_cost": 0.0,
+            "cached_input_cost": 0.0,
+            "output_cost": 0.0,
+            "total_cost": 0.0,
+        },
+    }

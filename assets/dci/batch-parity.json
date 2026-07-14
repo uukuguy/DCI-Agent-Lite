@@ -2668,7 +2668,7 @@
       "source_name": "worker",
       "implementation_status": "implemented",
       "current_asterion_owner": "asterion.dci.benchmark",
-      "current_symbol": "run_benchmark_async.worker",
+      "current_symbol": "run_benchmark_async",
       "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_worker"],
       "target_asterion_owner": "asterion.dci.benchmark",
       "target_symbol": "worker",

@@ -444,6 +444,44 @@ class DciRunLock:
     _released: bool = False
 
     @classmethod
+    def acquire_fd(
+        cls, directory_fd: int, *, path: Path, wait: bool = False
+    ) -> DciRunLock:
+        """Acquire writer authority from an already-open directory inode."""
+
+        if fcntl is None:
+            raise DciArtifactError("DCI run locking is unavailable")
+        descriptor = os.dup(directory_fd)
+        try:
+            os.fchmod(descriptor, 0o700)
+            operation = fcntl.LOCK_EX | (0 if wait else fcntl.LOCK_NB)
+            fcntl.flock(descriptor, operation)
+            _validate_lock_metadata_at(descriptor, cls.LOCK_NAME)
+            owner_token = secrets.token_hex(32)
+            _atomic_write_json_at(
+                descriptor,
+                cls.LOCK_NAME,
+                {
+                    "pid": os.getpid(),
+                    "hostname": socket.gethostname(),
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "owner_token": owner_token,
+                },
+            )
+            return cls(
+                path=Path(path) / cls.LOCK_NAME,
+                owner_token=owner_token,
+                _directory_fd=descriptor,
+            )
+        except BaseException:
+            try:
+                fcntl.flock(descriptor, fcntl.LOCK_UN)
+            except OSError:
+                pass
+            os.close(descriptor)
+            raise
+
+    @classmethod
     def acquire(cls, output_dir: Path, *, create: bool = True) -> DciRunLock:
         directory = Path(output_dir)
         descriptor = _acquire_directory_fd(directory, create=create)
@@ -1801,13 +1839,20 @@ class DciRunRecorder:
         paths: DciPaths,
         features: DciConversationFeatures | None = None,
         resume: bool = False,
+        directory_fd: int | None = None,
     ) -> None:
         validate_dci_run_request(request, paths)
         self.output_dir = Path(output_dir)
         self.request = request
         self.paths = paths
         self.features = features or DciConversationFeatures()
-        self.lock = DciRunLock.acquire(self.output_dir, create=not resume)
+        self.lock = (
+            DciRunLock.acquire(self.output_dir, create=not resume)
+            if directory_fd is None
+            else DciRunLock.acquire_fd(
+                directory_fd, path=self.output_dir, wait=False
+            )
+        )
         self._root_fd = self.lock._directory_fd
         self._protocol_fd: int | None = None
         self._closed = False

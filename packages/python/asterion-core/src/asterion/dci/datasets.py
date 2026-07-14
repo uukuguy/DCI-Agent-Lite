@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import stat
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
@@ -194,31 +195,57 @@ def _row_from_value(value: Any) -> BenchmarkRow:
 
 
 def load_benchmark_rows(path: Path) -> tuple[BenchmarkRow, ...]:
-    """Load strict UTF-8 JSONL without sorting or filesystem mutation."""
+    """Read one no-follow regular-file snapshot and parse its exact bytes."""
 
     try:
+        descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        try:
+            if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+                raise DatasetError("DCI benchmark dataset is invalid")
+            with os.fdopen(descriptor, "rb") as handle:
+                descriptor = -1
+                raw = handle.read()
+        finally:
+            if descriptor >= 0:
+                os.close(descriptor)
+        return load_benchmark_rows_bytes(raw)
+    except DatasetError:
+        raise
+    except (OSError, UnicodeError) as error:
+        raise DatasetError("DCI benchmark dataset is invalid") from error
+
+
+def load_benchmark_rows_bytes(raw: bytes) -> tuple[BenchmarkRow, ...]:
+    """Parse one immutable strict UTF-8 JSONL snapshot in source order."""
+
+    try:
+        text = raw.decode("utf-8", errors="strict")
         rows: list[BenchmarkRow] = []
         identities: set[str] = set()
-        with Path(path).open("r", encoding="utf-8", errors="strict") as handle:
-            for line_number, line in enumerate(handle, start=1):
-                if not line.strip():
-                    continue
-                try:
-                    value = json.loads(
-                        line, object_pairs_hook=_object_without_duplicate_keys
-                    )
-                    row = _row_from_value(value)
-                except (json.JSONDecodeError, DatasetError) as error:
-                    raise DatasetError(
-                        f"DCI benchmark dataset is invalid at line {line_number}"
-                    ) from error
-                identity = portable_query_id_key(row.query_id)
-                if identity in identities:
-                    raise DatasetError(
-                        f"DCI benchmark dataset has colliding query ID at line {line_number}"
-                    )
-                identities.add(identity)
-                rows.append(row)
+        # JSONL records are separated only by physical LF bytes.  Python's
+        # splitlines() also treats U+2028/U+2029 as record boundaries, which
+        # would silently reinterpret otherwise valid JSON string content.
+        for line_number, line in enumerate(text.split("\n"), start=1):
+            if line.endswith("\r"):
+                line = line[:-1]
+            if not line.strip():
+                continue
+            try:
+                value = json.loads(
+                    line, object_pairs_hook=_object_without_duplicate_keys
+                )
+                row = _row_from_value(value)
+            except (json.JSONDecodeError, DatasetError) as error:
+                raise DatasetError(
+                    f"DCI benchmark dataset is invalid at line {line_number}"
+                ) from error
+            identity = portable_query_id_key(row.query_id)
+            if identity in identities:
+                raise DatasetError(
+                    f"DCI benchmark dataset has colliding query ID at line {line_number}"
+                )
+            identities.add(identity)
+            rows.append(row)
     except DatasetError:
         raise
     except (OSError, UnicodeError) as error:
@@ -347,6 +374,7 @@ __all__ = [
     "build_qa_prompt",
     "canonical_input_identity",
     "load_benchmark_rows",
+    "load_benchmark_rows_bytes",
     "normalize_retrieved_path",
     "parse_retrieved_docs",
     "parse_retrieved_documents",

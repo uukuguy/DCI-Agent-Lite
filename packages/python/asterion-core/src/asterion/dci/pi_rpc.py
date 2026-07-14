@@ -282,6 +282,7 @@ class PiRpcClient:
         keep_session: bool,
         node_max_old_space_size_mb: int | None,
         stream_text: bool = True,
+        inherited_fds: tuple[int, ...] = (),
     ) -> None:
         self.package_dir = Path(package_dir)
         self.cwd = Path(cwd)
@@ -297,6 +298,7 @@ class PiRpcClient:
         self.keep_session = keep_session
         self.node_max_old_space_size_mb = node_max_old_space_size_mb
         self.stream_text = stream_text
+        self.inherited_fds = tuple(inherited_fds)
         self.proc: subprocess.Popen[bytes] | None = None
         self.command: list[str] | None = None
         self.stderr_chunks: list[str] = []
@@ -342,6 +344,7 @@ class PiRpcClient:
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            pass_fds=self.inherited_fds,
         )
         self._stdout_queue = queue.Queue()
         self._stdout_thread = threading.Thread(target=self._drain_stdout, daemon=True)
