@@ -4,16 +4,14 @@ from __future__ import annotations
 
 import ipaddress
 import re
-import socket
 import subprocess
 from pathlib import Path
 from urllib.parse import urlsplit
 
 
 _REVISION_PATTERN = re.compile(r"[0-9a-fA-F]{40,64}")
-_SCP_ORIGIN_PATTERN = re.compile(r"^(?:[^@/:]+@)?(?P<host>[^/:]+):(?P<path>.+)$")
-_LEGACY_IPV4_PATTERN = re.compile(
-    r"(?:0[xX][0-9A-Fa-f]+|[0-9]+)(?:\.(?:0[xX][0-9A-Fa-f]+|[0-9]+)){0,3}"
+_SCP_ORIGIN_PATTERN = re.compile(
+    r"^(?:[^@/:]+@)?(?P<host>\[[^]]+\]|[^/:]+):(?P<path>.+)$"
 )
 _REMOTE_ORIGIN_SCHEMES = frozenset({"git", "http", "https", "ssh"})
 
@@ -57,6 +55,8 @@ def _sanitized_origin(value: str | None) -> dict[str, str] | None:
     if scp_match is None:
         return None
     host = scp_match.group("host")
+    if host.startswith("[") and host.endswith("]"):
+        host = host[1:-1]
     path = scp_match.group("path").split("?", 1)[0].split("#", 1)[0]
     if not _is_remote_host(host) or "\\" in path:
         return None
@@ -70,15 +70,72 @@ def _is_remote_host(value: str | None) -> bool:
     if host == "localhost" or host.endswith(".localhost"):
         return False
     try:
-        return not ipaddress.ip_address(host).is_loopback
+        address = ipaddress.ip_address(host)
     except ValueError:
-        if _LEGACY_IPV4_PATTERN.fullmatch(host) is None:
+        if not _looks_numeric(host):
             return True
-    try:
-        legacy_address = ipaddress.ip_address(socket.inet_aton(host))
-    except OSError:
+        address = _parse_legacy_ipv4(host)
+        if address is None:
+            return False
+    return not (address.is_loopback or address.is_unspecified)
+
+
+def _looks_numeric(host: str) -> bool:
+    if not host or not host[0].isdigit():
         return False
-    return not legacy_address.is_loopback
+    return all(not part or part[0].isdigit() for part in host.split("."))
+
+
+def _parse_legacy_ipv4(host: str) -> ipaddress.IPv4Address | None:
+    parts = host.split(".")
+    if not 1 <= len(parts) <= 4:
+        return None
+    values: list[int] = []
+    for part in parts:
+        value = _parse_legacy_ipv4_component(part)
+        if value is None:
+            return None
+        values.append(value)
+    limits = {
+        1: (0xFFFFFFFF,),
+        2: (0xFF, 0xFFFFFF),
+        3: (0xFF, 0xFF, 0xFFFF),
+        4: (0xFF, 0xFF, 0xFF, 0xFF),
+    }[len(values)]
+    if any(value > limit for value, limit in zip(values, limits, strict=True)):
+        return None
+    if len(values) == 1:
+        integer = values[0]
+    elif len(values) == 2:
+        integer = (values[0] << 24) | values[1]
+    elif len(values) == 3:
+        integer = (values[0] << 24) | (values[1] << 16) | values[2]
+    else:
+        integer = (
+            (values[0] << 24) | (values[1] << 16) | (values[2] << 8) | values[3]
+        )
+    return ipaddress.IPv4Address(integer)
+
+
+def _parse_legacy_ipv4_component(component: str) -> int | None:
+    if not component:
+        return None
+    lowered = component.lower()
+    if lowered.startswith("0x"):
+        digits = component[2:]
+        base = 16
+        valid = bool(digits) and all(character in "0123456789abcdefABCDEF" for character in digits)
+    elif len(component) > 1 and component.startswith("0"):
+        digits = component[1:]
+        base = 8
+        valid = all(character in "01234567" for character in digits)
+    else:
+        digits = component
+        base = 10
+        valid = component.isascii() and component.isdigit()
+    if not valid:
+        return None
+    return int(digits or "0", base)
 
 
 def collect_pi_provenance(

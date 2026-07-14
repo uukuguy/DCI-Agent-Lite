@@ -603,6 +603,21 @@ class AsterionDciRunTests(unittest.TestCase):
             "ssh://017700000001/sentinel-loopback-octal/pi.git",
             "127.1:sentinel-loopback-scp-short/pi.git",
             "git@2130706433:sentinel-loopback-scp-integer/pi.git",
+            "http://0xfffffffff/sentinel-overflow-hex/pi.git",
+            "http://4294967296/sentinel-overflow-decimal/pi.git",
+            "http://0x100000000/sentinel-overflow-hex-boundary/pi.git",
+            "http://1.2.3.4.5/sentinel-excess-components/pi.git",
+            "http://256.1.1.1/sentinel-four-part-overflow/pi.git",
+            "http://1.16777216/sentinel-two-part-overflow/pi.git",
+            "http://1.2.65536/sentinel-three-part-overflow/pi.git",
+            "http://0/sentinel-zero-single/pi.git",
+            "ssh://0.0.0.0/sentinel-zero-dotted/pi.git",
+            "git://00/sentinel-zero-octal/pi.git",
+            "http://0x0/sentinel-zero-hex/pi.git",
+            "ssh://[::]/sentinel-zero-ipv6/pi.git",
+            "0:sentinel-zero-scp/pi.git",
+            "git@0.0.0.0:sentinel-zero-scp-dotted/pi.git",
+            "git@[::]:sentinel-zero-scp-ipv6/pi.git",
         )
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
