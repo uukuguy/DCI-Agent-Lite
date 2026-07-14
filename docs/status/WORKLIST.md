@@ -266,7 +266,7 @@
 - Dependencies: AF-230
 - Acceptance: bounded concurrent Asterion batch paths reuse the native run/evaluator boundaries, preserve deterministic cache and per-query state, and reproduce source-product dataset, metric, summary, export, and analysis semantics without importing or launching `src/dci`.
 - Design: `docs/superpowers/specs/2026-07-13-asterion-dci-complete-product-parity-design.md`
-- Plan: successor planning and review are the active package work; no AF-240 implementation may start before the detailed plan is committed.
+- Plan: `docs/superpowers/plans/2026-07-14-af-240-batch-evaluation-export-parity.md`
 
 ## AF-250 — Product acceptance matrix
 
