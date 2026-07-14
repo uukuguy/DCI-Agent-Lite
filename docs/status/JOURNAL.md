@@ -504,3 +504,4 @@
 - 18:47 AF-230 Task 4 R3 binds protocol terminal and run identity evidence to durable attempt classification before resume. [pending R3 commit]
 - 18:49 AF-230 resume rejects terminal/status and run identity mismatches before Pi construction. [d91db65]
 - 18:57 AF-230 Task 5 adds safe inputs, unique runs, conversation controls, and operator docs. [caa7323]
+- 19:03 AF-230 Task 5 preflights all operator resources and redacts filesystem failures before Pi. [7d81354]
