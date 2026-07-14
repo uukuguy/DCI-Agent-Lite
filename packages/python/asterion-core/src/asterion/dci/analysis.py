@@ -571,6 +571,55 @@ def plot_tool_summary(analysis: Mapping[str, Any]) -> bytes:
     return render_figures(analysis)["tool_summary.png"]
 
 
+def _draw_runtime_breakdown(axis: Any, records: Sequence[Mapping[str, Any]]) -> None:
+    sortable = [row for row in records if _number(row.get("wall_time_seconds")) is not None]
+    ordered = sorted(
+        sortable,
+        key=lambda row: float(row["wall_time_seconds"]),
+        reverse=True,
+    )
+    x_values = list(range(len(ordered)))
+    tool_times = [float(row.get("tool_time_seconds") or 0) for row in ordered]
+    non_tool_times = [float(row.get("non_tool_time_seconds") or 0) for row in ordered]
+    total_times = [
+        tool + non_tool
+        for tool, non_tool in zip(tool_times, non_tool_times, strict=True)
+    ]
+    colors = [
+        "#2E8B57" if row.get("is_correct") is True else "#C0392B"
+        for row in ordered
+    ]
+
+    axis.bar(x_values, non_tool_times, color="#F2CF5B", label="Non-tool time")
+    axis.bar(
+        x_values,
+        tool_times,
+        bottom=non_tool_times,
+        color="#72B7B2",
+        label="Tool time",
+    )
+    axis.scatter(
+        x_values,
+        total_times,
+        c=colors,
+        s=22,
+        zorder=3,
+        label="Outcome",
+    )
+    tick_step = max(1, len(ordered) // 20)
+    axis.set_xticks(x_values[::tick_step])
+    axis.set_xticklabels(
+        [str(ordered[index]["query_id"]) for index in x_values[::tick_step]],
+        rotation=60,
+        ha="right",
+    )
+    axis.set_ylabel("Seconds")
+    axis.set_xlabel("Query ID (sorted by wall time)")
+    axis.set_title("Per-query Runtime Breakdown")
+    axis.legend(frameon=False)
+    axis.grid(axis="y", alpha=0.2)
+
+
 def render_figures(analysis: Mapping[str, Any]) -> dict[str, bytes]:
     import matplotlib
     matplotlib.use("Agg", force=True)
@@ -586,15 +635,9 @@ def render_figures(analysis: Mapping[str, Any]) -> dict[str, bytes]:
     fig.suptitle("BrowseComp Eval Overview", fontweight="bold")
     figures["scatter_overview.png"] = fig
 
-    fig, ax = plt.subplots(figsize=(14, 6))
-    ordered = sorted(records, key=lambda row: (-float(row.get("wall_time_seconds") or 0), str(row.get("query_id"))))
-    x = list(range(len(ordered)))
-    non_tool = [row.get("non_tool_time_seconds") or 0 for row in ordered]
-    tool = [row.get("tool_time_seconds") or 0 for row in ordered]
-    ax.bar(x, non_tool, color="#7F8C8D", label="Non-tool time")
-    ax.bar(x, tool, bottom=non_tool, color="#F39C12", label="Tool time")
-    ax.set(title="Per-query Runtime Breakdown", xlabel="Query ID (sorted by wall time)", ylabel="Seconds")
-    ax.legend(frameon=False)
+    fig_width = max(14, len(records) * 0.32)
+    fig, ax = plt.subplots(figsize=(fig_width, 6))
+    _draw_runtime_breakdown(ax, records)
     figures["runtime_breakdown.png"] = fig
 
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))

@@ -346,6 +346,62 @@ class AsterionDciAnalysisTests(unittest.TestCase):
                 self.assertEqual(image_one.shape, image_two.shape)
                 self.assertTrue((image_one == image_two).all())
 
+    def test_runtime_chart_preserves_order_stacks_labels_and_unavailable_values(self) -> None:
+        from matplotlib import pyplot as plt
+        from asterion.dci.analysis import _draw_runtime_breakdown
+
+        records = [
+            {
+                "query_id": "q-fast",
+                "wall_time_seconds": 2.0,
+                "non_tool_time_seconds": 1.5,
+                "tool_time_seconds": 0.5,
+                "is_correct": False,
+            },
+            {
+                "query_id": "q-unavailable",
+                "wall_time_seconds": None,
+                "non_tool_time_seconds": None,
+                "tool_time_seconds": None,
+                "is_correct": None,
+            },
+            {
+                "query_id": "q-slow",
+                "wall_time_seconds": 10.0,
+                "non_tool_time_seconds": 3.0,
+                "tool_time_seconds": 7.0,
+                "is_correct": True,
+            },
+        ]
+        figure, axis = plt.subplots()
+        try:
+            _draw_runtime_breakdown(axis, records)
+            self.assertEqual(
+                [tick.get_text() for tick in axis.get_xticklabels()],
+                ["q-slow", "q-fast"],
+            )
+            self.assertEqual(
+                [patch.get_height() for patch in axis.patches],
+                [3.0, 1.5, 7.0, 0.5],
+            )
+            self.assertEqual(
+                [patch.get_y() for patch in axis.patches],
+                [0.0, 0.0, 3.0, 1.5],
+            )
+            self.assertEqual(
+                axis.collections[0].get_offsets().tolist(),
+                [[0.0, 10.0], [1.0, 2.0]],
+            )
+            self.assertEqual(axis.get_title(), "Per-query Runtime Breakdown")
+            self.assertEqual(axis.get_xlabel(), "Query ID (sorted by wall time)")
+            self.assertEqual(axis.get_ylabel(), "Seconds")
+            self.assertCountEqual(
+                [text.get_text() for text in axis.get_legend().get_texts()],
+                ["Non-tool time", "Tool time", "Outcome"],
+            )
+        finally:
+            plt.close(figure)
+
     def test_inventory_task4_behavior_coverage(self) -> None:
         # The focused golden tests above cover every AF-240 Task 4 inventory row.
         from asterion.dci import analysis as analysis_module
@@ -585,7 +641,7 @@ def _assert_function_parity(
         }
         tolerances = {
             "plot_scatter_overview": 0.01,
-            "plot_runtime_breakdown": 0.23,
+            "plot_runtime_breakdown": 0.001,
             "plot_metric_distributions": 0.01,
             "plot_tool_summary": 0.16,
         }
@@ -676,7 +732,7 @@ def _task4_behavior_test(row: dict[str, object]):
             elif name.endswith(".png"):
                 tolerance = {
                     "analysis_figures/scatter_overview.png": 0.01,
-                    "analysis_figures/runtime_breakdown.png": 0.23,
+                    "analysis_figures/runtime_breakdown.png": 0.001,
                     "analysis_figures/metric_distributions.png": 0.01,
                     "analysis_figures/tool_summary.png": 0.16,
                 }[name]
