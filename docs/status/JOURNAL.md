@@ -479,3 +479,4 @@
 - 02:25 AF-230 原生操作器与产物计划已提交，为安全恢复和完整证据实现提供边界。[ca7fb9e]
 - 16:19 AF-230 Climb state registered before production work: four pending unified-recorder, protected-evidence, provenance/resume-safety, and operator/terminal hypotheses. [pending state commit]
 - 16:22 AF-230 Climb registration committed to establish governed native parity work. [713db4c]
+- 16:30 AF-230 private atomic recorder and owner-token lock committed to prevent unsafe concurrent artifact writers. [2e2aed9]
