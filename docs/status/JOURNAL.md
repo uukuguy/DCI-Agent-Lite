@@ -523,3 +523,4 @@
 - 19:59 AF-230 Task 7 review aligns CURRENT with the actual isolated branch so the AF-240 recovery boundary is contradiction-free. [pending review-fix commit]
 - 20:00 correction: AF-230 Task 7 branch-state review fix committed. [164cfc0]
 - 20:02 AF-240 detailed batch/evaluation/export plan passed independent coverage review and became executable. [6b67285]
+- 20:03 AF-240 live checkpoint now recovers directly into the approved Task 0 inventory and hypotheses. [303303a]
