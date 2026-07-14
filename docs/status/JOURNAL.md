@@ -686,3 +686,4 @@
 - 07:03 Independent closure re-review approves the repaired AF-250 acceptance with no Critical, Important, or Minor findings.
 - 07:05 Final full discovery passes 1266/1266 Python tests after the approved review repair.
 - 07:06 Final closure gates pass 11 TypeScript, 19 Rust, compile, Ruff, shell, scope, diff, public product 8/8+533/533+12/12+6/6+7/7, and private native acceptance 7/7.
+- 07:07 AF-250 private-native acceptance closes full DCI migration with reviewed 7/7 evidence. [327a070]

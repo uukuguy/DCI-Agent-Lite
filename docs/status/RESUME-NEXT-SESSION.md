@@ -6,6 +6,7 @@ Active work package: AF-250
 
 ## TL;DR
 
+- AF-250 accepted implementation is committed at `327a070` on `af-220-shared-dci-config`.
 - AF-250 implementation and bounded product acceptance are complete: eight product rows, 533 delegated selectors, twelve launcher pairs, six batch extras, isolated installed-wheel/application proof, and seven real source/Asterion/application/Pi-plus-Judge/reuse cases pass.
 - The earlier real-run failures were caused by the isolated worktree lacking the external main-repository `corpus/`, not by a missing Asterion DCI behavior. Explicit shared Pi/corpus paths plus the repository-root `.env` produced successful bounded runs.
 - `assets/dci/product-acceptance.json` contains only commands, inherited variable names, exit codes, modes, hashes, counts, verdict booleans, and timestamps. Credential values matched zero; provider bodies and private paths are excluded. A caller-owned private acceptance root retains all seven native cases for digest/mode/semantic revalidation.
