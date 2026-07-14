@@ -189,6 +189,19 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
                 ["--thinking-level", "high", "--limit", "7", "--no-figures"],
             )
 
+            for invalid_args in (("../../escape",), ("level3", "../../escape")):
+                with self.subTest(invalid_args=invalid_args):
+                    invalid_log = root / "invalid.log"
+                    result = subprocess.run(
+                        ["bash", str(launcher), *invalid_args],
+                        env=env | {"CAPTURE_ARGS": str(invalid_log)},
+                        capture_output=True,
+                        text=True,
+                    )
+                    self.assertEqual(result.returncode, 2)
+                    self.assertFalse(invalid_log.exists())
+                    self.assertNotIn("../../escape", result.stderr)
+
     def test_all_launchers_are_valid_bash(self) -> None:
         for relative in sorted(TARGET_LAUNCHERS):
             with self.subTest(launcher=relative):
