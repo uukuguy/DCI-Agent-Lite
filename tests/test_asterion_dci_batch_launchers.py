@@ -117,8 +117,58 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
         self.assertIn('thinking_level=${2:-""}', text)
         self.assertIn('limit=${3:-""}', text)
         self.assertIn('--runtime-context-level "$level"', text)
-        self.assertIn('--thinking-level "$thinking_level"', text)
-        self.assertIn('--limit "$limit"', text)
+        self.assertIn('command+=(--thinking-level "$thinking_level")', text)
+        self.assertIn('command+=(--limit "$limit")', text)
+
+    def test_dynamic_launcher_omits_unset_optionals_and_forwards_explicit_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            launcher_dir = root / "scripts/asterion/bcplus_eval"
+            launcher_dir.mkdir(parents=True)
+            launcher = launcher_dir / "run_bcplus_eval_openai.sh"
+            launcher.write_text(
+                (ASTERION_LAUNCHER_ROOT / "bcplus_eval/run_bcplus_eval_openai.sh").read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            (root / ".env").write_text("", encoding="utf-8")
+            (root / "data").mkdir()
+            (root / "data/bcplus_qa.jsonl").write_text("{}\n", encoding="utf-8")
+            (root / "corpus/bc_plus_docs").mkdir(parents=True)
+            bin_dir = root / "bin"
+            bin_dir.mkdir()
+            fake = bin_dir / "asterion-dci"
+            fake.write_text(
+                '#!/usr/bin/env bash\nprintf "%s\\n" "$@" > "$CAPTURE_ARGS"\n',
+                encoding="utf-8",
+            )
+            fake.chmod(0o755)
+            env = os.environ | {"PATH": f"{bin_dir}:{os.environ['PATH']}"}
+
+            unset_log = root / "unset.log"
+            result = subprocess.run(
+                ["bash", str(launcher), "level2"],
+                env=env | {"CAPTURE_ARGS": str(unset_log)},
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            unset_args = unset_log.read_text(encoding="utf-8").splitlines()
+            self.assertNotIn("--thinking-level", unset_args)
+            self.assertNotIn("--limit", unset_args)
+
+            explicit_log = root / "explicit.log"
+            result = subprocess.run(
+                ["bash", str(launcher), "level4", "high", "7", "--no-figures"],
+                env=env | {"CAPTURE_ARGS": str(explicit_log)},
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            explicit_args = explicit_log.read_text(encoding="utf-8").splitlines()
+            self.assertEqual(
+                explicit_args[-5:],
+                ["--thinking-level", "high", "--limit", "7", "--no-figures"],
+            )
 
     def test_all_launchers_are_valid_bash(self) -> None:
         for relative in sorted(TARGET_LAUNCHERS):
@@ -234,4 +284,3 @@ for _relative, _profile in {
         f"test_scripts_{source_id}_launcher_{_profile}",
         _test,
     )
-

@@ -1288,6 +1288,30 @@ class AsterionDciCliTests(unittest.TestCase):
                 strip_usage=True,
             ),
         )
+        self.assertEqual(
+            (
+                request.runtime_options.provider,
+                request.runtime_options.model,
+                request.runtime_options.tools,
+                request.runtime_options.timeout_seconds,
+                request.runtime_options.runtime_context_level,
+                request.runtime_options.thinking_level,
+                request.runtime_options.node_max_old_space_size_mb,
+                request.runtime_options.keep_session,
+                request.runtime_options.extra_args,
+            ),
+            (
+                "openai",
+                "gpt-test",
+                "read",
+                45.0,
+                "level3",
+                "high",
+                4096,
+                True,
+                ("--verbose",),
+            ),
+        )
 
     def test_benchmark_help_exposes_complete_source_and_asterion_controls(self) -> None:
         stdout = io.StringIO()
@@ -1376,30 +1400,6 @@ class AsterionDciCliTests(unittest.TestCase):
         self.assertEqual(config.cached_input_price_per_1m, 0.25)
         self.assertEqual(config.output_price_per_1m, 3.75)
         self.assertNotIn("synthetic-secret", stdout.getvalue() + stderr.getvalue())
-        self.assertEqual(
-            (
-                request.runtime_options.provider,
-                request.runtime_options.model,
-                request.runtime_options.tools,
-                request.runtime_options.timeout_seconds,
-                request.runtime_options.runtime_context_level,
-                request.runtime_options.thinking_level,
-                request.runtime_options.node_max_old_space_size_mb,
-                request.runtime_options.keep_session,
-                request.runtime_options.extra_args,
-            ),
-            (
-                "openai",
-                "gpt-test",
-                "read",
-                45.0,
-                "level3",
-                "high",
-                4096,
-                True,
-                ("--verbose",),
-            ),
-        )
 
     def test_benchmark_redacts_native_and_artifact_failures(self) -> None:
         for failure in (
