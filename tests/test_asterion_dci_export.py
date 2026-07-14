@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import contextlib
 import fcntl
 import hashlib
 import importlib.util
@@ -280,6 +281,26 @@ class AsterionDciExportTests(unittest.TestCase):
                 self.assertEqual(export_bcplus_qa(source, parent / "qa.jsonl", decrypt=False), 1)
             self.assertEqual(json.loads((authority / "qa.jsonl").read_text())["query"], "q")
             self.assertFalse((attacker / "qa.jsonl").exists())
+
+    def test_parquet_reads_keep_open_source_authority_across_rebind(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td).resolve(); source = root / "source"; held = root / "held-source"
+            attacker = root / "attacker"; output = root / "output"
+            _parquet(source / "p.parquet", [{"docid": "1", "text": "Title: Safe\nsafe", "url": "https://example.com/safe"}])
+            _parquet(attacker / "p.parquet", [{"docid": "1", "text": "Title: Attack\nattack", "url": "https://evil.test/attack"}])
+            original = export_module._locked_root
+
+            @contextlib.contextmanager
+            def rebind(path: Path):
+                source.rename(held)
+                source.symlink_to(attacker, target_is_directory=True)
+                with original(path) as directory:
+                    yield directory
+
+            with mock.patch.object(export_module, "_locked_root", side_effect=rebind):
+                self.assertEqual(export_bcplus(source, output), 1)
+            self.assertEqual((output / "example.com/Safe.txt").read_text(), "Title: Safe\nsafe")
+            self.assertFalse((output / "evil.test").exists())
 
     def test_cli_failures_are_body_free_and_module_has_no_baseline_import(self) -> None:
         err = io.StringIO(); out = io.StringIO()
