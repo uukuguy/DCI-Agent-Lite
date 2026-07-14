@@ -489,6 +489,10 @@ class AsterionDciExportTests(unittest.TestCase):
                 ".DCI_EXPORT_COMPLETE",
                 ".ＡＳＴＥＲＩＯＮ-ＤＣＩ-ＥＸＰＯＲＴ.LOCK",
             )
+            _parquet(source / "p.parquet", [{"id": "safe.txt", "content": "safe"}])
+            self.assertEqual(export_subset(source, output), 1)
+            marker = output / ".dci_export_complete"
+            marker_inode = marker.stat().st_ino
             for alias in aliases:
                 _parquet(source / "p.parquet", [{"id": alias, "content": "forged"}])
                 with self.assertRaises(DciExportError, msg=alias):
@@ -496,12 +500,15 @@ class AsterionDciExportTests(unittest.TestCase):
                 candidate = output / alias
                 if candidate.is_file():
                     self.assertNotEqual(candidate.read_text(), "forged")
-                self.assertFalse((output / ".dci_export_complete").exists())
+                self.assertEqual(marker.read_text(), "1\n")
+                self.assertEqual(marker.stat().st_ino, marker_inode)
 
             qa_parent = root / "qa"
             qa_parent.mkdir()
             lock = qa_parent / ".asterion-dci-export.lock"
             lock.write_text("sentinel")
+            lock_stream = lock.open("a+")
+            fcntl.flock(lock_stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
             _parquet(
                 source / "p.parquet",
                 [{"id": "1", "query": "q", "answer": "a"}],
@@ -513,6 +520,8 @@ class AsterionDciExportTests(unittest.TestCase):
                 with self.assertRaises(DciExportError, msg=alias):
                     export_bcplus_qa(source, qa_parent / alias, decrypt=False)
                 self.assertEqual(lock.read_text(), "sentinel")
+            fcntl.flock(lock_stream, fcntl.LOCK_UN)
+            lock_stream.close()
 
     def test_bright_parent_portable_collisions_fail_across_reruns(self) -> None:
         pairs = (
@@ -534,7 +543,7 @@ class AsterionDciExportTests(unittest.TestCase):
                 with self.assertRaises(DciExportError):
                     export_subset(source, output)
                 self.assertEqual((output / first).read_text(), "one")
-                self.assertFalse((output / alias).exists())
+                self.assertEqual(sum(path.is_dir() for path in output.iterdir()), 1)
 
     def test_arbitrary_export_temp_prefix_file_is_preserved_and_fails_closed(
         self,
