@@ -428,11 +428,12 @@ class AsterionDciExportTests(unittest.TestCase):
             source = root / "source"
             output = root / "output"
             output.mkdir()
-            (output / ".asterion-dci-export-tmp-crashed").write_text("partial")
+            stale = output / (".asterion-dci-export-tmp-doc-" + "a" * 32)
+            stale.write_text("partial")
             (output / ".tmp-user-work").write_text("unrelated")
             _parquet(source / "p.parquet", [{"id": "a", "content": "A"}])
             self.assertEqual(export_subset(source, output), 1)
-            self.assertFalse((output / ".asterion-dci-export-tmp-crashed").exists())
+            self.assertEqual(stale.read_text(), "partial")
             self.assertEqual((output / ".tmp-user-work").read_text(), "unrelated")
             _parquet(source / "p.parquet", [{"id": None, "content": "A"}])
             with self.assertRaises(DciExportError):
@@ -450,14 +451,15 @@ class AsterionDciExportTests(unittest.TestCase):
             output = root / "output"
             nested = output / "nested"
             nested.mkdir(parents=True)
-            (nested / ".asterion-dci-export-tmp-crashed").write_text("partial")
+            stale = nested / (".asterion-dci-export-tmp-doc-" + "b" * 32)
+            stale.write_text("partial")
             (nested / ".tmp-user-work").write_text("unrelated")
             _parquet(
                 source / "p.parquet",
                 [{"id": "nested/a.txt", "content": "A"}],
             )
             self.assertEqual(export_subset(source, output), 1)
-            self.assertFalse((nested / ".asterion-dci-export-tmp-crashed").exists())
+            self.assertEqual(stale.read_text(), "partial")
             self.assertEqual((nested / ".tmp-user-work").read_text(), "unrelated")
             _parquet(
                 source / "p.parquet",
@@ -476,6 +478,79 @@ class AsterionDciExportTests(unittest.TestCase):
                     root / ".asterion-dci-export.lock",
                     decrypt=False,
                 )
+
+    def test_reserved_portable_aliases_never_replace_lock_or_marker(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td).resolve()
+            source = root / "source"
+            output = root / "output"
+            aliases = (
+                ".ASTERION-DCI-EXPORT.LOCK",
+                ".DCI_EXPORT_COMPLETE",
+                ".ＡＳＴＥＲＩＯＮ-ＤＣＩ-ＥＸＰＯＲＴ.LOCK",
+            )
+            for alias in aliases:
+                _parquet(source / "p.parquet", [{"id": alias, "content": "forged"}])
+                with self.assertRaises(DciExportError, msg=alias):
+                    export_subset(source, output)
+                candidate = output / alias
+                if candidate.is_file():
+                    self.assertNotEqual(candidate.read_text(), "forged")
+                self.assertFalse((output / ".dci_export_complete").exists())
+
+            qa_parent = root / "qa"
+            qa_parent.mkdir()
+            lock = qa_parent / ".asterion-dci-export.lock"
+            lock.write_text("sentinel")
+            _parquet(
+                source / "p.parquet",
+                [{"id": "1", "query": "q", "answer": "a"}],
+            )
+            for alias in (
+                ".ASTERION-DCI-EXPORT.LOCK",
+                ".ＡＳＴＥＲＩＯＮ-ＤＣＩ-ＥＸＰＯＲＴ.LOCK",
+            ):
+                with self.assertRaises(DciExportError, msg=alias):
+                    export_bcplus_qa(source, qa_parent / alias, decrypt=False)
+                self.assertEqual(lock.read_text(), "sentinel")
+
+    def test_bright_parent_portable_collisions_fail_across_reruns(self) -> None:
+        pairs = (
+            ("a/x.txt", "A/x.txt"),
+            ("Å/x.txt", "Å/x.txt"),
+            ("dir02/x.txt", "dir2/x.txt"),
+        )
+        for first, alias in pairs:
+            with (
+                self.subTest(first=first, alias=alias),
+                tempfile.TemporaryDirectory() as td,
+            ):
+                root = Path(td).resolve()
+                source = root / "source"
+                output = root / "output"
+                _parquet(source / "p.parquet", [{"id": first, "content": "one"}])
+                self.assertEqual(export_subset(source, output), 1)
+                _parquet(source / "p.parquet", [{"id": alias, "content": "one"}])
+                with self.assertRaises(DciExportError):
+                    export_subset(source, output)
+                self.assertEqual((output / first).read_text(), "one")
+                self.assertFalse((output / alias).exists())
+
+    def test_arbitrary_export_temp_prefix_file_is_preserved_and_fails_closed(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td).resolve()
+            source = root / "source"
+            output = root / "output"
+            output.mkdir()
+            user_file = output / ".asterion-dci-export-tmp-user-owned"
+            user_file.write_text("KEEP")
+            _parquet(source / "p.parquet", [{"id": "a", "content": "A"}])
+            with self.assertRaises(DciExportError):
+                export_subset(source, output)
+            self.assertEqual(user_file.read_text(), "KEEP")
+            self.assertFalse((output / ".dci_export_complete").exists())
 
     def test_multibyte_names_fit_portable_component_limits(self) -> None:
         with tempfile.TemporaryDirectory() as td:
