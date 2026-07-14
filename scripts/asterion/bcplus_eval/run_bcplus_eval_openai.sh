@@ -8,9 +8,17 @@ corpus="$REPO_ROOT/corpus/bc_plus_docs"
 [ -f "$dataset" ] || { echo "Asterion DCI dataset is unavailable" >&2; exit 2; }
 [ -d "$corpus" ] || { echo "Asterion DCI corpus is unavailable" >&2; exit 2; }
 level=${1:-"level3"}
-thinking_level=${2:-""}
 if (($# > 0)); then shift; fi
-if (($# > 0)); then shift; fi
+thinking_level=""
+if (($# > 0)) && [[ "$1" != --* ]]; then thinking_level=$1; shift; fi
+case "$level" in
+  level0|level1|level2|level3|level4|level5|legacy) ;;
+  *) echo "Asterion DCI context level is invalid" >&2; exit 2 ;;
+esac
+case "$thinking_level" in
+  ""|off|minimal|low|medium|high|xhigh) ;;
+  *) echo "Asterion DCI thinking level is invalid" >&2; exit 2 ;;
+esac
 output_root="$REPO_ROOT/outputs/asterion/bcplus_eval/openai_${level}_concurrency10"
 if [[ -n "$thinking_level" ]]; then output_root="${output_root}_thinking${thinking_level}"; fi
 command=(asterion-dci benchmark --profile bcplus.openai --dataset "$dataset" --corpus "$corpus" --output-root "$output_root" --runtime-context-level "$level")

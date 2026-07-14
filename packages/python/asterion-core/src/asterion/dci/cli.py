@@ -268,6 +268,18 @@ def main(
                 raise ValueError("benchmark limit is invalid")
             if args.max_concurrency < 1:
                 raise ValueError("benchmark concurrency is invalid")
+            runtime_options = _runtime_options(args)
+            runtime_preflight = replace(
+                request_from_runtime_options(
+                    runtime_options,
+                    run_id="asterion-dci-benchmark-preflight",
+                    question="Asterion DCI benchmark preflight",
+                    cwd=args.cwd,
+                    stream_text=False,
+                ),
+                max_turns=args.max_turns,
+            )
+            validate_dci_run_request(runtime_preflight)
             benchmark_output_root = args.output_root
             if _path_has_symlink(benchmark_output_root):
                 raise ValueError("benchmark destination is unsafe")
@@ -287,7 +299,7 @@ def main(
                     output_root=benchmark_output_root,
                     cwd=args.cwd,
                     judge_config=_judge_config(args),
-                    runtime_options=_runtime_options(args),
+                    runtime_options=runtime_options,
                     limit=args.limit,
                     mode=args.mode,
                     profile=args.profile,
