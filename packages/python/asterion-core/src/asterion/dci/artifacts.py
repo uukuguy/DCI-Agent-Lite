@@ -17,6 +17,11 @@ from asterion.dci.run import DciRunRequest
 from asterion.runtime.host import RunEvent
 from asterion.runtime.protocol import PROTOCOL_VERSION, validate_event_stream, validate_run_request
 
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - exercised only on non-POSIX hosts
+    fcntl = None  # type: ignore[assignment]
+
 
 class DciArtifactError(RuntimeError):
     """Safe failure at the native artifact filesystem boundary."""
@@ -130,126 +135,57 @@ def _lock_payload(path: Path) -> dict[str, Any]:
     return payload
 
 
-def _pid_is_alive(pid: int) -> bool:
+def _acquire_directory_fd(path: Path) -> int:
+    """Open, verify, privatize, and exclusively lock one run directory."""
+
+    if fcntl is None:
+        raise DciArtifactError("DCI run locking is unavailable")
+    _reject_symlink(path, label="output directory")
+    path.mkdir(parents=True, mode=0o700, exist_ok=True)
+    _reject_symlink(path, label="output directory")
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
     try:
-        os.kill(pid, 0)
-    except ProcessLookupError:
-        return False
-    except PermissionError:
-        return True
+        descriptor = os.open(path, _open_flags(flags))
     except OSError as exc:
-        raise DciArtifactError("DCI run lock process cannot be verified") from exc
-    return True
-
-
-def _restore_quarantined_lock(quarantined: Path, live_path: Path) -> bool:
-    """Restore without overwriting a new live owner."""
-
+        raise DciArtifactError("DCI output directory is invalid") from exc
     try:
-        os.link(quarantined, live_path, follow_symlinks=False)
-    except FileExistsError:
-        return False
-    quarantined.unlink()
-    return True
-
-
-def _remove_owned_lock(path: Path, owner_token: str, expected_stat: os.stat_result) -> bool:
-    """Atomically detach a lock name, then delete only the verified owned object."""
-
-    quarantine_dir = path.parent / f".{path.name}.quarantine-{secrets.token_hex(16)}"
-    quarantine_dir.mkdir(mode=0o700)
-    quarantined = quarantine_dir / "lock"
-    try:
-        try:
-            os.rename(path, quarantined)
-        except FileNotFoundError:
-            return False
-        try:
-            moved_stat = quarantined.stat(follow_symlinks=False)
-            payload = _lock_payload(quarantined)
-        except (FileNotFoundError, DciArtifactError):
-            if quarantined.exists() or quarantined.is_symlink():
-                _restore_quarantined_lock(quarantined, path)
-            return False
-        matches_inode = (moved_stat.st_dev, moved_stat.st_ino) == (
-            expected_stat.st_dev,
-            expected_stat.st_ino,
-        )
-        if not matches_inode or payload["owner_token"] != owner_token:
-            _restore_quarantined_lock(quarantined, path)
-            return False
-        quarantined.unlink()
-        return True
-    finally:
-        try:
-            quarantine_dir.rmdir()
-        except OSError:
-            # Preserve an unverified raced object rather than deleting it.
-            pass
-
-
-def _stat_lock(path: Path) -> os.stat_result:
-    _reject_symlink(path, label="run lock")
-    try:
-        return path.stat(follow_symlinks=False)
-    except FileNotFoundError:
-        raise
+        os.fchmod(descriptor, 0o700)
+        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError as exc:
+        os.close(descriptor)
+        raise DciArtifactError("DCI run directory is locked") from exc
     except OSError as exc:
-        raise DciArtifactError("DCI run lock is invalid") from exc
-
-
-def _existing_lock(path: Path) -> tuple[os.stat_result, dict[str, Any]]:
-    observed_stat = _stat_lock(path)
-    payload = _lock_payload(path)
-    current_stat = _stat_lock(path)
-    if (current_stat.st_dev, current_stat.st_ino) != (
-        observed_stat.st_dev,
-        observed_stat.st_ino,
-    ):
-        raise DciArtifactError("DCI run lock changed during validation")
-    return observed_stat, payload
-
-
-def _write_lock_payload(descriptor: int, payload: dict[str, Any]) -> None:
-    try:
-        os.fchmod(descriptor, 0o600)
-        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
-            json.dump(payload, handle, ensure_ascii=True, indent=2)
-            handle.write("\n")
-            handle.flush()
-            os.fsync(handle.fileno())
-    except BaseException:
         try:
             os.close(descriptor)
         except OSError:
             pass
-        raise
+        raise DciArtifactError("DCI run locking failed") from exc
+    return descriptor
 
 
-def _release_lock(path: Path, owner_token: str) -> bool:
-    try:
-        observed_stat, payload = _existing_lock(path)
-    except (FileNotFoundError, DciArtifactError):
-        return False
-    if payload["owner_token"] != owner_token:
-        return False
-    return _remove_owned_lock(path, owner_token, observed_stat)
+def _validate_lock_metadata(path: Path) -> None:
+    if not path.exists() and not path.is_symlink():
+        return
+    metadata = _lock_payload(path)
+    if metadata["hostname"] != socket.gethostname():
+        raise DciArtifactError("DCI run lock metadata is foreign")
 
 
 @dataclass
 class DciRunLock:
-    """Exclusive owner-token lock for one private native run directory."""
+    """OS-backed exclusive lock plus diagnostic metadata for one run directory."""
 
     LOCK_NAME = ".dci-run.lock"
 
     path: Path
     owner_token: str
+    _directory_fd: int
     _released: bool = False
 
     @classmethod
     def acquire(cls, output_dir: Path) -> DciRunLock:
         directory = Path(output_dir)
-        _private_directory(directory)
+        descriptor = _acquire_directory_fd(directory)
         resolved_directory = directory.resolve(strict=True)
         lock_path = resolved_directory / cls.LOCK_NAME
         owner_token = secrets.token_hex(32)
@@ -259,39 +195,29 @@ class DciRunLock:
             "created_at": datetime.now(timezone.utc).isoformat(),
             "owner_token": owner_token,
         }
-        for _ in range(4):
+        try:
+            _validate_lock_metadata(lock_path)
+            atomic_write_json(lock_path, payload)
+        except BaseException:
             try:
-                descriptor = os.open(
-                    lock_path,
-                    _open_flags(os.O_CREAT | os.O_EXCL | os.O_WRONLY),
-                    0o600,
-                )
-            except FileExistsError:
-                try:
-                    observed_stat, existing = _existing_lock(lock_path)
-                except FileNotFoundError:
-                    continue
-                if existing["hostname"] != socket.gethostname():
-                    raise DciArtifactError("DCI run directory is locked")
-                if _pid_is_alive(existing["pid"]):
-                    raise DciArtifactError("DCI run directory is locked")
-                if not _remove_owned_lock(lock_path, existing["owner_token"], observed_stat):
-                    raise DciArtifactError("DCI run lock changed during acquisition")
-                continue
-            created_stat = os.fstat(descriptor)
-            try:
-                _write_lock_payload(descriptor, payload)
-            except BaseException:
-                _remove_owned_lock(lock_path, owner_token, created_stat)
-                raise
-            return cls(path=lock_path, owner_token=owner_token)
-        raise DciArtifactError("DCI run lock could not be acquired")
+                fcntl.flock(descriptor, fcntl.LOCK_UN)
+            finally:
+                os.close(descriptor)
+            raise
+        return cls(path=lock_path, owner_token=owner_token, _directory_fd=descriptor)
 
     def release(self) -> None:
         if self._released:
             return
-        _release_lock(self.path, self.owner_token)
-        self._released = True
+        try:
+            if fcntl is not None:
+                fcntl.flock(self._directory_fd, fcntl.LOCK_UN)
+        finally:
+            try:
+                os.close(self._directory_fd)
+            except OSError:
+                pass
+            self._released = True
 
 
 @dataclass(frozen=True)

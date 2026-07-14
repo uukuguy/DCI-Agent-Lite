@@ -11,6 +11,8 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from unittest.mock import patch
 
+import fcntl
+
 import asterion.dci.artifacts as artifacts
 from asterion.dci.artifacts import (
     DciConversationFeatures,
@@ -96,6 +98,105 @@ class AsterionDciArtifactTests(unittest.TestCase):
             self.assertEqual(len(acquired), 1)
             acquired[0].release()
 
+    def test_dead_metadata_swap_cannot_admit_b_while_a_holds_directory_lock(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output_dir = Path(temporary_directory) / "run"
+            owner_a = DciRunLock.acquire(output_dir)
+            lock_path = output_dir / DciRunLock.LOCK_NAME
+            replacement = self._lock_payload(pid=999_999_999, owner_token="replacement-owner")
+            replacement_path = output_dir / ".replacement"
+            replacement_path.write_text(json.dumps(replacement), encoding="utf-8")
+            os.replace(replacement_path, lock_path)
+
+            with self.assertRaises(RuntimeError):
+                DciRunLock.acquire(output_dir)
+            owner_a.release()
+
+            self.assertEqual(json.loads(lock_path.read_text(encoding="utf-8")), replacement)
+
+    def test_release_never_unlinks_metadata_by_name(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output_dir = Path(temporary_directory) / "run"
+            owner = DciRunLock.acquire(output_dir)
+
+            with patch.object(
+                Path,
+                "unlink",
+                side_effect=AssertionError("release must not name-delete metadata"),
+            ):
+                owner.release()
+
+            self.assertTrue((output_dir / DciRunLock.LOCK_NAME).is_file())
+
+    def test_directory_lock_is_held_during_delayed_metadata_reconciliation(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output_dir = Path(temporary_directory) / "run"
+            output_dir.mkdir(mode=0o700)
+            lock_path = output_dir / DciRunLock.LOCK_NAME
+            lock_path.write_text(
+                json.dumps(self._lock_payload(pid=999_999_999, owner_token="stale-owner")),
+                encoding="utf-8",
+            )
+            original_reader = artifacts._lock_payload
+            metadata_read_started = threading.Event()
+            continue_metadata_read = threading.Event()
+
+            def delay_b_metadata(path: Path) -> dict[str, object]:
+                if threading.current_thread().name == "owner-b":
+                    metadata_read_started.set()
+                    continue_metadata_read.wait(timeout=5)
+                return original_reader(path)
+
+            result: list[DciRunLock | BaseException] = []
+
+            def acquire_b() -> None:
+                try:
+                    result.append(DciRunLock.acquire(output_dir))
+                except BaseException as exc:
+                    result.append(exc)
+
+            with patch("asterion.dci.artifacts._lock_payload", side_effect=delay_b_metadata):
+                owner_b_thread = threading.Thread(target=acquire_b, name="owner-b")
+                owner_b_thread.start()
+                self.assertTrue(metadata_read_started.wait(timeout=5))
+                contender_fd = os.open(output_dir, os.O_RDONLY)
+                try:
+                    with self.assertRaises(BlockingIOError):
+                        fcntl.flock(contender_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                finally:
+                    os.close(contender_fd)
+                    continue_metadata_read.set()
+                    owner_b_thread.join(timeout=5)
+
+            self.assertEqual(len(result), 1)
+            self.assertIsInstance(result[0], DciRunLock)
+            owner_b = result[0]
+            assert isinstance(owner_b, DciRunLock)
+            with self.assertRaises(RuntimeError):
+                DciRunLock.acquire(output_dir)
+            owner_b.release()
+
+    def test_closing_the_owned_directory_fd_permits_the_next_owner(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output_dir = Path(temporary_directory) / "run"
+            owner_a = DciRunLock.acquire(output_dir)
+            self.assertTrue(hasattr(owner_a, "_directory_fd"))
+            os.close(owner_a._directory_fd)
+            owner_a._released = True
+
+            owner_b = DciRunLock.acquire(output_dir)
+            owner_b.release()
+
+    def test_locking_fails_closed_when_os_advisory_locking_is_unavailable(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output_dir = Path(temporary_directory) / "run"
+
+            with patch("asterion.dci.artifacts.fcntl", None):
+                with self.assertRaisesRegex(RuntimeError, "locking is unavailable"):
+                    DciRunLock.acquire(output_dir)
+
+            self.assertFalse(output_dir.exists())
+
     def test_same_host_dead_pid_lock_is_reclaimed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             output_dir = Path(temporary_directory) / "run"
@@ -146,7 +247,7 @@ class AsterionDciArtifactTests(unittest.TestCase):
                         DciRunLock.acquire(output_dir)
                     self.assertEqual(lock_path.read_text(encoding="utf-8"), original)
 
-    def test_release_removes_only_the_matching_owner_token(self) -> None:
+    def test_release_leaves_replacement_metadata_untouched(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             output_dir = Path(temporary_directory) / "run"
             owner = DciRunLock.acquire(output_dir)
@@ -168,57 +269,29 @@ class AsterionDciArtifactTests(unittest.TestCase):
             output_dir = Path(temporary_directory) / "run"
             owner = DciRunLock.acquire(output_dir)
             lock_path = output_dir / DciRunLock.LOCK_NAME
-            original_reader = artifacts._lock_payload
             replacement = self._lock_payload(pid=os.getpid(), owner_token="replacement-owner")
+            replacement_path = output_dir / ".replacement"
+            replacement_path.write_text(json.dumps(replacement), encoding="utf-8")
+            os.replace(replacement_path, lock_path)
 
-            def replace_after_read(path: Path) -> dict[str, object]:
-                payload = original_reader(path)
-                replacement_path = output_dir / ".replacement"
-                replacement_path.write_text(json.dumps(replacement), encoding="utf-8")
-                os.replace(replacement_path, lock_path)
-                return payload
-
-            with patch("asterion.dci.artifacts._lock_payload", side_effect=replace_after_read):
+            with patch(
+                "asterion.dci.artifacts._lock_payload",
+                side_effect=AssertionError("release must not read metadata authority"),
+            ):
                 owner.release()
 
             self.assertTrue(lock_path.is_file(), "release deleted the raced replacement lock")
             self.assertEqual(json.loads(lock_path.read_text(encoding="utf-8")), replacement)
 
-    def test_stale_reclaim_does_not_unlink_a_replacement_raced_after_validation(self) -> None:
+    def test_metadata_write_failure_releases_directory_lock_and_preserves_existing_metadata(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             output_dir = Path(temporary_directory) / "run"
             output_dir.mkdir(mode=0o700)
             lock_path = output_dir / DciRunLock.LOCK_NAME
-            lock_path.write_text(
-                json.dumps(self._lock_payload(pid=999_999_999, owner_token="dead-owner")),
-                encoding="utf-8",
-            )
-            original_reader = artifacts._lock_payload
-            replacement = self._lock_payload(pid=os.getpid(), owner_token="replacement-owner")
-            read_count = 0
-
-            def replace_on_removal_read(path: Path) -> dict[str, object]:
-                nonlocal read_count
-                payload = original_reader(path)
-                read_count += 1
-                if read_count == 2:
-                    replacement_path = output_dir / ".replacement"
-                    replacement_path.write_text(json.dumps(replacement), encoding="utf-8")
-                    os.replace(replacement_path, lock_path)
-                return payload
-
-            with patch(
-                "asterion.dci.artifacts._lock_payload",
-                side_effect=replace_on_removal_read,
-            ):
-                with self.assertRaises(RuntimeError):
-                    DciRunLock.acquire(output_dir)
-
-            self.assertEqual(json.loads(lock_path.read_text(encoding="utf-8")), replacement)
-
-    def test_acquisition_error_cleanup_preserves_a_changed_owner_token(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            output_dir = Path(temporary_directory) / "run"
+            existing = self._lock_payload(pid=os.getpid(), owner_token="existing-owner")
+            lock_path.write_text(json.dumps(existing), encoding="utf-8")
             real_dump = json.dump
 
             def change_token_then_fail(payload, handle, **kwargs) -> None:
@@ -232,12 +305,9 @@ class AsterionDciArtifactTests(unittest.TestCase):
                 with self.assertRaisesRegex(OSError, "injected lock write failure"):
                     DciRunLock.acquire(output_dir)
 
-            lock_path = output_dir / DciRunLock.LOCK_NAME
-            self.assertTrue(lock_path.is_file(), "cleanup deleted the changed-owner lock")
-            self.assertEqual(
-                json.loads(lock_path.read_text(encoding="utf-8"))["owner_token"],
-                "replacement-owner",
-            )
+            self.assertEqual(json.loads(lock_path.read_text(encoding="utf-8")), existing)
+            next_owner = DciRunLock.acquire(output_dir)
+            next_owner.release()
 
     def test_atomic_json_failure_before_replace_preserves_previous_document(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
