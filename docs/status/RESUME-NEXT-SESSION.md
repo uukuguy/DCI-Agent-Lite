@@ -1,29 +1,29 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-14 23:58. **Session remains active — not a final handoff.** AF-240 Task 4 is in progress in the isolated `af-220-shared-dci-config` worktree.
+> Updated: 2026-07-15 01:22. **Session remains active — not a final handoff.** AF-240 Task 5 is in progress in the isolated `af-220-shared-dci-config` worktree.
 
 Active work package: AF-240
 
 ## TL;DR
 
-- AF-240 Tasks 0–3 are complete. Task 3's bounded durable coordinator passed R4 independent review after all prior evidence-reuse, authority, cancellation, fresh-run, snapshot, fingerprint, inventory, generation-traversal, and reserved-namespace blockers were closed.
-- Latest Task 3 verification passed 666 full Python tests, 258 Asterion DCI tests, 189 focused review tests, 20 inventory tests, Ruff, compile, scope, and diff gates without Pi or Judge calls.
-- Task 4 is active: reproduce source query metrics, summaries, detailed analysis, enriched JSONL, and four deterministic PNG figures using Asterion-owned native evidence and descriptor-relative publication.
-- No complete source-product parity claim is valid yet. AF-240 Tasks 4–7 and AF-250 remain.
+- AF-240 Tasks 0–4 are complete. Task 4 passed R5 after native/terminal evidence binding, source-derived inventory assertions, and deterministic four-figure mutation checks were independently approved.
+- Latest Task 4 verification passed 1090 full Python tests, 506 focused tests, four-of-four same-size blank PNG rejection, Ruff, compile, scope, and diff gates without Pi or Judge calls.
+- Task 5 is active: implement safe streaming BCPlus QA extraction and BCPlus/BRIGHT corpus exporters with descriptor-relative publication and installed CLI coverage.
+- No complete source-product parity claim is valid yet. AF-240 Tasks 5–7 and AF-250 remain.
 
 ## Committed / unpushed state
 
 - Branch: `af-220-shared-dci-config`.
-- Task 3 approval boundary: `c4b2538`; coordinator namespace repair: `c2c80f4`; generation authority repair: `6813437`.
-- Commits are local/unpushed unless Git reports otherwise. The Task 4 implementer may have uncommitted RED tests; inspect before editing.
+- Task 4 approval boundary: `69de418`; final figure repair: `cea5306`; terminal/function repair: `c7a1658`.
+- Commits are local/unpushed unless Git reports otherwise. The Task 5 implementer may have uncommitted RED tests; inspect before editing.
 
 ## Next action
 
-Continue AF-240 Task 4 from `docs/superpowers/plans/2026-07-14-af-240-batch-evaluation-export-parity.md`: finish RED golden fixtures, implement `asterion.dci.analysis`, integrate atomic batch analysis publication, verify installed dependencies and deterministic figures, then obtain an independent review before Task 5.
+Continue AF-240 Task 5 from `docs/superpowers/plans/2026-07-14-af-240-batch-evaluation-export-parity.md`: finish RED exporter fixtures, implement safe streaming BCPlus QA and BCPlus/BRIGHT exports, verify CLI/wheel/inventory boundaries, then obtain an independent review before Task 6.
 
 ## Open questions
 
-- None requiring user input. Figure generation may be explicitly disabled by configuration, but requested figures must never be silently omitted.
+- None requiring user input. Exporter fixtures must remain tiny/local; do not download or run full corpora.
 - Only AF-240 Task 7 may consume the authorized bounded one-row real Pi-plus-Judge request.
 
 ## Ruled-out paths
@@ -39,7 +39,7 @@ Continue AF-240 Task 4 from `docs/superpowers/plans/2026-07-14-af-240-batch-eval
 python3 tools/project_scope_check.py
 git status --short
 git log --oneline -12
-uv run python -m unittest -q tests.test_asterion_dci_analysis
+uv run python -m unittest -q tests.test_asterion_dci_export
 uv run python -m unittest -q tests.test_climb_tools.Af240InventoryTests
 ```
 
