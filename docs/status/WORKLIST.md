@@ -238,13 +238,24 @@
 
 ## AF-220 — Shared configuration and runnable Pi application parity
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Asterion DCI complete capability-package reference product
 - Scope: replace the prior split configuration assumption with the approved shared `.env` contract, carry effective Pi/provider/model/tool/context configuration through Asterion package, benchmark, and installed-application paths, and provide Pi-default Asterion runnable examples.
 - Dependencies: AF-180, AF-190, AF-200, AF-210
 - Acceptance: Asterion and source DCI share normal `DCI_*` configuration without an Asterion runtime dependency on the source product; package CLI and installed Pi application construct equivalent native requests; configuration/context/resource mappings and two Asterion example launchers pass fixture, installed-wheel, and authorized bounded Pi checks.
 - Design: `docs/superpowers/specs/2026-07-13-asterion-dci-complete-product-parity-design.md`
 - Plan: `docs/superpowers/plans/2026-07-14-af-220-shared-config-runnable-pi.md`
+- Closure evidence: AF-220-H-001 through H-004 remain confirmed 4/4. With process-local shared configuration and no copied data, model-free Pi/Judge configuration checks, both Asterion Pi examples, the project-entrypoint installed application, and one-row Pi-plus-Judge benchmark all exit zero. Native states and evaluation artifacts validate by schema; the application emits one body-free JSON projection. This is AF-220 parity only, not a claim of full source-product parity.
+
+## AF-230 — Complete native operator and artifact parity
+
+- Status: in_progress
+- Parent objective: Asterion DCI complete capability-package reference product
+- Scope: close remaining source-DCI single-run, terminal, context/resource, artifact, provenance, and resume controls in independently owned Asterion code.
+- Dependencies: AF-220
+- Acceptance: every remaining native operator and artifact behavior is explicitly mapped to Asterion-owned implementation or recorded as an approved unsupported boundary, with executable fixture and small-sample acceptance evidence.
+- Design: `docs/superpowers/specs/2026-07-13-asterion-dci-complete-product-parity-design.md`
+- Plan: planning required before implementation; derive a detailed AF-230 plan from the approved product-parity design.
 
 ## AF-095 — Asterion framework identity and extraction
 

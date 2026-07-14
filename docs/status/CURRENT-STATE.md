@@ -8,7 +8,7 @@
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: AF-220 — shared configuration and runnable Pi application parity.
+- Active work package: AF-230 — complete native operator and artifact parity.
 
 ## Current Architecture
 
@@ -21,7 +21,8 @@
 - Claude Code provider access: the adapter supports stored login and inherited environment-configured backends; provider-backed UAT is deferred while the local account is unavailable and does not block host-language work.
 - Installed DCI compatibility: the bundled DCI application declares exact Pi and Claude runtime identities through paired composition-equivalent canonical assemblies; generic application selection picks the unique matching assembly before runtime construction, and fixture-only CLI proof does not authorize or invoke Claude.
 - Complete DCI direction: `src/dci` remains an independent source-only comparison baseline. AF-180 through AF-210 established independent Asterion DCI components, but their local closure is not a claim of full source-product parity: shared `.env` forwarding, complete operator controls, batch/export semantics, Asterion examples, and provider-backed acceptance are governed by active AF-220 followed by AF-230 through AF-250. Asterion will share normal `DCI_*` configuration with the baseline while keeping Asterion-owned output paths; neither product imports or launches the other.
-- AF-220 local evidence: its four current Climb hypotheses are confirmed 4/4 against shared configuration/Judge precedence, typed Pi controls, package-plus-batch option propagation, and installed-application/examples boundaries. Full provider-independent closure passes. The authorized process-local shared `.env` and main-Pi configuration makes both model-free prerequisites pass from the worktree; the corpus-root and context-control repairs let both real examples complete, including the runtime example's boolean Judge verdict. The installed application completes its native Pi state with shared fields but violates its public body-free JSON contract because Pi text is streamed directly to stdout before the generic projection. AF-220 remains in progress pending stream-safe application output and the one-row benchmark acceptance.
+- AF-220 acceptance: its four Climb hypotheses are confirmed 4/4. Using only process-local shared configuration and main-repository external resources, both model-free prerequisites, both real Pi examples, the project-entrypoint installed application, and the one-row Pi-plus-Judge benchmark passed. Native state/evaluation schemas and the application's single body-free JSON projection were verified; this closes AF-220 only.
+- AF-230 direction: the next package completes native operator and artifact parity—single-run/terminal controls, context/resources, durable artifacts/provenance, and resume semantics—against the independent source baseline without importing it at runtime.
 - Host contracts: Python and TypeScript expose the same schema-backed runtime manifest, request, event, and asynchronous client boundary without adapter-private types.
 - Controlled execution: `dci.executor/v1` has a runnable concurrent Rust JSONL sidecar with trusted startup policy, direct execution, bounded dual-stream draining, deadline/cancel kill-and-reap, duplicate-ID denial, out-of-order correlation, safe parse errors, EOF draining, operator documentation, and root verification targets.
 - Package composition: `dci.package/v1` and the deterministic Python composer resolve a portable policy → DCI research → evaluation → observability graph identically for Pi and Claude Code capability mappings. The TypeScript host exports the same manifest types and validates the canonical schema/fixtures without implementing a second composer.
@@ -56,7 +57,7 @@
 - Provider-backed acceptance of the first non-Pi runtime when credentials or a compatible gateway become available.
 - Provider-backed Claude acceptance remains deferred because the local CLI is unauthenticated. AF-160 instead validates the installed runtime factory and existing command/fixture/redaction boundary without a provider request.
 - A future provider-backed Claude parity claim requires separate operator authorization and evidence; fixture-only compatibility remains insufficient.
-- Complete source-DCI product parity remains open: the current Asterion CLI/application/benchmark lacks several source controls and no authorized Pi/Judge acceptance has yet been run.
+- Complete source-DCI product parity remains open: AF-220 establishes shared configuration and runnable Pi acceptance, while AF-230 through AF-250 still govern native controls/artifacts, batch/evaluation/export behavior, and final product-matrix evidence.
 
 ## Key Files
 

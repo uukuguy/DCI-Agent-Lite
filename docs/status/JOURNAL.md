@@ -463,6 +463,11 @@
 - 01:48 AF-220 runtime-context example stopped before prompt: the current Pi CLI rejects Asterion’s unsupported `--context-management-level` flag. No model/Judge request or verdict occurred; application and benchmark acceptance remain unrun.
 - 01:56 AF-220 context compatibility repair let the runtime-context Pi-plus-Judge example complete with a boolean verdict and explicit unsupported-control state.
 - 01:58 AF-220 installed application reached a completed native Pi state with shared fields, but its public JSON projection was polluted by streamed Pi text on stdout; benchmark acceptance remains unrun.
+- 02:06 AF-220 stream-safe application repair completed the project-entrypoint real Pi application check: stdout is one body-free JSON projection and native shared fields are present.
+- 02:07 AF-220 one-row Pi-plus-Judge benchmark completed: one native query directory, `result.json`, `summary.json` total 1, and boolean `eval_result.json` verdict; no full dataset started.
+- 02:08 AF-220 closed after all four authorized bounded real checks passed. AF-230 activated for remaining native operator/artifact parity; full source-product parity remains open.
+- 02:10 AF-220 acceptance roots were isolated under system-temp `af220-basic-output.*`, `af220-context-retry-output.*`, `af220-application-final-output.*`, and `af220-benchmark.*`; all final commands exited zero, context/benchmark verdicts were boolean, and no full dataset ran.
+- 02:11 Current AF-220 full local closure reran successfully: Python discovery, Asterion compile/Ruff, TypeScript, Rust, example shell syntax, scope, and diff gates all exited zero.
 - 01:54 AF-220 examples now accept the documented `ASTERION_DCI_CORPUS_ROOT` read-only corpus-root override, default to the checkout `corpus/`, and reject a missing required child directory before launching Pi; 17 focused product CLI tests, shell syntax, scope, and diff checks pass without provider requests. [pending corpus-boundary commit]
 - 01:54 correction: corpus-root example boundary committed after focused no-provider verification. [8f47a19]
 - 02:00 AF-220 example corpus override now rejects relative paths before Pi; documentation no longer claims a read-only boundary. [pending review-fix commit]
