@@ -476,3 +476,4 @@
 - 02:09 Pi capability-gated Asterion context controls prevent a pre-prompt failure while preserving supported runtime controls. [1b8bc56]
 - 02:16 AF-220 installed-app stdout repair: the provider-owned native executor now disables Pi text streaming for the generic application boundary, preserving one body-free JSON projection while standalone product runs retain streaming by default. Focused application/transport/run tests, compile, Ruff, scope, and diff checks pass without provider requests. [9d26eaa]
 - 02:24 AF-230 detailed plan recorded after source/Asterion comparison: unify the production recorder, complete protected conversation/context evidence, add credential-safe Pi provenance, enforce single-writer resume, complete package operator inputs, and add direct TTY-only terminal mode before bounded acceptance.
+- 02:25 AF-230 原生操作器与产物计划已提交，为安全恢复和完整证据实现提供边界。[ca7fb9e]
