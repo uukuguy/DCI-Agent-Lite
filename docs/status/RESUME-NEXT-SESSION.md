@@ -15,7 +15,7 @@ Active work package: AF-250
 
 - Branch: `af-220-shared-dci-config`.
 - AF-240 Climb confirmation: `6e651b3`; lifecycle contract correction: `16ceec5`.
-- AF-240 closure/state changes are committed at `3e28d5c`; only the closure-review repair and post-commit journal entries remain uncommitted.
+- AF-240 closure/state changes are committed at `3e28d5c` and the independent-review repair at `b15d5f1`; only the latest post-commit journal entry remains uncommitted.
 - Commits are local/unpushed unless Git reports otherwise.
 
 ## Next action

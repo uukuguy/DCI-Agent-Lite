@@ -617,3 +617,4 @@
 - 03:10 AF-240 independent closure review rejects swapped AF-230/AF-240 H-001 session ownership; closure approval is withheld pending repair.
 - 03:12 AF-230/AF-240 result sessions now match the authoritative runs ledger, with a regression covering both packages.
 - 03:15 AF-240 review repair narrows the session name to batch/evaluation/export scope and corrects the committed resume boundary; 23 focused tests pass.
+- 03:16 AF-240 closure ownership and scope-label repairs are committed after independent review. [b15d5f1]
