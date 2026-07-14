@@ -549,3 +549,5 @@
 - 06:17 AF-240 adds RED regressions for unavailable metrics and truthful disabled-figure reports. [9b0059d]
 - 00:48 correction: preceding AF-240 RED regression entry used an incorrect timestamp.
 - 00:48 AF-240 binds analysis to validated native evidence and preserves terminal metrics. [58ec826]
+- 00:58 AF-240 adds RED regressions for terminal integrity and executable function parity. [1c0f0de]
+- 02:03 AF-240 binds terminal evidence and executes function parity to close R3 gaps. [c7a1658]
