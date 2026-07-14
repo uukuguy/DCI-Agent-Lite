@@ -502,3 +502,4 @@
 - 18:41 AF-230 Task 4 R2 validates reconstructed requests, durably terminalizes stale attempts, and enforces exact per-attempt deadline evidence. [pending R2 commit]
 - 18:44 AF-230 resume now returns validated requests and preserves independently valid exact attempt evidence. [25b6fc2]
 - 18:47 AF-230 Task 4 R3 binds protocol terminal and run identity evidence to durable attempt classification before resume. [pending R3 commit]
+- 18:49 AF-230 resume rejects terminal/status and run identity mismatches before Pi construction. [d91db65]
