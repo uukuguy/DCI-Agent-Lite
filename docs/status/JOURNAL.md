@@ -525,3 +525,4 @@
 - 20:02 AF-240 detailed batch/evaluation/export plan passed independent coverage review and became executable. [6b67285]
 - 20:03 AF-240 live checkpoint now recovers directly into the approved Task 0 inventory and hypotheses. [303303a]
 - 20:14 AF-240 Task 0 froze complete batch parity inventory and executable Climb evidence. [8538a0f]
+- 20:32 AF-240 Task 0 repair separates missing targets from current evidence and candidate readiness. [35a7a2a]
