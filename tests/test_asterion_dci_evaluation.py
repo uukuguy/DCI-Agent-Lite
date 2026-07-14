@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import itertools
 import json
 import math
+import os
+import stat
 import tempfile
 import threading
 import time
@@ -18,7 +21,12 @@ from asterion.dci.evaluation import (
     evaluate_run_directory,
     evaluate_run_directory_async,
 )
-from asterion.dci.artifacts import DciArtifactError, DciRunLock, DciRunRecorder
+from asterion.dci.artifacts import (
+    DciArtifactError,
+    DciConversationFeatures,
+    DciRunLock,
+    DciRunRecorder,
+)
 from asterion.dci.config import resolve_dci_paths
 from asterion.dci.run import DciRunRequest
 from asterion.dci.judge import DciJudgeError, JudgeConfig
@@ -207,6 +215,115 @@ class AsterionDciEvaluationTests(unittest.TestCase):
                 self.assertEqual(before, _snapshot(output_dir))
                 self.assertNotIn("SECRET", str(raised.exception))
 
+    def test_resumed_completion_binds_only_final_attempt_answer(self) -> None:
+        for partial_kind in ("text", "tool_message"):
+            with (
+                self.subTest(partial_kind=partial_kind),
+                tempfile.TemporaryDirectory() as temporary_directory,
+            ):
+                output_dir = _write_resumed_native_run(
+                    Path(temporary_directory), partial_kind
+                )
+                with patch(
+                    "asterion.dci.evaluation.judge_answer_sync", return_value=_verdict()
+                ) as judge:
+                    result = evaluate_run_directory(
+                        output_dir, gold_answer="gold", judge_config=_config()
+                    )
+                self.assertTrue(result["is_correct"])
+                self.assertEqual(judge.call_count, 1)
+                path = output_dir / "protocol/attempt-0001.events.jsonl"
+                events = [json.loads(line) for line in path.read_text().splitlines()]
+                if partial_kind == "text":
+                    next(event for event in events if event["type"] == "text.delta")[
+                        "payload"
+                    ]["text"] = "FORGED"
+                else:
+                    next(event for event in events if event["type"] == "tool.call")[
+                        "payload"
+                    ]["name"] = "forged"
+                path.write_text(
+                    "".join(json.dumps(event) + "\n" for event in events),
+                    encoding="utf-8",
+                )
+                before = _snapshot(output_dir)
+                with patch("asterion.dci.evaluation.judge_answer_sync") as rejected:
+                    with self.assertRaises(DciEvaluationError):
+                        evaluate_run_directory(
+                            output_dir, gold_answer="different", judge_config=_config()
+                        )
+                rejected.assert_not_called()
+                self.assertEqual(before, _snapshot(output_dir))
+
+    def test_full_processed_and_latest_projections_cover_all_feature_combinations(
+        self,
+    ) -> None:
+        for values in itertools.product((False, True), repeat=4):
+            with (
+                self.subTest(values=values),
+                tempfile.TemporaryDirectory() as temporary_directory,
+            ):
+                output_dir = _write_feature_native_run(
+                    Path(temporary_directory), values
+                )
+                with patch(
+                    "asterion.dci.evaluation.judge_answer_sync", return_value=_verdict()
+                ) as judge:
+                    evaluate_run_directory(
+                        output_dir, gold_answer="gold", judge_config=_config()
+                    )
+                self.assertEqual(judge.call_count, 1)
+
+    def test_dual_conversation_forgery_and_latest_forgery_fail_before_judge(
+        self,
+    ) -> None:
+        for mutation in ("conversation", "latest"):
+            with (
+                self.subTest(mutation=mutation),
+                tempfile.TemporaryDirectory() as temporary_directory,
+            ):
+                output_dir = _write_feature_native_run(
+                    Path(temporary_directory), (False, False, False, False)
+                )
+                if mutation == "conversation":
+                    for name in ("conversation.json", "conversation_full.json"):
+                        path = output_dir / name
+                        value = json.loads(path.read_text())
+                        value["messages"][-1]["content"][0]["text"] = "FORGED"
+                        path.write_bytes(artifacts.json_document_bytes(value))
+                else:
+                    path = output_dir / "latest_model_context.json"
+                    value = json.loads(path.read_text())
+                    value["latest"]["payload"] = {"forged": True}
+                    path.write_bytes(artifacts.json_document_bytes(value))
+                before = _snapshot(output_dir)
+                with patch("asterion.dci.evaluation.judge_answer_sync") as judge:
+                    with self.assertRaises(DciEvaluationError):
+                        evaluate_run_directory(
+                            output_dir, gold_answer="gold", judge_config=_config()
+                        )
+                judge.assert_not_called()
+                self.assertEqual(before, _snapshot(output_dir))
+
+    def test_state_tool_projection_is_bound_to_raw_events(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output_dir = _write_feature_native_run(
+                Path(temporary_directory), (False, False, False, False)
+            )
+            state_path = output_dir / "state.json"
+            state = json.loads(state_path.read_text())
+            state["tool_calls"][0]["toolName"] = "SECRET-FORGED"
+            state_path.write_bytes(artifacts.json_document_bytes(state))
+            before = _snapshot(output_dir)
+            with patch("asterion.dci.evaluation.judge_answer_sync") as judge:
+                with self.assertRaises(DciEvaluationError) as raised:
+                    evaluate_run_directory(
+                        output_dir, gold_answer="gold", judge_config=_config()
+                    )
+            judge.assert_not_called()
+            self.assertEqual(before, _snapshot(output_dir))
+            self.assertNotIn("SECRET", str(raised.exception))
+
     def test_cache_usage_and_cost_arithmetic_must_be_exact(self) -> None:
         mutations = {
             "token_total": lambda result: result["usage"].__setitem__(
@@ -273,13 +390,20 @@ class AsterionDciEvaluationTests(unittest.TestCase):
         cases = (
             ("prepare_eval", "_prepare_json_at", 1),
             ("prepare_state", "_prepare_json_at", 2),
+            ("prepare_manifest", "_prepare_json_at", 3),
             ("write_eval", "_write_prepared_bytes", 1),
             ("write_state", "_write_prepared_bytes", 2),
-            ("publish_state", "_publish_prepared_at", 1),
-            ("publish_eval", "_publish_prepared_at", 2),
+            ("write_manifest", "_write_prepared_bytes", 3),
+            ("publish_manifest", "_publish_prepared_at", 1),
+            ("publish_state", "_publish_prepared_at", 2),
+            ("publish_eval", "_publish_prepared_at", 3),
             ("fsync_eval", "os.fsync", 1),
             ("fsync_state", "os.fsync", 2),
-            ("fsync_directory", "os.fsync", 3),
+            ("fsync_manifest", "os.fsync", 3),
+            ("fsync_manifest_publish", "os.fsync", 4),
+            ("fsync_state_publish", "os.fsync", 5),
+            ("fsync_eval_publish", "os.fsync", 6),
+            ("fsync_manifest_clear", "os.fsync", 7),
         )
         for name, patch_name, fail_at in cases:
             with (
@@ -313,17 +437,124 @@ class AsterionDciEvaluationTests(unittest.TestCase):
                                 output_dir, gold_answer="gold", judge_config=_config()
                             )
                 self.assertNotIn("SECRET", str(raised.exception))
-                self.assertFalse(
-                    any("evaluation-tmp" in path.name for path in output_dir.iterdir())
-                )
-                _assert_no_split_pair(output_dir)
+                manifest = output_dir / DciRunLock.EVALUATION_TRANSACTION_NAME
+                pending = manifest.exists()
+                if pending:
+                    self.assertEqual(manifest.stat().st_mode & 0o777, 0o600)
+                else:
+                    self.assertFalse(
+                        any(
+                            "evaluation-tmp" in path.name
+                            for path in output_dir.iterdir()
+                        )
+                    )
+                    _assert_no_split_pair(output_dir)
                 with patch(
                     "asterion.dci.evaluation.judge_answer_sync", return_value=_verdict()
-                ):
+                ) as retry_judge:
                     evaluate_run_directory(
                         output_dir, gold_answer="gold", judge_config=_config()
                     )
+                self.assertEqual(retry_judge.call_count, 0 if pending else 1)
                 _assert_committed_pair(output_dir)
+                self.assertFalse(manifest.exists())
+                self.assertFalse(
+                    any("evaluation-tmp" in path.name for path in output_dir.iterdir())
+                )
+
+    def test_invalid_immutable_evidence_never_mutates_matching_collision_leaves(
+        self,
+    ) -> None:
+        for corruption, collision_kind in itertools.product(
+            ("malformed", "missing", "symlink"),
+            ("regular", "symlink", "directory"),
+        ):
+            with (
+                self.subTest(corruption=corruption, collision_kind=collision_kind),
+                tempfile.TemporaryDirectory() as temporary_directory,
+            ):
+                root = Path(temporary_directory)
+                output_dir = _write_native_run(root)
+                final_path = output_dir / "final.txt"
+                if corruption == "malformed":
+                    final_path.write_text("SECRET-FORGED\n", encoding="utf-8")
+                elif corruption == "missing":
+                    final_path.unlink()
+                else:
+                    final_path.unlink()
+                    final_path.symlink_to(root / "outside-final.txt")
+                collision = (
+                    output_dir
+                    / ".state.json.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.evaluation-tmp"
+                )
+                if collision_kind == "regular":
+                    collision.write_bytes(b"SECRET-SENTINEL")
+                    collision.chmod(0o600)
+                elif collision_kind == "symlink":
+                    collision.symlink_to(root / "outside-collision.txt")
+                else:
+                    collision.mkdir(mode=0o700)
+                before = _tree_snapshot(output_dir)
+                with patch("asterion.dci.evaluation.judge_answer_sync") as judge:
+                    with self.assertRaises(DciEvaluationError) as raised:
+                        evaluate_run_directory(
+                            output_dir, gold_answer="gold", judge_config=_config()
+                        )
+                judge.assert_not_called()
+                self.assertEqual(before, _tree_snapshot(output_dir))
+                self.assertNotIn("SECRET", str(raised.exception))
+
+    def test_pending_manifest_must_finish_durability_before_cache_hit(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output_dir = _write_native_run(Path(temporary_directory))
+            real_fsync = artifacts.os.fsync
+            calls = 0
+
+            def fail_final_publish_fsync(descriptor: int) -> None:
+                nonlocal calls
+                calls += 1
+                if calls == 6:
+                    raise OSError("SECRET final durability failure")
+                real_fsync(descriptor)
+
+            with (
+                patch(
+                    "asterion.dci.artifacts.os.fsync",
+                    side_effect=fail_final_publish_fsync,
+                ),
+                patch(
+                    "asterion.dci.evaluation.judge_answer_sync",
+                    return_value=_verdict(),
+                ) as first_judge,
+            ):
+                with self.assertRaises(DciEvaluationError):
+                    evaluate_run_directory(
+                        output_dir, gold_answer="gold", judge_config=_config()
+                    )
+            self.assertEqual(first_judge.call_count, 1)
+            manifest = output_dir / DciRunLock.EVALUATION_TRANSACTION_NAME
+            self.assertTrue(manifest.exists())
+            with (
+                patch(
+                    "asterion.dci.artifacts._fsync_directory",
+                    side_effect=OSError("SECRET recovery barrier failure"),
+                ),
+                patch("asterion.dci.evaluation.judge_answer_sync") as blocked_judge,
+            ):
+                with self.assertRaises(DciEvaluationError):
+                    evaluate_run_directory(
+                        output_dir, gold_answer="gold", judge_config=_config()
+                    )
+            blocked_judge.assert_not_called()
+            self.assertTrue(manifest.exists())
+            with patch("asterion.dci.evaluation.judge_answer_sync") as cached_judge:
+                result = evaluate_run_directory(
+                    output_dir, gold_answer="gold", judge_config=_config()
+                )
+            cached_judge.assert_not_called()
+            self.assertTrue(result["is_correct"])
+            self.assertFalse(manifest.exists())
+            _assert_committed_pair(output_dir)
 
     def test_async_cancellation_drains_http_before_releasing_writer_lock(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -471,6 +702,26 @@ def _snapshot(output_dir: Path) -> dict[str, bytes]:
     }
 
 
+def _tree_snapshot(output_dir: Path) -> dict[str, tuple[object, ...]]:
+    snapshot: dict[str, tuple[object, ...]] = {}
+
+    def visit(directory: Path) -> None:
+        for path in sorted(directory.iterdir(), key=lambda item: item.name):
+            relative = str(path.relative_to(output_dir))
+            entry = path.lstat()
+            mode = stat.S_IMODE(entry.st_mode)
+            if stat.S_ISLNK(entry.st_mode):
+                snapshot[relative] = ("symlink", mode, os.readlink(path))
+            elif stat.S_ISDIR(entry.st_mode):
+                snapshot[relative] = ("directory", mode)
+                visit(path)
+            else:
+                snapshot[relative] = ("file", mode, path.read_bytes())
+
+    visit(output_dir)
+    return snapshot
+
+
 def _assert_no_split_pair(output_dir: Path) -> None:
     eval_path = output_dir / "eval_result.json"
     state = json.loads((output_dir / "state.json").read_text())
@@ -505,6 +756,133 @@ def _write_native_run(root: Path) -> Path:
         output_dir=output_dir,
         request=DciRunRequest(run_id="run-1", question="question", cwd=root),
         paths=resolve_dci_paths(root),
+    )
+    recorder.record_event(
+        {
+            "type": "message_update",
+            "assistantMessageEvent": {"type": "text_delta", "delta": "answer"},
+        }
+    )
+    recorder.finalize(status="completed", final_text="answer")
+    return output_dir
+
+
+def _write_resumed_native_run(root: Path, partial_kind: str) -> Path:
+    root = root.resolve()
+    output_dir = root / "run"
+    request = DciRunRequest(run_id="run-1", question="question", cwd=root)
+    paths = resolve_dci_paths(root)
+    first = DciRunRecorder(output_dir=output_dir, request=request, paths=paths)
+    if partial_kind == "text":
+        first.record_event(
+            {
+                "type": "message_update",
+                "assistantMessageEvent": {"type": "text_delta", "delta": "partial"},
+            }
+        )
+    else:
+        first.record_event(
+            {
+                "type": "tool_execution_start",
+                "toolCallId": "partial-call",
+                "toolName": "read",
+                "args": {"path": "partial"},
+            }
+        )
+        first.record_event(
+            {
+                "type": "tool_execution_end",
+                "toolCallId": "partial-call",
+                "toolName": "read",
+                "isError": False,
+                "result": "partial result",
+            }
+        )
+        first.record_event(
+            {
+                "type": "message_end",
+                "message": {
+                    "role": "toolResult",
+                    "toolCallId": "partial-call",
+                    "toolName": "read",
+                    "content": [{"type": "text", "text": "partial result"}],
+                },
+            }
+        )
+    first.finalize(status="failed")
+    resumed = DciRunRecorder(
+        output_dir=output_dir, request=request, paths=paths, resume=True
+    )
+    resumed.record_event(
+        {
+            "type": "message_update",
+            "assistantMessageEvent": {"type": "text_delta", "delta": "answer"},
+        }
+    )
+    resumed.finalize(status="completed", final_text="answer")
+    return output_dir
+
+
+def _write_feature_native_run(
+    root: Path, values: tuple[bool, bool, bool, bool]
+) -> Path:
+    root = root.resolve()
+    output_dir = root / "run"
+    features = DciConversationFeatures(
+        clear_tool_results=values[0],
+        clear_tool_results_keep_last=0,
+        externalize_tool_results=values[1],
+        strip_thinking=values[2],
+        strip_usage=values[3],
+    )
+    recorder = DciRunRecorder(
+        output_dir=output_dir,
+        request=DciRunRequest(run_id="run-1", question="question", cwd=root),
+        paths=resolve_dci_paths(root),
+        features=features,
+    )
+    recorder.record_event(
+        {
+            "type": "tool_execution_start",
+            "toolCallId": "call-1",
+            "toolName": "read",
+            "args": {"path": "item"},
+        }
+    )
+    recorder.record_event(
+        {
+            "type": "tool_execution_end",
+            "toolCallId": "call-1",
+            "toolName": "read",
+            "isError": False,
+            "result": "tool body",
+        }
+    )
+    tool_message = {
+        "role": "toolResult",
+        "toolCallId": "call-1",
+        "toolName": "read",
+        "content": [{"type": "text", "text": "tool body"}],
+    }
+    recorder.record_event({"type": "message_end", "message": tool_message})
+    assistant_message = {
+        "role": "assistant",
+        "content": [
+            {"type": "thinking", "thinking": "private"},
+            {"type": "text", "text": "answer"},
+        ],
+        "usage": {"input": 2, "output": 1},
+    }
+    recorder.record_event({"type": "message_end", "message": assistant_message})
+    recorder.record_event(
+        {
+            "type": "provider_request_context",
+            "requestIndex": 1,
+            "model": "fixture",
+            "runtimeContextManagement": {"level": "fixture"},
+            "messages": [assistant_message, tool_message],
+            "payload": {"token_count": 3},
+        }
     )
     recorder.record_event(
         {

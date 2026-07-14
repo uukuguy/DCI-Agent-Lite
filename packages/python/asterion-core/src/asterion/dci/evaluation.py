@@ -45,8 +45,9 @@ def evaluate_run_directory(
     lock: DciRunLock | None = None
     try:
         lock = DciRunLock.acquire_existing(Path(output_dir), wait=True)
-        lock.cleanup_evaluation_temps()
         state, question, durable_prediction = validate_completed_run_evidence(lock)
+        if lock.recover_evaluation_transaction():
+            state, question, durable_prediction = validate_completed_run_evidence(lock)
         prediction = (
             predicted_answer if predicted_answer is not None else durable_prediction
         )

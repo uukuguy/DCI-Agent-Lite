@@ -94,7 +94,8 @@ def _read_optional_json_document_at(
     except FileNotFoundError:
         return None
     try:
-        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+        entry = os.fstat(descriptor)
+        if not stat.S_ISREG(entry.st_mode) or stat.S_IMODE(entry.st_mode) != 0o600:
             raise DciArtifactError("DCI artifact JSON is invalid")
         with os.fdopen(descriptor, "rb") as handle:
             descriptor = -1
@@ -435,6 +436,7 @@ class DciRunLock:
     """OS-backed exclusive lock plus diagnostic metadata for one run directory."""
 
     LOCK_NAME = ".dci-run.lock"
+    EVALUATION_TRANSACTION_NAME = ".dci-evaluation-transaction.json"
 
     path: Path
     owner_token: str
@@ -520,31 +522,153 @@ class DciRunLock:
 
         state_tmp: str | None = None
         evaluation_tmp: str | None = None
+        manifest_tmp: str | None = None
+        manifest_visible = False
+        state_bytes = json_document_bytes(state)
+        evaluation_bytes = json_document_bytes(evaluation)
+        commit_id = evaluation.get("evaluation_commit_id")
+        fingerprint = evaluation.get("judge_request_fingerprint")
+        if (
+            not isinstance(commit_id, str)
+            or not isinstance(fingerprint, str)
+            or state.get("evaluation", {}).get("evaluation_commit_id") != commit_id
+        ):
+            raise DciArtifactError("DCI evaluation transaction is invalid")
         try:
             evaluation_tmp = _prepare_json_at(
                 self._directory_fd, "eval_result.json", evaluation
             )
             state_tmp = _prepare_json_at(self._directory_fd, "state.json", state)
+            manifest = {
+                "schema": "dci.evaluation-transaction/v1",
+                "commit_id": commit_id,
+                "judge_request_fingerprint": fingerprint,
+                "state_temp": state_tmp,
+                "evaluation_temp": evaluation_tmp,
+                "state_sha256": hashlib.sha256(state_bytes).hexdigest(),
+                "evaluation_sha256": hashlib.sha256(evaluation_bytes).hexdigest(),
+            }
+            manifest_tmp = _prepare_json_at(
+                self._directory_fd, self.EVALUATION_TRANSACTION_NAME, manifest
+            )
+            _publish_prepared_at(
+                self._directory_fd,
+                manifest_tmp,
+                self.EVALUATION_TRANSACTION_NAME,
+            )
+            manifest_tmp = None
+            manifest_visible = True
+            _fsync_directory(self._directory_fd)
             _publish_prepared_at(self._directory_fd, state_tmp, "state.json")
             state_tmp = None
+            _fsync_directory(self._directory_fd)
             _publish_prepared_at(self._directory_fd, evaluation_tmp, "eval_result.json")
             evaluation_tmp = None
             _fsync_directory(self._directory_fd)
+            self._clear_evaluation_manifest(manifest)
+            manifest_visible = False
         finally:
-            for temporary in (state_tmp, evaluation_tmp):
-                if temporary is not None:
-                    try:
-                        os.unlink(temporary, dir_fd=self._directory_fd)
-                    except FileNotFoundError:
-                        pass
+            if not manifest_visible:
+                for temporary in (state_tmp, evaluation_tmp, manifest_tmp):
+                    if temporary is not None:
+                        try:
+                            os.unlink(temporary, dir_fd=self._directory_fd)
+                        except FileNotFoundError:
+                            pass
 
-    def cleanup_evaluation_temps(self) -> None:
-        for name in os.listdir(self._directory_fd):
-            if re.fullmatch(
-                r"\.(?:state|eval_result)\.json\.[0-9a-f]{32}\.evaluation-tmp",
-                name,
-            ):
-                os.unlink(name, dir_fd=self._directory_fd)
+    def recover_evaluation_transaction(self) -> bool:
+        """Validate and finish one explicitly owned pending pair transaction."""
+
+        document = self.read_optional_json_document(self.EVALUATION_TRANSACTION_NAME)
+        if document is None:
+            return False
+        manifest, _ = document
+        expected_names = {
+            "schema",
+            "commit_id",
+            "judge_request_fingerprint",
+            "state_temp",
+            "evaluation_temp",
+            "state_sha256",
+            "evaluation_sha256",
+        }
+        if (
+            set(manifest) != expected_names
+            or manifest["schema"] != "dci.evaluation-transaction/v1"
+            or not all(
+                isinstance(manifest[name], str) and manifest[name]
+                for name in expected_names - {"schema"}
+            )
+            or re.fullmatch(r"[0-9a-f]{64}", manifest["commit_id"]) is None
+            or re.fullmatch(r"[0-9a-f]{64}", manifest["judge_request_fingerprint"])
+            is None
+            or re.fullmatch(r"[0-9a-f]{64}", manifest["state_sha256"]) is None
+            or re.fullmatch(r"[0-9a-f]{64}", manifest["evaluation_sha256"]) is None
+            or re.fullmatch(
+                r"\.state\.json\.[0-9a-f]{32}\.evaluation-tmp",
+                manifest["state_temp"],
+            )
+            is None
+            or re.fullmatch(
+                r"\.eval_result\.json\.[0-9a-f]{32}\.evaluation-tmp",
+                manifest["evaluation_temp"],
+            )
+            is None
+        ):
+            raise DciArtifactError("DCI evaluation transaction is invalid")
+        state_temp = _read_optional_json_document_at(
+            self._directory_fd, manifest["state_temp"]
+        )
+        evaluation_temp = _read_optional_json_document_at(
+            self._directory_fd, manifest["evaluation_temp"]
+        )
+        state_target = _read_optional_json_document_at(self._directory_fd, "state.json")
+        evaluation_target = _read_optional_json_document_at(
+            self._directory_fd, "eval_result.json"
+        )
+        _select_transaction_document(
+            state_temp,
+            state_target,
+            digest=manifest["state_sha256"],
+            commit_id=manifest["commit_id"],
+            state=True,
+        )
+        evaluation_source = _select_transaction_document(
+            evaluation_temp,
+            evaluation_target,
+            digest=manifest["evaluation_sha256"],
+            commit_id=manifest["commit_id"],
+            state=False,
+        )
+        if (
+            evaluation_source[0].get("judge_request_fingerprint")
+            != manifest["judge_request_fingerprint"]
+        ):
+            raise DciArtifactError("DCI evaluation transaction is invalid")
+        if state_temp is not None:
+            _publish_prepared_at(
+                self._directory_fd, manifest["state_temp"], "state.json"
+            )
+        _fsync_directory(self._directory_fd)
+        if evaluation_temp is not None:
+            _publish_prepared_at(
+                self._directory_fd,
+                manifest["evaluation_temp"],
+                "eval_result.json",
+            )
+        _fsync_directory(self._directory_fd)
+        self._clear_evaluation_manifest(manifest)
+        return True
+
+    def _clear_evaluation_manifest(self, manifest: dict[str, Any]) -> None:
+        os.unlink(self.EVALUATION_TRANSACTION_NAME, dir_fd=self._directory_fd)
+        try:
+            _fsync_directory(self._directory_fd)
+        except OSError:
+            _atomic_write_json_at(
+                self._directory_fd, self.EVALUATION_TRANSACTION_NAME, manifest
+            )
+            raise
 
     def open_directory(self, name: str) -> int:
         return _open_existing_directory_at(self._directory_fd, name)
@@ -561,6 +685,27 @@ class DciRunLock:
             except OSError:
                 pass
             self._released = True
+
+
+def _select_transaction_document(
+    temporary: tuple[dict[str, Any], bytes] | None,
+    target: tuple[dict[str, Any], bytes] | None,
+    *,
+    digest: str,
+    commit_id: str,
+    state: bool,
+) -> tuple[dict[str, Any], bytes]:
+    candidate = temporary if temporary is not None else target
+    if candidate is None or hashlib.sha256(candidate[1]).hexdigest() != digest:
+        raise DciArtifactError("DCI evaluation transaction is invalid")
+    actual_commit = (
+        candidate[0].get("evaluation", {}).get("evaluation_commit_id")
+        if state and isinstance(candidate[0].get("evaluation"), dict)
+        else candidate[0].get("evaluation_commit_id")
+    )
+    if actual_commit != commit_id:
+        raise DciArtifactError("DCI evaluation transaction is invalid")
+    return candidate
 
 
 def validate_completed_run_evidence(
@@ -620,7 +765,8 @@ def validate_completed_run_evidence(
     protocol_fd = lock.open_directory("protocol")
     try:
         expected_names: set[str] = set()
-        protocol_answer_parts: list[str] = []
+        protocol_attempt_texts: list[str] = []
+        protocol_projection: list[tuple[str, dict[str, Any]]] = []
         for number, raw_attempt in enumerate(attempts, 1):
             attempt = _validate_attempt_record(raw_attempt, number)
             stem = f"attempt-{number:04d}"
@@ -644,12 +790,19 @@ def validate_completed_run_evidence(
                 raise DciArtifactError("DCI completed run evidence is invalid")
             protocol_events = _read_jsonl_at(protocol_fd, events_name)
             validate_event_stream(protocol_events)
-            protocol_answer_parts.extend(
+            attempt_text = "".join(
                 event["payload"]["text"]
                 for event in protocol_events
                 if event.get("type") == "text.delta"
                 and isinstance(event.get("payload"), dict)
                 and isinstance(event["payload"].get("text"), str)
+            )
+            protocol_attempt_texts.append(attempt_text)
+            protocol_projection.extend(
+                (event["type"], event["payload"])
+                for event in protocol_events
+                if event.get("type")
+                in {"text.delta", "tool.call", "tool.result", "usage.reported"}
             )
             if not protocol_events or any(
                 event.get("run_id") != protocol_request.get("run_id")
@@ -697,7 +850,12 @@ def validate_completed_run_evidence(
                     raise DciArtifactError("DCI completed run evidence is invalid")
         if set(os.listdir(protocol_fd)) != expected_names:
             raise DciArtifactError("DCI completed run evidence is invalid")
-        if "".join(protocol_answer_parts) != answer:
+        raw_answer = _raw_text_delta_projection(raw_events)
+        if (
+            protocol_attempt_texts[-1] != answer
+            or "".join(protocol_attempt_texts) != raw_answer
+            or protocol_projection != _raw_protocol_projection(raw_events)
+        ):
             raise DciArtifactError("DCI completed run evidence is invalid")
     except (DciArtifactError, ValueError):
         raise
@@ -789,32 +947,29 @@ def _validate_completed_view_shapes(
     ):
         raise DciArtifactError("DCI completed run evidence is invalid")
     features = DciConversationFeatures.from_mapping(state["conversation_features"])
-    if (
-        not any(
-            (
-                features.clear_tool_results,
-                features.externalize_tool_results,
-                features.strip_thinking,
-                features.strip_usage,
-            )
-        )
-        and conversation != conversation_full
-    ):
-        raise DciArtifactError("DCI completed run evidence is invalid")
-    if len(conversation["messages"]) != len(conversation_full["messages"]):
-        raise DciArtifactError("DCI completed run evidence is invalid")
-    for processed, full in zip(
-        conversation["messages"], conversation_full["messages"], strict=True
-    ):
-        for identity in ("role", "toolCallId", "toolName"):
-            if processed.get(identity) != full.get(identity):
-                raise DciArtifactError("DCI completed run evidence is invalid")
     expected_state_messages = [
         {"event": event["type"], "message": event.get("message")}
         for event in raw_events
         if event.get("type") in {"message_start", "message_end"}
     ]
-    raw_answer_parts: list[str] = []
+    if (
+        state["messages"] != expected_state_messages
+        or conversation["final_text"] != state["assistant_text"]
+        or conversation_full["final_text"] != state["assistant_text"]
+    ):
+        raise DciArtifactError("DCI completed run evidence is invalid")
+    timings = _tool_timing_projection(raw_events, state["tool_calls"])
+    _validate_full_conversation_projection(
+        state, raw_events, conversation_full, timings
+    )
+    _validate_processed_conversation_projection(
+        conversation_full, conversation, features
+    )
+    _validate_latest_context_projection(raw_events, latest_context, timings)
+
+
+def _raw_text_delta_projection(raw_events: list[dict[str, Any]]) -> str:
+    parts: list[str] = []
     for event in raw_events:
         assistant = event.get("assistantMessageEvent")
         if (
@@ -823,14 +978,349 @@ def _validate_completed_view_shapes(
             and assistant.get("type") == "text_delta"
             and isinstance(assistant.get("delta"), str)
         ):
-            raw_answer_parts.append(assistant["delta"])
+            parts.append(assistant["delta"])
+    return "".join(parts)
+
+
+def _raw_protocol_projection(
+    raw_events: list[dict[str, Any]],
+) -> list[tuple[str, dict[str, Any]]]:
+    projected: list[tuple[str, dict[str, Any]]] = []
+    for event in raw_events:
+        event_type = event.get("type")
+        if event_type == "message_update":
+            assistant = event.get("assistantMessageEvent")
+            if (
+                isinstance(assistant, dict)
+                and assistant.get("type") == "text_delta"
+                and isinstance(assistant.get("delta"), str)
+                and assistant["delta"]
+            ):
+                projected.append(("text.delta", {"text": assistant["delta"]}))
+        elif event_type == "tool_execution_start":
+            raw_args = event.get("args")
+            arguments = raw_args if isinstance(raw_args, dict) else {"value": raw_args}
+            projected.append(
+                (
+                    "tool.call",
+                    {
+                        "call_id": event.get("toolCallId"),
+                        "name": event.get("toolName"),
+                        "arguments": arguments,
+                    },
+                )
+            )
+        elif event_type == "tool_execution_end":
+            projected.append(
+                (
+                    "tool.result",
+                    {
+                        "call_id": event.get("toolCallId"),
+                        "output": event.get("result"),
+                        "is_error": event.get("isError"),
+                    },
+                )
+            )
+        elif event_type == "message_end":
+            message = event.get("message")
+            if not isinstance(message, dict) or message.get("role") != "assistant":
+                continue
+            usage = message.get("usage")
+            if isinstance(usage, dict):
+                projected.append(
+                    (
+                        "usage.reported",
+                        {
+                            "input_tokens": usage.get("input"),
+                            "output_tokens": usage.get("output"),
+                        },
+                    )
+                )
+    return projected
+
+
+def _tool_timing_projection(
+    raw_events: list[dict[str, Any]],
+    tool_calls: list[dict[str, Any]],
+) -> dict[str, dict[str, object]]:
+    raw_tool_events = [
+        event
+        for event in raw_events
+        if event.get("type") in {"tool_execution_start", "tool_execution_end"}
+    ]
+    if len(raw_tool_events) != len(tool_calls):
+        raise DciArtifactError("DCI completed run evidence is invalid")
+    timings: dict[str, dict[str, object]] = {}
+    pending: dict[str, str] = {}
+    expected_names = {
+        "recorded_at",
+        "event",
+        "toolCallId",
+        "toolName",
+        "args",
+        "isError",
+        "result",
+        "started_at",
+        "finished_at",
+        "duration_seconds",
+    }
+    for raw, entry in zip(raw_tool_events, tool_calls, strict=True):
+        recorded_at = entry.get("recorded_at")
+        call_id = entry.get("toolCallId")
+        event_type = raw.get("type")
+        if (
+            set(entry) != expected_names
+            or not _valid_timestamp(recorded_at)
+            or entry.get("event") != event_type
+            or call_id != raw.get("toolCallId")
+            or entry.get("toolName") != raw.get("toolName")
+            or entry.get("args") != raw.get("args")
+            or entry.get("isError") != raw.get("isError")
+            or entry.get("result") != raw.get("result")
+            or not isinstance(call_id, str)
+            or not call_id
+        ):
+            raise DciArtifactError("DCI completed run evidence is invalid")
+        if event_type == "tool_execution_start":
+            if (
+                entry.get("started_at") != recorded_at
+                or entry.get("finished_at") is not None
+                or entry.get("duration_seconds") is not None
+            ):
+                raise DciArtifactError("DCI completed run evidence is invalid")
+            pending[call_id] = recorded_at
+            continue
+        started = pending.pop(call_id, None)
+        finished = recorded_at
+        if entry.get("started_at") != started or entry.get("finished_at") != finished:
+            raise DciArtifactError("DCI completed run evidence is invalid")
+        duration = _duration_seconds(started, finished)
+        if (
+            duration is None
+            or not isinstance(started, str)
+            or not isinstance(finished, str)
+        ):
+            continue
+        expected = {
+            "tool_call_id": call_id,
+            "status": "completed",
+            "started_at": started,
+            "finished_at": finished,
+            "duration_seconds": duration,
+            "duration_ms": int(round(duration * 1000)),
+        }
+        if entry.get("duration_seconds") != duration:
+            raise DciArtifactError("DCI completed run evidence is invalid")
+        timings[call_id] = expected
+    return timings
+
+
+def _annotated_message_projection(
+    message: object, timings: dict[str, dict[str, object]]
+) -> dict[str, Any] | None:
+    if not isinstance(message, dict):
+        return None
+    result = json.loads(json.dumps(message))
+    call_id = result.get("toolCallId")
+    if result.get("role") == "toolResult" and isinstance(call_id, str):
+        timing = timings.get(call_id)
+        if timing is not None:
+            result["tool_execution"] = json.loads(json.dumps(timing))
+    return result
+
+
+def _validate_full_conversation_projection(
+    state: dict[str, Any],
+    raw_events: list[dict[str, Any]],
+    conversation_full: dict[str, Any],
+    timings: dict[str, dict[str, object]],
+) -> None:
+    expected_messages = [
+        annotated
+        for event in raw_events
+        if event.get("type") == "message_end"
+        for annotated in [_annotated_message_projection(event.get("message"), timings)]
+        if annotated is not None
+    ]
+    actual = conversation_full["messages"]
+    prefix_count = len(actual) - len(expected_messages)
+    expected_prefix = (
+        1
+        if (
+            state.get("system_prompt_file") is not None
+            or state.get("append_system_prompt_file") is not None
+        )
+        else 0
+    )
+    if prefix_count != expected_prefix or actual[prefix_count:] != expected_messages:
+        raise DciArtifactError("DCI completed run evidence is invalid")
+    if expected_prefix:
+        system = actual[0]
+        if (
+            system.get("role") != "system"
+            or system.get("sources")
+            != {
+                "system_prompt_file": state.get("system_prompt_file"),
+                "append_system_prompt_file": state.get("append_system_prompt_file"),
+            }
+            or not isinstance(system.get("content"), list)
+            or len(system["content"]) != 1
+            or not isinstance(system["content"][0], dict)
+            or system["content"][0].get("type") != "text"
+            or not isinstance(system["content"][0].get("text"), str)
+        ):
+            raise DciArtifactError("DCI completed run evidence is invalid")
+
+
+def _validate_processed_conversation_projection(
+    full: dict[str, Any],
+    processed: dict[str, Any],
+    features: DciConversationFeatures,
+) -> None:
+    expected = json.loads(json.dumps(full))
+    messages = expected["messages"]
+    actual_messages = processed["messages"]
+    tool_indexes = [
+        index
+        for index, message in enumerate(messages)
+        if message.get("role") == "toolResult"
+    ]
+    names = DciRunRecorder._tool_result_names(
+        [messages[index] for index in tool_indexes]
+    )
+    if len(actual_messages) != len(messages):
+        raise DciArtifactError("DCI completed run evidence is invalid")
+    for tool_position, (index, name) in enumerate(
+        zip(tool_indexes, names, strict=True)
+    ):
+        message = messages[index]
+        actual = actual_messages[index]
+        clear_count = max(0, len(tool_indexes) - features.clear_tool_results_keep_last)
+        will_clear = features.clear_tool_results and tool_position < clear_count
+        context = (
+            DciRunRecorder._tool_result_context(message)
+            if features.externalize_tool_results or will_clear
+            else None
+        )
+        if features.externalize_tool_results:
+            actual_externalized = (
+                actual.get("context_management", {})
+                .get("tool_result", {})
+                .get("externalized")
+            )
+            stats = DciRunRecorder._tool_result_stats(message)
+            if (
+                not isinstance(actual_externalized, dict)
+                or actual_externalized.get("path") != f"tool_results/{name}"
+                or actual_externalized.get("stats") != stats
+                or not _valid_timestamp(actual_externalized.get("saved_at"))
+            ):
+                raise DciArtifactError("DCI completed run evidence is invalid")
+            assert context is not None
+            context["externalized"] = json.loads(json.dumps(actual_externalized))
+        if will_clear:
+            assert context is not None
+            actual_tool_context = actual.get("context_management", {}).get(
+                "tool_result", {}
+            )
+            if not _valid_timestamp(actual_tool_context.get("cleared_at")):
+                raise DciArtifactError("DCI completed run evidence is invalid")
+            stats = context.get("externalized", {}).get(
+                "stats"
+            ) or DciRunRecorder._tool_result_stats(message)
+            context.update(
+                {
+                    "status": "cleared",
+                    "stats": stats,
+                    "cleared_at": actual_tool_context["cleared_at"],
+                    "keep_last": features.clear_tool_results_keep_last,
+                }
+            )
+            summary = [
+                "[tool result cleared from conversation context]",
+                f"tool={message.get('toolName', 'unknown')}",
+                f"chars={stats.get('chars', 0)}",
+                f"lines={stats.get('lines', 0)}",
+            ]
+            externalized = context.get("externalized")
+            if isinstance(externalized, dict) and externalized.get("path"):
+                summary.append(f"full_output={externalized['path']}")
+            message["content"] = [{"type": "text", "text": "\n".join(summary)}]
+    for message in messages:
+        if message.get("role") == "assistant":
+            if features.strip_thinking and isinstance(message.get("content"), list):
+                message["content"] = [
+                    part
+                    for part in message["content"]
+                    if isinstance(part, dict) and part.get("type") != "thinking"
+                ]
+            if features.strip_usage:
+                message.pop("usage", None)
+    if expected != processed:
+        raise DciArtifactError("DCI completed run evidence is invalid")
+
+
+def _validate_latest_context_projection(
+    raw_events: list[dict[str, Any]],
+    latest_context: dict[str, Any],
+    timings: dict[str, dict[str, object]],
+) -> None:
+    provider_events = [
+        event for event in raw_events if event.get("type") == "provider_request_context"
+    ]
+    if not provider_events:
+        if (
+            latest_context["request_count"] != 0
+            or latest_context["runtime_context_management"] is not None
+            or latest_context["latest"] is not None
+        ):
+            raise DciArtifactError("DCI completed run evidence is invalid")
+        return
+    last = provider_events[-1]
+    indexes = [
+        event.get("requestIndex")
+        for event in provider_events
+        if isinstance(event.get("requestIndex"), int)
+        and not isinstance(event.get("requestIndex"), bool)
+    ]
+    expected_count = max([0, *indexes])
+    messages = last.get("messages")
+    annotated = (
+        [
+            _annotated_message_projection(message, timings) or message
+            for message in messages
+        ]
+        if isinstance(messages, list)
+        else []
+    )
+    runtime = json.loads(json.dumps(last.get("runtimeContextManagement")))
+    latest = latest_context["latest"]
     if (
-        state["messages"] != expected_state_messages
-        or "".join(raw_answer_parts) != state["assistant_text"]
-        or conversation["final_text"] != state["assistant_text"]
-        or conversation_full["final_text"] != state["assistant_text"]
+        latest_context["request_count"] != expected_count
+        or latest_context["runtime_context_management"] != runtime
+        or not isinstance(latest, dict)
+        or not _valid_timestamp(latest.get("captured_at"))
+        or {name: value for name, value in latest.items() if name != "captured_at"}
+        != {
+            "request_index": last.get("requestIndex"),
+            "model": last.get("model"),
+            "runtime_context_management": runtime,
+            "message_count": len(annotated),
+            "messages": annotated,
+            "payload": json.loads(json.dumps(last.get("payload"))),
+        }
     ):
         raise DciArtifactError("DCI completed run evidence is invalid")
+
+
+def _valid_timestamp(value: object) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return False
+    return parsed.tzinfo is not None
 
 
 @dataclass(frozen=True)
