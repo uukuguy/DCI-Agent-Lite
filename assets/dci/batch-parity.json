@@ -73,8 +73,8 @@
       "source_kind": "target_feature",
       "source_name": "installed-batch-profiles",
       "implementation_status": "implemented",
-      "current_asterion_owner": "asterion.dci.resources.batch-profiles.json",
-      "current_symbol": "batch-profiles.json",
+      "current_asterion_owner": "asterion.dci.cli",
+      "current_symbol": "_load_batch_profiles",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_docs_superpowers_plans_2026_07_14_af_240_batch_evaluation_export_parity_md_target_feature_installed_batch_profiles"
       ],
@@ -302,7 +302,7 @@
       "source_path": "scripts/bcplus_eval/run_L3.sh",
       "source_kind": "launcher",
       "source_name": "bcplus.level3",
-      "current_asterion_owner": "scripts.asterion",
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "scripts.asterion",
       "target_symbol": "scripts/asterion/bcplus_eval/run_L3.sh",
       "launcher_family": "bcplus",
@@ -321,7 +321,7 @@
         "corpus_dir": "corpus/bc_plus_docs"
       },
       "implementation_status": "implemented",
-      "current_symbol": "scripts/asterion/bcplus_eval/run_L3.sh",
+      "current_symbol": "_load_batch_profiles",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_l3_sh_launcher_bcplus_level3"
       ],
@@ -340,7 +340,7 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval_openai.sh",
       "source_kind": "launcher",
       "source_name": "bcplus.dynamic-level-thinking",
-      "current_asterion_owner": "scripts.asterion",
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "scripts.asterion",
       "target_symbol": "scripts/asterion/bcplus_eval/run_bcplus_eval_openai.sh",
       "launcher_family": "bcplus",
@@ -359,7 +359,7 @@
         "corpus_dir": "corpus/bc_plus_docs"
       },
       "implementation_status": "implemented",
-      "current_symbol": "scripts/asterion/bcplus_eval/run_bcplus_eval_openai.sh",
+      "current_symbol": "_load_batch_profiles",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_openai_sh_launcher_bcplus_dynamic_level_thinking"
       ],
@@ -497,7 +497,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--agent-dir",
       "implementation_status": "implemented",
-      "current_symbol": "--agent-dir",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_agent_dir"
       ],
@@ -520,7 +520,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--append-system-prompt-file",
       "implementation_status": "implemented",
-      "current_symbol": "--append-system-prompt-file",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_append_system_prompt_file"
       ],
@@ -543,7 +543,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--corpus-dir",
       "implementation_status": "implemented",
-      "current_symbol": "--corpus-dir",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_corpus_dir"
       ],
@@ -566,7 +566,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--corpus-hint",
       "implementation_status": "implemented",
-      "current_symbol": "--corpus-hint",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_corpus_hint"
       ],
@@ -589,7 +589,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--dataset",
       "implementation_status": "implemented",
-      "current_symbol": "--dataset",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_dataset"
       ],
@@ -612,7 +612,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--enable-ir",
       "implementation_status": "implemented",
-      "current_symbol": "--enable-ir",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_enable_ir"
       ],
@@ -635,7 +635,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--judge-api",
       "implementation_status": "implemented",
-      "current_symbol": "--judge-api",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_judge_api"
       ],
@@ -658,7 +658,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--judge-api-key-env",
       "implementation_status": "implemented",
-      "current_symbol": "--judge-api-key-env",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_judge_api_key_env"
       ],
@@ -681,7 +681,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--judge-base-url",
       "implementation_status": "implemented",
-      "current_symbol": "--judge-base-url",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_judge_base_url"
       ],
@@ -704,7 +704,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--judge-cached-input-price-per-1m",
       "implementation_status": "implemented",
-      "current_symbol": "--judge-cached-input-price-per-1m",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_judge_cached_input_price_per_1m"
       ],
@@ -727,7 +727,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--judge-input-price-per-1m",
       "implementation_status": "implemented",
-      "current_symbol": "--judge-input-price-per-1m",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_judge_input_price_per_1m"
       ],
@@ -750,7 +750,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--judge-model",
       "implementation_status": "implemented",
-      "current_symbol": "--judge-model",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_judge_model"
       ],
@@ -773,7 +773,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--judge-output-price-per-1m",
       "implementation_status": "implemented",
-      "current_symbol": "--judge-output-price-per-1m",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_judge_output_price_per_1m"
       ],
@@ -796,7 +796,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--judge-timeout-seconds",
       "implementation_status": "implemented",
-      "current_symbol": "--judge-timeout-seconds",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_judge_timeout_seconds"
       ],
@@ -819,7 +819,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--limit",
       "implementation_status": "implemented",
-      "current_symbol": "--limit",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_limit"
       ],
@@ -842,7 +842,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--max-concurrency",
       "implementation_status": "implemented",
-      "current_symbol": "--max-concurrency",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_max_concurrency"
       ],
@@ -865,7 +865,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--max-turns",
       "implementation_status": "implemented",
-      "current_symbol": "--max-turns",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_max_turns"
       ],
@@ -888,7 +888,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--model",
       "implementation_status": "implemented",
-      "current_symbol": "--model",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_model"
       ],
@@ -911,7 +911,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--node-max-old-space-size-mb",
       "implementation_status": "implemented",
-      "current_symbol": "--node-max-old-space-size-mb",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_node_max_old_space_size_mb"
       ],
@@ -934,7 +934,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--output-root",
       "implementation_status": "implemented",
-      "current_symbol": "--output-root",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_output_root"
       ],
@@ -957,7 +957,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--package-dir",
       "implementation_status": "implemented",
-      "current_symbol": "--package-dir",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_package_dir"
       ],
@@ -980,7 +980,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--pi-extra-arg",
       "implementation_status": "implemented",
-      "current_symbol": "--pi-extra-arg",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_pi_extra_arg"
       ],
@@ -1003,7 +1003,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--pi-thinking-level",
       "implementation_status": "implemented",
-      "current_symbol": "--pi-thinking-level",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_pi_thinking_level"
       ],
@@ -1026,7 +1026,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--provider",
       "implementation_status": "implemented",
-      "current_symbol": "--provider",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_provider"
       ],
@@ -1049,7 +1049,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--runtime-context-level",
       "implementation_status": "implemented",
-      "current_symbol": "--runtime-context-level",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_runtime_context_level"
       ],
@@ -1072,7 +1072,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--system-prompt-file",
       "implementation_status": "implemented",
-      "current_symbol": "--system-prompt-file",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_system_prompt_file"
       ],
@@ -1095,7 +1095,7 @@
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--tools",
       "implementation_status": "implemented",
-      "current_symbol": "--tools",
+      "current_symbol": "_parser",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_tools"
       ],
@@ -11671,7 +11671,7 @@
       "source_path": "scripts/bright/run_bio.sh",
       "source_kind": "launcher",
       "source_name": "bright.biology",
-      "current_asterion_owner": "scripts.asterion",
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "scripts.asterion",
       "target_symbol": "scripts/asterion/bright/run_bio.sh",
       "launcher_family": "bright",
@@ -11690,7 +11690,7 @@
         "corpus_dir": "corpus/bright_corpus/biology"
       },
       "implementation_status": "implemented",
-      "current_symbol": "scripts/asterion/bright/run_bio.sh",
+      "current_symbol": "_load_batch_profiles",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bright_run_bio_sh_launcher_bright_biology"
       ],
@@ -11709,7 +11709,7 @@
       "source_path": "scripts/bright/run_earth_science.sh",
       "source_kind": "launcher",
       "source_name": "bright.earth-science",
-      "current_asterion_owner": "scripts.asterion",
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "scripts.asterion",
       "target_symbol": "scripts/asterion/bright/run_earth_science.sh",
       "launcher_family": "bright",
@@ -11728,7 +11728,7 @@
         "corpus_dir": "corpus/bright_corpus/earth_science"
       },
       "implementation_status": "implemented",
-      "current_symbol": "scripts/asterion/bright/run_earth_science.sh",
+      "current_symbol": "_load_batch_profiles",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bright_run_earth_science_sh_launcher_bright_earth_science"
       ],
@@ -11747,7 +11747,7 @@
       "source_path": "scripts/bright/run_economics.sh",
       "source_kind": "launcher",
       "source_name": "bright.economics",
-      "current_asterion_owner": "scripts.asterion",
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "scripts.asterion",
       "target_symbol": "scripts/asterion/bright/run_economics.sh",
       "launcher_family": "bright",
@@ -11766,7 +11766,7 @@
         "corpus_dir": "corpus/bright_corpus/economics"
       },
       "implementation_status": "implemented",
-      "current_symbol": "scripts/asterion/bright/run_economics.sh",
+      "current_symbol": "_load_batch_profiles",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bright_run_economics_sh_launcher_bright_economics"
       ],
@@ -11785,7 +11785,7 @@
       "source_path": "scripts/bright/run_robotics.sh",
       "source_kind": "launcher",
       "source_name": "bright.robotics",
-      "current_asterion_owner": "scripts.asterion",
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "scripts.asterion",
       "target_symbol": "scripts/asterion/bright/run_robotics.sh",
       "launcher_family": "bright",
@@ -11804,7 +11804,7 @@
         "corpus_dir": "corpus/bright_corpus/robotics"
       },
       "implementation_status": "implemented",
-      "current_symbol": "scripts/asterion/bright/run_robotics.sh",
+      "current_symbol": "_load_batch_profiles",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bright_run_robotics_sh_launcher_bright_robotics"
       ],
@@ -11823,7 +11823,7 @@
       "source_path": "scripts/qa/run_2wikimultihopqa_dev_sample50.sh",
       "source_kind": "launcher",
       "source_name": "qa.2wikimultihopqa",
-      "current_asterion_owner": "scripts.asterion",
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "scripts.asterion",
       "target_symbol": "scripts/asterion/qa/run_2wikimultihopqa_dev_sample50.sh",
       "launcher_family": "qa",
@@ -11842,7 +11842,7 @@
         "corpus_dir": "corpus/wiki_corpus"
       },
       "implementation_status": "implemented",
-      "current_symbol": "scripts/asterion/qa/run_2wikimultihopqa_dev_sample50.sh",
+      "current_symbol": "_load_batch_profiles",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_qa_run_2wikimultihopqa_dev_sample50_sh_launcher_qa_2wikimultihopqa"
       ],
@@ -11861,7 +11861,7 @@
       "source_path": "scripts/qa/run_bamboogle_test_sample50.sh",
       "source_kind": "launcher",
       "source_name": "qa.bamboogle",
-      "current_asterion_owner": "scripts.asterion",
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "scripts.asterion",
       "target_symbol": "scripts/asterion/qa/run_bamboogle_test_sample50.sh",
       "launcher_family": "qa",
@@ -11880,7 +11880,7 @@
         "corpus_dir": "corpus/wiki_corpus"
       },
       "implementation_status": "implemented",
-      "current_symbol": "scripts/asterion/qa/run_bamboogle_test_sample50.sh",
+      "current_symbol": "_load_batch_profiles",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_qa_run_bamboogle_test_sample50_sh_launcher_qa_bamboogle"
       ],
@@ -11899,7 +11899,7 @@
       "source_path": "scripts/qa/run_hotpotqa_dev_sample50.sh",
       "source_kind": "launcher",
       "source_name": "qa.hotpotqa",
-      "current_asterion_owner": "scripts.asterion",
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "scripts.asterion",
       "target_symbol": "scripts/asterion/qa/run_hotpotqa_dev_sample50.sh",
       "launcher_family": "qa",
@@ -11918,7 +11918,7 @@
         "corpus_dir": "corpus/wiki_corpus"
       },
       "implementation_status": "implemented",
-      "current_symbol": "scripts/asterion/qa/run_hotpotqa_dev_sample50.sh",
+      "current_symbol": "_load_batch_profiles",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_qa_run_hotpotqa_dev_sample50_sh_launcher_qa_hotpotqa"
       ],
@@ -11937,7 +11937,7 @@
       "source_path": "scripts/qa/run_musique_dev_sample50.sh",
       "source_kind": "launcher",
       "source_name": "qa.musique",
-      "current_asterion_owner": "scripts.asterion",
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "scripts.asterion",
       "target_symbol": "scripts/asterion/qa/run_musique_dev_sample50.sh",
       "launcher_family": "qa",
@@ -11956,7 +11956,7 @@
         "corpus_dir": "corpus/wiki_corpus"
       },
       "implementation_status": "implemented",
-      "current_symbol": "scripts/asterion/qa/run_musique_dev_sample50.sh",
+      "current_symbol": "_load_batch_profiles",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_qa_run_musique_dev_sample50_sh_launcher_qa_musique"
       ],
@@ -11975,7 +11975,7 @@
       "source_path": "scripts/qa/run_nq_test_sample50.sh",
       "source_kind": "launcher",
       "source_name": "qa.nq",
-      "current_asterion_owner": "scripts.asterion",
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "scripts.asterion",
       "target_symbol": "scripts/asterion/qa/run_nq_test_sample50.sh",
       "launcher_family": "qa",
@@ -11994,7 +11994,7 @@
         "corpus_dir": "corpus/wiki_corpus"
       },
       "implementation_status": "implemented",
-      "current_symbol": "scripts/asterion/qa/run_nq_test_sample50.sh",
+      "current_symbol": "_load_batch_profiles",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_qa_run_nq_test_sample50_sh_launcher_qa_nq"
       ],
@@ -12013,7 +12013,7 @@
       "source_path": "scripts/qa/run_triviaqa_test_sample50.sh",
       "source_kind": "launcher",
       "source_name": "qa.triviaqa",
-      "current_asterion_owner": "scripts.asterion",
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "scripts.asterion",
       "target_symbol": "scripts/asterion/qa/run_triviaqa_test_sample50.sh",
       "launcher_family": "qa",
@@ -12032,7 +12032,7 @@
         "corpus_dir": "corpus/wiki_corpus"
       },
       "implementation_status": "implemented",
-      "current_symbol": "scripts/asterion/qa/run_triviaqa_test_sample50.sh",
+      "current_symbol": "_load_batch_profiles",
       "current_verification_tests": [
         "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_qa_run_triviaqa_test_sample50_sh_launcher_qa_triviaqa"
       ],
