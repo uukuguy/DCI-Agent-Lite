@@ -552,3 +552,5 @@
 - 00:58 AF-240 adds RED regressions for terminal integrity and executable function parity. [1c0f0de]
 - 02:03 AF-240 binds terminal evidence and executes function parity to close R3 gaps. [c7a1658]
 - 01:06 correction: preceding AF-240 R3 repair entry used an incorrect timestamp.
+- 01:14 AF-240 adds a RED regression proving blank runtime charts passed acceptance. [1f0f506]
+- 01:14 AF-240 restores runtime chart semantics and kills blank PNG mutations. [cea5306]
