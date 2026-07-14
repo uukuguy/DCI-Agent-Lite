@@ -12,6 +12,7 @@ import sys
 import tempfile
 import threading
 import unittest
+import zipfile
 from pathlib import Path
 from unittest import mock
 
@@ -233,6 +234,18 @@ class AsterionDciExportTests(unittest.TestCase):
             _parquet(source / "qa.parquet", [{"id": "file02", "content": "one"}, {"id": "file2", "content": "two"}])
             with self.assertRaises(DciExportError): export_subset(source, output)
 
+    def test_stale_atomic_files_are_recovered_and_null_rows_are_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td).resolve(); source = root / "source"; output = root / "output"
+            output.mkdir(); (output / ".tmp-crashed-publication").write_text("partial")
+            _parquet(source / "p.parquet", [{"id": "a", "content": "A"}])
+            self.assertEqual(export_subset(source, output), 1)
+            self.assertFalse((output / ".tmp-crashed-publication").exists())
+            _parquet(source / "p.parquet", [{"id": None, "content": "A"}])
+            with self.assertRaises(DciExportError): export_subset(source, output)
+            _parquet(source / "p.parquet", [{"id": "1", "query": None, "answer": "A"}])
+            with self.assertRaises(DciExportError): export_bcplus_qa(source, root / "qa.jsonl", decrypt=False)
+
     def test_cli_failures_are_body_free_and_module_has_no_baseline_import(self) -> None:
         err = io.StringIO(); out = io.StringIO()
         self.assertEqual(cli_main(["export", "bcplus", "--source-dir", "/missing", "--output-dir", "/tmp/out"], repo_root=ROOT, stdout=out, stderr=err), 2)
@@ -244,9 +257,26 @@ class AsterionDciExportTests(unittest.TestCase):
         self.assertNotIn("concat(", source)
 
     def test_installed_wheel_exports_without_repository_baseline(self) -> None:
-        source = (ROOT / "packages/python/asterion-core/pyproject.toml").read_text()
-        self.assertIn("pyarrow", source)
-        self.assertTrue(importlib.util.find_spec("asterion.dci.export"))
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td).resolve(); dist = root / "dist"; venv = root / "venv"
+            subprocess.run(["uv", "build", "--package", "asterion", "--wheel", "--out-dir", str(dist)], cwd=ROOT, check=True, capture_output=True, text=True)
+            wheel = next(dist.glob("*.whl"))
+            with zipfile.ZipFile(wheel) as archive:
+                self.assertIn("asterion/dci/export.py", archive.namelist())
+                metadata = archive.read(next(name for name in archive.namelist() if name.endswith("METADATA"))).decode()
+                self.assertIn("Requires-Dist: pyarrow", metadata)
+            subprocess.run(["uv", "venv", "--system-site-packages", str(venv)], check=True, capture_output=True, text=True)
+            subprocess.run(["uv", "pip", "install", "--python", str(venv / "bin/python"), str(wheel)], check=True, capture_output=True, text=True)
+            env = os.environ.copy(); env.pop("PYTHONPATH", None)
+            imported = subprocess.run([str(venv / "bin/python"), "-I", "-c", "import asterion.dci.export; import pyarrow"], cwd=root, env=env, capture_output=True, text=True)
+            self.assertEqual(imported.returncode, 0, imported.stderr)
+            command = subprocess.run([str(venv / "bin/asterion-dci"), "export", "--help"], cwd=root, env=env, capture_output=True, text=True)
+            self.assertEqual(command.returncode, 0, command.stderr)
+            self.assertIn("bcplus-qa", command.stdout)
+            failed = subprocess.run([str(venv / "bin/asterion-dci"), "export", "bcplus", "--source-dir", str(root / "missing"), "--output-dir", str(root / "out")], cwd=root, env=env, capture_output=True, text=True)
+            self.assertEqual(failed.returncode, 2)
+            self.assertEqual(failed.stdout, "")
+            self.assertEqual(failed.stderr, "DCI export failed\n")
 
 
 def cli_main_help(*args: str) -> str:
