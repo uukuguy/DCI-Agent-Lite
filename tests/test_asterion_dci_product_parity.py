@@ -49,6 +49,7 @@ REQUIRED_PRODUCT_OWNERS = {
 }
 EXPECTED_BEHAVIOR_SELECTORS = {
     "configuration-and-pi-argv": {
+        "tests.test_check_judge.CheckJudgeTests.test_make_config_target_is_independently_executable",
         "tests.test_config.PiPathConfigTests.test_environment_can_override_all_pi_paths",
         "tests.test_asterion_dci_config.AsterionDciConfigTests.test_runtime_options_merge_shared_env_and_explicit_values",
         "tests.test_asterion_dci_run.AsterionDciRunTests.test_runtime_options_map_to_native_pi_request",
@@ -75,8 +76,7 @@ EXPECTED_BEHAVIOR_SELECTORS = {
         "tests.test_asterion_dci_export.AsterionDciExportTests.test_cli_failures_are_body_free_and_module_has_no_baseline_import",
     },
     "source-and-asterion-examples": {
-        "tests.test_asterion_structure.AsterionStructureTests.test_examples_build_cli_commands_in_an_isolated_repository",
-        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_asterion_examples_use_shared_env_and_package_command",
+        "tests.test_asterion_structure.AsterionStructureTests.test_examples_execute_with_pairwise_semantic_parity",
     },
     "installed-wheel-boundary": {
         "tests.test_distribution_boundaries.BuiltDistributionBoundaryTests.test_asterion_is_the_only_buildable_wheel",

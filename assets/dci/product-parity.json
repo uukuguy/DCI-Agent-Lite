@@ -9,11 +9,11 @@
     {
       "id": "configuration-and-pi-argv",
       "owner": "asterion.dci.config",
-      "source_entry_points": ["src/dci/config.py", "src/dci/benchmark/pi_rpc_runner.py"],
+      "source_entry_points": ["Makefile", "scripts/check_judge.py", "src/dci/config.py", "src/dci/benchmark/pi_rpc_runner.py"],
       "asterion_entry_points": ["packages/python/asterion-core/src/asterion/dci/config.py", "packages/python/asterion-core/src/asterion/dci/pi_rpc.py"],
-      "stable_semantics": ["Shared DCI configuration resolves with explicit overrides taking precedence", "Pi runtime controls map to literal argument vectors without shell interpretation"],
+      "stable_semantics": ["Shared DCI configuration resolves with explicit overrides taking precedence", "Source Judge checks resolve the repository module path without caller configuration", "Pi runtime controls map to literal argument vectors without shell interpretation"],
       "unsupported": false,
-      "local_evidence": [{"id": "configuration-behavior", "tier": "local", "argv": ["uv", "run", "python", "-m", "unittest", "tests.test_config.PiPathConfigTests.test_environment_can_override_all_pi_paths", "tests.test_asterion_dci_config.AsterionDciConfigTests.test_runtime_options_merge_shared_env_and_explicit_values", "tests.test_asterion_dci_run.AsterionDciRunTests.test_runtime_options_map_to_native_pi_request"], "selectors": ["tests.test_config.PiPathConfigTests.test_environment_can_override_all_pi_paths", "tests.test_asterion_dci_config.AsterionDciConfigTests.test_runtime_options_merge_shared_env_and_explicit_values", "tests.test_asterion_dci_run.AsterionDciRunTests.test_runtime_options_map_to_native_pi_request"]}],
+      "local_evidence": [{"id": "configuration-behavior", "tier": "local", "argv": ["uv", "run", "python", "-m", "unittest", "tests.test_check_judge.CheckJudgeTests.test_make_config_target_is_independently_executable", "tests.test_config.PiPathConfigTests.test_environment_can_override_all_pi_paths", "tests.test_asterion_dci_config.AsterionDciConfigTests.test_runtime_options_merge_shared_env_and_explicit_values", "tests.test_asterion_dci_run.AsterionDciRunTests.test_runtime_options_map_to_native_pi_request"], "selectors": ["tests.test_check_judge.CheckJudgeTests.test_make_config_target_is_independently_executable", "tests.test_config.PiPathConfigTests.test_environment_can_override_all_pi_paths", "tests.test_asterion_dci_config.AsterionDciConfigTests.test_runtime_options_merge_shared_env_and_explicit_values", "tests.test_asterion_dci_run.AsterionDciRunTests.test_runtime_options_map_to_native_pi_request"]}],
       "provider_evidence": []
     },
     {
@@ -61,9 +61,9 @@
       "owner": "asterion.dci.cli",
       "source_entry_points": ["scripts/examples/dci_basic_example.sh", "scripts/examples/dci_runtime_context_example.sh"],
       "asterion_entry_points": ["scripts/examples/asterion_dci_basic_example.sh", "scripts/examples/asterion_dci_runtime_context_example.sh"],
-      "stable_semantics": ["Both products expose independently runnable basic examples", "Both runtime-context examples preserve explicit context thinking and evaluation controls"],
+      "stable_semantics": ["Both products expose independently runnable basic examples without launching the other product", "Both runtime-context examples preserve exact question corpus tools thinking max-turn and evaluation controls"],
       "unsupported": false,
-      "local_evidence": [{"id": "source-asterion-example-behavior", "tier": "model-free", "argv": ["uv", "run", "python", "-m", "unittest", "tests.test_asterion_structure.AsterionStructureTests.test_examples_build_cli_commands_in_an_isolated_repository", "tests.test_asterion_dci_cli.AsterionDciCliTests.test_asterion_examples_use_shared_env_and_package_command"], "selectors": ["tests.test_asterion_structure.AsterionStructureTests.test_examples_build_cli_commands_in_an_isolated_repository", "tests.test_asterion_dci_cli.AsterionDciCliTests.test_asterion_examples_use_shared_env_and_package_command"]}],
+      "local_evidence": [{"id": "source-asterion-example-behavior", "tier": "model-free", "argv": ["uv", "run", "python", "-m", "unittest", "tests.test_asterion_structure.AsterionStructureTests.test_examples_execute_with_pairwise_semantic_parity"], "selectors": ["tests.test_asterion_structure.AsterionStructureTests.test_examples_execute_with_pairwise_semantic_parity"]}],
       "provider_evidence": ["source-basic", "source-runtime-context", "asterion-basic", "asterion-runtime-context"]
     },
     {

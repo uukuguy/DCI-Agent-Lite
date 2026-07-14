@@ -16,10 +16,10 @@ check-pi-rpc:
 	uv run python scripts/check_pi_rpc.py
 
 check-judge:
-	uv run python scripts/check_judge.py
+	PYTHONPATH=src uv run python scripts/check_judge.py
 
 check-judge-config:
-	uv run python scripts/check_judge.py --config-only
+	PYTHONPATH=src uv run python scripts/check_judge.py --config-only
 
 test-typescript-host:
 	npm --prefix packages/typescript/asterion-runtime test

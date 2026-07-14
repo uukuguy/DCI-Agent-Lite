@@ -149,45 +149,160 @@ class AsterionStructureTests(unittest.TestCase):
             )
             self.assertIn('source "$REPO_ROOT/.env"', source)
 
-    def test_examples_build_cli_commands_in_an_isolated_repository(self) -> None:
+    def test_examples_execute_with_pairwise_semantic_parity(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
-            repo = Path(temp_dir)
+            repo = Path(temp_dir).resolve()
             subprocess.run(["git", "init", "-q", str(repo)], check=True)
             (repo / "scripts/examples").mkdir(parents=True)
             (repo / "corpus/wiki_corpus").mkdir(parents=True)
             (repo / "corpus/bc_plus_docs").mkdir(parents=True)
-            (repo / ".env").write_text("DCI_PROVIDER=test-provider\nDCI_MODEL=test-model\n")
-            log = repo / "uv-args.txt"
             bin_dir = repo / "bin"
             bin_dir.mkdir()
             uv = bin_dir / "uv"
-            uv.write_text('#!/usr/bin/env bash\nprintf "%s\\n" "$*" >> "$UV_ARGS_LOG"\n')
+            uv.write_text(
+                '#!/usr/bin/env bash\nprintf "%s\\0" "$@" > "$UV_ARGS_LOG"\n'
+            )
             uv.chmod(0o755)
-            env = {
+            base_env = {
                 **os.environ,
                 "PATH": f"{bin_dir}:{os.environ['PATH']}",
-                "UV_ARGS_LOG": str(log),
+                "DCI_PROVIDER": "synthetic-provider",
+                "DCI_MODEL": "synthetic-model",
+                "ASTERION_DCI_CORPUS_ROOT": str(repo / "corpus"),
             }
-            for name in ("dci_basic_example.sh", "dci_runtime_context_example.sh"):
-                shutil.copy(ROOT / "scripts/examples" / name, repo / "scripts/examples" / name)
+            script_names = (
+                "dci_basic_example.sh",
+                "dci_runtime_context_example.sh",
+                "asterion_dci_basic_example.sh",
+                "asterion_dci_runtime_context_example.sh",
+            )
+            commands: dict[str, list[str]] = {}
+            for name in script_names:
+                shutil.copy(
+                    ROOT / "scripts/examples" / name,
+                    repo / "scripts/examples" / name,
+                )
+                log = repo / f"{name}.argv"
+                env = {**base_env, "UV_ARGS_LOG": str(log)}
+                script_argv = ["bash", str(repo / "scripts/examples" / name)]
+                if "runtime_context" in name:
+                    script_argv.append("deliberate")
                 result = subprocess.run(
-                    ["bash", str(repo / "scripts/examples" / name)],
+                    script_argv,
                     cwd=repo,
                     env=env,
                     text=True,
                     capture_output=True,
                 )
                 self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertNotIn("test-provider", result.stdout + result.stderr)
-                self.assertNotIn("test-model", result.stdout + result.stderr)
-            commands = log.read_text().splitlines()
-            self.assertEqual(len(commands), 2)
-            self.assertTrue(
-                all(
-                    command.startswith("run python -m dci.benchmark.pi_rpc_runner ")
-                    for command in commands
-                )
+                self.assertNotIn("synthetic-provider", result.stdout + result.stderr)
+                self.assertNotIn("synthetic-model", result.stdout + result.stderr)
+                commands[name] = [
+                    item.decode() for item in log.read_bytes().split(b"\0") if item
+                ]
+
+            basic_question = (
+                "Answer the following question using only wiki_dump.jsonl in the "
+                "current directory. Do not use web search. Use rg instead of grep for "
+                "fast searching. Question: In which street did the Great Fire of "
+                "London originate?"
             )
+            runtime_question = (
+                "Read the files in the current directory. Do not use web search. Use "
+                "rg instead of grep when searching. Question: In the Bonang Matheba "
+                "interview where the third-to-last question asks about the origin of "
+                "the name given to her by radio listeners, what is the interviewer's "
+                "first name? Answer with just the first name and one supporting file "
+                "path."
+            )
+            source_prefix = ["run", "python", "-m", "dci.benchmark.pi_rpc_runner"]
+            asterion_prefix = ["run", "asterion-dci", "run"]
+            wiki = str(repo / "corpus/wiki_corpus")
+            bc_plus = str(repo / "corpus/bc_plus_docs")
+            self.assertEqual(
+                commands["dci_basic_example.sh"],
+                source_prefix
+                + ["--cwd", wiki, "--extra-arg=--thinking high", basic_question],
+            )
+            self.assertEqual(
+                commands["asterion_dci_basic_example.sh"],
+                asterion_prefix
+                + ["--cwd", wiki, "--extra-arg=--thinking high", basic_question],
+            )
+            self.assertEqual(
+                commands["dci_runtime_context_example.sh"],
+                source_prefix
+                + [
+                    "--cwd",
+                    bc_plus,
+                    "--tools",
+                    "read,bash",
+                    "--show-tools",
+                    "--max-turns",
+                    "6",
+                    "--eval-answer",
+                    "Adaku",
+                    "--extra-arg=--thinking deliberate",
+                    runtime_question,
+                ],
+            )
+            self.assertEqual(
+                commands["asterion_dci_runtime_context_example.sh"],
+                asterion_prefix
+                + [
+                    "--cwd",
+                    bc_plus,
+                    "--tools",
+                    "read,bash",
+                    "--max-turns",
+                    "6",
+                    "--thinking-level",
+                    "deliberate",
+                    "--eval-answer",
+                    "Adaku",
+                    runtime_question,
+                ],
+            )
+
+            def option(argv: list[str], name: str) -> str | None:
+                if name not in argv:
+                    return None
+                return argv[argv.index(name) + 1]
+
+            def semantics(argv: list[str]) -> dict[str, str | None]:
+                thinking = option(argv, "--thinking-level")
+                if thinking is None:
+                    thinking_arg = next(
+                        item
+                        for item in argv
+                        if item.startswith("--extra-arg=--thinking ")
+                    )
+                    thinking = thinking_arg.removeprefix("--extra-arg=--thinking ")
+                return {
+                    "question": argv[-1],
+                    "corpus": option(argv, "--cwd"),
+                    "tools": option(argv, "--tools"),
+                    "thinking": thinking,
+                    "max_turns": option(argv, "--max-turns"),
+                    "eval_answer": option(argv, "--eval-answer"),
+                }
+
+            self.assertEqual(
+                semantics(commands["dci_basic_example.sh"]),
+                semantics(commands["asterion_dci_basic_example.sh"]),
+            )
+            self.assertEqual(
+                semantics(commands["dci_runtime_context_example.sh"]),
+                semantics(commands["asterion_dci_runtime_context_example.sh"]),
+            )
+
+            for name, argv in commands.items():
+                if name.startswith("asterion_"):
+                    self.assertEqual(argv[:3], asterion_prefix)
+                    self.assertNotIn("dci.benchmark.pi_rpc_runner", argv)
+                else:
+                    self.assertEqual(argv[:4], source_prefix)
+                    self.assertNotIn("asterion-dci", argv)
 
     def test_workspace_does_not_install_baseline_console_scripts(self) -> None:
         pyproject = (ROOT / "pyproject.toml").read_text()

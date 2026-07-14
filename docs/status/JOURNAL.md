@@ -633,3 +633,7 @@
 - 03:50 AF-250 Task 1 review repair passes 162 governance tests and 22 real row selectors with exact local-command safety.
 - 03:52 AF-250 matrix evidence hardened after review to prevent command bypass and self-certification. [dac19dc]
 - 03:55 AF-250 Task 1 independently approves eight executable rows, exact command shapes, meaningful owners/selectors, and all seven provider cases.
+- 03:56 AF-250 Task 1 approval is committed before source verification repairs begin. [0e5b9ba]
+- 04:03 AF-250 Task 2 RED reproduces the source Judge Make boundary failure without caller `PYTHONPATH`: `ModuleNotFoundError: No module named 'dci'`.
+- 04:03 AF-250 Task 2 restores independent source Judge entry points and model-free exact argv parity across all four source/Asterion example scripts.
+- 04:03 AF-250 Task 2 GREEN passes 57 focused tests, compile, Ruff, four-script Bash syntax, scope, and diff gates without provider or Judge requests.

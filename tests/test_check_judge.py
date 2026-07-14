@@ -3,6 +3,8 @@ from __future__ import annotations
 import importlib.util
 import io
 import json
+import os
+import subprocess
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
@@ -14,6 +16,34 @@ from dci.benchmark.judge import JudgeConfig
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = REPO_ROOT / "scripts/check_judge.py"
+
+
+def synthetic_judge_environment() -> dict[str, str]:
+    environment = {
+        name: value
+        for name, value in os.environ.items()
+        if not name.startswith("DCI_EVAL_JUDGE_")
+    }
+    environment.pop("PYTHONPATH", None)
+    environment.update(
+        {
+            "DCI_EVAL_JUDGE_API_KEY": "synthetic-non-secret-key",
+            "DCI_EVAL_JUDGE_API_KEY_ENV": "AF250_UNUSED_JUDGE_KEY",
+            "DCI_EVAL_JUDGE_BASE_URL": "https://judge.invalid/v1",
+            "DCI_EVAL_JUDGE_API": "chat-completions",
+            "DCI_EVAL_JUDGE_MODEL": "synthetic-judge-model",
+            "DCI_EVAL_JUDGE_TIMEOUT_SECONDS": "120",
+            "DCI_EVAL_JUDGE_MAX_OUTPUT_TOKENS": "1024",
+            "DCI_EVAL_JUDGE_JSON_MODE": "true",
+            "DCI_EVAL_JUDGE_STRICT_JSON_SCHEMA": "false",
+            "DCI_EVAL_JUDGE_RESPONSES_STORE": "false",
+            "DCI_EVAL_JUDGE_THINKING": "disabled",
+            "DCI_EVAL_JUDGE_INPUT_PRICE_PER_1M": "0",
+            "DCI_EVAL_JUDGE_CACHED_INPUT_PRICE_PER_1M": "0",
+            "DCI_EVAL_JUDGE_OUTPUT_PRICE_PER_1M": "0",
+        }
+    )
+    return environment
 
 
 def load_check_judge() -> ModuleType:
@@ -205,15 +235,54 @@ class CheckJudgeTests(unittest.TestCase):
         makefile = (REPO_ROOT / "Makefile").read_text()
 
         self.assertIn("check-judge:", makefile)
-        self.assertIn("uv run python scripts/check_judge.py", makefile)
+        self.assertIn(
+            "PYTHONPATH=src uv run python scripts/check_judge.py", makefile
+        )
 
     def test_make_target_runs_config_only_preflight(self) -> None:
         makefile = (REPO_ROOT / "Makefile").read_text()
 
         self.assertIn("check-judge-config:", makefile)
         self.assertIn(
-            "uv run python scripts/check_judge.py --config-only", makefile
+            "PYTHONPATH=src uv run python scripts/check_judge.py --config-only",
+            makefile,
         )
+
+    def test_make_config_target_is_independently_executable(self) -> None:
+        result = subprocess.run(
+            ["make", "check-judge-config"],
+            cwd=REPO_ROOT,
+            env=synthetic_judge_environment(),
+            text=True,
+            capture_output=True,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout.splitlines()[-1])
+        shadowed = payload.pop("judge_api_key_shadowed_by_environment")
+        self.assertIsInstance(shadowed, bool)
+        self.assertEqual(
+            payload,
+            {
+                "judge_api": "chat-completions",
+                "judge_api_key_env": "AF250_UNUSED_JUDGE_KEY",
+                "judge_api_key_source": "process-environment",
+                "judge_base_url": "https://judge.invalid/v1",
+                "judge_cached_input_price_per_1m": 0.0,
+                "judge_input_price_per_1m": 0.0,
+                "judge_json_mode": True,
+                "judge_max_output_tokens": 1024,
+                "judge_model": "synthetic-judge-model",
+                "judge_output_price_per_1m": 0.0,
+                "judge_responses_store": False,
+                "judge_strict_json_schema": False,
+                "judge_thinking": "disabled",
+                "judge_timeout_seconds": 120,
+                "ok": True,
+                "request_performed": False,
+            },
+        )
+        self.assertNotIn("synthetic-non-secret-key", result.stdout + result.stderr)
 
     def test_documentation_explains_the_credentialed_preflight(self) -> None:
         readme = (REPO_ROOT / "README.md").read_text()
