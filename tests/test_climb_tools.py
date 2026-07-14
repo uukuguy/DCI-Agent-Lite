@@ -3,9 +3,11 @@ from __future__ import annotations
 import csv
 import ast
 import copy
+import functools
 import importlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -39,156 +41,6 @@ AF240_OWNERS = {
     "scripts.asterion",
 }
 AF240_FORBIDDEN = {"placeholder", "tbd", "todo", "unsupported", "unknown", "n/a"}
-AF240_SOURCE_METRICS = {
-    "agent_usage.cache_read_tokens",
-    "agent_usage.cache_write_tokens",
-    "agent_usage.cost_cache_read",
-    "agent_usage.cost_cache_write",
-    "agent_usage.cost_input",
-    "agent_usage.cost_output",
-    "agent_usage.cost_total",
-    "agent_usage.input_tokens",
-    "agent_usage.output_tokens",
-    "agent_usage.total_tokens",
-    "analysis.cost_efficiency.agent_tokens_per_correct",
-    "analysis.cost_efficiency.cost_per_correct_usd",
-    "analysis.incorrect_queries.overall_cost_total",
-    "analysis.incorrect_queries.tool_call_count",
-    "analysis.incorrect_queries.turn_count",
-    "analysis.incorrect_queries.wall_time_seconds",
-    "analysis.per_query.agent_cache_read_tokens",
-    "analysis.per_query.agent_cost_total",
-    "analysis.per_query.agent_input_tokens",
-    "analysis.per_query.agent_output_tokens",
-    "analysis.per_query.agent_total_tokens",
-    "analysis.per_query.answer_char_count",
-    "analysis.per_query.event_count",
-    "analysis.per_query.gold_doc_count",
-    "analysis.per_query.judge_cost_total",
-    "analysis.per_query.judge_total_tokens",
-    "analysis.per_query.launcher_wall_time_seconds",
-    "analysis.per_query.non_tool_time_seconds",
-    "analysis.per_query.overall_cost_total",
-    "analysis.per_query.question_char_count",
-    "analysis.per_query.question_word_count",
-    "analysis.per_query.request_count",
-    "analysis.per_query.tool_call_count",
-    "analysis.per_query.tool_counts.*",
-    "analysis.per_query.tool_durations.*",
-    "analysis.per_query.tool_error_count",
-    "analysis.per_query.tool_time_seconds",
-    "analysis.per_query.tool_time_share",
-    "analysis.per_query.turn_count",
-    "analysis.per_query.wall_time_seconds",
-    "analysis.rankings.highest_token_queries.value",
-    "analysis.rankings.most_expensive_queries.value",
-    "analysis.rankings.most_tool_heavy_queries.value",
-    "analysis.rankings.slowest_queries.value",
-    "analysis.tool_summary.accuracy_when_used",
-    "analysis.tool_summary.avg_calls_per_query",
-    "analysis.tool_summary.avg_calls_when_used",
-    "analysis.tool_summary.avg_duration_per_call_seconds",
-    "analysis.tool_summary.correct_when_used",
-    "analysis.tool_summary.queries_used",
-    "analysis.tool_summary.queries_used_rate",
-    "analysis.tool_summary.total_calls",
-    "analysis.tool_summary.total_duration_seconds",
-    "analysis.tool_summary.total_error_count",
-    "numeric_summary.count",
-    "numeric_summary.max",
-    "numeric_summary.mean",
-    "numeric_summary.median",
-    "numeric_summary.min",
-    "numeric_summary.p10",
-    "numeric_summary.p25",
-    "numeric_summary.p75",
-    "numeric_summary.p90",
-    "judge_cost.cached_input_cost",
-    "judge_cost.input_cost",
-    "judge_cost.output_cost",
-    "judge_cost.total_cost",
-    "judge_usage.input_tokens",
-    "judge_usage.input_tokens_details.cached_tokens",
-    "judge_usage.output_tokens",
-    "judge_usage.total_tokens",
-    "query.event_count",
-    "query.is_correct",
-    "query.launcher_returncode",
-    "query.launcher_wall_time_seconds",
-    "query.ndcg_at_10",
-    "query.non_tool_time_seconds",
-    "query.request_count",
-    "query.tool_time_seconds",
-    "query.turn_count",
-    "query.wall_time_seconds",
-    "summary.accuracy.over_judged",
-    "summary.accuracy.over_total",
-    "summary.averages.agent_total_tokens",
-    "summary.averages.judge_total_tokens",
-    "summary.averages.overall_cost_total",
-    "summary.averages.tool_call_count",
-    "summary.averages.tool_time_seconds",
-    "summary.averages.turn_count",
-    "summary.averages.wall_time_seconds",
-    "summary.counts.correct",
-    "summary.counts.failed_runs",
-    "summary.counts.incorrect_or_unjudged",
-    "summary.counts.judged",
-    "summary.counts.total",
-    "summary.ndcg_at_10",
-    "summary.totals.agent_cache_read_tokens",
-    "summary.totals.agent_cache_write_tokens",
-    "summary.totals.agent_cost_total",
-    "summary.totals.agent_input_tokens",
-    "summary.totals.agent_output_tokens",
-    "summary.totals.agent_total_tokens",
-    "summary.totals.event_count",
-    "summary.totals.judge_cost_total",
-    "summary.totals.judge_input_tokens",
-    "summary.totals.judge_output_tokens",
-    "summary.totals.judge_total_tokens",
-    "summary.totals.launcher_wall_time_seconds",
-    "summary.totals.non_tool_time_seconds",
-    "summary.totals.overall_cost_total",
-    "summary.totals.tool_call_count",
-    "summary.totals.tool_error_count",
-    "summary.totals.tool_time_seconds",
-    "summary.totals.turn_count",
-    "summary.totals.wall_time_seconds",
-    "tool_metrics.by_tool.*.call_count",
-    "tool_metrics.by_tool.*.duration_seconds",
-    "tool_metrics.by_tool.*.error_count",
-    "tool_metrics.call_count",
-    "tool_metrics.duration_measured_call_count",
-    "tool_metrics.duration_missing_call_count",
-    "tool_metrics.duration_seconds",
-    "tool_metrics.error_count",
-}
-AF240_SOURCE_METRICS |= {
-    f"analysis.slices.*.{metric}.{statistic}"
-    for metric in (
-        "agent_total_tokens",
-        "overall_cost_total",
-        "question_word_count",
-        "tool_call_count",
-        "tool_error_count",
-        "tool_time_seconds",
-        "tool_time_share",
-        "turn_count",
-        "wall_time_seconds",
-    )
-    for statistic in (
-        "count",
-        "max",
-        "mean",
-        "median",
-        "min",
-        "p10",
-        "p25",
-        "p75",
-        "p90",
-    )
-}
 AF240_READINESS_TESTS = {
     "AF-240-H-001": (
         "test_af240_h001_dataset_mapping_readiness",
@@ -215,13 +67,16 @@ AF240_READINESS_TESTS = {
         "test_af240_h004_installed_resource_mapping_readiness",
     ),
 }
-AF240_FUTURE_TEST_PREFIXES = {
-    "AF-240 Task 1": "tests.test_asterion_dci_datasets.",
-    "AF-240 Task 2": "tests.test_asterion_dci_evaluation.",
-    "AF-240 Task 3": "tests.test_asterion_dci_batch.",
-    "AF-240 Task 4": "tests.test_asterion_dci_analysis.",
-    "AF-240 Task 5": "tests.test_asterion_dci_export.",
-    "AF-240 Task 6": "tests.test_asterion_dci_batch_launchers.",
+AF240_FUTURE_TEST_TARGETS = {
+    "AF-240 Task 1": ("tests/test_asterion_dci_datasets.py", "AsterionDciDatasetTests"),
+    "AF-240 Task 2": ("tests/test_asterion_dci_evaluation.py", "AsterionDciEvaluationTests"),
+    "AF-240 Task 3": ("tests/test_asterion_dci_batch.py", "AsterionDciBatchTests"),
+    "AF-240 Task 4": ("tests/test_asterion_dci_analysis.py", "AsterionDciAnalysisTests"),
+    "AF-240 Task 5": ("tests/test_asterion_dci_export.py", "AsterionDciExportTests"),
+    "AF-240 Task 6": (
+        "tests/test_asterion_dci_batch_launchers.py",
+        "AsterionDciBatchLauncherTests",
+    ),
 }
 
 
@@ -263,6 +118,11 @@ def _resolve_current_owner(owner: str, symbol: str) -> bool:
     return value is not None
 
 
+def _af240_behavior_slug(row: dict[str, object]) -> str:
+    value = f"{row['source_path']}__{row['source_kind']}__{row['source_name']}"
+    return re.sub(r"_+", "_", re.sub(r"[^a-z0-9]+", "_", value.casefold())).strip("_")
+
+
 def _af240_source_flags(path: str) -> set[str]:
     tree = ast.parse((REPO_ROOT / path).read_text(encoding="utf-8"))
     flags: set[str] = set()
@@ -283,6 +143,153 @@ def _af240_source_flags(path: str) -> set[str]:
     return flags
 
 
+@functools.cache
+def _af240_metric_paths_from_source() -> frozenset[str]:
+    """Extract emitted numeric/boolean JSONPaths from representative source schemas.
+
+    The source functions build the fixtures; this extractor only supplies values that
+    make every explicit list and dynamic tool container non-empty. AST keys are used
+    as an independent guard that every emitted leaf name originates in source code.
+    """
+    source = importlib.import_module("scripts.bcplus_eval.run_bcplus_eval")
+    ast_keys: set[str] = set()
+    for source_path in (
+        REPO_ROOT / "scripts/bcplus_eval/run_bcplus_eval.py",
+        REPO_ROOT / "src/dci/benchmark/judge.py",
+    ):
+        tree = ast.parse(source_path.read_text(encoding="utf-8"))
+        ast_keys.update(
+            node.value
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Constant) and isinstance(node.value, str)
+        )
+    with tempfile.TemporaryDirectory() as temp_dir:
+        query_dir = Path(temp_dir)
+        state = {
+            "status": "completed",
+            "error": None,
+            "started_at": "2026-01-01T00:00:00+00:00",
+            "finished_at": "2026-01-01T00:00:02+00:00",
+            "event_count": 3,
+            "turn_count": 1,
+            "conversation_features": {},
+            "messages": [
+                {
+                    "event": "message_end",
+                    "message": {
+                        "role": "assistant",
+                        "usage": {
+                            "input": 11,
+                            "output": 7,
+                            "cacheRead": 3,
+                            "cacheWrite": 2,
+                            "totalTokens": 23,
+                            "cost": {
+                                "input": 0.01,
+                                "output": 0.02,
+                                "cacheRead": 0.001,
+                                "cacheWrite": 0.002,
+                                "total": 0.033,
+                            },
+                        },
+                    },
+                }
+            ],
+            "tool_calls": [
+                {
+                    "event": "tool_execution_start",
+                    "toolCallId": "call-1",
+                    "toolName": "fixture_tool",
+                    "recorded_at": "2026-01-01T00:00:00+00:00",
+                },
+                {
+                    "event": "tool_execution_end",
+                    "toolCallId": "call-1",
+                    "toolName": "fixture_tool",
+                    "recorded_at": "2026-01-01T00:00:01+00:00",
+                    "isError": False,
+                },
+            ],
+        }
+        (query_dir / "state.json").write_text(json.dumps(state), encoding="utf-8")
+        (query_dir / "latest_model_context.json").write_text(
+            json.dumps({"request_count": 1}), encoding="utf-8"
+        )
+        (query_dir / "final.txt").write_text("fixture answer", encoding="utf-8")
+        for name in ("stderr.txt", "launcher_stdout.txt", "launcher_stderr.txt"):
+            (query_dir / name).write_text("", encoding="utf-8")
+        judge_result = {
+            "is_correct": True,
+            "reason": "fixture",
+            "usage": {
+                "input_tokens": 5,
+                "output_tokens": 2,
+                "total_tokens": 7,
+                "input_tokens_details": {"cached_tokens": 1},
+            },
+            "cost_estimate_usd": {
+                "input_cost": 0.01,
+                "cached_input_cost": 0.001,
+                "output_cost": 0.02,
+                "total_cost": 0.031,
+            },
+        }
+        row = {
+            "query_id": "fixture-1",
+            "query": "fixture question",
+            "answer": "fixture answer",
+            "gold_docs": ["doc-1"],
+        }
+        result = source.gather_query_metrics(
+            row=row,
+            query_dir=query_dir,
+            launcher_returncode=0,
+            launcher_started_at="2026-01-01T00:00:00+00:00",
+            launcher_finished_at="2026-01-01T00:00:03+00:00",
+            judge_result=judge_result,
+            ndcg_at_10=1.0,
+        )
+    incorrect = copy.deepcopy(result)
+    incorrect.update(query_id="fixture-2", is_correct=False)
+    incorrect["judge_result"]["is_correct"] = False
+    rows = [row, {**row, "query_id": "fixture-2"}]
+    results = [result, incorrect]
+    summary = source.aggregate_results(results)
+    analysis = source.compute_detailed_analysis(
+        results=results, rows=rows, summary=summary
+    )
+
+    dynamic_parents = {
+        "tool_metrics.by_tool",
+        "analysis.tool_summary",
+        "analysis.per_query_metrics[*].tool_counts",
+        "analysis.per_query_metrics[*].tool_durations",
+    }
+    paths: set[str] = set()
+
+    def visit(value: object, path: str) -> None:
+        if isinstance(value, dict):
+            for key, child in value.items():
+                if path == "" and key in {"judge_result", "conversation_features"}:
+                    continue
+                rendered = "*" if path in dynamic_parents else str(key)
+                visit(child, f"{path}.{rendered}" if path else rendered)
+        elif isinstance(value, list):
+            for child in value:
+                visit(child, f"{path}[*]")
+        elif isinstance(value, (bool, int, float)):
+            paths.add(path)
+
+    visit(result, "")
+    visit(summary, "summary")
+    visit(analysis, "analysis")
+    for path in paths:
+        leaf = path.rsplit(".", 1)[-1].replace("[*]", "")
+        if leaf != "*" and leaf not in ast_keys:
+            raise AssertionError(f"metric leaf is not emitted by source AST: {path}")
+    return frozenset(paths)
+
+
 def _validate_af240_inventory(inventory: dict[str, object]) -> None:
     if inventory.get("schema") != "asterion.dci.batch-parity/v1":
         raise ValueError("unknown inventory schema")
@@ -290,6 +297,8 @@ def _validate_af240_inventory(inventory: dict[str, object]) -> None:
     if not isinstance(rows, list) or not rows:
         raise ValueError("inventory rows must be non-empty")
     row_ids: list[str] = []
+    future_methods: list[str] = []
+    future_assertions: list[str] = []
     for row in rows:
         if not isinstance(row, dict):
             raise ValueError("inventory row must be an object")
@@ -307,17 +316,39 @@ def _validate_af240_inventory(inventory: dict[str, object]) -> None:
         if target_owner not in AF240_OWNERS:
             raise ValueError(f"unknown target owner in {row_id}")
         target_task = row.get("target_task")
-        if target_task not in AF240_FUTURE_TEST_PREFIXES:
+        if target_task not in AF240_FUTURE_TEST_TARGETS:
             raise ValueError(f"invalid target task in {row_id}")
-        future_test = row.get("future_acceptance_test")
-        if not (
-            isinstance(future_test, str)
-            and future_test.startswith("tests.")
-            and ".test_" in future_test
+        future = row.get("future_acceptance")
+        if not isinstance(future, dict) or set(future) != {
+            "task",
+            "test_file",
+            "test_class",
+            "test_method",
+            "assertion_id",
+            "assertion_summary",
+        }:
+            raise ValueError(f"invalid future acceptance contract in {row_id}")
+        expected_file, expected_class = AF240_FUTURE_TEST_TARGETS[target_task]
+        if (
+            future["task"] != target_task
+            or future["test_file"] != expected_file
+            or future["test_class"] != expected_class
         ):
-            raise ValueError(f"invalid future acceptance test in {row_id}")
-        if not future_test.startswith(AF240_FUTURE_TEST_PREFIXES[target_task]):
-            raise ValueError(f"future acceptance test does not match target task in {row_id}")
+            raise ValueError(f"future acceptance target does not match task in {row_id}")
+        method = future["test_method"]
+        assertion_id = future["assertion_id"]
+        summary = future["assertion_summary"]
+        behavior_slug = _af240_behavior_slug(row)
+        if not isinstance(method, str) or not method.startswith("test_") or behavior_slug not in method:
+            raise ValueError(f"future test method is not behavior-specific in {row_id}")
+        if "inventory_acceptance_row" in method:
+            raise ValueError(f"generic future test method in {row_id}")
+        if not isinstance(assertion_id, str) or row_id not in assertion_id:
+            raise ValueError(f"future assertion id is not behavior-specific in {row_id}")
+        if not isinstance(summary, str) or row["source_name"] not in summary or row["source_path"] not in summary:
+            raise ValueError(f"future assertion summary is not concrete in {row_id}")
+        future_methods.append(method)
+        future_assertions.append(assertion_id)
         current_owner = row.get("current_asterion_owner")
         current_symbol = row.get("current_symbol")
         current_tests = row.get("current_verification_tests")
@@ -335,6 +366,10 @@ def _validate_af240_inventory(inventory: dict[str, object]) -> None:
                 raise ValueError(f"current verification test does not resolve in {row_id}")
     if row_ids != sorted(row_ids) or len(row_ids) != len(set(row_ids)):
         raise ValueError("inventory ids must be unique and stably sorted")
+    if len(future_methods) != len(set(future_methods)):
+        raise ValueError("future test methods must be unique per behavior")
+    if len(future_assertions) != len(set(future_assertions)):
+        raise ValueError("future assertion ids must be unique per behavior")
 
     indexed = {
         (row["source_path"], row["source_kind"], row["source_name"])
@@ -363,7 +398,7 @@ def _validate_af240_inventory(inventory: dict[str, object]) -> None:
     mapped_metrics = {
         row["source_name"] for row in rows if row.get("source_kind") == "metric"
     }
-    if mapped_metrics != AF240_SOURCE_METRICS:
+    if mapped_metrics != _af240_metric_paths_from_source():
         raise ValueError("source metric inventory is incomplete or fabricated")
 
 
@@ -486,7 +521,7 @@ class Af240InventoryTests(unittest.TestCase):
         metric_names = {
             row["source_name"] for row in rows if row["source_kind"] == "metric"
         }
-        self.assertEqual(metric_names, AF240_SOURCE_METRICS)
+        self.assertEqual(metric_names, _af240_metric_paths_from_source())
 
     def _rows(self) -> list[dict[str, object]]:
         inventory = self._inventory()
@@ -568,8 +603,19 @@ class Af240InventoryTests(unittest.TestCase):
         rows = self._rows()
         self.assertEqual(
             {row["source_name"] for row in rows if row["source_kind"] == "metric"},
-            AF240_SOURCE_METRICS,
+            _af240_metric_paths_from_source(),
         )
+
+    def test_af240_metric_paths_preserve_source_jsonpath_names(self) -> None:
+        paths = _af240_metric_paths_from_source()
+        self.assertIn("analysis.per_query_metrics[*].is_correct", paths)
+        self.assertIn("judge_cost_estimate_usd.total_cost", paths)
+        self.assertIn(
+            "analysis.rankings.slowest_queries[*].wall_time_seconds", paths
+        )
+        self.assertNotIn("analysis.per_query.wall_time_seconds", paths)
+        self.assertNotIn("judge_cost.total_cost", paths)
+        self.assertNotIn("numeric_summary.p10", paths)
 
     def test_af240_h003_analysis_mapping_readiness(self) -> None:
         self._assert_function_task(
@@ -627,6 +673,18 @@ class Af240InventoryTests(unittest.TestCase):
         self.assertEqual(row["source_kind"], "target_feature")
         self.assertEqual(row["target_task"], "AF-240 Task 6")
 
+    def test_af240_future_acceptance_is_unique_and_behavior_specific(self) -> None:
+        rows = self._rows()
+        methods = [row["future_acceptance"]["test_method"] for row in rows]
+        assertions = [row["future_acceptance"]["assertion_id"] for row in rows]
+        self.assertEqual(len(methods), len(set(methods)))
+        self.assertEqual(len(assertions), len(set(assertions)))
+        for row in rows:
+            future = row["future_acceptance"]
+            self.assertIn(_af240_behavior_slug(row), future["test_method"])
+            self.assertIn(row["id"], future["assertion_id"])
+            self.assertNotIn("inventory_acceptance_row", future["test_method"])
+
     def test_af240_inventory_validator_rejects_missing_duplicate_placeholder_owner_and_tests(self) -> None:
         inventory = self._inventory()
         mutations = []
@@ -674,12 +732,28 @@ class Af240InventoryTests(unittest.TestCase):
         metrics["rows"] = [
             row
             for row in metrics["rows"]
-            if row["source_name"] != "numeric_summary.p10"
+            if row["source_name"]
+            != "analysis.per_query_metrics[*].wall_time_seconds"
         ]
         mutations.append(metrics)
         target_task = copy.deepcopy(inventory)
         target_task["rows"][0]["target_task"] = "AF-240 Task 1"
         mutations.append(target_task)
+        unrelated = copy.deepcopy(inventory)
+        unrelated["rows"][0]["future_acceptance"]["test_method"] = (
+            "test_same_task_but_unrelated_behavior"
+        )
+        mutations.append(unrelated)
+        generic = copy.deepcopy(inventory)
+        generic["rows"][0]["future_acceptance"]["test_method"] = (
+            "test_inventory_acceptance_row"
+        )
+        mutations.append(generic)
+        duplicate_assertion = copy.deepcopy(inventory)
+        duplicate_assertion["rows"][1]["future_acceptance"]["assertion_id"] = (
+            duplicate_assertion["rows"][0]["future_acceptance"]["assertion_id"]
+        )
+        mutations.append(duplicate_assertion)
         for index, mutation in enumerate(mutations):
             with self.subTest(mutation=index), self.assertRaises(ValueError):
                 _validate_af240_inventory(mutation)
