@@ -520,3 +520,4 @@
 - 19:48 AF-230 fixture resume and no-TTY terminal/Node command-construction acceptance passed; no second provider request was used to manufacture failure.
 - 19:48 AF-230 closed after all native operator/artifact rows and approved boundaries passed; AF-240 activated for governed batch, evaluation, and export planning. [pending closure commit]
 - 19:50 AF-230 closure evidence committed to preserve the verified AF-240 recovery boundary. [12014c2]
+- 19:59 AF-230 Task 7 review aligns CURRENT with the actual isolated branch so the AF-240 recovery boundary is contradiction-free. [pending review-fix commit]

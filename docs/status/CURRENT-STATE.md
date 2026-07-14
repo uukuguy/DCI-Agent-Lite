@@ -3,7 +3,7 @@
 ## Project Snapshot
 
 - Project: Asterion framework under development in the DCI-Agent-Lite repository; DCI remains the first capability and reference application.
-- Current branch: `main`
+- Current branch: `af-220-shared-dci-config`
 - Theme-level focus: complete and prove Asterion DCI as the first capability-package reference product against the source DCI product.
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
