@@ -124,26 +124,24 @@ def run_pi_research(
 ) -> DciRunResult:
     """Run Pi once and persist complete native conversation evidence."""
 
-    from asterion.dci.artifacts import DciRunRecorder
+    from asterion.dci.artifacts import DciArtifactError, DciRunRecorder
 
     destination = Path(output_dir) if output_dir is not None else paths.output_root / request.run_id
-    destination = destination.resolve()
-    existing_state: dict[str, object] | None = None
-    if destination.exists() and any(destination.iterdir()):
-        if not request.resume:
-            raise DciRunError("DCI output directory is not empty")
-        existing_state = _load_resume_state(destination)
-        _validate_resume_request(existing_state, request)
-    elif request.resume:
-        raise DciRunError("DCI resume validation failed")
-
-    recorder = DciRunRecorder(
-        output_dir=destination,
-        request=request,
-        paths=paths,
-        features=conversation_features,
-        resume=request.resume,
-    )
+    destination = destination.absolute()
+    try:
+        recorder = DciRunRecorder(
+            output_dir=destination,
+            request=request,
+            paths=paths,
+            features=conversation_features,
+            resume=request.resume,
+        )
+    except DciArtifactError as exc:
+        message = "DCI resume validation failed" if request.resume else str(exc)
+        raise DciRunError(message) from None
+    except ValueError:
+        message = "DCI resume validation failed" if request.resume else "DCI artifact setup failed"
+        raise DciRunError(message) from None
 
     client: PiRpcClient | None = None
     try:
@@ -208,26 +206,6 @@ def _load_resume_state(destination: Path) -> dict[str, object]:
     if not isinstance(value, dict):
         raise DciRunError("DCI resume validation failed")
     return value
-
-
-def _validate_resume_request(state: dict[str, object], request: DciRunRequest) -> None:
-    if state.get("status") == "completed":
-        raise DciRunError("DCI resume validation failed")
-    expected = {
-        "run_id": request.run_id,
-        "question": request.question,
-        "cwd": str(request.cwd),
-        "provider": request.provider,
-        "model": request.model,
-        "tools": request.tools,
-        "max_turns": request.max_turns,
-        "runtime_context_level": request.runtime_context_level,
-        "thinking_level": request.thinking_level,
-        "node_max_old_space_size_mb": request.node_max_old_space_size_mb,
-        "keep_session": request.keep_session,
-    }
-    if any(state.get(name) != value for name, value in expected.items()):
-        raise DciRunError("DCI resume validation failed")
 
 
 def _required_string(state: dict[str, object], name: str) -> str:

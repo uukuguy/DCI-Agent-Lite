@@ -16,7 +16,7 @@ from asterion.dci.run import (
     resume_request_from_output_dir,
     run_pi_research,
 )
-from asterion.runtime.protocol import validate_event_stream
+from asterion.runtime.protocol import MAX_DEADLINE_MS, validate_event_stream
 
 
 class FixturePiClient:
@@ -145,6 +145,88 @@ class LifecyclePiClient(FixturePiClient):
 
 
 class AsterionDciRunTests(unittest.TestCase):
+    def test_production_path_rejects_output_symlink_before_client_or_target_write(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            paths = resolve_dci_paths(root)
+            foreign = root / "foreign"
+            foreign.mkdir()
+            linked = root / "linked-run"
+            linked.symlink_to(foreign, target_is_directory=True)
+            request = DciRunRequest(run_id="run-1", question="question", cwd=root)
+
+            with patch("asterion.dci.run.PiRpcClient") as client:
+                with self.assertRaisesRegex(RuntimeError, "symlink"):
+                    run_pi_research(paths, request, output_dir=linked)
+
+            client.assert_not_called()
+            self.assertEqual(list(foreign.iterdir()), [])
+
+    def test_protocol_request_preserves_bounded_deadline_ms(self) -> None:
+        for name, timeout_seconds, expected in (
+            ("normal", 12.5, 12_500),
+            ("tiny", 0.0001, 1),
+            ("over-limit", (MAX_DEADLINE_MS + 1) / 1000, None),
+        ):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                paths = resolve_dci_paths(root)
+                request = DciRunRequest(
+                    run_id="run-1",
+                    question="question",
+                    cwd=root,
+                    timeout_seconds=timeout_seconds,
+                )
+                with patch("asterion.dci.run.PiRpcClient", FixturePiClient):
+                    result = run_pi_research(paths, request)
+
+                protocol_request = json.loads(
+                    (result.output_dir / "protocol/attempt-0001.request.json").read_text()
+                )
+                if expected is None:
+                    self.assertNotIn("deadline_ms", protocol_request)
+                else:
+                    self.assertEqual(protocol_request["deadline_ms"], expected)
+
+    def test_malformed_persisted_features_fail_before_resume_client(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            paths = resolve_dci_paths(root)
+            output_dir = root / "run"
+            failed_request = DciRunRequest(run_id="run-1", question="question", cwd=root)
+            with patch("asterion.dci.run.PiRpcClient", FailingPiClient):
+                with self.assertRaises(DciRunError):
+                    run_pi_research(paths, failed_request, output_dir=output_dir)
+            state_path = output_dir / "state.json"
+            state = json.loads(state_path.read_text())
+            state["conversation_features"]["strip_usage"] = 1
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            state_before_resume = state_path.read_text()
+            protocol_before_resume = {
+                path.name: path.read_text()
+                for path in (output_dir / "protocol").iterdir()
+            }
+            resumed = DciRunRequest(
+                run_id="run-1",
+                question="question",
+                cwd=root,
+                resume=True,
+            )
+
+            with patch("asterion.dci.run.PiRpcClient") as client:
+                with self.assertRaisesRegex(DciRunError, "resume validation failed"):
+                    run_pi_research(paths, resumed, output_dir=output_dir)
+
+            client.assert_not_called()
+            self.assertEqual(state_path.read_text(), state_before_resume)
+            self.assertEqual(
+                {
+                    path.name: path.read_text()
+                    for path in (output_dir / "protocol").iterdir()
+                },
+                protocol_before_resume,
+            )
+
     def test_production_path_records_complete_conversation_and_latest_context(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)

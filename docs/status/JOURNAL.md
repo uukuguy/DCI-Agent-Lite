@@ -488,3 +488,4 @@
 - 17:03 AF-230 post-flock setup now always releases its directory FD on metadata-construction failures. [d1b88b3]
 - 17:28 AF-230 Task 2 unified the real Pi run path with the locked descriptor-relative recorder; complete pending/final message evidence, tool timing with resume restoration, latest provider context, system-prompt sources, and privacy-separated processed controls pass focused and URI-only application projection tests without external calls. [pending Task 2 commit]
 - 17:31 AF-230 Task 2 conversation artifacts committed after focused, projection, Ruff, compile, scope, and diff verification. [80b9aa2]
+- 17:32 AF-230 Task 2 review repairs restore locked symlink rejection, collision-safe evidence, protocol deadlines, and strict persisted controls. [pending repair commit]

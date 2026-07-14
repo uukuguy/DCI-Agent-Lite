@@ -74,6 +74,27 @@ class AsterionDciArtifactTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "keep_last must be >= 0"):
             DciConversationFeatures(clear_tool_results_keep_last=-1)
 
+        for field, invalid in (
+            ("clear_tool_results", "false"),
+            ("externalize_tool_results", 1),
+            ("strip_thinking", []),
+            ("strip_usage", {}),
+        ):
+            with self.subTest(field=field, invalid=invalid):
+                payload = features.to_mapping()
+                payload[field] = invalid
+                with self.assertRaisesRegex(ValueError, "boolean"):
+                    DciConversationFeatures.from_mapping(payload)
+                with self.assertRaisesRegex(ValueError, "boolean"):
+                    DciConversationFeatures(**payload)
+
+        malformed_keep_last = features.to_mapping()
+        malformed_keep_last["clear_tool_results_keep_last"] = True
+        with self.assertRaisesRegex(ValueError, "keep_last must be >= 0"):
+            DciConversationFeatures.from_mapping(malformed_keep_last)
+        with self.assertRaisesRegex(ValueError, "unknown"):
+            DciConversationFeatures.from_mapping({**features.to_mapping(), "extra": False})
+
     def test_lock_rejects_output_directory_and_lock_symlinks(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -754,6 +775,72 @@ class AsterionDciArtifactTests(unittest.TestCase):
                 self.assertEqual((output_dir / path).resolve().parent, (output_dir / "tool_results").resolve())
                 self.assertLessEqual(len(path.name), 96)
                 self.assertTrue((output_dir / path).is_file())
+
+    def test_tool_result_names_reserve_complete_casefolded_candidates(self) -> None:
+        messages = [
+            {"toolCallId": call_id}
+            for call_id in ("call", "CALL", "call-2", "call", "CALL-2")
+        ]
+
+        names = DciRunRecorder._tool_result_names(messages)
+
+        self.assertEqual(
+            names,
+            ["call.json", "CALL-2.json", "call-2-2.json", "call-3.json", "CALL-2-3.json"],
+        )
+        self.assertEqual(len({name.casefold() for name in names}), len(names))
+
+    def test_valid_tool_ids_with_suffix_collisions_keep_distinct_externalized_bodies(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            output_dir = root / "run"
+            recorder = DciRunRecorder(
+                output_dir=output_dir,
+                request=request(root),
+                paths=resolve_dci_paths(root),
+                features=DciConversationFeatures(externalize_tool_results=True),
+            )
+            for index, call_id in enumerate(("call", "CALL", "call-2"), 1):
+                recorder.record_event(
+                    {
+                        "type": "tool_execution_start",
+                        "toolCallId": call_id,
+                        "toolName": "read",
+                        "args": {"path": str(index)},
+                    }
+                )
+                recorder.record_event(
+                    {
+                        "type": "tool_execution_end",
+                        "toolCallId": call_id,
+                        "toolName": "read",
+                        "isError": False,
+                        "result": f"body-{index}",
+                    }
+                )
+                recorder.record_event(
+                    {
+                        "type": "message_end",
+                        "message": {
+                            "role": "toolResult",
+                            "toolCallId": call_id,
+                            "content": [{"type": "text", "text": f"body-{index}"}],
+                        },
+                    }
+                )
+            recorder.finalize(status="failed")
+
+            processed = json.loads((output_dir / "conversation.json").read_text())
+            pointers = [
+                message["context_management"]["tool_result"]["externalized"]["path"]
+                for message in processed["messages"]
+            ]
+            self.assertEqual(len({pointer.casefold() for pointer in pointers}), 3)
+            bodies = [
+                json.loads((output_dir / pointer).read_text())["message"]["content"][0]["text"]
+                for pointer in pointers
+            ]
+            self.assertEqual(bodies, ["body-1", "body-2", "body-3"])
 
 
 if __name__ == "__main__":

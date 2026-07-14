@@ -17,7 +17,12 @@ from asterion.adapters.pi import PiProtocolAdapter, map_pi_capabilities
 from asterion.dci.config import DciPaths
 from asterion.dci.run import DciRunRequest
 from asterion.runtime.host import RunEvent
-from asterion.runtime.protocol import PROTOCOL_VERSION, validate_event_stream, validate_run_request
+from asterion.runtime.protocol import (
+    MAX_DEADLINE_MS,
+    PROTOCOL_VERSION,
+    validate_event_stream,
+    validate_run_request,
+)
 
 try:
     import fcntl
@@ -300,6 +305,14 @@ class DciConversationFeatures:
     strip_usage: bool = False
 
     def __post_init__(self) -> None:
+        for name in (
+            "clear_tool_results",
+            "externalize_tool_results",
+            "strip_thinking",
+            "strip_usage",
+        ):
+            if not isinstance(getattr(self, name), bool):
+                raise ValueError(f"{name} must be boolean")
         keep_last = self.clear_tool_results_keep_last
         if isinstance(keep_last, bool) or not isinstance(keep_last, int) or keep_last < 0:
             raise ValueError("clear_tool_results_keep_last must be >= 0")
@@ -319,12 +332,23 @@ class DciConversationFeatures:
             return cls()
         if not isinstance(value, dict):
             raise ValueError("DCI conversation features are invalid")
+        known = {
+            "clear_tool_results",
+            "clear_tool_results_keep_last",
+            "externalize_tool_results",
+            "strip_thinking",
+            "strip_usage",
+        }
+        if unknown := set(value) - known:
+            raise ValueError(
+                f"DCI conversation features contain unknown fields: {', '.join(sorted(unknown))}"
+            )
         return cls(
-            clear_tool_results=bool(value.get("clear_tool_results", False)),
+            clear_tool_results=value.get("clear_tool_results", False),
             clear_tool_results_keep_last=value.get("clear_tool_results_keep_last", 3),
-            externalize_tool_results=bool(value.get("externalize_tool_results", False)),
-            strip_thinking=bool(value.get("strip_thinking", False)),
-            strip_usage=bool(value.get("strip_usage", False)),
+            externalize_tool_results=value.get("externalize_tool_results", False),
+            strip_thinking=value.get("strip_thinking", False),
+            strip_usage=value.get("strip_usage", False),
         )
 
 
@@ -347,6 +371,29 @@ def _safe_tool_stem(value: object) -> str:
     text = re.sub(r"[^A-Za-z0-9._-]+", "-", text.replace("\\", "/"))
     text = text.strip(".-_") or "event"
     return text[:80]
+
+
+def _validate_recorder_resume_state(
+    state: dict[str, Any],
+    request: DciRunRequest,
+) -> None:
+    if state.get("status") not in {"failed", "incomplete", "running"}:
+        raise DciArtifactError("DCI resume state is invalid")
+    expected = {
+        "run_id": request.run_id,
+        "question": request.question,
+        "cwd": str(request.cwd),
+        "provider": request.provider,
+        "model": request.model,
+        "tools": request.tools,
+        "max_turns": request.max_turns,
+        "runtime_context_level": request.runtime_context_level,
+        "thinking_level": request.thinking_level,
+        "node_max_old_space_size_mb": request.node_max_old_space_size_mb,
+        "keep_session": request.keep_session,
+    }
+    if any(state.get(name) != value for name, value in expected.items()):
+        raise DciArtifactError("DCI resume state is invalid")
 
 
 def _write_private_text_at(
@@ -412,13 +459,16 @@ class DciRunRecorder:
         self.latest_model_context_path = self.output_dir / "latest_model_context.json"
         self.protocol_dir = self.output_dir / "protocol"
         try:
-            self._protocol_fd = _open_private_directory_at(self._root_fd, "protocol")
             if resume:
                 self.state = _read_json_object_at(self._root_fd, "state.json")
+                _validate_recorder_resume_state(self.state, request)
+                persisted_features = DciConversationFeatures.from_mapping(
+                    self.state.get("conversation_features")
+                )
                 if features is None:
-                    self.features = DciConversationFeatures.from_mapping(
-                        self.state.get("conversation_features")
-                    )
+                    self.features = persisted_features
+                elif self.features != persisted_features:
+                    raise DciArtifactError("DCI resume state is invalid")
                 self.conversation_full = _read_json_object_at(
                     self._root_fd,
                     "conversation_full.json",
@@ -437,6 +487,9 @@ class DciRunRecorder:
                 self.latest_model_context["status"] = "running"
                 self.conversation_full["pending_message"] = None
             else:
+                existing_names = set(os.listdir(self._root_fd))
+                if existing_names - {DciRunLock.LOCK_NAME}:
+                    raise DciArtifactError("DCI output directory is not empty")
                 attempt = 1
                 _write_private_text_at(self._root_fd, "events.jsonl", "")
                 _write_private_text_at(self._root_fd, "question.txt", f"{request.question}\n")
@@ -513,6 +566,7 @@ class DciRunRecorder:
                     "runtime_context_management": None,
                     "latest": None,
                 }
+            self._protocol_fd = _open_private_directory_at(self._root_fd, "protocol")
             attempt_stem = f"attempt-{attempt:04d}"
             self._protocol_request_name = f"{attempt_stem}.request.json"
             self._protocol_events_name = f"{attempt_stem}.events.jsonl"
@@ -528,6 +582,10 @@ class DciRunRecorder:
                 "input": {"text": request.question},
                 "requested_capabilities": capabilities,
             }
+            if request.timeout_seconds is not None and request.timeout_seconds > 0:
+                deadline_ms = int(round(request.timeout_seconds * 1000))
+                if deadline_ms <= MAX_DEADLINE_MS:
+                    protocol_request["deadline_ms"] = max(1, deadline_ms)
             validate_run_request(protocol_request)
             _atomic_write_json_at(self._protocol_fd, self._protocol_request_name, protocol_request)
             self.adapter = PiProtocolAdapter(
@@ -860,14 +918,22 @@ class DciRunRecorder:
 
     @staticmethod
     def _tool_result_names(messages: list[dict[str, Any]]) -> list[str]:
-        counts: dict[str, int] = {}
+        next_suffix: dict[str, int] = {}
+        reserved: set[str] = set()
         names: list[str] = []
         for message in messages:
             stem = _safe_tool_stem(message.get("toolCallId"))
-            collision_key = stem.casefold()
-            counts[collision_key] = counts.get(collision_key, 0) + 1
-            suffix = "" if counts[collision_key] == 1 else f"-{counts[collision_key]}"
-            names.append(f"{stem}{suffix}.json")
+            stem_key = stem.casefold()
+            suffix_number = next_suffix.get(stem_key, 1)
+            while True:
+                suffix = "" if suffix_number == 1 else f"-{suffix_number}"
+                candidate = f"{stem[: 80 - len(suffix)]}{suffix}.json"
+                if candidate.casefold() not in reserved:
+                    break
+                suffix_number += 1
+            reserved.add(candidate.casefold())
+            next_suffix[stem_key] = suffix_number + 1
+            names.append(candidate)
         return names
 
     def _clear_tool_result(self, message: dict[str, Any]) -> None:
