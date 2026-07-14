@@ -519,3 +519,4 @@
 - 19:48 AF-230 authorized Pi-default acceptance used one actual provider-backed `asterion-dci run` and no Judge request; it completed with 314 raw events, 40 valid protocol events, five protected/externalized tool results, private parseable artifacts, safe provenance, exact final digest, and body-free projection.
 - 19:48 AF-230 fixture resume and no-TTY terminal/Node command-construction acceptance passed; no second provider request was used to manufacture failure.
 - 19:48 AF-230 closed after all native operator/artifact rows and approved boundaries passed; AF-240 activated for governed batch, evaluation, and export planning. [pending closure commit]
+- 19:50 AF-230 closure evidence committed to preserve the verified AF-240 recovery boundary. [12014c2]
