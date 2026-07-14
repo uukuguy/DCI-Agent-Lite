@@ -5,12 +5,15 @@ from __future__ import annotations
 
 import argparse
 import ast
+import functools
 import hashlib
 import importlib
 import json
+import os
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import cast
 
@@ -96,9 +99,25 @@ PRODUCT_SEMANTIC_SELECTORS = frozenset(
             "test_af250_h002_judge_request_and_cache_invalidation_semantics_match",
             "test_af250_h002_run_normalizer_rejects_missing_or_malformed_evidence",
             "test_af250_h002_run_semantics_retain_typed_max_turns",
+            "test_af250_h003_fresh_installed_product_runs_outside_repository",
         )
     }
 )
+LAUNCHER_RELATIVES = (
+    "bcplus_eval/run_L3.sh",
+    "bcplus_eval/run_bcplus_eval_openai.sh",
+    "bright/run_bio.sh",
+    "bright/run_earth_science.sh",
+    "bright/run_economics.sh",
+    "bright/run_robotics.sh",
+    "qa/run_2wikimultihopqa_dev_sample50.sh",
+    "qa/run_bamboogle_test_sample50.sh",
+    "qa/run_hotpotqa_dev_sample50.sh",
+    "qa/run_musique_dev_sample50.sh",
+    "qa/run_nq_test_sample50.sh",
+    "qa/run_triviaqa_test_sample50.sh",
+)
+_VERIFIED_DYNAMIC_SELECTORS: set[str] = set()
 
 
 def load_product_matrix(root: Path) -> dict[str, object]:
@@ -125,7 +144,10 @@ def _safe_repo_file(root: Path, value: object, label: str) -> str:
     return value
 
 
+@functools.lru_cache(maxsize=None)
 def _resolve_selector(root: Path, selector: str) -> bool:
+    if selector in _VERIFIED_DYNAMIC_SELECTORS:
+        return True
     parts = selector.split(".")
     if len(parts) == 4 and parts[0] == "tests":
         path = root / "tests" / f"{parts[1]}.py"
@@ -134,12 +156,12 @@ def _resolve_selector(root: Path, selector: str) -> bool:
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in tree.body:
             if isinstance(node, ast.ClassDef) and node.name == parts[2]:
-                return any(
+                if any(
                     isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef))
                     and child.name == parts[3]
                     for child in node.body
-                )
-        return False
+                ):
+                    return True
     root_text = str(root)
     added_root = root_text not in sys.path
     if added_root:
@@ -160,6 +182,29 @@ def _resolve_selector(root: Path, selector: str) -> bool:
     finally:
         if added_root:
             sys.path.remove(root_text)
+
+
+@functools.lru_cache(maxsize=None)
+def _resolve_dynamic_selectors(root: Path, selectors: tuple[str, ...]) -> bool:
+    program = """
+import importlib
+import json
+import sys
+for selector in json.load(sys.stdin):
+    module_name, class_name, method_name = selector.rsplit('.', 2)
+    value = getattr(getattr(importlib.import_module(module_name), class_name), method_name)
+    if not callable(value):
+        raise SystemExit(1)
+"""
+    completed = subprocess.run(
+        ["uv", "run", "python", "-c", program],
+        cwd=root,
+        input=json.dumps(selectors),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    return completed.returncode == 0
 
 
 def _validate_argv(root: Path, value: object) -> tuple[str, ...]:
@@ -199,7 +244,9 @@ def _validate_argv(root: Path, value: object) -> tuple[str, ...]:
     raise ValueError("argv shape is not allowlisted")
 
 
-def _validate_inventory(root: Path, value: object) -> None:
+def validate_batch_inventory(root: Path, value: object) -> tuple[str, ...]:
+    """Validate and resolve every digest-bound AF-240 delegated test selector."""
+
     if not isinstance(value, dict):
         raise ValueError("batch inventory reference must be an object")
     inventory = cast(dict[str, object], value)
@@ -216,6 +263,55 @@ def _validate_inventory(root: Path, value: object) -> None:
     rows = parsed.get("rows") if isinstance(parsed, dict) else None
     if inventory["row_count"] != 533 or not isinstance(rows, list) or len(rows) != 533:
         raise ValueError("batch inventory row count mismatch")
+    selectors: list[str] = []
+    for row in rows:
+        values = row.get("current_verification_tests") if isinstance(row, dict) else None
+        if (
+            row.get("implementation_status") != "implemented"
+            if isinstance(row, dict)
+            else True
+        ) or not isinstance(values, list) or len(values) != 1:
+            raise ValueError("batch inventory selector is missing")
+        selector = values[0]
+        if not isinstance(selector, str) or not selector.startswith("tests."):
+            raise ValueError("batch inventory selector is not executable")
+        selectors.append(selector)
+    if len(set(selectors)) != 533:
+        raise ValueError("batch inventory selectors are not unique")
+    unresolved = tuple(
+        selector for selector in selectors if not _resolve_selector(root, selector)
+    )
+    if unresolved and not _resolve_dynamic_selectors(root, unresolved):
+        raise ValueError("batch inventory selector is not executable")
+    _VERIFIED_DYNAMIC_SELECTORS.update(unresolved)
+    return tuple(selectors)
+
+
+def validate_launcher_pairs(root: Path) -> tuple[tuple[str, str], ...]:
+    """Require the exact twelve independent source/Asterion launcher pairs."""
+
+    expected = {
+        f"scripts/{relative}" for relative in LAUNCHER_RELATIVES
+    }
+    expected_targets = {
+        f"scripts/asterion/{relative}" for relative in LAUNCHER_RELATIVES
+    }
+    actual = {
+        path.relative_to(root).as_posix()
+        for family in ("bcplus_eval", "qa", "bright")
+        for path in (root / "scripts" / family).glob("run_*.sh")
+    }
+    actual_targets = {
+        path.relative_to(root).as_posix()
+        for family in ("bcplus_eval", "qa", "bright")
+        for path in (root / "scripts" / "asterion" / family).glob("run_*.sh")
+    }
+    if actual != expected or actual_targets != expected_targets:
+        raise ValueError("source/Asterion launcher pairs are not exact")
+    return tuple(
+        (f"scripts/{relative}", f"scripts/asterion/{relative}")
+        for relative in LAUNCHER_RELATIVES
+    )
 
 
 def _nonempty_strings(value: object, label: str) -> list[str]:
@@ -234,7 +330,8 @@ def validate_product_matrix(
     _require_exact_fields(matrix, MATRIX_FIELDS, "matrix")
     if matrix["schema"] != SCHEMA:
         raise ValueError("unsupported product matrix schema")
-    _validate_inventory(root, matrix["batch_inventory"])
+    validate_batch_inventory(root, matrix["batch_inventory"])
+    validate_launcher_pairs(root)
     raw_rows = matrix["rows"]
     if not isinstance(raw_rows, list):
         raise ValueError("product matrix rows must be an array")
@@ -301,7 +398,11 @@ def validate_product_matrix(
             ):
                 raise ValueError("matrix governance selector cannot prove product behavior")
             if not all(
-                selector.startswith("tests.") and _resolve_selector(root, selector)
+                selector.startswith("tests.")
+                and (
+                    selector in _VERIFIED_DYNAMIC_SELECTORS
+                    or _resolve_selector(root, selector)
+                )
                 for selector in selectors
             ):
                 raise ValueError("selectors must resolve to executable tests")
@@ -356,7 +457,168 @@ def run_local_evidence(
                 "exit_status": max(statuses, default=1),
             }
         )
-    return {"rows": results, "provider_backed_executed": 0}
+    inventory = load_product_matrix(root)["batch_inventory"]
+    delegated = validate_batch_inventory(root, inventory)
+    launchers = validate_launcher_pairs(root)
+    return {
+        "rows": results,
+        "provider_backed_executed": 0,
+        "delegated_inventory": f"{len(delegated)}/533",
+        "launcher_pairs": f"{len(launchers)}/12",
+    }
+
+
+_FAKE_NODE = r'''#!/usr/bin/env python3
+import json
+import sys
+
+if sys.argv[1:] == ["--version"]:
+    print("v20.0.0")
+    raise SystemExit(0)
+for line in sys.stdin:
+    request = json.loads(line)
+    request_id = request.get("id")
+    if request.get("type") == "get_state":
+        print(json.dumps({
+            "type": "response", "id": request_id, "success": True,
+            "data": {"isStreaming": False, "isCompacting": False,
+                     "messageCount": 0, "pendingMessageCount": 0},
+        }), flush=True)
+    elif request.get("type") == "prompt":
+        print(json.dumps({"type": "response", "id": request_id, "success": True}), flush=True)
+        print(json.dumps({"type": "agent_start"}), flush=True)
+        print(json.dumps({"type": "message_update", "assistantMessageEvent": {
+            "type": "text_delta", "delta": "PRIVATE-FIXTURE-ANSWER"}}), flush=True)
+        print(json.dumps({"type": "agent_settled"}), flush=True)
+'''
+
+
+def _checked_run(
+    argv: list[str], *, cwd: Path, environment: dict[str, str]
+) -> subprocess.CompletedProcess[str]:
+    completed = subprocess.run(
+        argv,
+        cwd=cwd,
+        env=environment,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise RuntimeError("installed product proof command failed")
+    return completed
+
+
+def run_installed_product_proof(root: Path) -> dict[str, object]:
+    """Build, isolate, and execute the installed Pi-default DCI product model-free."""
+
+    with tempfile.TemporaryDirectory() as temporary_directory:
+        temporary_root = Path(temporary_directory).resolve()
+        dist = temporary_root / "dist"
+        outside = temporary_root / "outside"
+        venv = temporary_root / "venv"
+        fake_bin = temporary_root / "fake-bin"
+        pi_package = temporary_root / "fake-pi" / "packages" / "coding-agent"
+        pi_agent = temporary_root / "fake-pi" / ".pi" / "agent"
+        output_root = temporary_root / "native-runs"
+        for directory in (outside, fake_bin, pi_package / "dist", pi_agent):
+            directory.mkdir(parents=True, exist_ok=True)
+        (pi_package / "dist" / "cli.js").write_text("fixture\n", encoding="utf-8")
+        fake_node = fake_bin / "node"
+        fake_node.write_text(_FAKE_NODE, encoding="utf-8")
+        fake_node.chmod(0o755)
+
+        build_environment = os.environ.copy()
+        build_environment.pop("PYTHONPATH", None)
+        _checked_run(
+            ["uv", "build", "--package", "asterion", "--wheel", "--out-dir", str(dist)],
+            cwd=root,
+            environment=build_environment,
+        )
+        wheels = tuple(dist.glob("*.whl"))
+        if len(wheels) != 1:
+            raise RuntimeError("installed product proof wheel count is invalid")
+        _checked_run(
+            ["uv", "venv", "--python", sys.executable, str(venv)],
+            cwd=outside,
+            environment=build_environment,
+        )
+        python = venv / "bin" / "python"
+        _checked_run(
+            ["uv", "pip", "install", "--python", str(python), str(wheels[0])],
+            cwd=outside,
+            environment=build_environment,
+        )
+
+        environment = build_environment | {
+            "PATH": os.pathsep.join((str(fake_bin), str(venv / "bin"), build_environment.get("PATH", ""))),
+            "DCI_PI_DIR": str(temporary_root / "fake-pi"),
+            "DCI_PROVIDER": "fixture-provider",
+            "DCI_MODEL": "fixture-model",
+            "DCI_TOOLS": "read,bash",
+            "DCI_RUNTIME_CONTEXT_LEVEL": "level3",
+            "DCI_PI_THINKING_LEVEL": "high",
+            "ASTERION_RUNTIME_CWD": str(outside),
+            "ASTERION_DCI_OUTPUT_ROOT": str(output_root),
+        }
+        probe = _checked_run(
+            [
+                str(python), "-I", "-c",
+                "from importlib.util import find_spec; "
+                "from asterion.dci.cli import _load_batch_profiles; "
+                "assert find_spec('dci') is None; print(len(_load_batch_profiles()))",
+            ],
+            cwd=outside,
+            environment=environment,
+        )
+        help_result = _checked_run(
+            [str(venv / "bin" / "asterion-dci"), "--help"],
+            cwd=outside,
+            environment=environment,
+        )
+        list_result = _checked_run(
+            [str(venv / "bin" / "asterion"), "list"],
+            cwd=outside,
+            environment=environment,
+        )
+        application = _checked_run(
+            [
+                str(venv / "bin" / "asterion"), "run",
+                "--provider", "dci-agent-lite",
+                "--runtime", "pi.reference",
+                "--application", "dci.research-capability@1.0.0",
+                "--run-id", "installed-fixture",
+                "--input", "PRIVATE-FIXTURE-QUESTION",
+            ],
+            cwd=outside,
+            environment=environment,
+        )
+        payload = json.loads(application.stdout)
+        artifact = payload["artifacts"][0]["value"]
+        states = tuple(output_root.rglob("state.json"))
+        if len(states) != 1:
+            raise RuntimeError("installed product proof native state is invalid")
+        state = json.loads(states[0].read_text(encoding="utf-8"))
+        serialized = application.stdout + application.stderr
+        return {
+            "dci_importable": False,
+            "profiles": int(probe.stdout.strip()),
+            "asterion_dci_help": help_result.returncode,
+            "asterion_list": list_result.returncode,
+            "installed_application": state["status"],
+            "answer_artifact_uri": artifact["answer_artifact_uri"],
+            "native_artifact_uri": artifact["state_artifact_uri"],
+            "body_free": not any(
+                secret in serialized
+                for secret in ("PRIVATE-FIXTURE-QUESTION", "PRIVATE-FIXTURE-ANSWER")
+            ),
+            "runtime_options": {
+                name: state[name]
+                for name in (
+                    "provider", "model", "tools", "runtime_context_level", "thinking_level"
+                )
+            },
+        }
 
 
 def main() -> int:
@@ -372,6 +634,9 @@ def main() -> int:
     result = run_local_evidence(root, rows)
     for row in cast(list[dict[str, object]], result["rows"]):
         print(f"{row['id']} {row['status']} exit={row['exit_status']}")
+    print(f"delegated-inventory {result['delegated_inventory']}")
+    print(f"launcher-pairs {result['launcher_pairs']}")
+    print(f"provider-backed-executed {result['provider_backed_executed']}")
     return 0 if all(row["status"] == "PASS" for row in result["rows"]) else 1
 
 

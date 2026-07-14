@@ -652,3 +652,6 @@
 - 04:44 AF-250 Task 3 hardens selector identity, stable configuration, and native cross-product evidence. [2410820]
 - 04:46 AF-250 Task 3 independently approves exact selectors, retained configuration, and native Judge/cache/batch semantic comparisons.
 - 04:47 AF-250 Task 3 approval committed so installed-product proof can proceed from reviewed semantics. [feb6441]
+- 04:48 Recovery checkpoint now directs autonomous work to AF-250 Task 4 installed-product proof. [c938c54]
+- 04:50 AF-250 Task 4 RED confirms the product verifier lacks 533-selector execution, exact 12-pair launcher composition, installed-wheel isolation, and installed fake-Pi application proof.
+- 04:59 AF-250 Task 4 GREEN passes 106 focused tests, all eight model-free product rows, 533/533 delegated selectors, 12/12 launcher pairs, isolated-wheel/application execution, compile, Ruff, scope, and diff gates with zero provider-backed commands.

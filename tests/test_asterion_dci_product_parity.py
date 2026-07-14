@@ -46,6 +46,7 @@ from tests.asterion_dci_parity_helpers import (
     canonical_judge_semantics,
     canonical_run_semantics,
 )
+import tools.verify_asterion_dci_product as product_verifier
 
 from tools.verify_asterion_dci_product import (
     load_product_matrix,
@@ -130,8 +131,15 @@ EXPECTED_BEHAVIOR_SELECTORS = {
     "installed-pi-application": {
         "tests.test_builtin_dci_application.BuiltinDciApplicationTests.test_selected_provider_uses_one_asterion_resource_root",
         "tests.test_asterion_dci_application_executor.AsterionDciApplicationExecutorTests.test_maps_runtime_cwd_and_native_paths_to_one_pi_run",
+        "tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h003_fresh_installed_product_runs_outside_repository",
     },
 }
+EXPECTED_BEHAVIOR_SELECTORS["batch-ir-analysis-and-exports"].update(
+    row["current_verification_tests"][0]
+    for row in json.loads(
+        (ROOT / "assets/dci/batch-parity.json").read_text(encoding="utf-8")
+    )["rows"]
+)
 
 
 class _SourceFixturePiClient:
@@ -518,6 +526,39 @@ class AsterionDciProductParityTests(unittest.TestCase):
             inventory["sha256"], hashlib.sha256(path.read_bytes()).hexdigest()
         )
 
+    def test_inventory_requires_all_533_resolvable_executable_selectors(self) -> None:
+        selectors = product_verifier.validate_batch_inventory(
+            ROOT, self.document["batch_inventory"]
+        )
+        self.assertEqual(len(selectors), 533)
+        self.assertEqual(len(set(selectors)), 533)
+        rejected = selectors[17]
+        with mock.patch.object(
+            product_verifier,
+            "_resolve_selector",
+            side_effect=lambda root, selector: selector != rejected,
+        ), mock.patch.object(
+            product_verifier, "_resolve_dynamic_selectors", return_value=False
+        ):
+            with self.assertRaisesRegex(ValueError, "inventory selector"):
+                product_verifier.validate_batch_inventory(
+                    ROOT, self.document["batch_inventory"]
+                )
+
+    def test_exact_twelve_source_asterion_launcher_pairs_are_required(self) -> None:
+        pairs = product_verifier.validate_launcher_pairs(ROOT)
+        self.assertEqual(len(pairs), 12)
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            for source, target in pairs:
+                for relative in (source, target):
+                    destination = root / relative
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    destination.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+            (root / pairs[0][1]).unlink()
+            with self.assertRaisesRegex(ValueError, "launcher pairs"):
+                product_verifier.validate_launcher_pairs(root)
+
     def test_matrix_rejects_unknown_fields_and_duplicate_ids(self) -> None:
         unknown = copy.deepcopy(self.document)
         unknown["extra"] = True
@@ -647,7 +688,7 @@ class AsterionDciProductParityTests(unittest.TestCase):
             self.assertFalse(
                 any(
                     selector.startswith("tests.test_asterion_dci_product_parity")
-                    and ".test_af250_h002_" not in selector
+                    and selector not in product_verifier.PRODUCT_SEMANTIC_SELECTORS
                     for selector in selectors
                 )
             )
@@ -718,6 +759,8 @@ class AsterionDciProductParityTests(unittest.TestCase):
         self.assertEqual(result["provider_backed_executed"], 0)
         self.assertNotIn("private body", json.dumps(result))
         self.assertNotIn("secret", json.dumps(result))
+        self.assertEqual(result["delegated_inventory"], "533/533")
+        self.assertEqual(result["launcher_pairs"], "12/12")
         for call in run.call_args_list:
             self.assertIs(call.kwargs["shell"], False)
             self.assertEqual(call.kwargs["cwd"], ROOT)
@@ -1210,6 +1253,27 @@ class AsterionDciProductParityTests(unittest.TestCase):
             if not row["id"].startswith("installed-"):
                 continue
             self.assertTrue(all(item["tier"] == "model-free" for item in row["local_evidence"]))
+
+    def test_af250_h003_fresh_installed_product_runs_outside_repository(self) -> None:
+        evidence = product_verifier.run_installed_product_proof(ROOT)
+        self.assertEqual(evidence["dci_importable"], False)
+        self.assertEqual(evidence["profiles"], 12)
+        self.assertEqual(evidence["asterion_dci_help"], 0)
+        self.assertEqual(evidence["asterion_list"], 0)
+        self.assertEqual(evidence["installed_application"], "completed")
+        self.assertEqual(evidence["answer_artifact_uri"], "final.txt")
+        self.assertEqual(evidence["native_artifact_uri"], "state.json")
+        self.assertEqual(evidence["body_free"], True)
+        self.assertEqual(
+            evidence["runtime_options"],
+            {
+                "provider": "fixture-provider",
+                "model": "fixture-model",
+                "tools": "read,bash",
+                "runtime_context_level": "level3",
+                "thinking_level": "high",
+            },
+        )
 
     # AF-250-H-004: bounded evidence and final matrix closure governance.
     def test_af250_h004_all_rows_are_supported(self) -> None:
