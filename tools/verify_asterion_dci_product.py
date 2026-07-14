@@ -81,6 +81,18 @@ MATRIX_ONLY_TEST_PREFIXES = (
     "test_default_executor_",
     "test_validate_only_",
 )
+PRODUCT_SEMANTIC_SELECTOR_NAMES = frozenset(
+    {
+        "test_af250_h002_batch_semantics_keep_counts_ndcg_exports_and_reuse",
+        "test_af250_h002_bcplus_and_bright_export_transforms_match",
+        "test_af250_h002_completed_native_runs_have_equal_stable_semantics",
+        "test_af250_h002_configuration_precedence_and_effective_pi_argv_match",
+        "test_af250_h002_failed_and_resumed_lifecycle_is_not_normalized_away",
+        "test_af250_h002_judge_request_and_cache_invalidation_semantics_match",
+        "test_af250_h002_judge_semantics_keep_verdict_type_and_fingerprint",
+        "test_af250_h002_run_normalizer_rejects_missing_or_malformed_evidence",
+    }
+)
 
 
 def load_product_matrix(root: Path) -> dict[str, object]:
@@ -278,6 +290,8 @@ def validate_product_matrix(
             if any(
                 selector.startswith("tests.test_asterion_dci_product_parity")
                 and selector.rsplit(".", 1)[-1].startswith(MATRIX_ONLY_TEST_PREFIXES)
+                and selector.rsplit(".", 1)[-1]
+                not in PRODUCT_SEMANTIC_SELECTOR_NAMES
                 for selector in selectors
             ):
                 raise ValueError("matrix governance selector cannot prove product behavior")

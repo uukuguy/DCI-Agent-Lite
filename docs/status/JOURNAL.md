@@ -642,3 +642,7 @@
 - 04:10 AF-250 Task 2 review hardens exact argv evidence with atomic single-invocation claims and advances the recovery baton to Task 3.
 - 04:12 AF-250 Task 2 review prevents hidden example invocations and advances recovery to Task 3. [bff32d7]
 - 04:16 AF-250 Task 2 independently approves four executable examples, exact single-call argv, semantic parity, and independent product boundaries.
+- 04:17 AF-250 Task 2 approval checkpoint committed so Task 3 can start from reviewed evidence. [1894a7c]
+- 04:18 AF-250 Task 3 RED confirms the canonical comparison boundary is absent: the focused product-parity suite fails with `ModuleNotFoundError: tests.asterion_dci_parity_helpers`.
+- 04:24 AF-250 Task 3 permits only an exact allowlist of executable H-002 product-semantic selectors through the matrix verifier; H-001 and non-executable H-002 governance selectors remain rejected.
+- 04:26 AF-250 Task 3 GREEN passes the exact focused run/Judge/batch/export suite plus compile, Ruff, scope, and diff gates without a provider or Judge HTTP request.
