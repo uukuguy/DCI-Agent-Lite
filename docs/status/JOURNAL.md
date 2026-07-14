@@ -492,3 +492,4 @@
 - 17:36 AF-230 Task 2 review repair committed with 41 focused and 15 URI-only projection tests passing. [f58b034]
 - 17:42 AF-230 Task 3 records credential-safe per-attempt Pi provenance, digests, summaries, and bounded stderr for auditable resume evidence. [8c30e6b]
 - 17:51 AF-230 Task 3 omits local origins and preserves byte-bounded UTF-8 stderr tails to prevent provenance leakage and overflow. [8f13368]
+- 17:56 AF-230 Task 3 normalizes legacy IPv4 loopbacks while preserving explicit one-character remote aliases for truthful safe provenance. [5609a9d]
