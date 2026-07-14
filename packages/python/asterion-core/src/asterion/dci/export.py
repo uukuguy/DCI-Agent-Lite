@@ -11,10 +11,11 @@ import re
 import secrets
 import stat
 import sys
+import tempfile
 import unicodedata
 from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
-from typing import Iterator, Sequence
+from typing import BinaryIO, Iterator, Sequence
 from urllib.parse import urlparse
 
 import pyarrow as pa
@@ -259,45 +260,76 @@ def _validate_separation(source: Path, output: Path, *, output_is_dir: bool) -> 
 
 class _ParquetInputs:
     def __init__(self, source: Path) -> None:
+        self._spools: dict[str, BinaryIO] = {}
         try:
             self.fd = _open_directory_fd(source, create=False)
             names = [name for name in os.listdir(self.fd) if name.endswith(".parquet")]
             self.names = sorted(names)
             if not self.names:
                 raise DciExportError("parquet source unavailable")
+            flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+            for name in self.names:
+                _validate_component(name)
+                source_fd = os.open(name, flags, dir_fd=self.fd)
+                try:
+                    before = os.fstat(source_fd)
+                    if not stat.S_ISREG(before.st_mode):
+                        raise DciExportError("unsafe parquet source")
+                    spool = tempfile.TemporaryFile(mode="w+b")
+                    try:
+                        while chunk := os.read(source_fd, 1024 * 1024):
+                            spool.write(chunk)
+                        after = os.fstat(source_fd)
+                        if (
+                            before.st_dev,
+                            before.st_ino,
+                            before.st_size,
+                            before.st_mtime_ns,
+                            before.st_ctime_ns,
+                        ) != (
+                            after.st_dev,
+                            after.st_ino,
+                            after.st_size,
+                            after.st_mtime_ns,
+                            after.st_ctime_ns,
+                        ):
+                            raise DciExportError("parquet source changed")
+                        spool.flush()
+                        spool.seek(0)
+                        pq.ParquetFile(spool)
+                        self._spools[name] = spool
+                    except Exception:
+                        spool.close()
+                        raise
+                finally:
+                    os.close(source_fd)
         except DciExportError:
+            for spool in self._spools.values():
+                spool.close()
             if hasattr(self, "fd"):
                 os.close(self.fd)
             raise
-        except OSError as error:
+        except (OSError, ValueError) as error:
+            for spool in self._spools.values():
+                spool.close()
             if hasattr(self, "fd"):
                 os.close(self.fd)
             raise DciExportError("parquet source unavailable") from error
 
     def close(self) -> None:
+        for spool in self._spools.values():
+            spool.close()
         os.close(self.fd)
 
     @contextmanager
     def parquet(self, name: str) -> Iterator[pq.ParquetFile]:
         _validate_component(name)
-        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
         try:
-            fd = os.open(name, flags, dir_fd=self.fd)
-            if not stat.S_ISREG(os.fstat(fd).st_mode):
-                raise DciExportError("unsafe parquet source")
-            stream = os.fdopen(fd, "rb")
-            fd = -1
-            try:
-                yield pq.ParquetFile(stream)
-            finally:
-                stream.close()
-        except DciExportError:
-            raise
-        except (OSError, ValueError) as error:
+            spool = self._spools[name]
+            spool.seek(0)
+            yield pq.ParquetFile(spool)
+        except (KeyError, OSError, ValueError) as error:
             raise DciExportError("invalid parquet source") from error
-        finally:
-            if "fd" in locals() and fd >= 0:
-                os.close(fd)
 
 
 class _SafeDirectory:
@@ -359,6 +391,25 @@ class _SafeDirectory:
             while chunk := os.read(fd, 1024 * 1024):
                 chunks.append(chunk)
             return b"".join(chunks)
+        finally:
+            os.close(fd)
+
+    def matches(self, name: str, data: bytes) -> bool:
+        _validate_component(name)
+        flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+        try:
+            fd = os.open(name, flags, dir_fd=self.fd)
+        except OSError as error:
+            raise DciExportError("unsafe existing destination") from error
+        try:
+            if not stat.S_ISREG(os.fstat(fd).st_mode):
+                raise DciExportError("unsafe existing destination")
+            offset = 0
+            while chunk := os.read(fd, 1024 * 1024):
+                if chunk != data[offset : offset + len(chunk)]:
+                    return False
+                offset += len(chunk)
+            return offset == len(data)
         finally:
             os.close(fd)
 
@@ -472,9 +523,6 @@ def _locked_root(path: Path) -> Iterator[_SafeDirectory]:
             if not stat.S_ISREG(os.fstat(lock_fd).st_mode):
                 raise OSError("lock is not a regular file")
             _lock_file(lock_fd)
-            os.ftruncate(lock_fd, 0)
-            os.write(lock_fd, f"{os.getpid()}\n".encode())
-            os.fsync(lock_fd)
         except OSError as error:
             raise DciExportError("export destination is locked") from error
         _remove_stale_temporaries(root)
@@ -645,8 +693,14 @@ def _existing_names(
         raise DciExportError("destination inventory failed") from error
     for name in values:
         if allow_controls and name in {LOCK_NAME, COMPLETE_MARKER}:
+            info = os.stat(name, dir_fd=directory.fd, follow_symlinks=False)
+            if not stat.S_ISREG(info.st_mode):
+                raise DciExportError("unsafe export control entry")
             continue
         if _is_strict_temporary(name):
+            info = os.stat(name, dir_fd=directory.fd, follow_symlinks=False)
+            if not stat.S_ISREG(info.st_mode):
+                raise DciExportError("unsafe interrupted publication")
             continue
         if _is_reserved_component(name):
             raise DciExportError("portable reserved-name collision")
@@ -763,8 +817,27 @@ def _bright_record(
     return safe_relative_path(row[identity]), (row[content] or "").encode("utf-8")
 
 
+class _BrightCollisionLedger:
+    def __init__(self) -> None:
+        self.records: dict[
+            tuple[tuple[object, ...], ...], tuple[str, int, bytes]
+        ] = {}
+
+    def add(self, relative: Path, data: bytes) -> None:
+        key = tuple(_portable_key(part) for part in relative.parts)
+        logical = relative.as_posix()
+        identity = (logical, len(data), hashlib.sha256(data).digest())
+        previous = self.records.get(key)
+        if previous is not None:
+            if previous[0] != logical:
+                raise DciExportError("portable document id collision")
+            if previous[1:] != identity[1:]:
+                raise DciExportError("duplicate document id")
+        self.records[key] = identity
+
+
 def _validate_bright_inputs(inputs: _ParquetInputs) -> None:
-    collision_ledger: dict[tuple[tuple[object, ...], ...], tuple[str, bytes]] = {}
+    collision_ledger = _BrightCollisionLedger()
     for name in inputs.names:
         with inputs.parquet(name) as parquet:
             identity, content = _schema_columns(parquet, (("id",), ("content",)))
@@ -774,15 +847,7 @@ def _validate_bright_inputs(inputs: _ParquetInputs) -> None:
                     index, columns=[identity, content]
                 ).to_pylist():
                     relative, data = _bright_record(row, identity, content)
-                    key = tuple(_portable_key(part) for part in relative.parts)
-                    logical = relative.as_posix()
-                    previous = collision_ledger.get(key)
-                    if previous is not None:
-                        if previous[0] != logical:
-                            raise DciExportError("portable document id collision")
-                        if previous[1] != data:
-                            raise DciExportError("duplicate document id")
-                    collision_ledger[key] = (logical, data)
+                    collision_ledger.add(relative, data)
 
 
 def _validate_destination_tree(
@@ -839,7 +904,9 @@ def _validate_bright_destination(inputs: _ParquetInputs, root: _SafeDirectory) -
                         ).get(_portable_key(relative.name))
                         if equivalent is not None and equivalent != relative.name:
                             raise DciExportError("portable destination collision")
-                        if equivalent is not None and current.read(equivalent) != data:
+                        if equivalent is not None and not current.matches(
+                            equivalent, data
+                        ):
                             raise DciExportError("duplicate document id")
                     finally:
                         if current is not root:
