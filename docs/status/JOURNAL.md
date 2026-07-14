@@ -478,6 +478,7 @@
 - 02:24 AF-230 detailed plan recorded after source/Asterion comparison: unify the production recorder, complete protected conversation/context evidence, add credential-safe Pi provenance, enforce single-writer resume, complete package operator inputs, and add direct TTY-only terminal mode before bounded acceptance.
 - 02:25 AF-230 原生操作器与产物计划已提交，为安全恢复和完整证据实现提供边界。[ca7fb9e]
 - 02:39 AF-230 锁权威改为运行目录 FD 的 OS 排他锁，消除名称替换竞态；元数据仅作诊断。
+- 17:14 AF-230 recorder 锁设计与 FD 相对 I/O 实现对齐，消除路径重绑定风险。[57f06fd]
 - 16:19 AF-230 Climb state registered before production work: four pending unified-recorder, protected-evidence, provenance/resume-safety, and operator/terminal hypotheses. [pending state commit]
 - 16:22 AF-230 Climb registration committed to establish governed native parity work. [713db4c]
 - 16:30 AF-230 private atomic recorder and owner-token lock committed to prevent unsafe concurrent artifact writers. [2e2aed9]
