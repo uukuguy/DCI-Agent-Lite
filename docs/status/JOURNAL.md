@@ -483,3 +483,4 @@
 - 16:39 AF-230 quarantined lock removal and fd-safe permissions close ownership races and recorder lock leaks. [53f7da4]
 - 16:50 AF-230 directory-descriptor flock replaces metadata authority to guarantee one writer across metadata races. [e2ba6c9]
 - 16:58 AF-230 recorder I/O now stays descriptor-relative to prevent path rebinding from redirecting locked writers. [38ebedf]
+- 17:03 AF-230 post-flock setup now always releases its directory FD on metadata-construction failures. [d1b88b3]
