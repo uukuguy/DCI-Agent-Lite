@@ -96,6 +96,49 @@ def _judge(correct: bool) -> dict[str, object]:
 
 
 class AsterionDciAnalysisTests(unittest.TestCase):
+    def test_native_state_timing_remains_authoritative_and_launcher_is_separate(self) -> None:
+        metrics = gather_query_metrics(
+            row={"query_id": "q-timing", "query": "q", "answer": "a"},
+            state=_state(),
+            latest_model_context={},
+            final_text="a",
+            launcher_started_at="2026-07-14T01:00:02+00:00",
+            launcher_finished_at="2026-07-14T01:00:04+00:00",
+        )
+        self.assertEqual(metrics["wall_time_seconds"], 10.0)
+        self.assertEqual(metrics["tool_time_seconds"], 3.0)
+        self.assertEqual(metrics["non_tool_time_seconds"], 7.0)
+        self.assertEqual(metrics["launcher_wall_time_seconds"], 2.0)
+
+    def test_unavailable_native_metrics_are_none_not_measured_zero(self) -> None:
+        metrics = gather_query_metrics(
+            row={"query_id": "q-not-started", "query": "q", "answer": "a"},
+            state=None,
+            latest_model_context={},
+            final_text="",
+        )
+        self.assertIsNone(metrics["wall_time_seconds"])
+        self.assertIsNone(metrics["tool_time_seconds"])
+        self.assertIsNone(metrics["non_tool_time_seconds"])
+        self.assertIsNone(metrics["agent_usage"]["total_tokens"])
+        self.assertIsNone(metrics["tool_metrics"]["call_count"])
+
+    def test_disabled_figures_markdown_is_truthful(self) -> None:
+        rows = [{"query_id": "q-1", "query": "q", "answer": "a"}]
+        results = [
+            gather_query_metrics(
+                row=rows[0], state=_state(), latest_model_context={}, final_text="a"
+            )
+        ]
+        summary = aggregate_results(results)
+        artifacts = write_analysis_artifacts(
+            results=results, rows=rows, summary=summary, include_figures=False
+        )
+        self.assertNotIn("analysis_figures/scatter_overview.png", artifacts)
+        markdown = artifacts["analysis.md"].decode("utf-8")
+        self.assertIn("Figures disabled", markdown)
+        self.assertNotIn("analysis_figures/scatter_overview.png", markdown)
+
     def test_golden_native_metric_extraction_matches_source_semantics(self) -> None:
         usage = extract_agent_usage_metrics(_state())
         tools = extract_tool_metrics(_state())
