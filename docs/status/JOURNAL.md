@@ -541,3 +541,4 @@
 - 23:29 correction: preceding AF-240 Task 3 hardening landed at 23:29, not 23:58.
 - 23:41 AF-240 Task 3 root review rejected forged native-generation path traversal; descriptor-relative evidence names now require one safe component, generation evidence follows exact canonical grammar beyond 9999, and traversal, absolute, nested, and symlink regressions pass with 61 batch, 257 Asterion DCI, and 665 full Python tests plus Ruff, compile, scope, and diff gates. [pending repair commit]
 - 23:42 AF-240 bound batch generations to query authority to block forged evidence traversal. [6813437]
+- 23:49 AF-240 reserves coordinator root names before output mutation to prevent query/evidence namespace collisions. [pending repair commit]

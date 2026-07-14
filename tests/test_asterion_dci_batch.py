@@ -57,6 +57,31 @@ class _FailingFixtureClient(_FixtureClient):
 
 
 class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
+    async def test_coordinator_names_are_rejected_before_output_mutation(self) -> None:
+        for query_id in (
+            ".inputs",
+            "．INPUTS",
+            "batch-state.json",
+            "BATCH-STATE.JSON",
+            ".asterion-dci-batch.lock",
+        ):
+            with self.subTest(query_id=query_id), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory).resolve()
+                request = _request(root)
+                request.dataset.write_text(
+                    json.dumps(
+                        {"query_id": query_id, "query": "q", "answer": "gold"}
+                    )
+                    + "\n"
+                )
+                with (
+                    patch("asterion.dci.run.PiRpcClient") as client,
+                    self.assertRaisesRegex(DciBenchmarkError, "dataset is invalid"),
+                ):
+                    await run_benchmark_async(request, paths=resolve_dci_paths(root))
+                client.assert_not_called()
+                self.assertFalse(request.output_root.exists())
+
     async def test_forged_native_generation_cannot_escape_query_authority(self) -> None:
         for attack in ("../foreign", "/absolute/foreign", "nested/foreign"):
             with self.subTest(attack=attack), tempfile.TemporaryDirectory() as temporary_directory:
