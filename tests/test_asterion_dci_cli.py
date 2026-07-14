@@ -245,6 +245,194 @@ class AsterionDciCliTests(unittest.TestCase):
             ),
         )
 
+    def test_run_preflights_evaluation_answer_file_with_resource_precedence(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            invocation = root / "invocation"
+            invocation.mkdir()
+            repo_answer = root / "gold.txt"
+            repo_answer.write_text("repo answer", encoding="utf-8")
+            previous = Path.cwd()
+            try:
+                os.chdir(invocation)
+                with (
+                    patch("asterion.dci.cli.run_pi_research") as run,
+                    patch("asterion.dci.cli.evaluate_run_directory") as evaluate,
+                ):
+                    run.return_value = fixture_result(root / "run")
+                    evaluate.return_value = {"is_correct": True}
+                    self.assertEqual(
+                        main(
+                            ["run", "--eval-answer-file", "gold.txt", "question"],
+                            repo_root=root,
+                            stdin=io.StringIO(),
+                            stdout=io.StringIO(),
+                            stderr=io.StringIO(),
+                        ),
+                        0,
+                    )
+                    self.assertEqual(
+                        evaluate.call_args.kwargs["gold_answer"], "repo answer"
+                    )
+
+                    local_answer = invocation / "gold.txt"
+                    local_answer.write_text("local answer", encoding="utf-8")
+                    self.assertEqual(
+                        main(
+                            ["run", "--eval-answer-file", "gold.txt", "question"],
+                            repo_root=root,
+                            stdin=io.StringIO(),
+                            stdout=io.StringIO(),
+                            stderr=io.StringIO(),
+                        ),
+                        0,
+                    )
+                    self.assertEqual(
+                        evaluate.call_args.kwargs["gold_answer"], "local answer"
+                    )
+            finally:
+                os.chdir(previous)
+
+    def test_run_rejects_unsafe_evaluation_answer_file_before_pi(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            target = root / "answer.txt"
+            target.write_text("answer", encoding="utf-8")
+            link = root / "answer-link.txt"
+            link.symlink_to(target)
+            unreadable = root / "unreadable.txt"
+            unreadable.write_text("answer", encoding="utf-8")
+            unreadable.chmod(0)
+            cases = ("missing.txt", str(link), str(unreadable))
+            with patch("asterion.dci.cli.run_pi_research") as run:
+                for resource in cases:
+                    with self.subTest(resource=resource):
+                        self.assertEqual(
+                            main(
+                                [
+                                    "run",
+                                    "--eval-answer-file",
+                                    resource,
+                                    "question",
+                                ],
+                                repo_root=root,
+                                stdin=io.StringIO(),
+                                stdout=io.StringIO(),
+                                stderr=io.StringIO(),
+                            ),
+                            2,
+                        )
+            unreadable.chmod(0o600)
+
+        run.assert_not_called()
+
+    def test_system_prompt_preflights_append_resource_before_renderer(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            invocation = root / "invocation"
+            invocation.mkdir()
+            append = root / "append.txt"
+            append.write_text("append", encoding="utf-8")
+            previous = Path.cwd()
+            try:
+                os.chdir(invocation)
+                with patch("asterion.dci.cli.render_pi_system_prompt") as render:
+                    render.return_value = "prompt"
+                    self.assertEqual(
+                        main(
+                            [
+                                "system-prompt",
+                                "--append-system-prompt-file",
+                                "append.txt",
+                            ],
+                            repo_root=root,
+                            stdout=io.StringIO(),
+                            stderr=io.StringIO(),
+                        ),
+                        0,
+                    )
+                    self.assertEqual(render.call_args.args[3], append)
+
+                    local_append = invocation / "append.txt"
+                    local_append.write_text("local", encoding="utf-8")
+                    self.assertEqual(
+                        main(
+                            [
+                                "system-prompt",
+                                "--append-system-prompt-file",
+                                "append.txt",
+                            ],
+                            repo_root=root,
+                            stdout=io.StringIO(),
+                            stderr=io.StringIO(),
+                        ),
+                        0,
+                    )
+                    self.assertEqual(render.call_args.args[3], local_append)
+            finally:
+                os.chdir(previous)
+
+    def test_system_prompt_rejects_unsafe_append_before_renderer(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            target = root / "append.txt"
+            target.write_text("append", encoding="utf-8")
+            link = root / "append-link.txt"
+            link.symlink_to(target)
+            unreadable = root / "unreadable.txt"
+            unreadable.write_text("append", encoding="utf-8")
+            unreadable.chmod(0)
+            with patch("asterion.dci.cli.render_pi_system_prompt") as render:
+                render.return_value = ""
+                for resource in ("missing.txt", str(link), str(unreadable)):
+                    with self.subTest(resource=resource):
+                        stderr = io.StringIO()
+                        self.assertEqual(
+                            main(
+                                [
+                                    "system-prompt",
+                                    "--append-system-prompt-file",
+                                    resource,
+                                ],
+                                repo_root=root,
+                                stdout=io.StringIO(),
+                                stderr=stderr,
+                            ),
+                            2,
+                        )
+                        self.assertEqual(
+                            stderr.getvalue(), "DCI system prompt generation failed\n"
+                        )
+            unreadable.chmod(0o600)
+
+        render.assert_not_called()
+
+    def test_run_redacts_destination_probe_oserror_before_pi(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            with (
+                patch(
+                    "asterion.dci.cli.Path.exists",
+                    side_effect=PermissionError("credential=synthetic-secret"),
+                ),
+                patch("asterion.dci.cli.run_pi_research") as run,
+            ):
+                stderr = io.StringIO()
+                code = main(
+                    ["run", "question"],
+                    repo_root=root,
+                    stdin=io.StringIO(),
+                    stdout=io.StringIO(),
+                    stderr=stderr,
+                )
+
+        self.assertEqual(code, 2)
+        run.assert_not_called()
+        self.assertEqual(stderr.getvalue(), "DCI Pi execution failed\n")
+        self.assertNotIn("synthetic-secret", stderr.getvalue())
+
     def test_asterion_examples_use_shared_env_and_package_command(self) -> None:
         for path in (
             ROOT / "scripts/examples/asterion_dci_basic_example.sh",

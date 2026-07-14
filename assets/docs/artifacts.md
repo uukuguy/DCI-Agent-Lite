@@ -37,9 +37,11 @@ Local modifications are reported as a boolean; their contents are never copied i
 
 If you pass `--system-prompt-file`, both `conversation_full.json` and
 `conversation.json` include a single `system` message built from that file and
-any appended system prompt file. Relative question/prompt resources resolve
-from the invocation directory first and repository root second, never from the
-Pi child `--cwd`; missing, unreadable, or symlinked resources fail before Pi.
+any appended system prompt file. Relative question, prompt, and
+evaluation-answer resources resolve from the invocation directory first and
+repository root second, never from the Pi child `--cwd`; missing, unreadable,
+or symlinked resources fail before Pi. The standalone `system-prompt` command
+applies the same boundary to its appended prompt before rendering.
 
 ## Artifact-Only Transcript Compaction
 

@@ -108,10 +108,14 @@ def main(
         args = parser.parse_args(argv)
     except SystemExit as error:
         return 0 if error.code == 0 else 2
-    invocation_cwd = Path.cwd().resolve()
-    root = invocation_cwd if repo_root is None else Path(repo_root).resolve()
-    load_asterion_dci_env(root)
-    paths = resolve_dci_paths(root)
+    try:
+        invocation_cwd = Path.cwd().resolve()
+        root = invocation_cwd if repo_root is None else Path(repo_root).resolve()
+        load_asterion_dci_env(root)
+        paths = resolve_dci_paths(root)
+    except (OSError, ValueError):
+        _write_command_failure(stderr, args.command)
+        return 2
     if args.command == "evaluate":
         try:
             result = evaluate_run_directory(
@@ -154,12 +158,17 @@ def main(
         return 0
     if args.command == "system-prompt":
         try:
+            append_system_prompt_file = _resolve_resource(
+                args.append_system_prompt_file,
+                invocation_cwd=invocation_cwd,
+                repo_root=root,
+            )
             stdout.write(
                 render_pi_system_prompt(
                     paths,
-                    args.cwd,
+                    _absolute_from_invocation(args.cwd, invocation_cwd),
                     args.tools,
-                    args.append_system_prompt_file,
+                    append_system_prompt_file,
                 )
             )
             return 0
@@ -168,9 +177,10 @@ def main(
             return 2
     if args.command == "resume":
         try:
-            request = resume_request_from_output_dir(args.output_dir)
-            result = run_pi_research(paths, request, output_dir=args.output_dir)
-        except DciRunError:
+            output_dir = _absolute_from_invocation(args.output_dir, invocation_cwd)
+            request = resume_request_from_output_dir(output_dir)
+            result = run_pi_research(paths, request, output_dir=output_dir)
+        except (DciRunError, OSError, ValueError):
             stderr.write("DCI Pi execution failed\n")
             return 2
         _write_run_result(stdout, result)
@@ -190,6 +200,18 @@ def main(
             invocation_cwd=invocation_cwd,
             repo_root=root,
         )
+        evaluation_answer_file = _resolve_resource(
+            args.eval_answer_file,
+            invocation_cwd=invocation_cwd,
+            repo_root=root,
+        )
+        evaluation_answer = _read_evaluation_answer(
+            args, evaluation_answer_file=evaluation_answer_file
+        )
+        if (
+            args.eval_answer is not None or args.eval_answer_file is not None
+        ) and not evaluation_answer:
+            raise ValueError("evaluation answer is required")
         question = _read_question(args, stdin, question_file=question_file)
         run_cwd = _absolute_from_invocation(args.cwd, invocation_cwd)
         if args.run_id is not None and not _safe_run_id(args.run_id):
@@ -231,7 +253,7 @@ def main(
         )
         if output_dir.exists() or output_dir.is_symlink():
             raise ValueError("run destination already exists")
-    except ValueError:
+    except (OSError, RuntimeError, ValueError):
         stderr.write("DCI Pi execution failed\n")
         return 2
     try:
@@ -243,7 +265,7 @@ def main(
         try:
             verdict = evaluate_run_directory(
                 result.output_dir,
-                gold_answer=_read_evaluation_answer(args),
+                gold_answer=evaluation_answer,
                 judge_config=JudgeConfig.from_env(),
             )
         except (DciEvaluationError, OSError, ValueError):
@@ -330,10 +352,25 @@ def _safe_run_id(value: str) -> bool:
     )
 
 
-def _read_evaluation_answer(args: argparse.Namespace) -> str:
-    if args.eval_answer_file is not None:
-        return args.eval_answer_file.read_text(encoding="utf-8").strip()
-    return str(args.eval_answer)
+def _read_evaluation_answer(
+    args: argparse.Namespace,
+    *,
+    evaluation_answer_file: Path | None,
+) -> str | None:
+    if evaluation_answer_file is not None:
+        return evaluation_answer_file.read_text(encoding="utf-8").strip()
+    if args.eval_answer is None:
+        return None
+    return str(args.eval_answer).strip()
+
+
+def _write_command_failure(stderr: TextIO, command: str) -> None:
+    messages = {
+        "evaluate": "DCI evaluation failed\n",
+        "benchmark": "DCI benchmark failed\n",
+        "system-prompt": "DCI system prompt generation failed\n",
+    }
+    stderr.write(messages.get(command, "DCI Pi execution failed\n"))
 
 
 def _runtime_options(args: argparse.Namespace) -> DciRuntimeOptions:

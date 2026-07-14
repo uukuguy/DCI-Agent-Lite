@@ -73,10 +73,12 @@ asterion-dci run \
 
 `run` accepts any number of positional question tokens and joins them with
 spaces. `--question-file` takes precedence over those tokens; when neither is
-present, input is read only from non-interactive stdin. Relative question and
-prompt files are resolved first from the invocation directory and then from
-the repository root, before `--cwd` is applied to the Pi child. Missing,
-unreadable, or symlinked resources are rejected before Pi starts.
+present, input is read only from non-interactive stdin. Relative question,
+prompt, and evaluation-answer files are resolved first from the invocation
+directory and then from the repository root, before `--cwd` is applied to the
+Pi child. Missing, unreadable, or symlinked resources are rejected before Pi
+starts. `system-prompt --append-system-prompt-file` uses the same resource
+boundary before prompt rendering.
 
 Omitting `--run-id` creates a collision-resistant UTC-and-random identifier
 under `outputs/asterion-dci-runs/`. An explicit `--run-id` remains stable, and
