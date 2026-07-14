@@ -107,7 +107,9 @@ class LifecyclePiClient(FixturePiClient):
                             "role": "toolResult",
                             "toolCallId": call_id,
                             "toolName": "read",
-                            "content": [{"type": "text", "text": f"SECRET-BODY-{index}"}],
+                            "content": [
+                                {"type": "text", "text": f"SECRET-BODY-{index}"}
+                            ],
                         },
                     },
                 ]
@@ -149,7 +151,9 @@ class LifecyclePiClient(FixturePiClient):
             on_event(event)
             state = json.loads((self.output_dir / "state.json").read_text())
             assert state["status"] == "running"
-            conversation = json.loads((self.output_dir / "conversation_full.json").read_text())
+            conversation = json.loads(
+                (self.output_dir / "conversation_full.json").read_text()
+            )
             if event["type"] == "message_start":
                 assert conversation["pending_message"]["role"] == "assistant"
             if event["type"] == "message_update":
@@ -158,7 +162,191 @@ class LifecyclePiClient(FixturePiClient):
 
 
 class AsterionDciRunTests(unittest.TestCase):
-    def test_resume_rejects_missing_state_without_creating_a_directory_or_client(self) -> None:
+    def test_resume_preflight_rejects_missing_and_orphan_evidence_without_mutation(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            paths = resolve_dci_paths(root)
+            request = DciRunRequest(run_id="run-1", question="question", cwd=root)
+            for missing in (
+                "events.jsonl",
+                "question.txt",
+                "conversation.json",
+                "protocol",
+            ):
+                with self.subTest(missing=missing):
+                    output = root / f"missing-{missing.replace('.', '-')}"
+                    with patch("asterion.dci.run.PiRpcClient", FailingPiClient):
+                        with self.assertRaises(DciRunError):
+                            run_pi_research(paths, request, output_dir=output)
+                    target = output / missing
+                    if target.is_dir():
+                        import shutil
+
+                        shutil.rmtree(target)
+                    else:
+                        target.unlink()
+                    before = {
+                        p.relative_to(output): p.read_bytes()
+                        for p in output.rglob("*")
+                        if p.is_file() and p.name != ".dci-run.lock"
+                    }
+                    with patch("asterion.dci.run.PiRpcClient") as client:
+                        with self.assertRaisesRegex(
+                            DciRunError, "resume validation failed"
+                        ):
+                            run_pi_research(
+                                paths, replace(request, resume=True), output_dir=output
+                            )
+                    client.assert_not_called()
+                    self.assertEqual(
+                        before,
+                        {
+                            p.relative_to(output): p.read_bytes()
+                            for p in output.rglob("*")
+                            if p.is_file() and p.name != ".dci-run.lock"
+                        },
+                    )
+                    self.assertFalse(target.exists())
+
+            output = root / "orphan"
+            with patch("asterion.dci.run.PiRpcClient", FailingPiClient):
+                with self.assertRaises(DciRunError):
+                    run_pi_research(paths, request, output_dir=output)
+            orphan = output / "protocol/attempt-0002.events.jsonl"
+            orphan.write_text("ORPHAN\n", encoding="utf-8")
+            before = orphan.read_bytes()
+            with patch("asterion.dci.run.PiRpcClient") as client:
+                with self.assertRaisesRegex(DciRunError, "resume validation failed"):
+                    run_pi_research(
+                        paths, replace(request, resume=True), output_dir=output
+                    )
+            client.assert_not_called()
+            self.assertEqual(orphan.read_bytes(), before)
+
+    def test_authoritative_request_validation_rejects_invalid_values_before_artifacts(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            paths = resolve_dci_paths(root)
+            base = DciRunRequest(run_id="run-1", question="question", cwd=root)
+            invalid = (
+                ("max_turns", 0),
+                ("max_turns", -1),
+                ("max_turns", True),
+                ("timeout_seconds", -1.0),
+                ("timeout_seconds", float("nan")),
+                ("timeout_seconds", 1),
+                ("node_max_old_space_size_mb", 0),
+                ("keep_session", 1),
+                ("show_tools", 0),
+                ("stream_text", 1),
+                ("resume", 0),
+                ("tools", ""),
+                ("provider", ""),
+                ("thinking_level", "bogus"),
+                ("cwd", Path("relative")),
+                ("system_prompt_file", Path("relative")),
+                ("extra_args", ["--x"]),
+            )
+            for index, (field, value) in enumerate(invalid):
+                with self.subTest(field=field, value=value):
+                    output = root / f"invalid-{index}"
+                    with patch("asterion.dci.run.PiRpcClient") as client:
+                        with self.assertRaises(DciRunError):
+                            run_pi_research(
+                                paths,
+                                replace(base, **{field: value}),
+                                output_dir=output,
+                            )
+                    client.assert_not_called()
+                    self.assertFalse(output.exists())
+
+    def test_resume_persists_latest_timeout_and_rejects_conflicting_feature_authorities(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            paths = resolve_dci_paths(root)
+            output = root / "run"
+            features = DciConversationFeatures(strip_usage=True)
+            request = DciRunRequest(
+                run_id="run-1",
+                question="question",
+                cwd=root,
+                timeout_seconds=90.0,
+                conversation_features=features,
+            )
+            with patch("asterion.dci.run.PiRpcClient", FailingPiClient):
+                with self.assertRaises(DciRunError):
+                    run_pi_research(paths, request, output_dir=output)
+                with self.assertRaises(DciRunError):
+                    run_pi_research(
+                        paths,
+                        replace(request, resume=True, timeout_seconds=12.5),
+                        output_dir=output,
+                    )
+            state = json.loads((output / "state.json").read_text())
+            self.assertEqual(state["timeout_seconds"], 12.5)
+            self.assertEqual(state["attempts"][1]["timeout_seconds"], 12.5)
+            self.assertEqual(
+                resume_request_from_output_dir(output).timeout_seconds, 12.5
+            )
+            with patch("asterion.dci.run.PiRpcClient") as client:
+                with self.assertRaises(DciRunError):
+                    run_pi_research(
+                        paths,
+                        replace(request, resume=True),
+                        output_dir=output,
+                        conversation_features=DciConversationFeatures(
+                            strip_thinking=True
+                        ),
+                    )
+            client.assert_not_called()
+
+    def test_directory_lock_is_held_until_client_stop_finishes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            paths = resolve_dci_paths(root)
+            output = root / "run"
+            request = DciRunRequest(run_id="run-1", question="question", cwd=root)
+            stopping = threading.Event()
+            release = threading.Event()
+
+            class BlockingStopClient(FailingPiClient):
+                def stop(self) -> None:
+                    stopping.set()
+                    release.wait(timeout=5)
+
+            errors: list[Exception] = []
+
+            def first() -> None:
+                try:
+                    run_pi_research(paths, request, output_dir=output)
+                except Exception as exc:
+                    errors.append(exc)
+
+            with patch("asterion.dci.run.PiRpcClient", BlockingStopClient):
+                thread = threading.Thread(target=first)
+                thread.start()
+                self.assertTrue(stopping.wait(timeout=5))
+                with patch("asterion.dci.run.PiRpcClient") as client:
+                    with self.assertRaisesRegex(
+                        DciRunError, "resume validation failed"
+                    ):
+                        run_pi_research(
+                            paths, replace(request, resume=True), output_dir=output
+                        )
+                client.assert_not_called()
+                release.set()
+                thread.join(timeout=5)
+            self.assertEqual(len(errors), 1)
+
+    def test_resume_rejects_missing_state_without_creating_a_directory_or_client(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             paths = resolve_dci_paths(root)
@@ -175,7 +363,9 @@ class AsterionDciRunTests(unittest.TestCase):
             client.assert_not_called()
             self.assertFalse(output_dir.exists())
 
-    def test_resume_rejects_each_changed_or_malformed_immutable_semantic_before_client(self) -> None:
+    def test_resume_rejects_each_changed_or_malformed_immutable_semantic_before_client(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             paths = resolve_dci_paths(root)
@@ -235,7 +425,9 @@ class AsterionDciRunTests(unittest.TestCase):
                 with self.subTest(field=field):
                     request = replace(original, **{field: value}, resume=True)
                     with patch("asterion.dci.run.PiRpcClient") as client:
-                        with self.assertRaisesRegex(DciRunError, "resume validation failed"):
+                        with self.assertRaisesRegex(
+                            DciRunError, "resume validation failed"
+                        ):
                             run_pi_research(
                                 paths,
                                 request,
@@ -254,12 +446,16 @@ class AsterionDciRunTests(unittest.TestCase):
                 ),
                 (
                     "agent_dir",
-                    replace(paths, pi=replace(paths.pi, agent_dir=root / "different-agent")),
+                    replace(
+                        paths, pi=replace(paths.pi, agent_dir=root / "different-agent")
+                    ),
                 ),
             ):
                 with self.subTest(field=label):
                     with patch("asterion.dci.run.PiRpcClient") as client:
-                        with self.assertRaisesRegex(DciRunError, "resume validation failed"):
+                        with self.assertRaisesRegex(
+                            DciRunError, "resume validation failed"
+                        ):
                             run_pi_research(
                                 changed_paths,
                                 replace(original, resume=True),
@@ -309,7 +505,9 @@ class AsterionDciRunTests(unittest.TestCase):
                     state[field] = value
                     state_path.write_text(json.dumps(state), encoding="utf-8")
                     with patch("asterion.dci.run.PiRpcClient") as client:
-                        with self.assertRaisesRegex(DciRunError, "resume validation failed"):
+                        with self.assertRaisesRegex(
+                            DciRunError, "resume validation failed"
+                        ):
                             run_pi_research(
                                 paths,
                                 replace(original, resume=True),
@@ -345,7 +543,9 @@ class AsterionDciRunTests(unittest.TestCase):
                     state.pop(field)
                     state_path.write_text(json.dumps(state), encoding="utf-8")
                     with patch("asterion.dci.run.PiRpcClient") as client:
-                        with self.assertRaisesRegex(DciRunError, "resume validation failed"):
+                        with self.assertRaisesRegex(
+                            DciRunError, "resume validation failed"
+                        ):
                             run_pi_research(
                                 paths,
                                 replace(original, resume=True),
@@ -355,7 +555,9 @@ class AsterionDciRunTests(unittest.TestCase):
                     client.assert_not_called()
             state_path.write_text(json.dumps(baseline_state), encoding="utf-8")
 
-    def test_resume_reconstruction_requires_matching_extra_args_and_allows_timeout_change(self) -> None:
+    def test_resume_reconstruction_requires_matching_extra_args_and_allows_timeout_change(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             paths = resolve_dci_paths(root)
@@ -388,12 +590,16 @@ class AsterionDciRunTests(unittest.TestCase):
             with patch("asterion.dci.run.PiRpcClient", FixturePiClient):
                 result = run_pi_research(paths, resumed, output_dir=output_dir)
             protocol = json.loads(
-                (output_dir / "protocol/attempt-0002.request.json").read_text(encoding="utf-8")
+                (output_dir / "protocol/attempt-0002.request.json").read_text(
+                    encoding="utf-8"
+                )
             )
             self.assertEqual(result.status, "completed")
             self.assertEqual(protocol["deadline_ms"], 12_500)
 
-    def test_running_state_resumes_only_after_the_os_directory_lock_is_acquired(self) -> None:
+    def test_running_state_resumes_only_after_the_os_directory_lock_is_acquired(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             paths = resolve_dci_paths(root)
@@ -401,10 +607,14 @@ class AsterionDciRunTests(unittest.TestCase):
             request = DciRunRequest(run_id="run-1", question="question", cwd=root)
             from asterion.dci.artifacts import DciRunRecorder
 
-            recorder = DciRunRecorder(output_dir=output_dir, request=request, paths=paths)
+            recorder = DciRunRecorder(
+                output_dir=output_dir, request=request, paths=paths
+            )
             try:
                 with patch("asterion.dci.run.PiRpcClient") as client:
-                    with self.assertRaisesRegex(DciRunError, "resume validation failed"):
+                    with self.assertRaisesRegex(
+                        DciRunError, "resume validation failed"
+                    ):
                         run_pi_research(
                             paths,
                             replace(request, resume=True),
@@ -421,7 +631,9 @@ class AsterionDciRunTests(unittest.TestCase):
                     output_dir=output_dir,
                 )
             self.assertEqual(result.status, "completed")
-            self.assertTrue((output_dir / "protocol/attempt-0002.request.json").is_file())
+            self.assertTrue(
+                (output_dir / "protocol/attempt-0002.request.json").is_file()
+            )
 
     def test_two_resume_contenders_construct_at_most_one_client(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -476,7 +688,9 @@ class AsterionDciRunTests(unittest.TestCase):
             self.assertEqual(len(errors), 1)
             self.assertIsInstance(errors[0], DciRunError)
 
-    def test_production_path_rejects_output_symlink_before_client_or_target_write(self) -> None:
+    def test_production_path_rejects_output_symlink_before_client_or_target_write(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             paths = resolve_dci_paths(root)
@@ -499,7 +713,10 @@ class AsterionDciRunTests(unittest.TestCase):
             ("tiny", 0.0001, 1),
             ("over-limit", (MAX_DEADLINE_MS + 1) / 1000, None),
         ):
-            with self.subTest(name=name), tempfile.TemporaryDirectory() as temporary_directory:
+            with (
+                self.subTest(name=name),
+                tempfile.TemporaryDirectory() as temporary_directory,
+            ):
                 root = Path(temporary_directory)
                 paths = resolve_dci_paths(root)
                 request = DciRunRequest(
@@ -512,7 +729,9 @@ class AsterionDciRunTests(unittest.TestCase):
                     result = run_pi_research(paths, request)
 
                 protocol_request = json.loads(
-                    (result.output_dir / "protocol/attempt-0001.request.json").read_text()
+                    (
+                        result.output_dir / "protocol/attempt-0001.request.json"
+                    ).read_text()
                 )
                 if expected is None:
                     self.assertNotIn("deadline_ms", protocol_request)
@@ -524,7 +743,9 @@ class AsterionDciRunTests(unittest.TestCase):
             root = Path(temporary_directory)
             paths = resolve_dci_paths(root)
             output_dir = root / "run"
-            failed_request = DciRunRequest(run_id="run-1", question="question", cwd=root)
+            failed_request = DciRunRequest(
+                run_id="run-1", question="question", cwd=root
+            )
             with patch("asterion.dci.run.PiRpcClient", FailingPiClient):
                 with self.assertRaises(DciRunError):
                     run_pi_research(paths, failed_request, output_dir=output_dir)
@@ -558,7 +779,9 @@ class AsterionDciRunTests(unittest.TestCase):
                 protocol_before_resume,
             )
 
-    def test_production_path_records_complete_conversation_and_latest_context(self) -> None:
+    def test_production_path_records_complete_conversation_and_latest_context(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             paths = resolve_dci_paths(root)
@@ -614,7 +837,14 @@ class AsterionDciRunTests(unittest.TestCase):
             self.assertEqual(full["messages"][0]["role"], "system")
             self.assertEqual(
                 [message["role"] for message in full["messages"]],
-                ["system", "toolResult", "toolResult", "toolResult", "toolResult", "assistant"],
+                [
+                    "system",
+                    "toolResult",
+                    "toolResult",
+                    "toolResult",
+                    "toolResult",
+                    "assistant",
+                ],
             )
             self.assertEqual(
                 full["messages"][0]["sources"],
@@ -624,7 +854,10 @@ class AsterionDciRunTests(unittest.TestCase):
                 },
             )
             self.assertIsNone(full["pending_message"])
-    def test_runtime_context_request_is_recorded_without_fabricating_a_pi_flag(self) -> None:
+
+    def test_runtime_context_request_is_recorded_without_fabricating_a_pi_flag(
+        self,
+    ) -> None:
         request = DciRunRequest(
             run_id="run-1",
             question="question",
@@ -635,7 +868,9 @@ class AsterionDciRunTests(unittest.TestCase):
 
         self.assertEqual(_pi_extra_args(request), ("--thinking", "high"))
 
-    def test_runtime_context_request_records_current_pi_capability_diagnostic(self) -> None:
+    def test_runtime_context_request_records_current_pi_capability_diagnostic(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             paths = resolve_dci_paths(root)
@@ -684,7 +919,9 @@ class AsterionDciRunTests(unittest.TestCase):
         self.assertTrue(request.keep_session)
         self.assertEqual(request.extra_args, ("--custom option",))
 
-    def test_resume_reuses_failed_directory_and_creates_a_second_protocol_attempt(self) -> None:
+    def test_resume_reuses_failed_directory_and_creates_a_second_protocol_attempt(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             paths = resolve_dci_paths(root)
@@ -703,16 +940,24 @@ class AsterionDciRunTests(unittest.TestCase):
                 result = run_pi_research(paths, resumed, output_dir=output_dir)
 
             self.assertEqual(result.status, "completed")
-            self.assertTrue((output_dir / "protocol/attempt-0002.request.json").is_file())
-            self.assertEqual(json.loads((output_dir / "state.json").read_text())["resume_count"], 1)
+            self.assertTrue(
+                (output_dir / "protocol/attempt-0002.request.json").is_file()
+            )
+            self.assertEqual(
+                json.loads((output_dir / "state.json").read_text())["resume_count"], 1
+            )
             stderr_text = (output_dir / "stderr.txt").read_text(encoding="utf-8")
             self.assertIn("attempt-0001 status=failed", stderr_text)
             self.assertIn("attempt-0002 status=completed", stderr_text)
             self.assertIn("failure stderr", stderr_text)
             self.assertIn("private stderr", stderr_text)
-            self.assertLess(stderr_text.index("failure stderr"), stderr_text.index("private stderr"))
+            self.assertLess(
+                stderr_text.index("failure stderr"), stderr_text.index("private stderr")
+            )
 
-    def test_resume_rejects_completed_or_changed_immutable_inputs_before_client_start(self) -> None:
+    def test_resume_rejects_completed_or_changed_immutable_inputs_before_client_start(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             paths = resolve_dci_paths(root)
@@ -721,7 +966,9 @@ class AsterionDciRunTests(unittest.TestCase):
             with patch("asterion.dci.run.PiRpcClient", FixturePiClient):
                 run_pi_research(paths, request, output_dir=output_dir)
 
-            completed = DciRunRequest(run_id="run-1", question="question", cwd=root, resume=True)
+            completed = DciRunRequest(
+                run_id="run-1", question="question", cwd=root, resume=True
+            )
             with self.assertRaisesRegex(DciRunError, "resume validation failed"):
                 run_pi_research(paths, completed, output_dir=output_dir)
 
@@ -730,14 +977,20 @@ class AsterionDciRunTests(unittest.TestCase):
                 with self.assertRaises(DciRunError):
                     run_pi_research(paths, request, output_dir=failed_dir)
             changed = DciRunRequest(
-                run_id="run-1", question="question", cwd=root, model="different", resume=True
+                run_id="run-1",
+                question="question",
+                cwd=root,
+                model="different",
+                resume=True,
             )
             with patch("asterion.dci.run.PiRpcClient") as client:
                 with self.assertRaisesRegex(DciRunError, "resume validation failed"):
                     run_pi_research(paths, changed, output_dir=failed_dir)
             client.assert_not_called()
 
-    def test_resume_reconstructs_and_validates_runtime_controls_before_client_start(self) -> None:
+    def test_resume_reconstructs_and_validates_runtime_controls_before_client_start(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             paths = resolve_dci_paths(root)
@@ -776,7 +1029,9 @@ class AsterionDciRunTests(unittest.TestCase):
                     run_pi_research(paths, changed, output_dir=output_dir)
             client.assert_not_called()
 
-    def test_completed_run_writes_native_artifacts_and_protocol_projection(self) -> None:
+    def test_completed_run_writes_native_artifacts_and_protocol_projection(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             paths = resolve_dci_paths(root)
@@ -785,11 +1040,16 @@ class AsterionDciRunTests(unittest.TestCase):
                 result = run_pi_research(paths, request)
 
             self.assertEqual(result.final_text, "answer")
-            self.assertEqual((result.output_dir / "question.txt").read_text(), "question\n")
+            self.assertEqual(
+                (result.output_dir / "question.txt").read_text(), "question\n"
+            )
             self.assertTrue((result.output_dir / "events.jsonl").is_file())
             self.assertEqual((result.output_dir / "final.txt").read_text(), "answer\n")
             self.assertTrue((result.output_dir / "state.json").is_file())
-            self.assertEqual([event.type for event in result.events][-2:], ["artifact.created", "run.completed"])
+            self.assertEqual(
+                [event.type for event in result.events][-2:],
+                ["artifact.created", "run.completed"],
+            )
             validate_event_stream([event.to_mapping() for event in result.events])
             state = json.loads((result.output_dir / "state.json").read_text())
             self.assertTrue(
@@ -823,8 +1083,12 @@ class AsterionDciRunTests(unittest.TestCase):
                     "resume_count",
                 }.issubset(state)
             )
-            self.assertTrue((result.output_dir / "protocol/attempt-0001.request.json").is_file())
-            self.assertTrue((result.output_dir / "protocol/attempt-0001.events.jsonl").is_file())
+            self.assertTrue(
+                (result.output_dir / "protocol/attempt-0001.request.json").is_file()
+            )
+            self.assertTrue(
+                (result.output_dir / "protocol/attempt-0001.events.jsonl").is_file()
+            )
             protocol_events = [
                 json.loads(line)
                 for line in (result.output_dir / "protocol/attempt-0001.events.jsonl")
@@ -838,18 +1102,28 @@ class AsterionDciRunTests(unittest.TestCase):
             )
             self.assertEqual(
                 artifact["sha256"],
-                hashlib.sha256((result.output_dir / "final.txt").read_bytes()).hexdigest(),
+                hashlib.sha256(
+                    (result.output_dir / "final.txt").read_bytes()
+                ).hexdigest(),
             )
 
-    def test_attempt_provenance_warning_and_command_summary_never_store_credentials(self) -> None:
+    def test_attempt_provenance_warning_and_command_summary_never_store_credentials(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             repo = root / "pi"
             package_dir = repo / "packages/coding-agent"
             package_dir.mkdir(parents=True)
             subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
-            subprocess.run(["git", "config", "user.email", "fixture@example.invalid"], cwd=repo, check=True)
-            subprocess.run(["git", "config", "user.name", "Fixture"], cwd=repo, check=True)
+            subprocess.run(
+                ["git", "config", "user.email", "fixture@example.invalid"],
+                cwd=repo,
+                check=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.name", "Fixture"], cwd=repo, check=True
+            )
             (package_dir / "marker.txt").write_text("fixture\n", encoding="utf-8")
             subprocess.run(["git", "add", "."], cwd=repo, check=True)
             subprocess.run(["git", "commit", "-qm", "fixture"], cwd=repo, check=True)
@@ -871,7 +1145,9 @@ class AsterionDciRunTests(unittest.TestCase):
                 "https://sentinel-user:sentinel-pass@example.invalid/repo.git"
                 "?token=sentinel-query#sentinel-fragment"
             )
-            subprocess.run(["git", "remote", "add", "origin", origin], cwd=repo, check=True)
+            subprocess.run(
+                ["git", "remote", "add", "origin", origin], cwd=repo, check=True
+            )
             (root / "pi-revision.txt").write_text(f"{'f' * 40}\n", encoding="utf-8")
             paths = resolve_dci_paths(root)
             request = DciRunRequest(
@@ -889,10 +1165,16 @@ class AsterionDciRunTests(unittest.TestCase):
                         result = run_pi_research(paths, request)
 
             state = json.loads((result.output_dir / "state.json").read_text())
-            full = json.loads((result.output_dir / "conversation_full.json").read_text())
-            latest = json.loads((result.output_dir / "latest_model_context.json").read_text())
+            full = json.loads(
+                (result.output_dir / "conversation_full.json").read_text()
+            )
+            latest = json.loads(
+                (result.output_dir / "latest_model_context.json").read_text()
+            )
             for artifact in (state, full, latest):
-                self.assertEqual(artifact["pi_source_attempts"][0]["commit"], actual_revision)
+                self.assertEqual(
+                    artifact["pi_source_attempts"][0]["commit"], actual_revision
+                )
                 self.assertFalse(artifact["pi_source_attempts"][0]["expected_match"])
             self.assertEqual(
                 state["attempts"][0]["command_summary"],
@@ -918,7 +1200,9 @@ class AsterionDciRunTests(unittest.TestCase):
                 self.assertNotIn(sentinel, all_surfaces)
             self.assertIn("Pi source warning", warning_stream.getvalue())
 
-    def test_local_origin_path_sentinels_are_absent_from_every_run_surface(self) -> None:
+    def test_local_origin_path_sentinels_are_absent_from_every_run_surface(
+        self,
+    ) -> None:
         local_origins = (
             "file:///sentinel-file-absolute/pi.git",
             "file://localhost/sentinel-file-localhost/pi.git",
@@ -960,7 +1244,9 @@ class AsterionDciRunTests(unittest.TestCase):
                 cwd=repo,
                 check=True,
             )
-            subprocess.run(["git", "config", "user.name", "Fixture"], cwd=repo, check=True)
+            subprocess.run(
+                ["git", "config", "user.name", "Fixture"], cwd=repo, check=True
+            )
             (package_dir / "marker.txt").write_text("fixture\n", encoding="utf-8")
             subprocess.run(["git", "add", "."], cwd=repo, check=True)
             subprocess.run(["git", "commit", "-qm", "fixture"], cwd=repo, check=True)
@@ -1005,7 +1291,9 @@ class AsterionDciRunTests(unittest.TestCase):
                     state = json.loads((result.output_dir / "state.json").read_text())
                     self.assertIsNone(state["pi_source_attempts"][0]["origin"])
 
-    def test_rejects_a_nonempty_output_and_keeps_failure_detail_out_of_error(self) -> None:
+    def test_rejects_a_nonempty_output_and_keeps_failure_detail_out_of_error(
+        self,
+    ) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             paths = resolve_dci_paths(root)
@@ -1016,9 +1304,13 @@ class AsterionDciRunTests(unittest.TestCase):
             with self.assertRaisesRegex(DciRunError, "output directory is not empty"):
                 run_pi_research(paths, request, output_dir=output_dir)
 
-            failing_request = DciRunRequest(run_id="run-2", question="question", cwd=root)
+            failing_request = DciRunRequest(
+                run_id="run-2", question="question", cwd=root
+            )
             with patch("asterion.dci.run.PiRpcClient", FailingPiClient):
-                with self.assertRaisesRegex(DciRunError, "DCI Pi execution failed") as caught:
+                with self.assertRaisesRegex(
+                    DciRunError, "DCI Pi execution failed"
+                ) as caught:
                     run_pi_research(paths, failing_request)
 
         self.assertNotIn("provider response", str(caught.exception))

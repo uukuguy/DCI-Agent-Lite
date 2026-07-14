@@ -18,7 +18,7 @@ from typing import Any
 from asterion.adapters.pi import PiProtocolAdapter, map_pi_capabilities
 from asterion.dci.config import DciPaths
 from asterion.dci.provenance import collect_pi_provenance
-from asterion.dci.run import DciRunRequest
+from asterion.dci.run import DciRunRequest, validate_dci_run_request
 from asterion.runtime.host import RunEvent
 from asterion.runtime.protocol import (
     MAX_DEADLINE_MS,
@@ -151,6 +151,73 @@ def _open_private_directory_at(parent_fd: int, name: str) -> int:
     return descriptor
 
 
+def _open_existing_directory_at(parent_fd: int, name: str) -> int:
+    _validate_leaf_name(name)
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    try:
+        descriptor = os.open(name, _open_flags(flags), dir_fd=parent_fd)
+    except OSError as exc:
+        raise DciArtifactError("DCI artifact directory is invalid") from exc
+    return descriptor
+
+
+def _read_text_at(directory_fd: int, name: str) -> str:
+    _validate_leaf_name(name)
+    descriptor: int | None = None
+    try:
+        descriptor = os.open(name, _open_flags(os.O_RDONLY), dir_fd=directory_fd)
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            raise DciArtifactError("DCI artifact file is invalid")
+        with os.fdopen(descriptor, encoding="utf-8") as handle:
+            descriptor = None
+            return handle.read()
+    except DciArtifactError:
+        raise
+    except (OSError, UnicodeError) as exc:
+        raise DciArtifactError("DCI artifact file is invalid") from exc
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+
+
+def _read_jsonl_at(directory_fd: int, name: str) -> list[dict[str, Any]]:
+    values: list[dict[str, Any]] = []
+    for line in _read_text_at(directory_fd, name).splitlines():
+        try:
+            value = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise DciArtifactError("DCI artifact JSONL is invalid") from exc
+        if not isinstance(value, dict):
+            raise DciArtifactError("DCI artifact JSONL is invalid")
+        values.append(value)
+    return values
+
+
+def _write_exclusive_text_at(directory_fd: int, name: str, value: str) -> None:
+    _validate_leaf_name(name)
+    try:
+        descriptor = os.open(
+            name,
+            _open_flags(os.O_CREAT | os.O_EXCL | os.O_WRONLY),
+            0o600,
+            dir_fd=directory_fd,
+        )
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            os.fchmod(handle.fileno(), 0o600)
+            handle.write(value)
+            handle.flush()
+    except OSError as exc:
+        raise DciArtifactError("DCI attempt evidence already exists") from exc
+
+
+def _write_exclusive_json_at(directory_fd: int, name: str, payload: Any) -> None:
+    _write_exclusive_text_at(
+        directory_fd,
+        name,
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+    )
+
+
 def atomic_write_json(path: Path, payload: Any) -> None:
     """Atomically replace one private JSON document in its existing directory."""
 
@@ -273,7 +340,9 @@ class DciRunLock:
             }
             _validate_lock_metadata_at(descriptor, cls.LOCK_NAME)
             _atomic_write_json_at(descriptor, cls.LOCK_NAME, payload)
-            return cls(path=lock_path, owner_token=owner_token, _directory_fd=descriptor)
+            return cls(
+                path=lock_path, owner_token=owner_token, _directory_fd=descriptor
+            )
         except BaseException:
             try:
                 try:
@@ -318,7 +387,11 @@ class DciConversationFeatures:
             if not isinstance(getattr(self, name), bool):
                 raise ValueError(f"{name} must be boolean")
         keep_last = self.clear_tool_results_keep_last
-        if isinstance(keep_last, bool) or not isinstance(keep_last, int) or keep_last < 0:
+        if (
+            isinstance(keep_last, bool)
+            or not isinstance(keep_last, int)
+            or keep_last < 0
+        ):
             raise ValueError("clear_tool_results_keep_last must be >= 0")
 
     def to_mapping(self) -> dict[str, object]:
@@ -364,7 +437,9 @@ def _duration_seconds(started_at: object, finished_at: object) -> float | None:
     if not isinstance(started_at, str) or not isinstance(finished_at, str):
         return None
     try:
-        duration = datetime.fromisoformat(finished_at) - datetime.fromisoformat(started_at)
+        duration = datetime.fromisoformat(finished_at) - datetime.fromisoformat(
+            started_at
+        )
     except ValueError:
         return None
     return max(0.0, duration.total_seconds())
@@ -385,9 +460,13 @@ def _bounded_text_tail(value: str, maximum_bytes: int) -> str:
 def extra_args_fingerprint(values: tuple[str, ...]) -> str:
     """Return a stable identity for private Pi arguments without persisting their values."""
 
-    if not isinstance(values, tuple) or any(not isinstance(value, str) for value in values):
+    if not isinstance(values, tuple) or any(
+        not isinstance(value, str) for value in values
+    ):
         raise ValueError("DCI extra arguments are invalid")
-    payload = json.dumps(list(values), ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    payload = json.dumps(
+        list(values), ensure_ascii=False, separators=(",", ":")
+    ).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
 
 
@@ -399,10 +478,7 @@ def _same_typed_value(actual: object, expected: object) -> bool:
 
 def _valid_timeout(value: object) -> bool:
     return value is None or (
-        not isinstance(value, bool)
-        and isinstance(value, (int, float))
-        and math.isfinite(value)
-        and value >= 0
+        isinstance(value, float) and math.isfinite(value) and value >= 0
     )
 
 
@@ -413,7 +489,10 @@ def _validate_recorder_resume_state(
 ) -> None:
     if state.get("status") not in {"failed", "incomplete", "running"}:
         raise DciArtifactError("DCI resume state is invalid")
-    if request.pi_package_dir is not None and request.pi_package_dir != paths.pi.package_dir:
+    if (
+        request.pi_package_dir is not None
+        and request.pi_package_dir != paths.pi.package_dir
+    ):
         raise DciArtifactError("DCI resume state is invalid")
     if request.pi_agent_dir is not None and request.pi_agent_dir != paths.pi.agent_dir:
         raise DciArtifactError("DCI resume state is invalid")
@@ -425,6 +504,15 @@ def _validate_recorder_resume_state(
         "model": request.model,
         "tools": request.tools,
         "max_turns": request.max_turns,
+        "runtime_context_control": (
+            {
+                "requested_level": request.runtime_context_level,
+                "effective_pi_control": None,
+                "status": "unsupported",
+            }
+            if request.runtime_context_level is not None
+            else None
+        ),
         "runtime_context_level": request.runtime_context_level,
         "thinking_level": request.thinking_level,
         "node_max_old_space_size_mb": request.node_max_old_space_size_mb,
@@ -433,7 +521,9 @@ def _validate_recorder_resume_state(
         "extra_args_fingerprint": extra_args_fingerprint(request.extra_args),
         "show_tools": request.show_tools,
         "system_prompt_file": (
-            str(request.system_prompt_file) if request.system_prompt_file is not None else None
+            str(request.system_prompt_file)
+            if request.system_prompt_file is not None
+            else None
         ),
         "append_system_prompt_file": (
             str(request.append_system_prompt_file)
@@ -486,6 +576,120 @@ def _write_private_text(path: Path, value: str, *, append: bool = False) -> None
         os.close(directory_fd)
 
 
+def _resume_preflight(
+    root_fd: int,
+    state: dict[str, Any],
+    request: DciRunRequest,
+) -> tuple[int, dict[str, Any], dict[str, Any]]:
+    """Validate all prior durable evidence and return the locked protocol descriptor."""
+
+    if _read_text_at(root_fd, "question.txt") != f"{request.question}\n":
+        raise DciArtifactError("DCI resume evidence is invalid")
+    _read_jsonl_at(root_fd, "events.jsonl")
+    conversation = _read_json_object_at(root_fd, "conversation.json")
+    conversation_full = _read_json_object_at(root_fd, "conversation_full.json")
+    latest_context = _read_json_object_at(root_fd, "latest_model_context.json")
+    _read_text_at(root_fd, "stderr.txt")
+    if (
+        not isinstance(state.get("event_count"), int)
+        or isinstance(state.get("event_count"), bool)
+        or state["event_count"] < 0
+        or not isinstance(state.get("assistant_text"), str)
+        or not all(
+            isinstance(state.get(name), list)
+            for name in ("messages", "tool_calls", "notes", "pi_source_attempts")
+        )
+        or not isinstance(conversation.get("messages"), list)
+        or not isinstance(conversation_full.get("messages"), list)
+        or not isinstance(conversation_full.get("notes"), list)
+        or not isinstance(conversation_full.get("pi_source_attempts"), list)
+        or not isinstance(latest_context.get("request_count"), int)
+        or isinstance(latest_context.get("request_count"), bool)
+        or latest_context["request_count"] < 0
+        or not isinstance(latest_context.get("notes"), list)
+        or not isinstance(latest_context.get("pi_source_attempts"), list)
+    ):
+        raise DciArtifactError("DCI resume evidence is invalid")
+    answer = state["assistant_text"]
+    if answer:
+        expected_final = answer if answer.endswith("\n") else f"{answer}\n"
+        if _read_text_at(root_fd, "final.txt") != expected_final:
+            raise DciArtifactError("DCI resume evidence is invalid")
+    else:
+        try:
+            os.stat("final.txt", dir_fd=root_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            pass
+        else:
+            raise DciArtifactError("DCI resume evidence is invalid")
+    attempts = state.get("attempts")
+    resume_count = state.get("resume_count")
+    if (
+        not isinstance(attempts, list)
+        or not attempts
+        or isinstance(resume_count, bool)
+        or not isinstance(resume_count, int)
+        or resume_count < 0
+        or len(attempts) != resume_count + 1
+    ):
+        raise DciArtifactError("DCI resume evidence is invalid")
+    if (
+        not isinstance(attempts[-1], dict)
+        or attempts[-1].get("status") != state.get("status")
+        or conversation_full.get("status") != state.get("status")
+        or latest_context.get("status") != state.get("status")
+        or conversation_full.get("question") != request.question
+        or latest_context.get("question") != request.question
+    ):
+        raise DciArtifactError("DCI resume evidence is invalid")
+    protocol_fd = _open_existing_directory_at(root_fd, "protocol")
+    try:
+        expected_names: set[str] = set()
+        for number, attempt in enumerate(attempts, 1):
+            if (
+                not isinstance(attempt, dict)
+                or attempt.get("attempt") != number
+                or attempt.get("status")
+                not in {"running", "failed", "incomplete", "completed"}
+            ):
+                raise DciArtifactError("DCI resume evidence is invalid")
+            stem = f"attempt-{number:04d}"
+            request_name = f"{stem}.request.json"
+            events_name = f"{stem}.events.jsonl"
+            expected_names.update((request_name, events_name))
+            prior_request = _read_json_object_at(protocol_fd, request_name)
+            validate_run_request(prior_request)
+            expected_run_id = f"{request.run_id}-{stem}"
+            if (
+                prior_request.get("run_id") != expected_run_id
+                or prior_request.get("input") != {"text": request.question}
+                or prior_request.get("requested_capabilities")
+                != map_pi_capabilities(request.tools)
+            ):
+                raise DciArtifactError("DCI resume evidence is invalid")
+            prior_events = _read_jsonl_at(protocol_fd, events_name)
+            if attempt.get("status") == "running" and prior_events:
+                prior_events.append(
+                    {
+                        "protocol": PROTOCOL_VERSION,
+                        "run_id": prior_events[0].get("run_id"),
+                        "sequence": len(prior_events) + 1,
+                        "type": "run.failed",
+                        "payload": {
+                            "code": "resume_preflight",
+                            "message": "resume preflight",
+                        },
+                    }
+                )
+            validate_event_stream(prior_events)
+        if set(os.listdir(protocol_fd)) != expected_names:
+            raise DciArtifactError("DCI resume evidence is invalid")
+        return protocol_fd, conversation_full, latest_context
+    except BaseException:
+        os.close(protocol_fd)
+        raise
+
+
 class DciRunRecorder:
     """Persist raw and processed DCI run evidence without crossing product boundaries."""
 
@@ -498,6 +702,7 @@ class DciRunRecorder:
         features: DciConversationFeatures | None = None,
         resume: bool = False,
     ) -> None:
+        validate_dci_run_request(request, paths)
         self.output_dir = Path(output_dir)
         self.request = request
         self.paths = paths
@@ -506,6 +711,8 @@ class DciRunRecorder:
         self._root_fd = self.lock._directory_fd
         self._protocol_fd: int | None = None
         self._closed = False
+        self._finalized = False
+        self._finalization_started = False
         self.events_path = self.output_dir / "events.jsonl"
         self.state_path = self.output_dir / "state.json"
         self.question_path = self.output_dir / "question.txt"
@@ -528,20 +735,18 @@ class DciRunRecorder:
                     self.features = persisted_features
                 elif self.features != persisted_features:
                     raise DciArtifactError("DCI resume state is invalid")
-                self.conversation_full = _read_json_object_at(
-                    self._root_fd,
-                    "conversation_full.json",
-                )
-                self.latest_model_context = _read_json_object_at(
-                    self._root_fd,
-                    "latest_model_context.json",
+                self._protocol_fd, self.conversation_full, self.latest_model_context = (
+                    _resume_preflight(self._root_fd, self.state, request)
                 )
                 prior_resume_count = self.state.get("resume_count", 0)
-                if isinstance(prior_resume_count, bool) or not isinstance(prior_resume_count, int):
+                if isinstance(prior_resume_count, bool) or not isinstance(
+                    prior_resume_count, int
+                ):
                     raise DciArtifactError("DCI resume state is invalid")
                 attempt = prior_resume_count + 2
                 self.state["resume_count"] = prior_resume_count + 1
                 self.state["status"] = "running"
+                self.state["timeout_seconds"] = request.timeout_seconds
                 self.conversation_full["status"] = "running"
                 self.latest_model_context["status"] = "running"
                 self.conversation_full["pending_message"] = None
@@ -551,7 +756,10 @@ class DciRunRecorder:
                     raise DciArtifactError("DCI output directory is not empty")
                 attempt = 1
                 _write_private_text_at(self._root_fd, "events.jsonl", "")
-                _write_private_text_at(self._root_fd, "question.txt", f"{request.question}\n")
+                _write_private_text_at(
+                    self._root_fd, "question.txt", f"{request.question}\n"
+                )
+                _write_private_text_at(self._root_fd, "stderr.txt", "")
                 self.state = {
                     "run_id": request.run_id,
                     "status": "running",
@@ -580,10 +788,14 @@ class DciRunRecorder:
                     "node_max_old_space_size_mb": request.node_max_old_space_size_mb,
                     "keep_session": request.keep_session,
                     "extra_args_count": len(request.extra_args),
-                    "extra_args_fingerprint": extra_args_fingerprint(request.extra_args),
+                    "extra_args_fingerprint": extra_args_fingerprint(
+                        request.extra_args
+                    ),
                     "show_tools": request.show_tools,
                     "system_prompt_file": (
-                        str(request.system_prompt_file) if request.system_prompt_file else None
+                        str(request.system_prompt_file)
+                        if request.system_prompt_file
+                        else None
                     ),
                     "append_system_prompt_file": (
                         str(request.append_system_prompt_file)
@@ -606,7 +818,9 @@ class DciRunRecorder:
                         "events_jsonl": str(self.events_path),
                         "conversation_full_json": str(self.conversation_full_path),
                         "conversation_json": str(self.conversation_path),
-                        "latest_model_context_json": str(self.latest_model_context_path),
+                        "latest_model_context_json": str(
+                            self.latest_model_context_path
+                        ),
                         "final_txt": str(self.final_path),
                         "stderr_txt": str(self.stderr_path),
                     },
@@ -638,7 +852,9 @@ class DciRunRecorder:
                     "notes": [],
                     "pi_source_attempts": [],
                 }
-            self._protocol_fd = _open_private_directory_at(self._root_fd, "protocol")
+                self._protocol_fd = _open_private_directory_at(
+                    self._root_fd, "protocol"
+                )
             attempt_stem = f"attempt-{attempt:04d}"
             self._attempt_stem = attempt_stem
             self.pi_source = collect_pi_provenance(
@@ -646,7 +862,11 @@ class DciRunRecorder:
                 paths.repo_root / "pi-revision.txt",
                 os.environ.get("DCI_PI_REVISION") or None,
             )
-            for artifact in (self.state, self.conversation_full, self.latest_model_context):
+            for artifact in (
+                self.state,
+                self.conversation_full,
+                self.latest_model_context,
+            ):
                 snapshots = artifact.setdefault("pi_source_attempts", [])
                 if not isinstance(snapshots, list):
                     raise DciArtifactError("DCI resume state is invalid")
@@ -660,6 +880,7 @@ class DciRunRecorder:
                     "attempt": attempt,
                     "status": "running",
                     "command_summary": self._command_summary(),
+                    "timeout_seconds": request.timeout_seconds,
                     "stderr_tail_characters": 0,
                 }
             )
@@ -667,7 +888,7 @@ class DciRunRecorder:
             self._protocol_events_name = f"{attempt_stem}.events.jsonl"
             self.protocol_request_path = self.protocol_dir / self._protocol_request_name
             self.protocol_events_path = self.protocol_dir / self._protocol_events_name
-            _write_private_text_at(self._protocol_fd, self._protocol_events_name, "")
+            _write_exclusive_text_at(self._protocol_fd, self._protocol_events_name, "")
             self.normalized: list[dict[str, object]] = []
             self._restore_tool_timing_indexes()
             capabilities = map_pi_capabilities(request.tools)
@@ -682,7 +903,9 @@ class DciRunRecorder:
                 if deadline_ms <= MAX_DEADLINE_MS:
                     protocol_request["deadline_ms"] = max(1, deadline_ms)
             validate_run_request(protocol_request)
-            _atomic_write_json_at(self._protocol_fd, self._protocol_request_name, protocol_request)
+            _write_exclusive_json_at(
+                self._protocol_fd, self._protocol_request_name, protocol_request
+            )
             self.adapter = PiProtocolAdapter(
                 run_id=str(protocol_request["run_id"]),
                 capabilities=capabilities,
@@ -696,7 +919,9 @@ class DciRunRecorder:
 
     def _emit_normalized(self, event: dict[str, object]) -> None:
         self.normalized.append(dict(event))
-        self._append_at(self._protocol_directory_fd(), self._protocol_events_name, event)
+        self._append_at(
+            self._protocol_directory_fd(), self._protocol_events_name, event
+        )
 
     def record_event(self, event: dict[str, object]) -> None:
         self._ensure_open()
@@ -713,19 +938,28 @@ class DciRunRecorder:
                     {"event": event_type, "message": json.loads(json.dumps(message))}
                 )
                 if event_type == "message_start":
-                    self.conversation_full["pending_message"] = self._annotate_message(message)
+                    self.conversation_full["pending_message"] = self._annotate_message(
+                        message
+                    )
                 elif isinstance(message, dict):
-                    self.conversation_full["messages"].append(self._annotate_message(message))
+                    self.conversation_full["messages"].append(
+                        self._annotate_message(message)
+                    )
                     self.conversation_full["pending_message"] = None
             elif event_type == "message_update":
                 assistant = event.get("assistantMessageEvent")
-                if isinstance(assistant, dict) and assistant.get("type") == "text_delta":
+                if (
+                    isinstance(assistant, dict)
+                    and assistant.get("type") == "text_delta"
+                ):
                     delta = assistant.get("delta")
                     if isinstance(delta, str):
                         self.state["assistant_text"] += delta
                     partial = assistant.get("partial")
                     if isinstance(partial, dict):
-                        self.conversation_full["pending_message"] = self._annotate_message(partial)
+                        self.conversation_full["pending_message"] = (
+                            self._annotate_message(partial)
+                        )
             elif event_type in {"tool_execution_start", "tool_execution_end"}:
                 self._record_tool_timing(event, recorded_at=recorded_at)
             elif event_type == "provider_request_context":
@@ -735,8 +969,18 @@ class DciRunRecorder:
             self.close()
             raise
 
-    def finalize(self, *, status: str, final_text: str = "", stderr_text: str = "") -> tuple[RunEvent, ...]:
+    def finalize(
+        self,
+        *,
+        status: str,
+        final_text: str = "",
+        stderr_text: str = "",
+        release_lock: bool = True,
+    ) -> tuple[RunEvent, ...]:
         self._ensure_open()
+        if self._finalization_started:
+            raise DciArtifactError("DCI run recorder is finalized")
+        self._finalization_started = True
         try:
             answer = final_text or self.state["assistant_text"]
             if answer:
@@ -768,7 +1012,8 @@ class DciRunRecorder:
                 artifact = None
                 if answer:
                     digest = hashlib.sha256(
-                        answer.encode("utf-8") + (b"" if answer.endswith("\n") else b"\n")
+                        answer.encode("utf-8")
+                        + (b"" if answer.endswith("\n") else b"\n")
                     ).hexdigest()
                     artifact = {
                         "artifact_id": "final-answer",
@@ -782,9 +1027,11 @@ class DciRunRecorder:
                 self.adapter.fail()
             validate_event_stream(self.normalized)
             self._write()
+            self._finalized = True
             return tuple(RunEvent.from_mapping(event) for event in self.normalized)
         finally:
-            self.close()
+            if release_lock:
+                self.close()
 
     def add_note(self, note: str) -> None:
         """Persist one caller-generated safe diagnostic note in every native view."""
@@ -847,7 +1094,9 @@ class DciRunRecorder:
 
     def _write(self) -> None:
         _atomic_write_json_at(self._root_fd, "state.json", self.state)
-        _atomic_write_json_at(self._root_fd, "conversation_full.json", self.conversation_full)
+        _atomic_write_json_at(
+            self._root_fd, "conversation_full.json", self.conversation_full
+        )
         _atomic_write_json_at(
             self._root_fd,
             "latest_model_context.json",
@@ -864,14 +1113,19 @@ class DciRunRecorder:
         messages = conversation.get("messages", [])
         if not isinstance(messages, list):
             return conversation
-        tool_messages = [message for message in messages if message.get("role") == "toolResult"]
+        tool_messages = [
+            message for message in messages if message.get("role") == "toolResult"
+        ]
         tool_names = self._tool_result_names(tool_messages)
         if self.features.externalize_tool_results and tool_messages:
             tool_results_fd = _open_private_directory_at(self._root_fd, "tool_results")
             try:
                 for message, name in zip(tool_messages, tool_names, strict=True):
                     stats = self._tool_result_stats(message)
-                    payload = {"saved_at": _utc_now(), "message": json.loads(json.dumps(message))}
+                    payload = {
+                        "saved_at": _utc_now(),
+                        "message": json.loads(json.dumps(message)),
+                    }
                     _atomic_write_json_at(tool_results_fd, name, payload)
                     context = self._tool_result_context(message)
                     context["externalized"] = {
@@ -882,7 +1136,9 @@ class DciRunRecorder:
             finally:
                 os.close(tool_results_fd)
         if self.features.clear_tool_results:
-            clear_count = max(0, len(tool_messages) - self.features.clear_tool_results_keep_last)
+            clear_count = max(
+                0, len(tool_messages) - self.features.clear_tool_results_keep_last
+            )
             for message in tool_messages[:clear_count]:
                 self._clear_tool_result(message)
         for message in messages:
@@ -894,7 +1150,10 @@ class DciRunRecorder:
 
     def _add_system_prompt(self) -> None:
         parts: list[str] = []
-        for path in (self.request.system_prompt_file, self.request.append_system_prompt_file):
+        for path in (
+            self.request.system_prompt_file,
+            self.request.append_system_prompt_file,
+        ):
             if path is not None:
                 parts.append(Path(path).read_text(encoding="utf-8").strip("\n"))
         if not parts:
@@ -905,7 +1164,9 @@ class DciRunRecorder:
                 "content": [{"type": "text", "text": "\n\n".join(parts)}],
                 "sources": {
                     "system_prompt_file": (
-                        str(self.request.system_prompt_file) if self.request.system_prompt_file else None
+                        str(self.request.system_prompt_file)
+                        if self.request.system_prompt_file
+                        else None
                     ),
                     "append_system_prompt_file": (
                         str(self.request.append_system_prompt_file)
@@ -940,7 +1201,9 @@ class DciRunRecorder:
                 self._pending_tool_starts.pop(call_id, None)
         self._refresh_tool_annotations()
 
-    def _record_tool_timing(self, event: dict[str, object], *, recorded_at: str) -> None:
+    def _record_tool_timing(
+        self, event: dict[str, object], *, recorded_at: str
+    ) -> None:
         call_id = event.get("toolCallId")
         started_at: str | None = None
         finished_at: str | None = None
@@ -976,7 +1239,11 @@ class DciRunRecorder:
         call_id: str, started_at: object, finished_at: object
     ) -> dict[str, object] | None:
         duration = _duration_seconds(started_at, finished_at)
-        if duration is None or not isinstance(started_at, str) or not isinstance(finished_at, str):
+        if (
+            duration is None
+            or not isinstance(started_at, str)
+            or not isinstance(finished_at, str)
+        ):
             return None
         return {
             "tool_call_id": call_id,
@@ -1007,10 +1274,15 @@ class DciRunRecorder:
         pending = self.conversation_full.get("pending_message")
         if isinstance(pending, dict):
             self.conversation_full["pending_message"] = self._annotate_message(pending)
-        latest = self.latest_model_context.get("latest") if hasattr(self, "latest_model_context") else None
+        latest = (
+            self.latest_model_context.get("latest")
+            if hasattr(self, "latest_model_context")
+            else None
+        )
         if isinstance(latest, dict) and isinstance(latest.get("messages"), list):
             latest["messages"] = [
-                self._annotate_message(message) or message for message in latest["messages"]
+                self._annotate_message(message) or message
+                for message in latest["messages"]
             ]
 
     def _record_latest_model_context(self, event: dict[str, object]) -> None:
@@ -1079,7 +1351,9 @@ class DciRunRecorder:
 
     def _clear_tool_result(self, message: dict[str, Any]) -> None:
         context = self._tool_result_context(message)
-        stats = context.get("externalized", {}).get("stats") or self._tool_result_stats(message)
+        stats = context.get("externalized", {}).get("stats") or self._tool_result_stats(
+            message
+        )
         context.update(
             {
                 "status": "cleared",

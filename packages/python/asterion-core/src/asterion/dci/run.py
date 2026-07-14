@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -60,6 +60,96 @@ class DciRunError(RuntimeError):
 
 
 _RESUME_TIMEOUT_UNSET = object()
+_THINKING_LEVELS = {"off", "minimal", "low", "medium", "high", "xhigh"}
+
+
+def validate_dci_run_request(
+    request: DciRunRequest, paths: DciPaths | None = None
+) -> None:
+    """Validate every behavior-affecting request value before filesystem mutation."""
+
+    def text(value: object, *, optional: bool = False) -> None:
+        if value is None and optional:
+            return
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError("DCI run request is invalid")
+
+    text(request.run_id)
+    text(request.question)
+    text(request.tools)
+    text(request.provider, optional=True)
+    text(request.model, optional=True)
+    text(request.runtime_context_level, optional=True)
+    text(request.thinking_level, optional=True)
+    if request.thinking_level not in _THINKING_LEVELS | {None}:
+        raise ValueError("DCI run request is invalid")
+    if request.max_turns is not None and (
+        isinstance(request.max_turns, bool)
+        or not isinstance(request.max_turns, int)
+        or request.max_turns <= 0
+    ):
+        raise ValueError("DCI run request is invalid")
+    if request.timeout_seconds is not None and (
+        isinstance(request.timeout_seconds, bool)
+        or not isinstance(request.timeout_seconds, float)
+        or not math.isfinite(request.timeout_seconds)
+        or request.timeout_seconds < 0
+    ):
+        raise ValueError("DCI run request is invalid")
+    if request.node_max_old_space_size_mb is not None and (
+        isinstance(request.node_max_old_space_size_mb, bool)
+        or not isinstance(request.node_max_old_space_size_mb, int)
+        or request.node_max_old_space_size_mb <= 0
+    ):
+        raise ValueError("DCI run request is invalid")
+    for value in (
+        request.keep_session,
+        request.show_tools,
+        request.resume,
+        request.stream_text,
+    ):
+        if type(value) is not bool:
+            raise ValueError("DCI run request is invalid")
+    if not isinstance(request.extra_args, tuple) or any(
+        not isinstance(value, str) or not value for value in request.extra_args
+    ):
+        raise ValueError("DCI run request is invalid")
+    for value in (
+        request.cwd,
+        request.system_prompt_file,
+        request.append_system_prompt_file,
+        request.pi_package_dir,
+        request.pi_agent_dir,
+    ):
+        if value is not None and (
+            not isinstance(value, Path) or not value.is_absolute()
+        ):
+            raise ValueError("DCI run request is invalid")
+    if request.conversation_features is not None:
+        from asterion.dci.artifacts import DciConversationFeatures
+
+        if not isinstance(request.conversation_features, DciConversationFeatures):
+            raise ValueError("DCI run request is invalid")
+    if paths is not None:
+        for value in (
+            paths.repo_root,
+            paths.output_root,
+            paths.pi.repo_dir,
+            paths.pi.package_dir,
+            paths.pi.agent_dir,
+        ):
+            if not isinstance(value, Path) or not value.is_absolute():
+                raise ValueError("DCI run request is invalid")
+        if (
+            request.pi_package_dir is not None
+            and request.pi_package_dir != paths.pi.package_dir
+        ):
+            raise ValueError("DCI run request is invalid")
+        if (
+            request.pi_agent_dir is not None
+            and request.pi_agent_dir != paths.pi.agent_dir
+        ):
+            raise ValueError("DCI run request is invalid")
 
 
 def request_from_runtime_options(
@@ -72,7 +162,7 @@ def request_from_runtime_options(
 ) -> DciRunRequest:
     """Convert resolved shared runtime settings into one immutable native request."""
 
-    return DciRunRequest(
+    request = DciRunRequest(
         run_id=run_id,
         question=question,
         cwd=cwd,
@@ -87,6 +177,11 @@ def request_from_runtime_options(
         extra_args=options.extra_args,
         stream_text=stream_text,
     )
+    try:
+        validate_dci_run_request(request)
+    except ValueError:
+        raise DciRunError("DCI resume validation failed") from None
+    return request
 
 
 def resume_request_from_output_dir(
@@ -127,7 +222,9 @@ def resume_request_from_output_dir(
     persisted_timeout = _optional_timeout(state, "timeout_seconds")
     runtime_context_level = _optional_string(state, "runtime_context_level")
     thinking_level = _optional_string(state, "thinking_level")
-    node_max_old_space_size_mb = _optional_positive_int(state, "node_max_old_space_size_mb")
+    node_max_old_space_size_mb = _optional_positive_int(
+        state, "node_max_old_space_size_mb"
+    )
     keep_session = _required_bool(state, "keep_session")
     extra_args_count = _required_nonnegative_int(state, "extra_args_count")
     persisted_fingerprint = _required_string(state, "extra_args_fingerprint")
@@ -141,7 +238,10 @@ def resume_request_from_output_dir(
         supplied_fingerprint = extra_args_fingerprint(supplied_extra_args)
     except ValueError:
         raise DciRunError("DCI resume validation failed") from None
-    if len(supplied_extra_args) != extra_args_count or supplied_fingerprint != persisted_fingerprint:
+    if (
+        len(supplied_extra_args) != extra_args_count
+        or supplied_fingerprint != persisted_fingerprint
+    ):
         raise DciRunError("DCI resume validation failed")
     show_tools = _required_bool(state, "show_tools")
     system_prompt = _optional_path(state, "system_prompt_file")
@@ -163,7 +263,7 @@ def resume_request_from_output_dir(
         resumed_timeout = None
     elif (
         isinstance(timeout_seconds, bool)
-        or not isinstance(timeout_seconds, (int, float))
+        or not isinstance(timeout_seconds, float)
         or not math.isfinite(timeout_seconds)
         or timeout_seconds < 0
     ):
@@ -206,26 +306,48 @@ def run_pi_research(
 
     from asterion.dci.artifacts import DciArtifactError, DciRunRecorder
 
-    destination = Path(output_dir) if output_dir is not None else paths.output_root / request.run_id
+    if conversation_features is not None:
+        if (
+            request.conversation_features is not None
+            and request.conversation_features != conversation_features
+        ):
+            raise DciRunError(
+                "DCI resume validation failed"
+                if request.resume
+                else "DCI run request is invalid"
+            )
+        request = replace(request, conversation_features=conversation_features)
+    try:
+        validate_dci_run_request(request, paths)
+    except ValueError:
+        raise DciRunError(
+            "DCI resume validation failed"
+            if request.resume
+            else "DCI run request is invalid"
+        ) from None
+    destination = (
+        Path(output_dir)
+        if output_dir is not None
+        else paths.output_root / request.run_id
+    )
     destination = destination.absolute()
     try:
-        effective_features = (
-            conversation_features
-            if conversation_features is not None
-            else request.conversation_features
-        )
         recorder = DciRunRecorder(
             output_dir=destination,
             request=request,
             paths=paths,
-            features=effective_features,
+            features=request.conversation_features,
             resume=request.resume,
         )
     except DciArtifactError as exc:
         message = "DCI resume validation failed" if request.resume else str(exc)
         raise DciRunError(message) from None
     except ValueError:
-        message = "DCI resume validation failed" if request.resume else "DCI artifact setup failed"
+        message = (
+            "DCI resume validation failed"
+            if request.resume
+            else "DCI artifact setup failed"
+        )
         raise DciRunError(message) from None
 
     client: PiRpcClient | None = None
@@ -260,7 +382,10 @@ def run_pi_research(
         stderr_getter = getattr(client, "get_stderr", None)
         stderr_text = stderr_getter() if callable(stderr_getter) else ""
         normalized_events = recorder.finalize(
-            status="completed", final_text=final_text, stderr_text=stderr_text
+            status="completed",
+            final_text=final_text,
+            stderr_text=stderr_text,
+            release_lock=False,
         )
         return DciRunResult(
             output_dir=destination,
@@ -269,10 +394,14 @@ def run_pi_research(
             status="completed",
         )
     except (OSError, RuntimeError, ValueError):
-        stderr_getter = getattr(client, "get_stderr", None) if client is not None else None
+        stderr_getter = (
+            getattr(client, "get_stderr", None) if client is not None else None
+        )
         stderr_text = stderr_getter() if callable(stderr_getter) else ""
-        if not recorder._closed:
-            recorder.finalize(status="failed", stderr_text=stderr_text)
+        if not recorder._finalization_started:
+            recorder.finalize(
+                status="failed", stderr_text=stderr_text, release_lock=False
+            )
         raise DciRunError("DCI Pi execution failed") from None
     finally:
         try:

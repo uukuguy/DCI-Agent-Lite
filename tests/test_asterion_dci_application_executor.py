@@ -12,7 +12,9 @@ from asterion.dci.run import DciRunRequest
 
 
 class AsterionDciApplicationExecutorTests(unittest.TestCase):
-    def test_application_executor_preserves_request_operator_semantics_without_streaming(self) -> None:
+    def test_application_executor_preserves_request_operator_semantics_without_streaming(
+        self,
+    ) -> None:
         calls: list[DciRunRequest] = []
 
         def run_native(_: object, request: DciRunRequest) -> object:
