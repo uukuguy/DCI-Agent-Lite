@@ -490,3 +490,4 @@
 - 17:31 AF-230 Task 2 conversation artifacts committed after focused, projection, Ruff, compile, scope, and diff verification. [80b9aa2]
 - 17:32 AF-230 Task 2 review repairs restore locked symlink rejection, collision-safe evidence, protocol deadlines, and strict persisted controls. [pending repair commit]
 - 17:36 AF-230 Task 2 review repair committed with 41 focused and 15 URI-only projection tests passing. [f58b034]
+- 17:42 AF-230 Task 3 records credential-safe per-attempt Pi provenance, digests, summaries, and bounded stderr for auditable resume evidence. [8c30e6b]
