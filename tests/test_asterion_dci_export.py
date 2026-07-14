@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import fcntl
 import hashlib
 import importlib.util
 import io
@@ -68,7 +69,7 @@ class AsterionDciExportTests(unittest.TestCase):
 
     def test_scripts_bcplus_eval_extract_bcplus_qa_py_durable_output_output_jsonl(self) -> None:
         with tempfile.TemporaryDirectory() as td:
-            root = Path(td); source = root / "source"; output = root / "qa.jsonl"
+            root = Path(td).resolve(); source = root / "source"; output = root / "qa.jsonl"
             _parquet(source / "b10.parquet", [{"QID": "3", "Question": _encrypt("q3"), "Target": _encrypt("a3")}])
             _parquet(source / "b2.parquet", [{"QID": "1", "Question": _encrypt("q1"), "Target": _encrypt("a1")}, {"QID": "2", "Question": _encrypt("q2"), "Target": _encrypt("a2")}], row_group_size=1)
             self.assertEqual(export_bcplus_qa(source, output), 3)
@@ -80,7 +81,7 @@ class AsterionDciExportTests(unittest.TestCase):
 
     def test_scripts_bcplus_eval_extract_bcplus_qa_py_function_main(self) -> None:
         with tempfile.TemporaryDirectory() as td:
-            root = Path(td); source = root / "s"; output = root / "o.jsonl"
+            root = Path(td).resolve(); source = root / "s"; output = root / "o.jsonl"
             _parquet(source / "x.parquet", [{"id": 7, "problem": "raw", "solution": "answer"}])
             self.assertEqual(cli_main(["export", "bcplus-qa", "--parquet-dir", str(source), "--output", str(output), "--no-decrypt"], repo_root=ROOT, stdout=io.StringIO(), stderr=io.StringIO()), 0)
             self.assertEqual(json.loads(output.read_text())["query"], "raw")
@@ -113,7 +114,7 @@ class AsterionDciExportTests(unittest.TestCase):
 
     def test_src_dci_benchmark_export_bc_plus_docs_py_function_unique_path(self) -> None:
         with tempfile.TemporaryDirectory() as td:
-            root = Path(td); path = root / "Name.txt"; path.write_text("one")
+            root = Path(td).resolve(); path = root / "Name.txt"; path.write_text("one")
             self.assertEqual(unique_path(path, "7", "one"), path)
             self.assertEqual(unique_path(path, "7", "two").name, "Name__docid_7.txt")
             (root / "Name__docid_7.txt").write_text("three")
@@ -121,7 +122,7 @@ class AsterionDciExportTests(unittest.TestCase):
 
     def test_src_dci_benchmark_export_bc_plus_docs_py_durable_output_domain_title_txt(self) -> None:
         with tempfile.TemporaryDirectory() as td:
-            root = Path(td); source = root / "source"; output = root / "output"
+            root = Path(td).resolve(); source = root / "source"; output = root / "output"
             _parquet(source / "part.parquet", [
                 {"docid": "2", "text": "Title: Same\nsecond", "url": "https://Example.com/b"},
                 {"docid": "1", "text": "Title: Same\nfirst", "url": "https://example.com/a"},
@@ -152,7 +153,7 @@ class AsterionDciExportTests(unittest.TestCase):
 
     def test_src_dci_benchmark_export_bright_docs_py_function_export_subset(self) -> None:
         with tempfile.TemporaryDirectory() as td:
-            root = Path(td); source = root / "source"; output = root / "output"
+            root = Path(td).resolve(); source = root / "source"; output = root / "output"
             _parquet(source / "p.parquet", [{"id": "nested/a.txt", "content": "A"}, {"id": "nested/b.txt", "content": None}])
             self.assertEqual(export_subset(source, output), 2)
             self.assertEqual((output / "nested/a.txt").read_text(), "A")
@@ -161,7 +162,7 @@ class AsterionDciExportTests(unittest.TestCase):
 
     def test_src_dci_benchmark_export_bright_docs_py_durable_output_dci_export_complete(self) -> None:
         with tempfile.TemporaryDirectory() as td:
-            root = Path(td); source = root / "source"; output = root / "output"
+            root = Path(td).resolve(); source = root / "source"; output = root / "output"
             _parquet(source / "p.parquet", [{"id": "ok", "content": "A"}, {"id": "../bad", "content": "B"}])
             with self.assertRaises(DciExportError):
                 export_subset(source, output)
@@ -172,12 +173,12 @@ class AsterionDciExportTests(unittest.TestCase):
 
     def test_src_dci_benchmark_export_bright_docs_py_durable_output_subset_id(self) -> None:
         with tempfile.TemporaryDirectory() as td:
-            root = Path(td); source = root / "source"; output = root / "output"
-            for subset in ("biology", "robotics"):
+            root = Path(td).resolve(); source = root / "source"; output = root / "output"
+            for subset in ("biology", "earth_science", "economics", "robotics"):
                 _parquet(source / subset / "p.parquet", [{"id": f"{subset}.txt", "content": subset}])
             self.assertEqual(export_bright(source, output, ("robotics",)), 1)
             self.assertFalse((output / "biology").exists())
-            self.assertEqual(export_bright(source, output), 2)
+            self.assertEqual(export_bright(source, output), 4)
 
     def test_src_dci_benchmark_export_bright_docs_py_function_main(self) -> None:
         self.assertIn("bright", cli_main_help("export"))
@@ -196,7 +197,7 @@ class AsterionDciExportTests(unittest.TestCase):
 
     def test_exporters_reject_schema_symlink_overlap_and_portable_collisions(self) -> None:
         with tempfile.TemporaryDirectory() as td:
-            root = Path(td); source = root / "source"; output = root / "output"
+            root = Path(td).resolve(); source = root / "source"; output = root / "output"
             _parquet(source / "bad.parquet", [{"other": "x"}])
             with self.assertRaises(DciExportError): export_bcplus(source, output)
             with self.assertRaises(DciExportError): export_bcplus_qa(source, root / "q.jsonl")
@@ -208,12 +209,29 @@ class AsterionDciExportTests(unittest.TestCase):
 
     def test_exclusive_lock_and_interrupted_rerun(self) -> None:
         with tempfile.TemporaryDirectory() as td:
-            root = Path(td); source = root / "source"; output = root / "output"
+            root = Path(td).resolve(); source = root / "source"; output = root / "output"
             _parquet(source / "p.parquet", [{"id": "a", "content": "A"}])
             output.mkdir(); (output / ".asterion-dci-export.lock").write_text("held")
-            with self.assertRaises(DciExportError): export_subset(source, output)
-            (output / ".asterion-dci-export.lock").unlink()
             self.assertEqual(export_subset(source, output), 1)
+            lock = (output / ".asterion-dci-export.lock").open("a+")
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            with self.assertRaises(DciExportError): export_subset(source, output)
+            fcntl.flock(lock, fcntl.LOCK_UN); lock.close()
+            self.assertEqual(export_subset(source, output), 1)
+
+    def test_qa_overlap_nested_symlink_nulls_and_natural_collision_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td).resolve(); source = root / "source"; output = root / "output"
+            _parquet(source / "qa.parquet", [{"id": "1", "query": "q", "answer": "a"}])
+            with self.assertRaises(DciExportError):
+                export_bcplus_qa(source, source / "qa.jsonl", decrypt=False)
+            nested = root / "nested"; nested.mkdir(); (nested / "link").symlink_to(source, target_is_directory=True)
+            with self.assertRaises(DciExportError):
+                export_bcplus(nested / "link", output)
+            _parquet(source / "qa.parquet", [{"docid": "1", "text": None, "url": "https://x"}])
+            with self.assertRaises(DciExportError): export_bcplus(source, output)
+            _parquet(source / "qa.parquet", [{"id": "file02", "content": "one"}, {"id": "file2", "content": "two"}])
+            with self.assertRaises(DciExportError): export_subset(source, output)
 
     def test_cli_failures_are_body_free_and_module_has_no_baseline_import(self) -> None:
         err = io.StringIO(); out = io.StringIO()
