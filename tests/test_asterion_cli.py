@@ -12,6 +12,8 @@ from unittest.mock import patch
 from asterion.cli import _parser, main
 from asterion.applications.dci_agent_lite.provider import create_provider as create_dci_provider
 from asterion.applications.provider import InstalledApplication, InstalledApplicationProvider
+from asterion.dci.application_executor import EnvironmentDciRunExecutor
+from asterion.dci.pi_rpc import PiRpcClient
 from asterion.dci.run import DciRunRequest, DciRunResult
 from asterion.runtime.factory import RuntimeFactoryBinding, RuntimeFactoryRegistry
 from asterion.runtime.host import RunEvent, RunRequest, RuntimeManifest
@@ -519,6 +521,97 @@ class AsterionCliTests(unittest.TestCase):
         self.assertNotIn("SECRET-INPUT", stdout.getvalue())
         self.assertNotIn("SECRET-NATIVE-ANSWER", stdout.getvalue())
         self.assertNotIn("SECRET-INPUT", stderr.getvalue())
+
+    def test_bundled_dci_pi_application_emits_one_body_free_json_object(self) -> None:
+        runtime = DciPiFixtureRuntime()
+        registry = RuntimeFactoryRegistry(
+            (
+                RuntimeFactoryBinding(
+                    runtime_id="pi.reference",
+                    capabilities=("filesystem.read", "shell"),
+                    factory=lambda context: runtime,
+                ),
+            )
+        )
+
+        def start(client: PiRpcClient) -> None:
+            client._test_events = iter(
+                (
+                    {"type": "response", "id": "py-1", "success": True},
+                    {"type": "agent_start"},
+                    {
+                        "type": "message_update",
+                        "assistantMessageEvent": {
+                            "type": "text_delta",
+                            "delta": "SECRET-NATIVE-DELTA",
+                        },
+                    },
+                    {"type": "agent_settled"},
+                )
+            )
+
+        def next_event(client: PiRpcClient, **_: object) -> dict[str, object]:
+            return next(client._test_events)
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            stdout = io.StringIO()
+            with (
+                patch.dict(
+                    os.environ,
+                    {"ASTERION_RUNTIME_CWD": str(root)},
+                    clear=True,
+                ),
+                patch.object(PiRpcClient, "start", start),
+                patch.object(PiRpcClient, "stop", lambda client: None),
+                patch.object(PiRpcClient, "_send", lambda client, payload: None),
+                patch.object(PiRpcClient, "_read_json_line", next_event),
+                patch.object(
+                    PiRpcClient,
+                    "probe_protocol",
+                    return_value={
+                        "isStreaming": False,
+                        "isCompacting": False,
+                        "messageCount": 1,
+                        "pendingMessageCount": 0,
+                    },
+                ),
+                patch("sys.stdout", stdout),
+            ):
+                code = main(
+                    [
+                        "run",
+                        "--provider",
+                        "dci-agent-lite",
+                        "--runtime",
+                        "pi.reference",
+                        "--application",
+                        "dci.research-capability@1.0.0",
+                        "--run-id",
+                        "native-cli-run",
+                        "--input",
+                        "SECRET-INPUT",
+                    ],
+                    entry_points=(
+                        FakeEntryPoint(
+                            name="dci-agent-lite",
+                            factory=lambda: create_dci_provider(
+                                native_executor=EnvironmentDciRunExecutor(repo_root=root)
+                            ),
+                        ),
+                    ),
+                    runtime_factories=registry,
+                    stdout=stdout,
+                    stderr=io.StringIO(),
+                )
+
+        self.assertEqual(code, 0)
+        payload = json.loads(stdout.getvalue())
+        self.assertIsInstance(payload, dict)
+        self.assertEqual(payload["application_id"], "dci.research-capability")
+        self.assertEqual(payload["events"], [{"payload": {"status": "completed"}, "type": "research.completed"}])
+        self.assertNotIn("SECRET-NATIVE-DELTA", stdout.getvalue())
+        self.assertNotIn("SECRET-INPUT", stdout.getvalue())
 
     def test_bundled_dci_pi_native_failure_is_redacted(self) -> None:
         runtime = DciPiFixtureRuntime()

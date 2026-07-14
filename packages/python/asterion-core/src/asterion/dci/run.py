@@ -43,6 +43,7 @@ class DciRunRequest:
     system_prompt_file: Path | None = None
     append_system_prompt_file: Path | None = None
     resume: bool = False
+    stream_text: bool = True
 
 
 @dataclass(frozen=True)
@@ -60,7 +61,12 @@ class DciRunError(RuntimeError):
 
 
 def request_from_runtime_options(
-    options: DciRuntimeOptions, *, run_id: str, question: str, cwd: Path
+    options: DciRuntimeOptions,
+    *,
+    run_id: str,
+    question: str,
+    cwd: Path,
+    stream_text: bool = True,
 ) -> DciRunRequest:
     """Convert resolved shared runtime settings into one immutable native request."""
 
@@ -77,6 +83,7 @@ def request_from_runtime_options(
         node_max_old_space_size_mb=options.node_max_old_space_size_mb,
         keep_session=options.keep_session,
         extra_args=options.extra_args,
+        stream_text=stream_text,
     )
 
 
@@ -197,6 +204,7 @@ def run_pi_research(
         literal_extra_args=_pi_extra_args(request),
         keep_session=request.keep_session,
         node_max_old_space_size_mb=request.node_max_old_space_size_mb,
+        stream_text=request.stream_text,
     )
     try:
         client.start()

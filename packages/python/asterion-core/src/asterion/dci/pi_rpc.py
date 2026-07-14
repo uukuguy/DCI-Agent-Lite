@@ -109,6 +109,7 @@ class PiRpcClient:
         literal_extra_args: tuple[str, ...],
         keep_session: bool,
         node_max_old_space_size_mb: int | None,
+        stream_text: bool = True,
     ) -> None:
         self.package_dir = Path(package_dir)
         self.cwd = Path(cwd)
@@ -123,6 +124,7 @@ class PiRpcClient:
         self.literal_extra_args = tuple(literal_extra_args)
         self.keep_session = keep_session
         self.node_max_old_space_size_mb = node_max_old_space_size_mb
+        self.stream_text = stream_text
         self.proc: subprocess.Popen[bytes] | None = None
         self.command: list[str] | None = None
         self.stderr_chunks: list[str] = []
@@ -315,7 +317,8 @@ class PiRpcClient:
                     delta = assistant_event.get("delta")
                     if isinstance(delta, str):
                         text_parts.append(delta)
-                        print(delta, end="", file=sys.stdout, flush=True)
+                        if self.stream_text:
+                            print(delta, end="", file=sys.stdout, flush=True)
                 continue
             if event_type == "tool_execution_start" and self.show_tools:
                 print(f"[tool:start] {event.get('toolName', 'unknown')}", file=sys.stderr)

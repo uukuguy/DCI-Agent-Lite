@@ -41,6 +41,7 @@ class EnvironmentDciRunExecutor:
             run_id=request.run_id,
             question=request.question,
             cwd=cwd,
+            stream_text=False,
         )
         return self._run_native(
             resolve_dci_paths(root),

@@ -51,6 +51,7 @@ class AsterionDciApplicationExecutorTests(unittest.TestCase):
             (mapped.runtime_context_level, mapped.thinking_level),
             ("level3", "high"),
         )
+        self.assertFalse(mapped.stream_text)
 
     def test_maps_runtime_cwd_and_native_paths_to_one_pi_run(self) -> None:
         calls: list[tuple[object, DciRunRequest]] = []

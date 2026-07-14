@@ -111,6 +111,7 @@ class PiRpcCommandTests(unittest.TestCase):
 class PiRpcLifecycleTests(unittest.TestCase):
     def test_waits_for_acknowledgement_and_idle_agent_settled_state(self) -> None:
         client = make_client()
+        stdout = io.StringIO()
         events = [
             {"type": "response", "id": "py-1", "success": True},
             {"type": "agent_start"},
@@ -133,11 +134,12 @@ class PiRpcLifecycleTests(unittest.TestCase):
                     "pendingMessageCount": 0,
                 },
             ),
-            patch("sys.stdout", new=io.StringIO()),
+            patch("sys.stdout", new=stdout),
         ):
             result = client.prompt_and_wait("question", timeout_seconds=30)
 
         self.assertEqual(result, "answer")
+        self.assertEqual(stdout.getvalue(), "answer")
         send.assert_called_once_with({"id": "py-1", "type": "prompt", "message": "question"})
 
     def test_retry_discards_partial_text_and_turn_limit_aborts_then_waits(self) -> None:
