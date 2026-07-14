@@ -533,3 +533,4 @@
 - 22:18 AF-240 Task 2 adds bounded Judge retries and locked evaluation to prevent duplicate calls and unsafe cache reuse. [9780083]
 - 22:42 AF-240 Task 2 repair binds completed evidence and transactional cache pairs to prevent forged or split evaluation reuse. [04654ba]
 - 23:19 AF-240 Task 2 R2 binds resumed evidence and manifest-recovers durable evaluation publication across crash boundaries. [abe1f50]
+- 23:30 AF-240 Task 2 R3 validates recovery candidates and externalized tool evidence before mutation or Judge. [dda6191]
