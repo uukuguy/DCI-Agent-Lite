@@ -536,3 +536,4 @@
 - 23:30 AF-240 Task 2 R3 validates recovery candidates and externalized tool evidence before mutation or Judge. [dda6191]
 - 23:43 AF-240 Task 2 R4 requires exact generated cost arithmetic so modified caches always rejudge. [22ccfde]
 - 23:50 AF-240 Task 2 R5 approved exact costs, recovery, projections, and lock boundaries after 121 focused tests. [e0a1005]
+- 22:59 AF-240 Task 3 adds bounded durable batches and cooperative Pi cancellation to prevent orphaned work. [e6d0eea]
