@@ -21,6 +21,7 @@ from asterion.dci.artifacts import (
     DciRunLock,
     extra_args_fingerprint,
     validate_completed_run_evidence,
+    validate_resumable_run_evidence,
 )
 from asterion.dci.config import DciPaths, DciRuntimeOptions
 from asterion.dci.datasets import (
@@ -43,6 +44,7 @@ from asterion.dci.analysis import (
 )
 from asterion.dci.metrics import compute_ir_ndcg
 from asterion.dci.run import (
+    DciRunError,
     DciRunResult,
     request_from_runtime_options,
     resume_request_from_output_dir,
@@ -105,6 +107,24 @@ class _SnapshotAuthority:
             os.close(descriptor)
 
 
+@dataclass
+class _RowAuthority:
+    query: _Directory
+    native: _Directory | None = None
+    generation: str | None = None
+
+    def bind_native(self, native: _Directory, generation: str) -> None:
+        if self.native is not None:
+            self.native.close()
+        self.native = _Directory(os.dup(native.fd))
+        self.generation = generation
+
+    def close(self) -> None:
+        if self.native is not None:
+            self.native.close()
+        self.query.close()
+
+
 async def run_benchmark_async(
     request: BenchmarkRequest, *, paths: DciPaths
 ) -> BenchmarkResult:
@@ -115,6 +135,7 @@ async def run_benchmark_async(
     tasks: list[asyncio.Task[tuple[int, dict[str, object]]]] = []
     results: dict[int, dict[str, object]] = {}
     snapshot_authority: _SnapshotAuthority | None = None
+    row_authorities: dict[int, _RowAuthority] = {}
     batch_started = False
     try:
         _preflight_locked(lock, config, row_documents)
@@ -122,12 +143,17 @@ async def run_benchmark_async(
         lock.write_json("config.json", config)
         _publish_batch_state(lock, "running", {})
         batch_started = True
+        row_authorities = {
+            index: _RowAuthority(lock.open_query(row.query_id))
+            for index, row in enumerate(rows)
+        }
         semaphore = asyncio.Semaphore(request.max_concurrency)
 
         async def worker(index: int, row: BenchmarkRow) -> tuple[int, dict[str, object]]:
             async with semaphore:
-                started_at = _utc_now()
-                prior_timing = _read_query_timing(lock, row.query_id)
+                prior_timing = _validate_timing(
+                    row_authorities[index].query.read_optional_json("timing.json")
+                )
                 value = await _run_row(
                     request,
                     paths,
@@ -135,7 +161,7 @@ async def run_benchmark_async(
                     row,
                     row_documents[index],
                     snapshot_authority,
-                    timing_started_at=started_at,
+                    authority=row_authorities[index],
                     prior_timing=prior_timing,
                 )
                 return index, value
@@ -151,10 +177,18 @@ async def run_benchmark_async(
             for task in done:
                 index, value = task.result()
                 results[index] = value
-            _publish_aggregates(lock, results, request=request, rows=rows)
+            _publish_aggregates(
+                lock,
+                results,
+                request=request,
+                paths=paths,
+                rows=rows,
+                authorities=row_authorities,
+            )
         counts = _counts(results)
         _publish_aggregates(
-            lock, results, request=request, rows=rows, include_analysis=True
+            lock, results, request=request, paths=paths, rows=rows,
+            authorities=row_authorities, include_analysis=True
         )
         _publish_batch_state(lock, "completed", results)
         return BenchmarkResult(output_root=output_root, counts=counts)
@@ -169,11 +203,13 @@ async def run_benchmark_async(
             lock,
             rows,
             row_documents,
+            authorities=row_authorities,
             trusted=results,
             missing_status="not_started",
         )
         _publish_aggregates(
-            lock, results, request=request, rows=rows, include_analysis=True
+            lock, results, request=request, paths=paths, rows=rows,
+            authorities=row_authorities, include_analysis=True
         )
         _publish_batch_state(lock, "cancelled", results)
         raise
@@ -188,17 +224,21 @@ async def run_benchmark_async(
             lock,
             rows,
             row_documents,
+            authorities=row_authorities,
             trusted=results,
             missing_status="not_started",
         )
         _publish_aggregates(
-            lock, results, request=request, rows=rows, include_analysis=True
+            lock, results, request=request, paths=paths, rows=rows,
+            authorities=row_authorities, include_analysis=True
         )
         _publish_batch_state(lock, "failed", results)
         raise
     finally:
         if snapshot_authority is not None:
             snapshot_authority.close()
+        for authority in row_authorities.values():
+            authority.close()
         lock.release()
 
 
@@ -338,10 +378,10 @@ async def _run_row(
     item: dict[str, object],
     snapshots: _SnapshotAuthority,
     *,
-    timing_started_at: str,
+    authority: _RowAuthority,
     prior_timing: dict[str, Any] | None,
 ) -> dict[str, object]:
-    query = lock.open_query(row.query_id)
+    query = authority.query
     agent_started_at: str | None = None
     agent_finished_at: str | None = None
     try:
@@ -368,6 +408,7 @@ async def _run_row(
             if native is None:
                 raise DciBenchmarkError("DCI benchmark result evidence is invalid")
             try:
+                authority.bind_native(native, str(existing["native_generation"]))
                 try:
                     _validate_exact_reuse(
                         native,
@@ -384,26 +425,28 @@ async def _run_row(
                         query,
                         existing,
                         prior_timing=prior_timing,
-                        started_at=timing_started_at,
-                        finished_at=_utc_now(),
-                        agent_started_at=agent_started_at,
-                        agent_finished_at=agent_finished_at,
+                        started_at=None,
+                        finished_at=None,
                     )
                     return existing
             finally:
                 native.close()
 
         if request.resume_policy == "reuse":
-            result = _failed_result(row.query_id, item["row_fingerprint"], "failed")
+            result = _failed_result(
+                row.query_id,
+                item["row_fingerprint"],
+                "failed",
+                native_generation=authority.generation,
+                native_evidence_available=False,
+            )
             query.write_json("result.json", result)
             _write_query_timing(
                 query,
                 result,
                 prior_timing=prior_timing,
-                started_at=timing_started_at,
-                finished_at=_utc_now(),
-                agent_started_at=agent_started_at,
-                agent_finished_at=agent_finished_at,
+                started_at=None,
+                finished_at=None,
             )
             return result
 
@@ -416,10 +459,17 @@ async def _run_row(
             if native_authority is None:
                 raise DciBenchmarkError("DCI benchmark native evidence is invalid")
             native_state = _native_state(native_authority, lock.path / row.query_id / generation)
+        authority.bind_native(native_authority, generation)
         native_dir = lock.path / row.query_id / generation
         try:
             if native_state == "malformed":
-                result = _failed_result(row.query_id, item["row_fingerprint"], "failed")
+                result = _failed_result(
+                    row.query_id,
+                    item["row_fingerprint"],
+                    "failed",
+                    native_generation=generation,
+                    native_evidence_available=False,
+                )
                 query.write_json("result.json", result)
                 return result
             if native_state != "completed":
@@ -481,31 +531,44 @@ async def _run_row(
                 result["judge_request_fingerprint"] = verdict[
                     "judge_request_fingerprint"
                 ]
+            result["native_evidence_fingerprint"] = _native_evidence_fingerprint(
+                native_authority, request.mode
+            )
             query.write_json("result.json", result)
             _write_query_timing(
                 query,
                 result,
                 prior_timing=prior_timing,
-                started_at=timing_started_at,
-                finished_at=_utc_now(),
-                agent_started_at=agent_started_at,
-                agent_finished_at=agent_finished_at,
+                started_at=agent_started_at,
+                finished_at=agent_finished_at,
             )
             return result
         finally:
             native_authority.close()
     except asyncio.CancelledError:
-        result = _failed_result(row.query_id, item["row_fingerprint"], "cancelled")
+        generation, available = _terminal_native_evidence(authority, request, paths)
+        result = _failed_result(
+            row.query_id,
+            item["row_fingerprint"],
+            "cancelled",
+            native_generation=generation,
+            native_evidence_available=available,
+        )
         query.write_json("result.json", result)
         raise
     except DciBenchmarkError:
         raise
     except Exception:
-        result = _failed_result(row.query_id, item["row_fingerprint"], "failed")
+        generation, available = _terminal_native_evidence(authority, request, paths)
+        result = _failed_result(
+            row.query_id,
+            item["row_fingerprint"],
+            "failed",
+            native_generation=generation,
+            native_evidence_available=available,
+        )
         query.write_json("result.json", result)
         return result
-    finally:
-        query.close()
 
 
 async def _run_pi_async(
@@ -802,7 +865,7 @@ def _validate_result_shape(
 ) -> None:
     common = {
         "schema", "query_id", "row_fingerprint", "status", "mode",
-        "native_generation",
+        "native_generation", "native_evidence_fingerprint",
     }
     expected = common | (
         {
@@ -821,6 +884,9 @@ def _validate_result_shape(
         or value.get("mode") != mode
         or not isinstance(value.get("native_generation"), str)
         or not _NATIVE_GENERATION_PATTERN.fullmatch(value["native_generation"])
+        or not isinstance(value.get("native_evidence_fingerprint"), str)
+        or re.fullmatch(r"[0-9a-f]{64}", value["native_evidence_fingerprint"])
+        is None
         or (mode == "qa" and type(value.get("is_correct")) is not bool)
     ):
         raise DciBenchmarkError("DCI benchmark result evidence is invalid")
@@ -831,11 +897,31 @@ def _validate_terminal_result(
 ) -> None:
     if (
         set(value)
-        != {"schema", "query_id", "row_fingerprint", "status"}
+        != {
+            "schema", "query_id", "row_fingerprint", "status",
+            "native_generation", "native_evidence_available",
+        }
         or value.get("schema") != "asterion.dci.batch-result/v1"
         or value.get("query_id") != item.get("query_id")
         or value.get("row_fingerprint") != item.get("row_fingerprint")
         or value.get("status") not in {"failed", "cancelled", "not_started"}
+        or value.get("native_generation") is not None
+        and (
+            not isinstance(value.get("native_generation"), str)
+            or not _NATIVE_GENERATION_PATTERN.fullmatch(value["native_generation"])
+        )
+        or type(value.get("native_evidence_available")) is not bool
+        or (
+            value.get("status") == "not_started"
+            and (
+                value.get("native_generation") is not None
+                or value.get("native_evidence_available") is not False
+            )
+        )
+        or (
+            value.get("native_evidence_available") is True
+            and value.get("native_generation") is None
+        )
     ):
         raise DciBenchmarkError("DCI benchmark terminal result is invalid")
 
@@ -852,6 +938,10 @@ def _validate_exact_reuse(
     display_path = query_path / str(result["native_generation"])
     lock: DciRunLock | None = None
     try:
+        if result.get("native_evidence_fingerprint") != _native_evidence_fingerprint(
+            native, request.mode
+        ):
+            raise DciBenchmarkError("DCI benchmark result evidence is invalid")
         lock = DciRunLock.acquire_fd(native.fd, path=display_path, wait=True)
         state, question, prediction = validate_completed_run_evidence(lock)
         if request.mode == "ir":
@@ -881,6 +971,23 @@ def _validate_exact_reuse(
     finally:
         if lock is not None:
             lock.release()
+
+
+def _native_evidence_fingerprint(native: _Directory, mode: str) -> str:
+    names = [
+        "state.json", "question.txt", "final.txt", "events.jsonl",
+        "conversation.json", "conversation_full.json",
+        "latest_model_context.json", "stderr.txt",
+    ]
+    if mode == "qa":
+        names.append("eval_result.json")
+    documents: dict[str, str] = {}
+    for name in names:
+        value = native.read_optional_text(name)
+        if value is None:
+            raise DciBenchmarkError("DCI benchmark result evidence is invalid")
+        documents[name] = value
+    return _fingerprint(documents)
 
 
 def _prompt_resource_digests(request: BenchmarkRequest) -> dict[str, object]:
@@ -945,8 +1052,49 @@ def _reusable_result(value: object, item: dict[str, object], mode: str) -> bool:
     return type(value.get("is_correct")) is bool and value.get("judge_configuration_fingerprint") == item["judge_configuration_fingerprint"]
 
 
-def _failed_result(query_id: str, row_fingerprint: object, status: str) -> dict[str, object]:
-    return {"schema": "asterion.dci.batch-result/v1", "query_id": query_id, "row_fingerprint": row_fingerprint, "status": status}
+def _terminal_native_evidence(
+    authority: _RowAuthority,
+    request: BenchmarkRequest,
+    paths: DciPaths,
+) -> tuple[str | None, bool]:
+    native = authority.native
+    generation = authority.generation
+    if native is None or generation is None:
+        return None, False
+    try:
+        resume_request = resume_request_from_output_dir(
+            Path(generation),
+            extra_args=request.runtime_options.extra_args,
+            _directory_fd=native.fd,
+        )
+        native_lock = DciRunLock.acquire_fd(
+            native.fd, path=Path(generation), wait=True
+        )
+        try:
+            validate_resumable_run_evidence(native_lock, resume_request, paths)
+        finally:
+            native_lock.release()
+    except (DciArtifactError, DciRunError, OSError, ValueError):
+        return generation, False
+    return generation, True
+
+
+def _failed_result(
+    query_id: str,
+    row_fingerprint: object,
+    status: str,
+    *,
+    native_generation: str | None = None,
+    native_evidence_available: bool = False,
+) -> dict[str, object]:
+    return {
+        "schema": "asterion.dci.batch-result/v1",
+        "query_id": query_id,
+        "row_fingerprint": row_fingerprint,
+        "status": status,
+        "native_generation": native_generation,
+        "native_evidence_available": native_evidence_available,
+    }
 
 
 def _write_query_result(lock: _BatchLock, query_id: str, result: dict[str, object]) -> None:
@@ -967,12 +1115,16 @@ def _publish_aggregates(
     results: dict[int, dict[str, object]],
     *,
     request: BenchmarkRequest,
+    paths: DciPaths,
     rows: tuple[BenchmarkRow, ...],
+    authorities: dict[int, _RowAuthority],
     include_analysis: bool = False,
 ) -> None:
     ordered = [results[index] for index in sorted(results)]
     lock.write_text("results.jsonl", "".join(json.dumps(value, ensure_ascii=False, sort_keys=True) + "\n" for value in ordered))
-    metrics = _analysis_results(lock, ordered, rows, request)
+    metrics = _analysis_results(
+        lock, ordered, rows, request, paths=paths, authorities=authorities
+    )
     summary = aggregate_results(metrics)
     lock.write_json("summary.json", summary)
     if include_analysis and request.analysis:
@@ -999,37 +1151,80 @@ def _analysis_results(
     results: list[dict[str, object]],
     rows: tuple[BenchmarkRow, ...],
     request: BenchmarkRequest,
+    *,
+    paths: DciPaths,
+    authorities: dict[int, _RowAuthority],
 ) -> list[dict[str, Any]]:
     row_by_id = {row.query_id: row for row in rows}
+    authority_by_id = {
+        rows[index].query_id: authority for index, authority in authorities.items()
+    }
     metrics: list[dict[str, Any]] = []
     for result in results:
         query_id = str(result["query_id"])
         row = row_by_id[query_id]
-        state: dict[str, Any] = {"status": result.get("status")}
+        state: dict[str, Any] | None = None
         context: dict[str, Any] = {}
         final_text = stderr_text = ""
         judge_result: dict[str, Any] | None = None
-        timing = _read_query_timing(lock, query_id)
+        authority = authority_by_id[query_id]
+        _validate_bound_directory(lock, query_id, authority.query)
+        timing = _validate_timing(authority.query.read_optional_json("timing.json"))
         generation = result.get("native_generation")
         if isinstance(generation, str):
-            query = _open_analysis_query(lock, query_id, result)
-            if query is None:
+            native = authority.native
+            if native is None or authority.generation != generation:
                 raise DciBenchmarkError("DCI benchmark analysis evidence is invalid")
-            try:
-                timing = _validate_timing(query.read_optional_json("timing.json"))
-                native = query.open_existing_query(generation)
-                if native is None:
-                    raise DciBenchmarkError("DCI benchmark analysis evidence is invalid")
+            _validate_bound_directory(authority.query, generation, native)
+            if result.get("status") == "completed":
                 try:
+                    item = authority.query.read_optional_json("item.json")
+                    if item is None:
+                        raise DciBenchmarkError(
+                            "DCI benchmark analysis evidence is invalid"
+                        )
+                    _validate_item_document(item)
+                    _validate_exact_reuse(
+                        native,
+                        result,
+                        item,
+                        row,
+                        request,
+                        query_path=lock.path / query_id,
+                    )
                     state = native.read_optional_json("state.json") or state
                     context = native.read_optional_json("latest_model_context.json") or {}
                     final_text = native.read_optional_text("final.txt") or str(state.get("assistant_text") or "")
                     stderr_text = native.read_optional_text("stderr.txt") or ""
                     judge_result = native.read_optional_json("eval_result.json")
-                finally:
-                    native.close()
-            finally:
-                query.close()
+                except _StaleJudgeResult as error:
+                    raise DciBenchmarkError(
+                        "DCI benchmark analysis evidence is invalid"
+                    ) from error
+            elif result.get("native_evidence_available") is True:
+                try:
+                    resume_request = resume_request_from_output_dir(
+                        lock.path / query_id / generation,
+                        extra_args=request.runtime_options.extra_args,
+                        _directory_fd=native.fd,
+                    )
+                    native_lock = DciRunLock.acquire_fd(
+                        native.fd,
+                        path=lock.path / query_id / generation,
+                        wait=True,
+                    )
+                    try:
+                        state, _question, final_text, stderr_text, context = (
+                            validate_resumable_run_evidence(
+                                native_lock, resume_request, paths
+                            )
+                        )
+                    finally:
+                        native_lock.release()
+                except (DciArtifactError, DciRunError, OSError, ValueError) as error:
+                    raise DciBenchmarkError(
+                        "DCI benchmark analysis evidence is invalid"
+                    ) from error
         if judge_result is None and type(result.get("is_correct")) is bool:
             judge_result = {"is_correct": result["is_correct"]}
         ndcg = (
@@ -1046,8 +1241,6 @@ def _analysis_results(
                 stderr_text=stderr_text,
                 judge_result=judge_result,
                 ndcg_at_10=ndcg,
-                started_at=str(timing.get("started_at")) if timing else None,
-                finished_at=str(timing.get("finished_at")) if timing else None,
                 launcher_started_at=str(timing.get("launcher_started_at")) if timing else None,
                 launcher_finished_at=str(timing.get("launcher_finished_at")) if timing else None,
                 launcher_returncode=(
@@ -1062,33 +1255,21 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _read_query_timing(lock: _BatchLock, query_id: str) -> dict[str, Any] | None:
-    query = lock.open_existing_query(query_id)
-    if query is None:
-        return None
-    try:
-        value = query.read_optional_json("timing.json")
-    finally:
-        query.close()
-    return _validate_timing(value)
-
-
 def _validate_timing(value: dict[str, Any] | None) -> dict[str, Any] | None:
     if value is None:
         return None
     if (
         set(value)
         != {
-            "schema", "native_generation", "started_at", "finished_at",
+            "schema", "native_generation",
             "launcher_started_at", "launcher_finished_at",
         }
-        or value.get("schema") != "asterion.dci.batch-timing/v1"
+        or value.get("schema") != "asterion.dci.batch-timing/v2"
         or not isinstance(value.get("native_generation"), str)
         or not _NATIVE_GENERATION_PATTERN.fullmatch(value["native_generation"])
         or any(
             item is not None and not isinstance(item, str)
             for item in (
-                value.get("started_at"), value.get("finished_at"),
                 value.get("launcher_started_at"), value.get("launcher_finished_at"),
             )
         )
@@ -1097,41 +1278,21 @@ def _validate_timing(value: dict[str, Any] | None) -> dict[str, Any] | None:
     return value
 
 
-def _open_analysis_query(
-    lock: _BatchLock, query_id: str, result: dict[str, object]
-) -> _Directory | None:
-    direct = lock.open_existing_query(query_id)
-    if direct is not None:
-        try:
-            if direct.read_optional_json("result.json") == result:
-                return direct
-        except DciBenchmarkError:
-            pass
-        direct.close()
-    matches: list[_Directory] = []
-    for name in sorted(lock.list_names()):
-        if name == query_id:
-            continue
-        try:
-            candidate = lock.open_existing_query(name)
-        except DciBenchmarkError:
-            continue
-        if candidate is None:
-            continue
-        try:
-            candidate_result = candidate.read_optional_json("result.json")
-        except DciBenchmarkError:
-            candidate.close()
-            continue
-        if candidate_result == result:
-            matches.append(candidate)
-        else:
-            candidate.close()
-    if len(matches) != 1:
-        for match in matches:
-            match.close()
-        return None
-    return matches[0]
+def _validate_bound_directory(
+    parent: _Directory, name: str, child: _Directory
+) -> None:
+    _validate_component(name)
+    try:
+        expected = os.stat(name, dir_fd=parent.fd, follow_symlinks=False)
+        actual = os.fstat(child.fd)
+    except OSError as error:
+        raise DciBenchmarkError("DCI benchmark analysis evidence is invalid") from error
+    if (
+        not stat.S_ISDIR(expected.st_mode)
+        or expected.st_dev != actual.st_dev
+        or expected.st_ino != actual.st_ino
+    ):
+        raise DciBenchmarkError("DCI benchmark analysis evidence is invalid")
 
 
 def _write_query_timing(
@@ -1139,10 +1300,8 @@ def _write_query_timing(
     result: dict[str, object],
     *,
     prior_timing: dict[str, Any] | None,
-    started_at: str,
-    finished_at: str,
-    agent_started_at: str | None,
-    agent_finished_at: str | None,
+    started_at: str | None,
+    finished_at: str | None,
 ) -> None:
     generation = result.get("native_generation")
     if not isinstance(generation, str):
@@ -1152,10 +1311,8 @@ def _write_query_timing(
     query.write_json(
         "timing.json",
         {
-            "schema": "asterion.dci.batch-timing/v1",
+            "schema": "asterion.dci.batch-timing/v2",
             "native_generation": generation,
-            "started_at": agent_started_at,
-            "finished_at": agent_finished_at,
             "launcher_started_at": started_at,
             "launcher_finished_at": finished_at,
         },
@@ -1180,32 +1337,30 @@ def _terminal_results(
     rows: tuple[BenchmarkRow, ...],
     items: tuple[dict[str, object], ...],
     *,
+    authorities: dict[int, _RowAuthority],
     trusted: dict[int, dict[str, object]],
     missing_status: str,
 ) -> dict[int, dict[str, object]]:
     results: dict[int, dict[str, object]] = {}
     for index, row in enumerate(rows):
-        query = lock.open_query(row.query_id)
-        try:
-            query.write_json("item.json", items[index])
-            query.write_text("input_question.txt", str(items[index]["prompt"]))
-            result = trusted.get(index)
-            if result is None:
-                candidate = query.read_optional_json("result.json")
-                if candidate is not None:
-                    try:
-                        _validate_terminal_result(candidate, items[index])
-                    except DciBenchmarkError:
-                        candidate = None
-                result = candidate
-            if result is None:
-                result = _failed_result(
-                    row.query_id, items[index]["row_fingerprint"], missing_status
-                )
-                query.write_json("result.json", result)
-            results[index] = result
-        finally:
-            query.close()
+        query = authorities[index].query
+        query.write_json("item.json", items[index])
+        query.write_text("input_question.txt", str(items[index]["prompt"]))
+        result = trusted.get(index)
+        if result is None:
+            candidate = query.read_optional_json("result.json")
+            if candidate is not None:
+                try:
+                    _validate_terminal_result(candidate, items[index])
+                except DciBenchmarkError:
+                    candidate = None
+            result = candidate
+        if result is None:
+            result = _failed_result(
+                row.query_id, items[index]["row_fingerprint"], missing_status
+            )
+            query.write_json("result.json", result)
+        results[index] = result
     return results
 
 

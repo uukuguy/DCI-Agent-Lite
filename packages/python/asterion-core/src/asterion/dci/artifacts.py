@@ -927,6 +927,40 @@ def validate_completed_run_evidence(
     return state, question, final_text.rstrip("\n")
 
 
+def validate_resumable_run_evidence(
+    lock: DciRunLock,
+    request: DciRunRequest,
+    paths: DciPaths,
+) -> tuple[dict[str, Any], str, str, str, dict[str, Any]]:
+    """Validate one finalized failed/incomplete run without mutating its evidence."""
+
+    state = lock.read_json("state.json")
+    if state.get("status") not in {"failed", "incomplete"}:
+        raise DciArtifactError("DCI resumable run evidence is invalid")
+    _validate_recorder_resume_state(state, request, paths)
+    protocol_fd: int | None = None
+    try:
+        protocol_fd, _conversation_full, latest_context = _resume_preflight(
+            lock._directory_fd, state, request
+        )
+        question = lock.read_text("question.txt")
+        final = (
+            lock.read_text("final.txt").rstrip("\n")
+            if isinstance(state.get("assistant_text"), str)
+            and state["assistant_text"]
+            else ""
+        )
+        stderr = lock.read_text("stderr.txt")
+        return state, question, final, stderr, latest_context
+    except DciArtifactError:
+        raise
+    except (OSError, ValueError) as error:
+        raise DciArtifactError("DCI resumable run evidence is invalid") from error
+    finally:
+        if protocol_fd is not None:
+            os.close(protocol_fd)
+
+
 def _validate_completed_view_shapes(
     directory_fd: int,
     state: dict[str, Any],
@@ -1891,6 +1925,7 @@ class DciRunRecorder:
                 attempt = prior_resume_count + 2
                 self.state["resume_count"] = prior_resume_count + 1
                 self.state["status"] = "running"
+                self.state["finished_at"] = None
                 self.state["timeout_seconds"] = request.timeout_seconds
                 self.conversation_full["status"] = "running"
                 self.latest_model_context["status"] = "running"
@@ -1951,6 +1986,8 @@ class DciRunRecorder:
                     "pi_package_dir": str(paths.pi.package_dir),
                     "pi_agent_dir": str(paths.pi.agent_dir),
                     "conversation_features": self.features.to_mapping(),
+                    "started_at": _utc_now(),
+                    "finished_at": None,
                     "event_count": 0,
                     "last_event_type": None,
                     "assistant_text": "",
@@ -2143,6 +2180,7 @@ class DciRunRecorder:
             attempt_record["status"] = status
             attempt_record["stderr_tail_characters"] = len(stderr_tail)
             self.state["status"] = status
+            self.state["finished_at"] = _utc_now()
             self.state["assistant_text"] = answer
             self.conversation_full["status"] = status
             self.conversation_full["final_text"] = answer

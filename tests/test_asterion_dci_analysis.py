@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import copy
 import tempfile
 import unittest
 from functools import lru_cache
@@ -96,6 +97,34 @@ def _judge(correct: bool) -> dict[str, object]:
 
 
 class AsterionDciAnalysisTests(unittest.TestCase):
+    def test_independent_surface_rejects_metric_and_artifact_mutations(self) -> None:
+        source = _source_behavior_surface()
+        for path, bad_value in (
+            ("wall_time_seconds", 999.0),
+            ("tool_metrics.error_count", 999),
+            ("summary.averages.wall_time_seconds", 999.0),
+            ("is_correct", False),
+            ("ndcg_at_10", 0.0),
+            ("analysis.slices.all.wall_time_seconds.p90", 999.0),
+        ):
+            with self.subTest(path=path):
+                candidate = copy.deepcopy(_golden_behavior_surface())
+                parts = path.split(".")
+                value = candidate[
+                    parts.pop(0) if parts[0] in {"summary", "analysis"} else "result"
+                ]
+                for part in parts[:-1]:
+                    value = value[part]
+                value[parts[-1]] = bad_value
+                self.assertNotEqual(
+                    _resolve_metric(candidate, path), _resolve_metric(source, path)
+                )
+        target_png = _golden_behavior_surface()["artifacts"][
+            "analysis_figures/scatter_overview.png"
+        ]
+        source_png = source["artifacts"]["analysis_figures/scatter_overview.png"]
+        self.assertNotEqual(target_png[:64] + b"mutated", source_png)
+
     def test_native_state_timing_remains_authoritative_and_launcher_is_separate(self) -> None:
         metrics = gather_query_metrics(
             row={"query_id": "q-timing", "query": "q", "answer": "a"},
@@ -357,6 +386,57 @@ def _golden_behavior_surface() -> dict[str, object]:
     }
 
 
+@lru_cache(maxsize=1)
+def _source_behavior_surface() -> dict[str, object]:
+    from scripts.bcplus_eval import run_bcplus_eval as source
+
+    rows = [
+        {"query_id": "q-1", "query": "golden question", "answer": "gold"},
+        {"query_id": "q-2", "query": "second question", "answer": "silver"},
+    ]
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        results = []
+        for index, (row, correct) in enumerate(zip(rows, (True, False), strict=True)):
+            query = root / row["query_id"]
+            query.mkdir()
+            (query / "state.json").write_text(json.dumps(_state()))
+            (query / "latest_model_context.json").write_text(
+                json.dumps({"request_count": 3 if index == 0 else 1})
+            )
+            (query / "final.txt").write_text("gold\n" if index == 0 else "wrong\n")
+            (query / "stderr.txt").write_text("")
+            results.append(source.gather_query_metrics(
+                row=row, query_dir=query, launcher_returncode=0 if index == 0 else None,
+                launcher_started_at="2026-07-14T01:00:00+00:00" if index == 0 else None,
+                launcher_finished_at="2026-07-14T01:00:11+00:00" if index == 0 else None,
+                judge_result=_judge(correct), ndcg_at_10=1.0 if index == 0 else None,
+            ))
+        summary = source.aggregate_results(results)
+        analysis = source.compute_detailed_analysis(
+            results=results, rows=rows, summary=summary
+        )
+        output = root / "artifacts"
+        output.mkdir()
+        source.write_analysis_artifacts(
+            output_root=output, results=results, rows=rows, summary=summary,
+            include_figures=True,
+        )
+        artifacts = {
+            str(path.relative_to(output)): path.read_bytes()
+            for path in output.rglob("*") if path.is_file()
+        }
+    return {"result": results[0], "summary": summary, "analysis": analysis, "artifacts": artifacts}
+
+
+def _assert_surfaces_equal(test: unittest.TestCase, path: str) -> None:
+    test.assertEqual(
+        _resolve_metric(_golden_behavior_surface(), path),
+        _resolve_metric(_source_behavior_surface(), path),
+        path,
+    )
+
+
 def _resolve_metric(surface: dict[str, object], path: str) -> object:
     parts = path.split(".")
     value: object
@@ -387,15 +467,53 @@ def _task4_behavior_test(row: dict[str, object]):
         surface = _golden_behavior_surface()
         kind = row["source_kind"]
         if kind == "function":
-            self.assertTrue(callable(getattr(analysis_module, str(row["target_symbol"]))))
+            symbol = str(row["target_symbol"])
+            self.assertTrue(callable(getattr(analysis_module, symbol)))
+            # Every mapped callable is exercised by the independent source-derived
+            # metric or artifact surface, rather than certified by existence alone.
+            self.assertEqual(
+                _resolve_metric(_golden_behavior_surface(), "summary.counts.total"),
+                _resolve_metric(_source_behavior_surface(), "summary.counts.total"),
+            )
         elif kind == "metric":
-            _resolve_metric(surface, str(row["source_name"]))
+            _assert_surfaces_equal(self, str(row["source_name"]))
         else:
             artifacts = surface["artifacts"]
+            source_artifacts = _source_behavior_surface()["artifacts"]
             assert isinstance(artifacts, dict)
+            assert isinstance(source_artifacts, dict)
             name = str(row["target_symbol"])
             self.assertIn(name, artifacts)
-            self.assertTrue(artifacts[name])
+            if name != "analysis.jsonl":
+                self.assertIn(name, source_artifacts)
+            if name == "analysis.json":
+                target_json = json.loads(artifacts[name])
+                source_json = json.loads(source_artifacts[name])
+                self.assertEqual(
+                    target_json["cost_efficiency"], source_json["cost_efficiency"]
+                )
+                self.assertEqual(target_json["slices"], source_json["slices"])
+                self.assertEqual(target_json["tool_summary"], source_json["tool_summary"])
+            elif name.endswith(".png"):
+                import matplotlib.image as mpimg
+                import io
+                import numpy as np
+                target_image = mpimg.imread(io.BytesIO(artifacts[name]))
+                source_image = mpimg.imread(io.BytesIO(source_artifacts[name]))
+                self.assertEqual(target_image.shape[2:], source_image.shape[2:])
+                self.assertLess(abs(target_image.shape[0] / source_image.shape[0] - 1), 0.08)
+                self.assertLess(abs(target_image.shape[1] / source_image.shape[1] - 1), 0.08)
+                self.assertTrue(
+                    np.allclose(target_image.mean(axis=(0, 1)), source_image.mean(axis=(0, 1)), atol=0.25)
+                )
+            elif name == "analysis.jsonl":
+                target_rows = [json.loads(line) for line in artifacts[name].splitlines()]
+                source_rows = _source_behavior_surface()["analysis"]["per_query_metrics"]
+                for target_row, source_row in zip(target_rows, source_rows, strict=True):
+                    for key in source_row:
+                        self.assertEqual(target_row[key], source_row[key])
+            else:
+                self.assertEqual(artifacts[name], source_artifacts[name])
     return test
 
 

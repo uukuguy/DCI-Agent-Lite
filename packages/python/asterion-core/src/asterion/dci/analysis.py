@@ -110,7 +110,7 @@ def extract_tool_metrics(state: Mapping[str, Any]) -> dict[str, Any]:
 def gather_query_metrics(
     *,
     row: Mapping[str, Any],
-    state: Mapping[str, Any],
+    state: Mapping[str, Any] | None,
     latest_model_context: Mapping[str, Any],
     final_text: str,
     stderr_text: str = "",
@@ -122,13 +122,25 @@ def gather_query_metrics(
     launcher_started_at: str | None = None,
     launcher_finished_at: str | None = None,
 ) -> dict[str, Any]:
-    agent_usage = extract_agent_usage_metrics(state)
-    tool_metrics = extract_tool_metrics(state)
+    available = state is not None
+    state = state or {}
+    agent_usage: dict[str, Any] = extract_agent_usage_metrics(state) if available else {
+        key: None for key in (
+            "input_tokens", "output_tokens", "cache_read_tokens",
+            "cache_write_tokens", "total_tokens", "cost_input", "cost_output",
+            "cost_cache_read", "cost_cache_write", "cost_total",
+        )
+    }
+    tool_metrics: dict[str, Any] = extract_tool_metrics(state) if available else {
+        "call_count": None, "error_count": None, "duration_seconds": None,
+        "duration_measured_call_count": None,
+        "duration_missing_call_count": None, "by_tool": {},
+    }
     started_at = started_at or state.get("started_at")
     finished_at = finished_at or state.get("finished_at")
     wall = seconds_between(started_at, finished_at)
-    tool_time = float(tool_metrics["duration_seconds"])
-    non_tool = None if wall is None else max(0.0, wall - tool_time)
+    tool_time = _number(tool_metrics["duration_seconds"])
+    non_tool = None if wall is None or tool_time is None else max(0.0, wall - tool_time)
     usage = judge_result.get("usage") if judge_result and isinstance(judge_result.get("usage"), Mapping) else {}
     cost = judge_result.get("cost_estimate_usd") if judge_result and isinstance(judge_result.get("cost_estimate_usd"), Mapping) else {}
     runtime = latest_model_context.get("runtime_context_management")
@@ -286,8 +298,13 @@ def _enrich(results: Sequence[Mapping[str, Any]], rows: Sequence[Mapping[str, An
         judge_cost = result.get("judge_cost_estimate_usd") if isinstance(result.get("judge_cost_estimate_usd"), Mapping) else {}
         question = str(result.get("question") or row.get("query") or "")
         final = str(result.get("final_text") or "")
-        agent_cost = _number(agent.get("cost_total")) or 0.0
-        judge_cost_total = _number(judge_cost.get("total_cost")) or 0.0
+        agent_cost = _number(agent.get("cost_total"))
+        judge_cost_total = _number(judge_cost.get("total_cost"))
+        overall_cost = (
+            (agent_cost or 0.0) + (judge_cost_total or 0.0)
+            if agent_cost is not None or judge_cost_total is not None
+            else None
+        )
         records.append({
             "query_id": query_id, "query": question,
             "gold_answer": str(result.get("gold_answer") or row.get("answer") or ""),
@@ -302,15 +319,16 @@ def _enrich(results: Sequence[Mapping[str, Any]], rows: Sequence[Mapping[str, An
             "tool_time_share": tool_time / wall if wall and tool_time is not None else None,
             "turn_count": _number(result.get("turn_count")), "request_count": _number(result.get("request_count")),
             "event_count": _number(result.get("event_count")),
-            "tool_call_count": _number(tool_metrics.get("call_count")) or 0.0,
-            "tool_error_count": _number(tool_metrics.get("error_count")) or 0.0,
+            "tool_call_count": _number(tool_metrics.get("call_count")),
+            "tool_error_count": _number(tool_metrics.get("error_count")),
             "tool_counts": dict(sorted(counts.items())), "tool_durations": dict(sorted(durations.items())),
-            "agent_input_tokens": _number(agent.get("input_tokens")) or 0.0,
-            "agent_output_tokens": _number(agent.get("output_tokens")) or 0.0,
-            "agent_cache_read_tokens": _number(agent.get("cache_read_tokens")) or 0.0,
-            "agent_total_tokens": _number(agent.get("total_tokens")) or 0.0,
-            "agent_cost_total": agent_cost, "judge_total_tokens": _number(judge.get("total_tokens")) or 0.0,
-            "judge_cost_total": judge_cost_total, "overall_cost_total": agent_cost + judge_cost_total,
+            "agent_input_tokens": _number(agent.get("input_tokens")),
+            "agent_output_tokens": _number(agent.get("output_tokens")),
+            "agent_cache_read_tokens": _number(agent.get("cache_read_tokens")),
+            "agent_total_tokens": _number(agent.get("total_tokens")),
+            "agent_cost_total": agent_cost,
+            "judge_total_tokens": _number(judge.get("total_tokens")),
+            "judge_cost_total": judge_cost_total, "overall_cost_total": overall_cost,
         })
     return records, sorted(tools)
 
@@ -407,7 +425,9 @@ def _format(value: object, digits: int = 1) -> str:
 format_number = _format
 
 
-def write_markdown_report(*, summary: Mapping[str, Any], analysis: Mapping[str, Any]) -> str:
+def write_markdown_report(
+    *, summary: Mapping[str, Any], analysis: Mapping[str, Any], include_figures: bool = True
+) -> str:
     counts = summary.get("counts") or {}
     accuracy = summary.get("accuracy") or {}
     totals = summary.get("totals") or {}
@@ -431,12 +451,22 @@ def write_markdown_report(*, summary: Mapping[str, Any], analysis: Mapping[str, 
         "", "## Outcome Slices", "",
         f"- Correct median wall time: {_seconds(correct_wall.get('median'))}",
         f"- Incorrect median wall time: {_seconds(incorrect_wall.get('median'))}",
-        "", "## Figures", "", "- `analysis_figures/scatter_overview.png`",
-        "- `analysis_figures/runtime_breakdown.png`", "- `analysis_figures/metric_distributions.png`",
-        "- `analysis_figures/tool_summary.png`", "", "## Slowest Queries", "",
+        "", "## Figures", "",
+    ]
+    if include_figures:
+        lines.extend([
+            "- `analysis_figures/scatter_overview.png`",
+            "- `analysis_figures/runtime_breakdown.png`",
+            "- `analysis_figures/metric_distributions.png`",
+            "- `analysis_figures/tool_summary.png`",
+        ])
+    else:
+        lines.append("- Figures disabled by configuration.")
+    lines.extend([
+        "", "## Slowest Queries", "",
         "| Query ID | Wall Time | Cost | Tool Calls | Correct |",
         "| --- | --- | --- | --- | --- |",
-    ]
+    ])
     for row in (rankings.get("slowest_queries") or ())[:5]:
         lines.append(f"| {row.get('query_id')} | {_seconds(row.get('value'))} | {_usd(row.get('overall_cost_total'))} | {_format(row.get('tool_call_count'))} | {row.get('is_correct')} |")
     lines.extend(["", "## Most Expensive Queries", "", "| Query ID | Cost | Wall Time | Tool Calls | Correct |", "| --- | --- | --- | --- | --- |"])
@@ -598,7 +628,9 @@ def write_analysis_artifacts(*, results: Sequence[Mapping[str, Any]], rows: Sequ
     artifacts = {
         "analysis.json": (json.dumps(analysis, ensure_ascii=False, indent=2) + "\n").encode(),
         "analysis.jsonl": "".join(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n" for row in analysis["per_query_metrics"]).encode(),
-        "analysis.md": write_markdown_report(summary=summary, analysis=analysis).encode(),
+        "analysis.md": write_markdown_report(
+            summary=summary, analysis=analysis, include_figures=include_figures
+        ).encode(),
     }
     if include_figures:
         artifacts.update({f"analysis_figures/{name}": value for name, value in render_figures(analysis).items()})
