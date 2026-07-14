@@ -545,3 +545,4 @@
 - 23:50 AF-240 reserved coordinator namespaces to reject query collisions before mutation. [c2c80f4]
 - 23:55 AF-240 Task 3 R4 approved durable batch authority after 189 focused tests and all prior blocker rechecks. [3893b2e]
 - 23:59 AF-240 checkpoint advances recovery to Task 4 after independently approved batch coordination. [be2ced8]
+- 00:15 AF-240 Task 4 adds deterministic batch metrics, reports, and figures for source-analysis parity. [539ee0a]
