@@ -530,3 +530,4 @@
 - 20:58 AF-240 Task 1 adds strict datasets, source-exact prompts, portable identities, and IR metrics. [b1e9528]
 - 21:10 AF-240 Task 1 repair hardens Unicode, physical JSONL, prompt identity, mode, normalization, and metric boundaries. [c12c01b]
 - 21:18 AF-240 Task 1 R2 guarantees UTF-8 durable text and cross-platform component lengths. [0c22a81]
+- 22:18 AF-240 Task 2 adds bounded Judge retries and locked evaluation to prevent duplicate calls and unsafe cache reuse. [9780083]
