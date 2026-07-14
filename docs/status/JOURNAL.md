@@ -564,3 +564,4 @@
 - 02:02 AF-240 Task 5 limits crash cleanup to exporter-owned temporaries before recovery repair. [8fb4a86]
 - 02:10 AF-240 Task 5 exposes nested residue and reserved-name collisions before namespace repair. [55ee4b1]
 - 02:23 AF-240 Task 5 adds safe streaming exporters with durable locks, recovery, and descriptor authority. [830ef7b]
+- 02:35 AF-240 Task 5 exposes source-exact lexical shard order before parity correction. [a01fb37]
