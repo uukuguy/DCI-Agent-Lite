@@ -13,6 +13,10 @@
 
 ## Active hypotheses
 
+- **AF-240-H-001** (pending, rank 0.90): Reproduce source dataset, prompt, retrieval parsing, and IR metric semantics in Asterion-owned modules.
+- **AF-240-H-002** (pending, rank 0.80): Coordinate bounded concurrent runs with durable per-query evidence, exact reuse, and compatible resume.
+- **AF-240-H-003** (pending, rank 0.70): Reproduce Judge cache, aggregate metrics, detailed analysis, and deterministic figure behavior.
+- **AF-240-H-004** (pending, rank 0.60): Reproduce QA and corpus exports plus all launcher profiles at the installed Asterion boundary.
 
 ## Run ladder
 

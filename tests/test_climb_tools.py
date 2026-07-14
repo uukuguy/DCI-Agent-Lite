@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import csv
+import ast
+import copy
 import json
 import os
 import shutil
@@ -13,6 +15,287 @@ import yaml
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+AF240_SOURCE_FILES = (
+    "scripts/bcplus_eval/run_bcplus_eval.py",
+    "scripts/bcplus_eval/extract_bcplus_qa.py",
+    "src/dci/benchmark/export_bc_plus_docs.py",
+    "src/dci/benchmark/export_bright_docs.py",
+)
+AF240_OWNERS = {
+    "asterion.dci.analysis",
+    "asterion.dci.artifacts",
+    "asterion.dci.benchmark",
+    "asterion.dci.cli",
+    "asterion.dci.datasets",
+    "asterion.dci.evaluation",
+    "asterion.dci.export",
+    "asterion.dci.judge",
+    "asterion.dci.metrics",
+    "asterion.dci.run",
+    "asterion.dci.resources.batch-profiles.json",
+    "scripts.asterion",
+}
+AF240_FORBIDDEN = {"placeholder", "tbd", "todo", "unsupported", "unknown", "n/a"}
+
+
+def _af240_source_functions(path: str) -> set[str]:
+    tree = ast.parse((REPO_ROOT / path).read_text(encoding="utf-8"))
+    return {
+        node.name
+        for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    }
+
+
+def _af240_source_flags(path: str) -> set[str]:
+    tree = ast.parse((REPO_ROOT / path).read_text(encoding="utf-8"))
+    flags: set[str] = set()
+    for node in ast.walk(tree):
+        if not (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "add_argument"
+        ):
+            continue
+        flags.update(
+            arg.value
+            for arg in node.args
+            if isinstance(arg, ast.Constant)
+            and isinstance(arg.value, str)
+            and arg.value.startswith("--")
+        )
+    return flags
+
+
+def _validate_af240_inventory(inventory: dict[str, object]) -> None:
+    if inventory.get("schema") != "asterion.dci.batch-parity/v1":
+        raise ValueError("unknown inventory schema")
+    rows = inventory.get("rows")
+    if not isinstance(rows, list) or not rows:
+        raise ValueError("inventory rows must be non-empty")
+    row_ids: list[str] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError("inventory row must be an object")
+        row_id = row.get("id")
+        if not isinstance(row_id, str) or not row_id:
+            raise ValueError("inventory row id must be non-empty")
+        row_ids.append(row_id)
+        serialized = json.dumps(row, sort_keys=True).casefold()
+        if any(token in serialized for token in AF240_FORBIDDEN):
+            raise ValueError(f"placeholder value in {row_id}")
+        for field in ("current_asterion_owner", "target_asterion_owner"):
+            if row.get(field) not in AF240_OWNERS:
+                raise ValueError(f"unknown owner in {row_id}")
+        tests = row.get("verification_tests")
+        if not isinstance(tests, list) or not tests:
+            raise ValueError(f"missing verification tests in {row_id}")
+        if not all(
+            isinstance(test, str)
+            and test.startswith("tests.")
+            and ".test_" in test
+            for test in tests
+        ):
+            raise ValueError(f"verification must name focused tests in {row_id}")
+    if row_ids != sorted(row_ids) or len(row_ids) != len(set(row_ids)):
+        raise ValueError("inventory ids must be unique and stably sorted")
+
+    indexed = {
+        (row["source_path"], row["source_kind"], row["source_name"])
+        for row in rows
+    }
+    for path in AF240_SOURCE_FILES:
+        for function in _af240_source_functions(path):
+            if (path, "function", function) not in indexed:
+                raise ValueError(f"missing function mapping: {path}:{function}")
+        for flag in _af240_source_flags(path):
+            if (path, "cli_flag", flag) not in indexed:
+                raise ValueError(f"missing flag mapping: {path}:{flag}")
+
+    expected_launchers = {
+        str(path.relative_to(REPO_ROOT))
+        for directory in ("scripts/bcplus_eval", "scripts/qa", "scripts/bright")
+        for path in (REPO_ROOT / directory).glob("run_*.sh")
+    }
+    mapped_launchers = {
+        row["source_path"]
+        for row in rows
+        if row.get("source_kind") == "launcher"
+    }
+    if mapped_launchers != expected_launchers:
+        raise ValueError("launcher inventory is incomplete")
+
+
+class Af240InventoryTests(unittest.TestCase):
+    def _inventory(self) -> dict[str, object]:
+        return json.loads(
+            (REPO_ROOT / "assets/dci/batch-parity.json").read_text(encoding="utf-8")
+        )
+
+    def test_af240_inventory_maps_complete_source_surface(self) -> None:
+        inventory = self._inventory()
+        _validate_af240_inventory(inventory)
+        rows = inventory["rows"]
+        self.assertEqual(
+            {
+                row["source_name"]
+                for row in rows
+                if row["source_kind"] == "durable_output"
+                and row["source_path"] == "scripts/bcplus_eval/run_bcplus_eval.py"
+            },
+            {
+                "analysis.json",
+                "analysis.md",
+                "analysis_figures/metric_distributions.png",
+                "analysis_figures/runtime_breakdown.png",
+                "analysis_figures/scatter_overview.png",
+                "analysis_figures/tool_summary.png",
+                "config.json",
+                "conversation.json",
+                "conversation_full.json",
+                "eval_result.json",
+                "events.jsonl",
+                "final.txt",
+                "input_question.txt",
+                "item.json",
+                "launcher_stderr.txt",
+                "launcher_stdout.txt",
+                "latest_model_context.json",
+                "question.txt",
+                "result.json",
+                "results.jsonl",
+                "state.json",
+                "stderr.txt",
+                "summary.json",
+            },
+        )
+        self.assertEqual(
+            {
+                row["source_name"]
+                for row in rows
+                if row["source_kind"] == "target_output"
+            },
+            {"analysis.jsonl"},
+        )
+        extractor = inventory["extractor_contract"]
+        self.assertEqual(
+            extractor["column_aliases"],
+            {
+                "query_id": ["query_id", "id", "qid", "problem_id"],
+                "query": ["query", "question", "problem", "input"],
+                "answer": ["answer", "gold_answer", "solution", "output", "target"],
+            },
+        )
+        self.assertEqual(
+            extractor["semantics"],
+            [
+                "case-insensitive-column-aliases",
+                "sorted-parquet-shards",
+                "stable-shard-and-row-order",
+                "canary-sha256-repeated-key-xor-base64",
+                "no-decrypt-raw-values",
+                "atomic-jsonl-replace",
+            ],
+        )
+        self.assertEqual(inventory["launcher_counts"], {"bcplus": 2, "qa": 6, "bright": 4})
+        launcher_rows = [row for row in rows if row["source_kind"] == "launcher"]
+        for row in launcher_rows:
+            self.assertEqual(
+                set(row["source_profile"]),
+                {
+                    "dataset",
+                    "output_root",
+                    "corpus_dir",
+                    "provider",
+                    "model",
+                    "tools",
+                    "max_turns",
+                    "max_concurrency",
+                    "runtime_context_level",
+                    "pi_thinking_level",
+                    "node_max_old_space_size_mb",
+                    "enable_ir",
+                },
+            )
+        self.assertEqual(
+            inventory["dynamic_launcher_controls"],
+            ["runtime-context-level-positional", "optional-pi-thinking-level"],
+        )
+        dynamic_profile = next(
+            row["source_profile"]
+            for row in launcher_rows
+            if row["source_name"] == "bcplus.dynamic-level-thinking"
+        )
+        self.assertEqual(dynamic_profile["runtime_context_level"], "${level}")
+        self.assertEqual(dynamic_profile["pi_thinking_level"], "${thinking_level}")
+        self.assertEqual(
+            {
+                row["source_name"]
+                for row in rows
+                if row["source_kind"] == "cache_rule"
+            },
+            {
+                "completed-result-exact-judge-config",
+                "completed-native-run-judge-only",
+                "failed-or-incomplete-compatible-resume",
+                "malformed-evidence-fail-closed",
+                "dataset-order-aggregate-publication",
+            },
+        )
+        metric_names = {
+            row["source_name"] for row in rows if row["source_kind"] == "metric"
+        }
+        self.assertTrue(
+            {
+                "accuracy.over_total",
+                "accuracy.over_judged",
+                "ndcg_at_10",
+                "wall_time_seconds",
+                "tool.calls",
+                "tool.errors",
+                "tool.duration_seconds",
+                "agent.total_tokens",
+                "judge.total_tokens",
+                "overall_cost_total",
+                "percentiles.p50",
+                "percentiles.p90",
+                "percentiles.p95",
+                "outcome_slices",
+                "per_tool_analysis",
+            }.issubset(metric_names)
+        )
+
+    def test_af240_inventory_validator_rejects_missing_duplicate_placeholder_owner_and_tests(self) -> None:
+        inventory = self._inventory()
+        mutations = []
+        missing = copy.deepcopy(inventory)
+        missing["rows"] = [
+            row
+            for row in missing["rows"]
+            if not (
+                row["source_path"] == "scripts/bcplus_eval/run_bcplus_eval.py"
+                and row["source_kind"] == "function"
+                and row["source_name"] == "aggregate_results"
+            )
+        ]
+        mutations.append(missing)
+        duplicate = copy.deepcopy(inventory)
+        duplicate["rows"].append(copy.deepcopy(duplicate["rows"][0]))
+        mutations.append(duplicate)
+        placeholder = copy.deepcopy(inventory)
+        placeholder["rows"][0]["target_symbol"] = "TBD"
+        mutations.append(placeholder)
+        owner = copy.deepcopy(inventory)
+        owner["rows"][0]["target_asterion_owner"] = "mystery.owner"
+        mutations.append(owner)
+        tests = copy.deepcopy(inventory)
+        tests["rows"][0]["verification_tests"] = []
+        mutations.append(tests)
+        for index, mutation in enumerate(mutations):
+            with self.subTest(mutation=index), self.assertRaises(ValueError):
+                _validate_af240_inventory(mutation)
 
 
 class ClimbToolTests(unittest.TestCase):
@@ -1945,6 +2228,65 @@ class ClimbToolTests(unittest.TestCase):
                 "conversation_controls",
                 "terminal_literal_boundary",
                 "node_selection",
+            },
+        }
+        for hypothesis_id, dimensions in expected_dimensions.items():
+            with self.subTest(hypothesis_id=hypothesis_id), tempfile.TemporaryDirectory() as temp_dir:
+                run_dir = Path(temp_dir)
+                env = os.environ.copy()
+                env["DCI_CLIMB_HYPOTHESIS_ID"] = hypothesis_id
+                result = subprocess.run(
+                    ["bash", "tools/climb/eval-local.sh", str(run_dir)],
+                    cwd=REPO_ROOT,
+                    env=env,
+                    text=True,
+                    capture_output=True,
+                )
+
+                self.assertEqual(result.returncode, 0, result.stderr)
+                evaluation = json.loads((run_dir / "local-eval.json").read_text())
+                self.assertEqual(evaluation["hypothesis_id"], hypothesis_id)
+                self.assertEqual(evaluation["total"], 4)
+                self.assertEqual(set(evaluation["per_task"]), dimensions)
+
+    def test_af240_train_registers_every_batch_parity_hypothesis(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+
+        for hypothesis_id in (
+            "AF-240-H-001",
+            "AF-240-H-002",
+            "AF-240-H-003",
+            "AF-240-H-004",
+        ):
+            with self.subTest(hypothesis_id=hypothesis_id):
+                self.assertIn(hypothesis_id, train_script)
+        self.assertIn("tests.test_climb_tools.Af240InventoryTests", train_script)
+
+    def test_af240_local_eval_reports_batch_parity_dimensions(self) -> None:
+        expected_dimensions = {
+            "AF-240-H-001": {
+                "dataset_contract",
+                "prompt_contract",
+                "retrieval_parsing",
+                "ir_metric",
+            },
+            "AF-240-H-002": {
+                "bounded_concurrency",
+                "durable_query_state",
+                "exact_reuse",
+                "compatible_resume",
+            },
+            "AF-240-H-003": {
+                "judge_retry_cache",
+                "aggregate_metrics",
+                "detailed_analysis",
+                "reproducible_figures",
+            },
+            "AF-240-H-004": {
+                "bcplus_qa_export",
+                "corpus_exports",
+                "launcher_profiles",
+                "installed_resources",
             },
         }
         for hypothesis_id, dimensions in expected_dimensions.items():

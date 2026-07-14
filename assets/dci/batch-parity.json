@@ -1,0 +1,2388 @@
+{
+  "schema": "asterion.dci.batch-parity/v1",
+  "source_product": "DCI-Agent-Lite source baseline",
+  "target_product": "Asterion DCI installed capability and application",
+  "ordering": "rows sorted lexicographically by id",
+  "launcher_counts": {
+    "bcplus": 2,
+    "qa": 6,
+    "bright": 4
+  },
+  "dynamic_launcher_controls": [
+    "runtime-context-level-positional",
+    "optional-pi-thinking-level"
+  ],
+  "extractor_contract": {
+    "column_aliases": {
+      "query_id": [
+        "query_id",
+        "id",
+        "qid",
+        "problem_id"
+      ],
+      "query": [
+        "query",
+        "question",
+        "problem",
+        "input"
+      ],
+      "answer": [
+        "answer",
+        "gold_answer",
+        "solution",
+        "output",
+        "target"
+      ]
+    },
+    "semantics": [
+      "case-insensitive-column-aliases",
+      "sorted-parquet-shards",
+      "stable-shard-and-row-order",
+      "canary-sha256-repeated-key-xor-base64",
+      "no-decrypt-raw-values",
+      "atomic-jsonl-replace"
+    ]
+  },
+  "rows": [
+    {
+      "id": "docs.superpowers.plans.2026-07-14-af-240-batch-evaluation-export-parity.md:target-output:analysis.jsonl",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "target_output",
+      "source_name": "analysis.jsonl",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "analysis.jsonl",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_durable_output_manifest"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.extract-bcplus-qa.py:cli-flag:--no-decrypt",
+      "source_path": "scripts/bcplus_eval/extract_bcplus_qa.py",
+      "source_kind": "cli_flag",
+      "source_name": "--no-decrypt",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--no-decrypt",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bcplus_qa_cli_flags"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.extract-bcplus-qa.py:cli-flag:--output",
+      "source_path": "scripts/bcplus_eval/extract_bcplus_qa.py",
+      "source_kind": "cli_flag",
+      "source_name": "--output",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--output",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bcplus_qa_cli_flags"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.extract-bcplus-qa.py:cli-flag:--parquet-dir",
+      "source_path": "scripts/bcplus_eval/extract_bcplus_qa.py",
+      "source_kind": "cli_flag",
+      "source_name": "--parquet-dir",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--parquet-dir",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bcplus_qa_cli_flags"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.extract-bcplus-qa.py:durable-output:output-jsonl",
+      "source_path": "scripts/bcplus_eval/extract_bcplus_qa.py",
+      "source_kind": "durable_output",
+      "source_name": "output JSONL",
+      "current_asterion_owner": "asterion.dci.export",
+      "target_asterion_owner": "asterion.dci.export",
+      "target_symbol": "atomic BCPlus QA JSONL",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bcplus_qa_source_semantics"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.extract-bcplus-qa.py:function:-decrypt",
+      "source_path": "scripts/bcplus_eval/extract_bcplus_qa.py",
+      "source_kind": "function",
+      "source_name": "_decrypt",
+      "current_asterion_owner": "asterion.dci.export",
+      "target_asterion_owner": "asterion.dci.export",
+      "target_symbol": "_decrypt",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bcplus_qa_source_semantics"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.extract-bcplus-qa.py:function:-derive-key",
+      "source_path": "scripts/bcplus_eval/extract_bcplus_qa.py",
+      "source_kind": "function",
+      "source_name": "_derive_key",
+      "current_asterion_owner": "asterion.dci.export",
+      "target_asterion_owner": "asterion.dci.export",
+      "target_symbol": "_derive_key",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bcplus_qa_source_semantics"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.extract-bcplus-qa.py:function:-pick-col",
+      "source_path": "scripts/bcplus_eval/extract_bcplus_qa.py",
+      "source_kind": "function",
+      "source_name": "_pick_col",
+      "current_asterion_owner": "asterion.dci.export",
+      "target_asterion_owner": "asterion.dci.export",
+      "target_symbol": "_pick_col",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bcplus_qa_source_semantics"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.extract-bcplus-qa.py:function:main",
+      "source_path": "scripts/bcplus_eval/extract_bcplus_qa.py",
+      "source_kind": "function",
+      "source_name": "main",
+      "current_asterion_owner": "asterion.dci.export",
+      "target_asterion_owner": "asterion.dci.export",
+      "target_symbol": "main",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bcplus_qa_source_semantics"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-L3.sh:launcher:bcplus.level3",
+      "source_path": "scripts/bcplus_eval/run_L3.sh",
+      "source_kind": "launcher",
+      "source_name": "bcplus.level3",
+      "current_asterion_owner": "scripts.asterion",
+      "target_asterion_owner": "scripts.asterion",
+      "target_symbol": "scripts/asterion/bcplus_eval/run_L3.sh",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_one_to_one_source_launcher_profiles"
+      ],
+      "launcher_family": "bcplus",
+      "source_profile": {
+        "provider": "openai",
+        "model": "gpt-5.4-nano",
+        "tools": "read,bash",
+        "max_turns": 300,
+        "max_concurrency": 10,
+        "runtime_context_level": "level3",
+        "pi_thinking_level": "high",
+        "node_max_old_space_size_mb": 8192,
+        "enable_ir": false,
+        "dataset": "data/bcplus_qa.jsonl",
+        "output_root": "outputs/bcplus_eval/openai_L3",
+        "corpus_dir": "corpus/bc_plus_docs"
+      }
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval-openai.sh:launcher:bcplus.dynamic-level-thinking",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval_openai.sh",
+      "source_kind": "launcher",
+      "source_name": "bcplus.dynamic-level-thinking",
+      "current_asterion_owner": "scripts.asterion",
+      "target_asterion_owner": "scripts.asterion",
+      "target_symbol": "scripts/asterion/bcplus_eval/run_bcplus_eval_openai.sh",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_one_to_one_source_launcher_profiles"
+      ],
+      "launcher_family": "bcplus",
+      "source_profile": {
+        "provider": "openai",
+        "model": "gpt-5.4-nano",
+        "tools": "read,bash",
+        "max_turns": 100,
+        "max_concurrency": 10,
+        "runtime_context_level": "${level}",
+        "pi_thinking_level": "${thinking_level}",
+        "node_max_old_space_size_mb": 8192,
+        "enable_ir": false,
+        "dataset": "data/bcplus_qa.jsonl",
+        "output_root": "outputs/bcplus_eval/openai_${level}_concurrency10[_thinking${thinking_level}]",
+        "corpus_dir": "corpus/bc_plus_docs"
+      }
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cache-rule:completed-native-run-judge-only",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cache_rule",
+      "source_name": "completed-native-run-judge-only",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.evaluation",
+      "target_symbol": "completed-native-run-judge-only",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_reentry_classification_and_cache_identity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cache-rule:completed-result-exact-judge-config",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cache_rule",
+      "source_name": "completed-result-exact-judge-config",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.evaluation",
+      "target_symbol": "completed-result-exact-judge-config",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_reentry_classification_and_cache_identity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cache-rule:dataset-order-aggregate-publication",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cache_rule",
+      "source_name": "dataset-order-aggregate-publication",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "dataset-order-aggregate-publication",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_reentry_classification_and_cache_identity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cache-rule:failed-or-incomplete-compatible-resume",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cache_rule",
+      "source_name": "failed-or-incomplete-compatible-resume",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "failed-or-incomplete-compatible-resume",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_reentry_classification_and_cache_identity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cache-rule:malformed-evidence-fail-closed",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cache_rule",
+      "source_name": "malformed-evidence-fail-closed",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "malformed-evidence-fail-closed",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_reentry_classification_and_cache_identity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--agent-dir",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--agent-dir",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--agent-dir",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--append-system-prompt-file",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--append-system-prompt-file",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--append-system-prompt-file",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--corpus-dir",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--corpus-dir",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--corpus-dir",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--corpus-hint",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--corpus-hint",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--corpus-hint",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--dataset",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--dataset",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--dataset",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--enable-ir",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--enable-ir",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--enable-ir",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--judge-api",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--judge-api",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--judge-api",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--judge-api-key-env",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--judge-api-key-env",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--judge-api-key-env",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--judge-base-url",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--judge-base-url",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--judge-base-url",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--judge-cached-input-price-per-1m",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--judge-cached-input-price-per-1m",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--judge-cached-input-price-per-1m",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--judge-input-price-per-1m",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--judge-input-price-per-1m",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--judge-input-price-per-1m",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--judge-model",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--judge-model",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--judge-model",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--judge-output-price-per-1m",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--judge-output-price-per-1m",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--judge-output-price-per-1m",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--judge-timeout-seconds",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--judge-timeout-seconds",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--judge-timeout-seconds",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--limit",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--limit",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--limit",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--max-concurrency",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--max-concurrency",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--max-concurrency",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--max-turns",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--max-turns",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--max-turns",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--model",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--model",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--model",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--node-max-old-space-size-mb",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--node-max-old-space-size-mb",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--node-max-old-space-size-mb",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--output-root",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--output-root",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--output-root",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--package-dir",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--package-dir",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--package-dir",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--pi-extra-arg",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--pi-extra-arg",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--pi-extra-arg",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--pi-thinking-level",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--pi-thinking-level",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--pi-thinking-level",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--provider",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--provider",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--provider",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--runtime-context-level",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--runtime-context-level",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--runtime-context-level",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--system-prompt-file",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--system-prompt-file",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--system-prompt-file",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--tools",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--tools",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--tools",
+      "verification_tests": [
+        "tests.test_asterion_dci_cli.AsterionDciCliTests.test_batch_parser_maps_every_source_flag"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:durable-output:analysis-figures.metric-distributions.png",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "durable_output",
+      "source_name": "analysis_figures/metric_distributions.png",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "analysis_figures/metric_distributions.png",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_durable_output_manifest"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:durable-output:analysis-figures.runtime-breakdown.png",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "durable_output",
+      "source_name": "analysis_figures/runtime_breakdown.png",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "analysis_figures/runtime_breakdown.png",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_durable_output_manifest"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:durable-output:analysis-figures.scatter-overview.png",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "durable_output",
+      "source_name": "analysis_figures/scatter_overview.png",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "analysis_figures/scatter_overview.png",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_durable_output_manifest"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:durable-output:analysis-figures.tool-summary.png",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "durable_output",
+      "source_name": "analysis_figures/tool_summary.png",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "analysis_figures/tool_summary.png",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_durable_output_manifest"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:durable-output:analysis.json",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "durable_output",
+      "source_name": "analysis.json",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "analysis.json",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_durable_output_manifest"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:durable-output:analysis.md",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "durable_output",
+      "source_name": "analysis.md",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "analysis.md",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_durable_output_manifest"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:durable-output:config.json",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "durable_output",
+      "source_name": "config.json",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "config.json",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_durable_output_manifest"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:durable-output:conversation-full.json",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "durable_output",
+      "source_name": "conversation_full.json",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.artifacts",
+      "target_symbol": "conversation_full.json",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_durable_output_manifest"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:durable-output:conversation.json",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "durable_output",
+      "source_name": "conversation.json",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.artifacts",
+      "target_symbol": "conversation.json",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_durable_output_manifest"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:durable-output:eval-result.json",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "durable_output",
+      "source_name": "eval_result.json",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.evaluation",
+      "target_symbol": "eval_result.json",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_durable_output_manifest"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:durable-output:events.jsonl",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "durable_output",
+      "source_name": "events.jsonl",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.artifacts",
+      "target_symbol": "events.jsonl",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_durable_output_manifest"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:durable-output:final.txt",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "durable_output",
+      "source_name": "final.txt",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "final.txt",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_durable_output_manifest"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:durable-output:input-question.txt",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "durable_output",
+      "source_name": "input_question.txt",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "input_question.txt",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_durable_output_manifest"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:durable-output:item.json",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "durable_output",
+      "source_name": "item.json",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "item.json",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_durable_output_manifest"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:durable-output:latest-model-context.json",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "durable_output",
+      "source_name": "latest_model_context.json",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.artifacts",
+      "target_symbol": "latest_model_context.json",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_durable_output_manifest"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:durable-output:launcher-stderr.txt",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "durable_output",
+      "source_name": "launcher_stderr.txt",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "launcher_stderr.txt",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_durable_output_manifest"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:durable-output:launcher-stdout.txt",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "durable_output",
+      "source_name": "launcher_stdout.txt",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "launcher_stdout.txt",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_durable_output_manifest"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:durable-output:question.txt",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "durable_output",
+      "source_name": "question.txt",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.artifacts",
+      "target_symbol": "question.txt",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_durable_output_manifest"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:durable-output:result.json",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "durable_output",
+      "source_name": "result.json",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "result.json",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_durable_output_manifest"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:durable-output:results.jsonl",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "durable_output",
+      "source_name": "results.jsonl",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "results.jsonl",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_durable_output_manifest"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:durable-output:state.json",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "durable_output",
+      "source_name": "state.json",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "state.json",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_durable_output_manifest"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:durable-output:stderr.txt",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "durable_output",
+      "source_name": "stderr.txt",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.artifacts",
+      "target_symbol": "stderr.txt",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_durable_output_manifest"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:durable-output:summary.json",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "durable_output",
+      "source_name": "summary.json",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "summary.json",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_durable_output_manifest"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:add-boxplot-panel",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "add_boxplot_panel",
+      "current_asterion_owner": "asterion.dci.analysis",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "add_boxplot_panel",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:aggregate-results",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "aggregate_results",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "aggregate_results",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:build-benchmark-prompt",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "build_benchmark_prompt",
+      "current_asterion_owner": "asterion.dci.datasets",
+      "target_asterion_owner": "asterion.dci.datasets",
+      "target_symbol": "build_benchmark_prompt",
+      "verification_tests": [
+        "tests.test_asterion_dci_datasets.AsterionDciDatasetTests.test_source_dataset_prompt_and_ir_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:build-failed-judge-result",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "build_failed_judge_result",
+      "current_asterion_owner": "asterion.dci.evaluation",
+      "target_asterion_owner": "asterion.dci.evaluation",
+      "target_symbol": "build_failed_judge_result",
+      "verification_tests": [
+        "tests.test_asterion_dci_evaluation.AsterionDciEvaluationTests.test_source_judge_cache_and_retry_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:build-ir-prompt",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "build_ir_prompt",
+      "current_asterion_owner": "asterion.dci.datasets",
+      "target_asterion_owner": "asterion.dci.datasets",
+      "target_symbol": "build_ir_prompt",
+      "verification_tests": [
+        "tests.test_asterion_dci_datasets.AsterionDciDatasetTests.test_source_dataset_prompt_and_ir_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:build-run-command",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "build_run_command",
+      "current_asterion_owner": "asterion.dci.run",
+      "target_asterion_owner": "asterion.dci.run",
+      "target_symbol": "build_run_command",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:build-slice-stats",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "build_slice_stats",
+      "current_asterion_owner": "asterion.dci.analysis",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "build_slice_stats",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:build-subprocess-env",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "build_subprocess_env",
+      "current_asterion_owner": "asterion.dci.run",
+      "target_asterion_owner": "asterion.dci.run",
+      "target_symbol": "build_subprocess_env",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:compute-detailed-analysis",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "compute_detailed_analysis",
+      "current_asterion_owner": "asterion.dci.analysis",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "compute_detailed_analysis",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:compute-ir-ndcg",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "compute_ir_ndcg",
+      "current_asterion_owner": "asterion.dci.metrics",
+      "target_asterion_owner": "asterion.dci.metrics",
+      "target_symbol": "compute_ir_ndcg",
+      "verification_tests": [
+        "tests.test_asterion_dci_datasets.AsterionDciDatasetTests.test_source_dataset_prompt_and_ir_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:compute-ndcg-at-k",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "compute_ndcg_at_k",
+      "current_asterion_owner": "asterion.dci.metrics",
+      "target_asterion_owner": "asterion.dci.metrics",
+      "target_symbol": "compute_ndcg_at_k",
+      "verification_tests": [
+        "tests.test_asterion_dci_datasets.AsterionDciDatasetTests.test_source_dataset_prompt_and_ir_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:compute-percentile",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "compute_percentile",
+      "current_asterion_owner": "asterion.dci.analysis",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "compute_percentile",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:compute-run-batch-timing",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "compute_run_batch_timing",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "compute_run_batch_timing",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:enrich-results",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "enrich_results",
+      "current_asterion_owner": "asterion.dci.analysis",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "enrich_results",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:existing-result-succeeded",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "existing_result_succeeded",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "existing_result_succeeded",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:existing-run-has-error",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "existing_run_has_error",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "existing_run_has_error",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:expand-extra-args",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "expand_extra_args",
+      "current_asterion_owner": "asterion.dci.run",
+      "target_asterion_owner": "asterion.dci.run",
+      "target_symbol": "expand_extra_args",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:extract-agent-usage-metrics",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "extract_agent_usage_metrics",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "extract_agent_usage_metrics",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:extract-tool-metrics",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "extract_tool_metrics",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "extract_tool_metrics",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:format-number",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "format_number",
+      "current_asterion_owner": "asterion.dci.analysis",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "format_number",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:format-seconds",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "format_seconds",
+      "current_asterion_owner": "asterion.dci.analysis",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "format_seconds",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:format-usd",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "format_usd",
+      "current_asterion_owner": "asterion.dci.analysis",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "format_usd",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:gather-query-metrics",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "gather_query_metrics",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "gather_query_metrics",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:has-core-run-artifacts",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "has_core_run_artifacts",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "has_core_run_artifacts",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:judge-answer-async",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "judge_answer_async",
+      "current_asterion_owner": "asterion.dci.evaluation",
+      "target_asterion_owner": "asterion.dci.evaluation",
+      "target_symbol": "judge_answer_async",
+      "verification_tests": [
+        "tests.test_asterion_dci_evaluation.AsterionDciEvaluationTests.test_source_judge_cache_and_retry_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:judge-result-succeeded",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "judge_result_succeeded",
+      "current_asterion_owner": "asterion.dci.evaluation",
+      "target_asterion_owner": "asterion.dci.evaluation",
+      "target_symbol": "judge_result_succeeded",
+      "verification_tests": [
+        "tests.test_asterion_dci_evaluation.AsterionDciEvaluationTests.test_source_judge_cache_and_retry_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:load-existing-query-result",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "load_existing_query_result",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "load_existing_query_result",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:load-judge-config-from-args",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "load_judge_config_from_args",
+      "current_asterion_owner": "asterion.dci.judge",
+      "target_asterion_owner": "asterion.dci.judge",
+      "target_symbol": "load_judge_config_from_args",
+      "verification_tests": [
+        "tests.test_asterion_dci_evaluation.AsterionDciEvaluationTests.test_source_judge_cache_and_retry_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:main",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "main",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "main",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:main-async",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "main_async",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "main_async",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:normalize-retrieved-path",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "normalize_retrieved_path",
+      "current_asterion_owner": "asterion.dci.datasets",
+      "target_asterion_owner": "asterion.dci.datasets",
+      "target_symbol": "normalize_retrieved_path",
+      "verification_tests": [
+        "tests.test_asterion_dci_datasets.AsterionDciDatasetTests.test_source_dataset_prompt_and_ir_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:parse-args",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "parse_args",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "parse_args",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:parse-iso8601",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "parse_iso8601",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "parse_iso8601",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:parse-retrieved-docs",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "parse_retrieved_docs",
+      "current_asterion_owner": "asterion.dci.datasets",
+      "target_asterion_owner": "asterion.dci.datasets",
+      "target_symbol": "parse_retrieved_docs",
+      "verification_tests": [
+        "tests.test_asterion_dci_datasets.AsterionDciDatasetTests.test_source_dataset_prompt_and_ir_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:plot-metric-distributions",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "plot_metric_distributions",
+      "current_asterion_owner": "asterion.dci.analysis",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "plot_metric_distributions",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:plot-runtime-breakdown",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "plot_runtime_breakdown",
+      "current_asterion_owner": "asterion.dci.analysis",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "plot_runtime_breakdown",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:plot-scatter-overview",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "plot_scatter_overview",
+      "current_asterion_owner": "asterion.dci.analysis",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "plot_scatter_overview",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:plot-tool-summary",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "plot_tool_summary",
+      "current_asterion_owner": "asterion.dci.analysis",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "plot_tool_summary",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:prepare-query-dir-for-run",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "prepare_query_dir_for_run",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.artifacts",
+      "target_symbol": "prepare_query_dir_for_run",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:query-needs-execution-or-judging",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "query_needs_execution_or_judging",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "query_needs_execution_or_judging",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:read-json-if-exists",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "read_json_if_exists",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.artifacts",
+      "target_symbol": "read_json_if_exists",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:read-jsonl",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "read_jsonl",
+      "current_asterion_owner": "asterion.dci.datasets",
+      "target_asterion_owner": "asterion.dci.datasets",
+      "target_symbol": "read_jsonl",
+      "verification_tests": [
+        "tests.test_asterion_dci_datasets.AsterionDciDatasetTests.test_source_dataset_prompt_and_ir_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:read-text-if-exists",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "read_text_if_exists",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.artifacts",
+      "target_symbol": "read_text_if_exists",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:resolve-repo-relative-path",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "resolve_repo_relative_path",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "resolve_repo_relative_path",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:run-single-query",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "run_single_query",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "run_single_query",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:safe-float",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "safe_float",
+      "current_asterion_owner": "asterion.dci.analysis",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "safe_float",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:scatter-by-outcome",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "scatter_by_outcome",
+      "current_asterion_owner": "asterion.dci.analysis",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "scatter_by_outcome",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:seconds-between",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "seconds_between",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "seconds_between",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:sum-dict-numbers",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "sum_dict_numbers",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "sum_dict_numbers",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:summarize-numeric",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "summarize_numeric",
+      "current_asterion_owner": "asterion.dci.analysis",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "summarize_numeric",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:utc-now",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "utc_now",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.benchmark",
+      "target_symbol": "utc_now",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:write-analysis-artifacts",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "write_analysis_artifacts",
+      "current_asterion_owner": "asterion.dci.analysis",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "write_analysis_artifacts",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:write-json",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "write_json",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.artifacts",
+      "target_symbol": "write_json",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:write-jsonl",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "write_jsonl",
+      "current_asterion_owner": "asterion.dci.artifacts",
+      "target_asterion_owner": "asterion.dci.artifacts",
+      "target_symbol": "write_jsonl",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_coordinator_and_artifact_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:write-markdown-report",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "write_markdown_report",
+      "current_asterion_owner": "asterion.dci.analysis",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "write_markdown_report",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:accuracy.over-judged",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "accuracy.over_judged",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "accuracy.over_judged",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:accuracy.over-total",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "accuracy.over_total",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "accuracy.over_total",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:agent-cost-estimate-usd",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "agent_cost_estimate_usd",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "agent_cost_estimate_usd",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:agent.cache-read-tokens",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "agent.cache_read_tokens",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "agent.cache_read_tokens",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:agent.cache-write-tokens",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "agent.cache_write_tokens",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "agent.cache_write_tokens",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:agent.input-tokens",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "agent.input_tokens",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "agent.input_tokens",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:agent.output-tokens",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "agent.output_tokens",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "agent.output_tokens",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:agent.total-tokens",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "agent.total_tokens",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "agent.total_tokens",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:event-count",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "event_count",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "event_count",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:judge-cost-estimate-usd",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "judge_cost_estimate_usd",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "judge_cost_estimate_usd",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:judge.cached-input-tokens",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "judge.cached_input_tokens",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "judge.cached_input_tokens",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:judge.input-tokens",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "judge.input_tokens",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "judge.input_tokens",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:judge.output-tokens",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "judge.output_tokens",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "judge.output_tokens",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:judge.total-tokens",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "judge.total_tokens",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "judge.total_tokens",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:launcher-wall-time-seconds",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "launcher_wall_time_seconds",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "launcher_wall_time_seconds",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:ndcg-at-10",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "ndcg_at_10",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "ndcg_at_10",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:non-tool-time-seconds",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "non_tool_time_seconds",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "non_tool_time_seconds",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:outcome-slices",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "outcome_slices",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "outcome_slices",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:overall-cost-total",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "overall_cost_total",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "overall_cost_total",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:per-tool-analysis",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "per_tool_analysis",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "per_tool_analysis",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:percentiles.p50",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "percentiles.p50",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "percentiles.p50",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:percentiles.p90",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "percentiles.p90",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "percentiles.p90",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:percentiles.p95",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "percentiles.p95",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "percentiles.p95",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:request-count",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "request_count",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "request_count",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:tool-time-seconds",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "tool_time_seconds",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "tool_time_seconds",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:tool.calls",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "tool.calls",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "tool.calls",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:tool.duration-seconds",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "tool.duration_seconds",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "tool.duration_seconds",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:tool.errors",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "tool.errors",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "tool.errors",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:turn-count",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "turn_count",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "turn_count",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:metric:wall-time-seconds",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "metric",
+      "source_name": "wall_time_seconds",
+      "current_asterion_owner": "asterion.dci.benchmark",
+      "target_asterion_owner": "asterion.dci.analysis",
+      "target_symbol": "wall_time_seconds",
+      "verification_tests": [
+        "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_source_metric_and_analysis_parity"
+      ]
+    },
+    {
+      "id": "scripts.bright.run-bio.sh:launcher:bright.biology",
+      "source_path": "scripts/bright/run_bio.sh",
+      "source_kind": "launcher",
+      "source_name": "bright.biology",
+      "current_asterion_owner": "scripts.asterion",
+      "target_asterion_owner": "scripts.asterion",
+      "target_symbol": "scripts/asterion/bright/run_bio.sh",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_one_to_one_source_launcher_profiles"
+      ],
+      "launcher_family": "bright",
+      "source_profile": {
+        "provider": "openai",
+        "model": "gpt-5.4-nano",
+        "tools": "read,bash",
+        "max_turns": 300,
+        "max_concurrency": 20,
+        "runtime_context_level": "level3",
+        "pi_thinking_level": "high",
+        "node_max_old_space_size_mb": 8192,
+        "enable_ir": true,
+        "dataset": "data/dci-bench/data/bright_biology/bright_biology.jsonl",
+        "output_root": "outputs/bright/bio",
+        "corpus_dir": "corpus/bright_corpus/biology"
+      }
+    },
+    {
+      "id": "scripts.bright.run-earth-science.sh:launcher:bright.earth-science",
+      "source_path": "scripts/bright/run_earth_science.sh",
+      "source_kind": "launcher",
+      "source_name": "bright.earth-science",
+      "current_asterion_owner": "scripts.asterion",
+      "target_asterion_owner": "scripts.asterion",
+      "target_symbol": "scripts/asterion/bright/run_earth_science.sh",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_one_to_one_source_launcher_profiles"
+      ],
+      "launcher_family": "bright",
+      "source_profile": {
+        "provider": "openai",
+        "model": "gpt-5.4-nano",
+        "tools": "read,bash",
+        "max_turns": 300,
+        "max_concurrency": 10,
+        "runtime_context_level": "level3",
+        "pi_thinking_level": "high",
+        "node_max_old_space_size_mb": 8192,
+        "enable_ir": true,
+        "dataset": "data/dci-bench/data/bright_earth_science/bright_earth_science.jsonl",
+        "output_root": "outputs/bright/earth_science",
+        "corpus_dir": "corpus/bright_corpus/earth_science"
+      }
+    },
+    {
+      "id": "scripts.bright.run-economics.sh:launcher:bright.economics",
+      "source_path": "scripts/bright/run_economics.sh",
+      "source_kind": "launcher",
+      "source_name": "bright.economics",
+      "current_asterion_owner": "scripts.asterion",
+      "target_asterion_owner": "scripts.asterion",
+      "target_symbol": "scripts/asterion/bright/run_economics.sh",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_one_to_one_source_launcher_profiles"
+      ],
+      "launcher_family": "bright",
+      "source_profile": {
+        "provider": "openai",
+        "model": "gpt-5.4-nano",
+        "tools": "read,bash",
+        "max_turns": 300,
+        "max_concurrency": 10,
+        "runtime_context_level": "level3",
+        "pi_thinking_level": "high",
+        "node_max_old_space_size_mb": 8192,
+        "enable_ir": true,
+        "dataset": "data/dci-bench/data/bright_economics/economics_full.jsonl",
+        "output_root": "outputs/bright/economics",
+        "corpus_dir": "corpus/bright_corpus/economics"
+      }
+    },
+    {
+      "id": "scripts.bright.run-robotics.sh:launcher:bright.robotics",
+      "source_path": "scripts/bright/run_robotics.sh",
+      "source_kind": "launcher",
+      "source_name": "bright.robotics",
+      "current_asterion_owner": "scripts.asterion",
+      "target_asterion_owner": "scripts.asterion",
+      "target_symbol": "scripts/asterion/bright/run_robotics.sh",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_one_to_one_source_launcher_profiles"
+      ],
+      "launcher_family": "bright",
+      "source_profile": {
+        "provider": "openai",
+        "model": "gpt-5.4-nano",
+        "tools": "read,bash",
+        "max_turns": 300,
+        "max_concurrency": 20,
+        "runtime_context_level": "level3",
+        "pi_thinking_level": "high",
+        "node_max_old_space_size_mb": 8192,
+        "enable_ir": true,
+        "dataset": "data/dci-bench/data/bright_robotics/bright_robotics.jsonl",
+        "output_root": "outputs/bright/robotics",
+        "corpus_dir": "corpus/bright_corpus/robotics"
+      }
+    },
+    {
+      "id": "scripts.qa.run-2wikimultihopqa-dev-sample50.sh:launcher:qa.2wikimultihopqa",
+      "source_path": "scripts/qa/run_2wikimultihopqa_dev_sample50.sh",
+      "source_kind": "launcher",
+      "source_name": "qa.2wikimultihopqa",
+      "current_asterion_owner": "scripts.asterion",
+      "target_asterion_owner": "scripts.asterion",
+      "target_symbol": "scripts/asterion/qa/run_2wikimultihopqa_dev_sample50.sh",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_one_to_one_source_launcher_profiles"
+      ],
+      "launcher_family": "qa",
+      "source_profile": {
+        "provider": "openai",
+        "model": "gpt-5.4-nano",
+        "tools": "read,bash",
+        "max_turns": 300,
+        "max_concurrency": 5,
+        "runtime_context_level": "level3",
+        "pi_thinking_level": "high",
+        "node_max_old_space_size_mb": 8192,
+        "enable_ir": false,
+        "dataset": "data/dci-bench/data/2wikimultihopqa/test.jsonl",
+        "output_root": "outputs/qa/openai_2wikimultihopqa_dev_sample50",
+        "corpus_dir": "corpus/wiki_corpus"
+      }
+    },
+    {
+      "id": "scripts.qa.run-bamboogle-test-sample50.sh:launcher:qa.bamboogle",
+      "source_path": "scripts/qa/run_bamboogle_test_sample50.sh",
+      "source_kind": "launcher",
+      "source_name": "qa.bamboogle",
+      "current_asterion_owner": "scripts.asterion",
+      "target_asterion_owner": "scripts.asterion",
+      "target_symbol": "scripts/asterion/qa/run_bamboogle_test_sample50.sh",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_one_to_one_source_launcher_profiles"
+      ],
+      "launcher_family": "qa",
+      "source_profile": {
+        "provider": "openai",
+        "model": "gpt-5.4-nano",
+        "tools": "read,bash",
+        "max_turns": 300,
+        "max_concurrency": 5,
+        "runtime_context_level": "level3",
+        "pi_thinking_level": "high",
+        "node_max_old_space_size_mb": 8192,
+        "enable_ir": false,
+        "dataset": "data/dci-bench/data/bamboogle/test.jsonl",
+        "output_root": "outputs/qa/openai_bamboogle_test_sample50",
+        "corpus_dir": "corpus/wiki_corpus"
+      }
+    },
+    {
+      "id": "scripts.qa.run-hotpotqa-dev-sample50.sh:launcher:qa.hotpotqa",
+      "source_path": "scripts/qa/run_hotpotqa_dev_sample50.sh",
+      "source_kind": "launcher",
+      "source_name": "qa.hotpotqa",
+      "current_asterion_owner": "scripts.asterion",
+      "target_asterion_owner": "scripts.asterion",
+      "target_symbol": "scripts/asterion/qa/run_hotpotqa_dev_sample50.sh",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_one_to_one_source_launcher_profiles"
+      ],
+      "launcher_family": "qa",
+      "source_profile": {
+        "provider": "openai",
+        "model": "gpt-5.4-nano",
+        "tools": "read,bash",
+        "max_turns": 300,
+        "max_concurrency": 5,
+        "runtime_context_level": "level3",
+        "pi_thinking_level": "high",
+        "node_max_old_space_size_mb": 8192,
+        "enable_ir": false,
+        "dataset": "data/dci-bench/data/hotpotqa/test.jsonl",
+        "output_root": "outputs/qa/openai_hotpotqa_dev_sample50",
+        "corpus_dir": "corpus/wiki_corpus"
+      }
+    },
+    {
+      "id": "scripts.qa.run-musique-dev-sample50.sh:launcher:qa.musique",
+      "source_path": "scripts/qa/run_musique_dev_sample50.sh",
+      "source_kind": "launcher",
+      "source_name": "qa.musique",
+      "current_asterion_owner": "scripts.asterion",
+      "target_asterion_owner": "scripts.asterion",
+      "target_symbol": "scripts/asterion/qa/run_musique_dev_sample50.sh",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_one_to_one_source_launcher_profiles"
+      ],
+      "launcher_family": "qa",
+      "source_profile": {
+        "provider": "openai",
+        "model": "gpt-5.4-nano",
+        "tools": "read,bash",
+        "max_turns": 300,
+        "max_concurrency": 5,
+        "runtime_context_level": "level3",
+        "pi_thinking_level": "high",
+        "node_max_old_space_size_mb": 8192,
+        "enable_ir": false,
+        "dataset": "data/dci-bench/data/musique/test.jsonl",
+        "output_root": "outputs/qa/openai_musique_dev_sample50",
+        "corpus_dir": "corpus/wiki_corpus"
+      }
+    },
+    {
+      "id": "scripts.qa.run-nq-test-sample50.sh:launcher:qa.nq",
+      "source_path": "scripts/qa/run_nq_test_sample50.sh",
+      "source_kind": "launcher",
+      "source_name": "qa.nq",
+      "current_asterion_owner": "scripts.asterion",
+      "target_asterion_owner": "scripts.asterion",
+      "target_symbol": "scripts/asterion/qa/run_nq_test_sample50.sh",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_one_to_one_source_launcher_profiles"
+      ],
+      "launcher_family": "qa",
+      "source_profile": {
+        "provider": "openai",
+        "model": "gpt-5.4-nano",
+        "tools": "read,bash",
+        "max_turns": 300,
+        "max_concurrency": 5,
+        "runtime_context_level": "level3",
+        "pi_thinking_level": "high",
+        "node_max_old_space_size_mb": 8192,
+        "enable_ir": false,
+        "dataset": "data/dci-bench/data/nq/test.jsonl",
+        "output_root": "outputs/qa/openai_nq_test_sample50",
+        "corpus_dir": "corpus/wiki_corpus"
+      }
+    },
+    {
+      "id": "scripts.qa.run-triviaqa-test-sample50.sh:launcher:qa.triviaqa",
+      "source_path": "scripts/qa/run_triviaqa_test_sample50.sh",
+      "source_kind": "launcher",
+      "source_name": "qa.triviaqa",
+      "current_asterion_owner": "scripts.asterion",
+      "target_asterion_owner": "scripts.asterion",
+      "target_symbol": "scripts/asterion/qa/run_triviaqa_test_sample50.sh",
+      "verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_one_to_one_source_launcher_profiles"
+      ],
+      "launcher_family": "qa",
+      "source_profile": {
+        "provider": "openai",
+        "model": "gpt-5.4-nano",
+        "tools": "read,bash",
+        "max_turns": 300,
+        "max_concurrency": 5,
+        "runtime_context_level": "level3",
+        "pi_thinking_level": "high",
+        "node_max_old_space_size_mb": 8192,
+        "enable_ir": false,
+        "dataset": "data/dci-bench/data/triviaqa/test.jsonl",
+        "output_root": "outputs/qa/openai_triviaqa_test_sample50",
+        "corpus_dir": "corpus/wiki_corpus"
+      }
+    },
+    {
+      "id": "src.dci.benchmark.export-bc-plus-docs.py:cli-flag:--output-dir",
+      "source_path": "src/dci/benchmark/export_bc_plus_docs.py",
+      "source_kind": "cli_flag",
+      "source_name": "--output-dir",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--output-dir",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bcplus_export_cli_flags"
+      ]
+    },
+    {
+      "id": "src.dci.benchmark.export-bc-plus-docs.py:cli-flag:--source-dir",
+      "source_path": "src/dci/benchmark/export_bc_plus_docs.py",
+      "source_kind": "cli_flag",
+      "source_name": "--source-dir",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--source-dir",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bcplus_export_cli_flags"
+      ]
+    },
+    {
+      "id": "src.dci.benchmark.export-bc-plus-docs.py:durable-output:domain.title.txt",
+      "source_path": "src/dci/benchmark/export_bc_plus_docs.py",
+      "source_kind": "durable_output",
+      "source_name": "domain/title.txt",
+      "current_asterion_owner": "asterion.dci.export",
+      "target_asterion_owner": "asterion.dci.export",
+      "target_symbol": "bcplus document tree",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bcplus_export_source_semantics"
+      ]
+    },
+    {
+      "id": "src.dci.benchmark.export-bc-plus-docs.py:function:build-filename",
+      "source_path": "src/dci/benchmark/export_bc_plus_docs.py",
+      "source_kind": "function",
+      "source_name": "build_filename",
+      "current_asterion_owner": "asterion.dci.export",
+      "target_asterion_owner": "asterion.dci.export",
+      "target_symbol": "build_filename",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bcplus_export_source_semantics"
+      ]
+    },
+    {
+      "id": "src.dci.benchmark.export-bc-plus-docs.py:function:extract-title",
+      "source_path": "src/dci/benchmark/export_bc_plus_docs.py",
+      "source_kind": "function",
+      "source_name": "extract_title",
+      "current_asterion_owner": "asterion.dci.export",
+      "target_asterion_owner": "asterion.dci.export",
+      "target_symbol": "extract_title",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bcplus_export_source_semantics"
+      ]
+    },
+    {
+      "id": "src.dci.benchmark.export-bc-plus-docs.py:function:get-domain",
+      "source_path": "src/dci/benchmark/export_bc_plus_docs.py",
+      "source_kind": "function",
+      "source_name": "get_domain",
+      "current_asterion_owner": "asterion.dci.export",
+      "target_asterion_owner": "asterion.dci.export",
+      "target_symbol": "get_domain",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bcplus_export_source_semantics"
+      ]
+    },
+    {
+      "id": "src.dci.benchmark.export-bc-plus-docs.py:function:main",
+      "source_path": "src/dci/benchmark/export_bc_plus_docs.py",
+      "source_kind": "function",
+      "source_name": "main",
+      "current_asterion_owner": "asterion.dci.export",
+      "target_asterion_owner": "asterion.dci.export",
+      "target_symbol": "main",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bcplus_export_source_semantics"
+      ]
+    },
+    {
+      "id": "src.dci.benchmark.export-bc-plus-docs.py:function:parse-args",
+      "source_path": "src/dci/benchmark/export_bc_plus_docs.py",
+      "source_kind": "function",
+      "source_name": "parse_args",
+      "current_asterion_owner": "asterion.dci.export",
+      "target_asterion_owner": "asterion.dci.export",
+      "target_symbol": "parse_args",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bcplus_export_source_semantics"
+      ]
+    },
+    {
+      "id": "src.dci.benchmark.export-bc-plus-docs.py:function:sanitize-name",
+      "source_path": "src/dci/benchmark/export_bc_plus_docs.py",
+      "source_kind": "function",
+      "source_name": "sanitize_name",
+      "current_asterion_owner": "asterion.dci.export",
+      "target_asterion_owner": "asterion.dci.export",
+      "target_symbol": "sanitize_name",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bcplus_export_source_semantics"
+      ]
+    },
+    {
+      "id": "src.dci.benchmark.export-bc-plus-docs.py:function:unique-path",
+      "source_path": "src/dci/benchmark/export_bc_plus_docs.py",
+      "source_kind": "function",
+      "source_name": "unique_path",
+      "current_asterion_owner": "asterion.dci.export",
+      "target_asterion_owner": "asterion.dci.export",
+      "target_symbol": "unique_path",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bcplus_export_source_semantics"
+      ]
+    },
+    {
+      "id": "src.dci.benchmark.export-bright-docs.py:cli-flag:--output-root",
+      "source_path": "src/dci/benchmark/export_bright_docs.py",
+      "source_kind": "cli_flag",
+      "source_name": "--output-root",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--output-root",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bright_export_cli_flags"
+      ]
+    },
+    {
+      "id": "src.dci.benchmark.export-bright-docs.py:cli-flag:--source-root",
+      "source_path": "src/dci/benchmark/export_bright_docs.py",
+      "source_kind": "cli_flag",
+      "source_name": "--source-root",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--source-root",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bright_export_cli_flags"
+      ]
+    },
+    {
+      "id": "src.dci.benchmark.export-bright-docs.py:cli-flag:--subset",
+      "source_path": "src/dci/benchmark/export_bright_docs.py",
+      "source_kind": "cli_flag",
+      "source_name": "--subset",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--subset",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bright_export_cli_flags"
+      ]
+    },
+    {
+      "id": "src.dci.benchmark.export-bright-docs.py:durable-output:.dci-export-complete",
+      "source_path": "src/dci/benchmark/export_bright_docs.py",
+      "source_kind": "durable_output",
+      "source_name": ".dci_export_complete",
+      "current_asterion_owner": "asterion.dci.export",
+      "target_asterion_owner": "asterion.dci.export",
+      "target_symbol": "subset completion marker",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bright_marker_is_terminal"
+      ]
+    },
+    {
+      "id": "src.dci.benchmark.export-bright-docs.py:durable-output:subset.id",
+      "source_path": "src/dci/benchmark/export_bright_docs.py",
+      "source_kind": "durable_output",
+      "source_name": "subset/id",
+      "current_asterion_owner": "asterion.dci.export",
+      "target_asterion_owner": "asterion.dci.export",
+      "target_symbol": "bright document tree",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bright_export_source_semantics"
+      ]
+    },
+    {
+      "id": "src.dci.benchmark.export-bright-docs.py:function:export-subset",
+      "source_path": "src/dci/benchmark/export_bright_docs.py",
+      "source_kind": "function",
+      "source_name": "export_subset",
+      "current_asterion_owner": "asterion.dci.export",
+      "target_asterion_owner": "asterion.dci.export",
+      "target_symbol": "export_subset",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bright_export_source_semantics"
+      ]
+    },
+    {
+      "id": "src.dci.benchmark.export-bright-docs.py:function:main",
+      "source_path": "src/dci/benchmark/export_bright_docs.py",
+      "source_kind": "function",
+      "source_name": "main",
+      "current_asterion_owner": "asterion.dci.export",
+      "target_asterion_owner": "asterion.dci.export",
+      "target_symbol": "main",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bright_export_source_semantics"
+      ]
+    },
+    {
+      "id": "src.dci.benchmark.export-bright-docs.py:function:parse-args",
+      "source_path": "src/dci/benchmark/export_bright_docs.py",
+      "source_kind": "function",
+      "source_name": "parse_args",
+      "current_asterion_owner": "asterion.dci.export",
+      "target_asterion_owner": "asterion.dci.export",
+      "target_symbol": "parse_args",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bright_export_source_semantics"
+      ]
+    },
+    {
+      "id": "src.dci.benchmark.export-bright-docs.py:function:safe-relative-path",
+      "source_path": "src/dci/benchmark/export_bright_docs.py",
+      "source_kind": "function",
+      "source_name": "safe_relative_path",
+      "current_asterion_owner": "asterion.dci.export",
+      "target_asterion_owner": "asterion.dci.export",
+      "target_symbol": "safe_relative_path",
+      "verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_bright_export_source_semantics"
+      ]
+    }
+  ]
+}
