@@ -13,6 +13,7 @@ _REVISION_PATTERN = re.compile(r"[0-9a-fA-F]{40,64}")
 _SCP_ORIGIN_PATTERN = re.compile(
     r"^(?:[^@/:]+@)?(?P<host>\[[^]]+\]|[^/:]+):(?P<path>.+)$"
 )
+_NUMERIC_COMPONENT_PATTERN = re.compile(r"(?:[0-9]+|0[xX][0-9A-Fa-f]+)")
 _REMOTE_ORIGIN_SCHEMES = frozenset({"git", "http", "https", "ssh"})
 
 
@@ -81,9 +82,17 @@ def _is_remote_host(value: str | None) -> bool:
 
 
 def _looks_numeric(host: str) -> bool:
-    if not host or not host[0].isdigit():
+    if not host:
         return False
-    return all(not part or part[0].isdigit() for part in host.split("."))
+    parts = host.split(".")
+    if all(_NUMERIC_COMPONENT_PATTERN.fullmatch(part) is not None for part in parts):
+        return True
+    return all(
+        part == ""
+        or part.lower() == "0x"
+        or _NUMERIC_COMPONENT_PATTERN.fullmatch(part) is not None
+        for part in parts
+    ) and any(part for part in parts)
 
 
 def _parse_legacy_ipv4(host: str) -> ipaddress.IPv4Address | None:

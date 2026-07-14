@@ -257,6 +257,32 @@ class AsterionDciArtifactTests(unittest.TestCase):
                 ),
                 ("ssh://x/team/repo.git", {"host": "x", "path": "/team/repo.git"}),
                 ("git@x:team/repo.git", {"host": "x", "path": "/team/repo.git"}),
+                ("ssh://1x/team/repo.git", {"host": "1x", "path": "/team/repo.git"}),
+                ("git@1x:team/repo.git", {"host": "1x", "path": "/team/repo.git"}),
+                (
+                    "ssh://1-host/team/repo.git",
+                    {"host": "1-host", "path": "/team/repo.git"},
+                ),
+                (
+                    "git@1-host:team/repo.git",
+                    {"host": "1-host", "path": "/team/repo.git"},
+                ),
+                (
+                    "ssh://123abc/team/repo.git",
+                    {"host": "123abc", "path": "/team/repo.git"},
+                ),
+                (
+                    "git@123abc:team/repo.git",
+                    {"host": "123abc", "path": "/team/repo.git"},
+                ),
+                (
+                    "ssh://deadbeef/team/repo.git",
+                    {"host": "deadbeef", "path": "/team/repo.git"},
+                ),
+                (
+                    "git@deadbeef:team/repo.git",
+                    {"host": "deadbeef", "path": "/team/repo.git"},
+                ),
                 (
                     "http://0xffffffff/team/repo.git",
                     {"host": "0xffffffff", "path": "/team/repo.git"},
