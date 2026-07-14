@@ -482,3 +482,4 @@
 - 16:30 AF-230 private atomic recorder and owner-token lock committed to prevent unsafe concurrent artifact writers. [2e2aed9]
 - 16:39 AF-230 quarantined lock removal and fd-safe permissions close ownership races and recorder lock leaks. [53f7da4]
 - 16:50 AF-230 directory-descriptor flock replaces metadata authority to guarantee one writer across metadata races. [e2ba6c9]
+- 16:58 AF-230 recorder I/O now stays descriptor-relative to prevent path rebinding from redirecting locked writers. [38ebedf]
