@@ -1,34 +1,51 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-14 20:02. **Session remains active — not a final handoff.** AF-240 planning is approved in the isolated `af-220-shared-dci-config` worktree.
+> Updated: 2026-07-14 23:58. **Session remains active — not a final handoff.** AF-240 Task 4 is in progress in the isolated `af-220-shared-dci-config` worktree.
 
 Active work package: AF-240
 
 ## TL;DR
 
-- AF-230 is complete. AF-230-H-001 through H-004 are confirmed 4/4 and the deterministic research tree records cycles 72–75.
-- Full closure passed 529 Python, 11 Node, and 19 Rust tests plus Asterion compile, Ruff, Climb shell syntax, scope, and diff checks.
-- One actual provider-backed Pi-default `asterion-dci run` completed under the physical system temporary path; no Judge request was made. Offline validation proved `0700` run/`0600` files, complete parseable artifacts, 314 raw and 40 valid protocol events, five full-versus-processed externalized tool results, completed truthful latest-context state, credential-safe provenance, exact final digest, and body-free application projection.
-- A preceding logical `/var` output-path attempt was rejected before run creation and Pi/provider startup because `/var` is a symlink on macOS. This confirms the no-follow destination boundary and did not consume a provider request.
-- Fixture-only failed resume and terminal Node/Pi command construction passed; no second provider request manufactured a failure, and no terminal child was launched without a TTY.
-- AF-240 now has an independently approved eight-task TDD plan covering the missing BCPlus QA extractor, dataset/IR semantics, single-budget Judge evaluation, cancellable bounded batches, analysis, safe exports, installed profiles, all Asterion launchers, and bounded closure.
+- AF-240 Tasks 0–3 are complete. Task 3's bounded durable coordinator passed R4 independent review after all prior evidence-reuse, authority, cancellation, fresh-run, snapshot, fingerprint, inventory, generation-traversal, and reserved-namespace blockers were closed.
+- Latest Task 3 verification passed 666 full Python tests, 258 Asterion DCI tests, 189 focused review tests, 20 inventory tests, Ruff, compile, scope, and diff gates without Pi or Judge calls.
+- Task 4 is active: reproduce source query metrics, summaries, detailed analysis, enriched JSONL, and four deterministic PNG figures using Asterion-owned native evidence and descriptor-relative publication.
+- No complete source-product parity claim is valid yet. AF-240 Tasks 4–7 and AF-250 remain.
+
+## Committed / unpushed state
+
+- Branch: `af-220-shared-dci-config`.
+- Task 3 approval boundary: `c4b2538`; coordinator namespace repair: `c2c80f4`; generation authority repair: `6813437`.
+- Commits are local/unpushed unless Git reports otherwise. The Task 4 implementer may have uncommitted RED tests; inspect before editing.
 
 ## Next action
 
-Execute AF-240 Task 0 from `docs/superpowers/plans/2026-07-14-af-240-batch-evaluation-export-parity.md`: freeze the checked-in source behavior inventory and register evidence-bound AF-240-H-001 through H-004 before product implementation.
+Continue AF-240 Task 4 from `docs/superpowers/plans/2026-07-14-af-240-batch-evaluation-export-parity.md`: finish RED golden fixtures, implement `asterion.dci.analysis`, integrate atomic batch analysis publication, verify installed dependencies and deterministic figures, then obtain an independent review before Task 5.
+
+## Open questions
+
+- None requiring user input. Figure generation may be explicitly disabled by configuration, but requested figures must never be silently omitted.
+- Only AF-240 Task 7 may consume the authorized bounded one-row real Pi-plus-Judge request.
+
+## Ruled-out paths
+
+- Do not claim completion from WORKLIST labels alone; executable inventory, fixtures, installed-boundary checks, bounded provider evidence, and AF-250 must agree.
+- Do not import, launch, or modify `src/dci`; it is the independent comparison baseline.
+- Do not redirect this Pi-default migration toward Claude provider work.
+- Do not publish aggregates through untrusted path rebinding or accept self-authored cache/result evidence without exact validation.
 
 ## Ready commands
 
 ```bash
 python3 tools/project_scope_check.py
 git status --short
-git log --oneline -8
+git log --oneline -12
+uv run python -m unittest -q tests.test_asterion_dci_analysis
+uv run python -m unittest -q tests.test_climb_tools.Af240InventoryTests
 ```
 
 ## Guardrails
 
-- Do not import, launch, or modify `src/dci`; it remains the independent comparison baseline.
 - Do not edit the external `pi/` checkout or persist credentials/provider bodies.
 - Keep shared normal configuration in root `.env`; keep Asterion output ownership independent.
-- Do not run full external datasets automatically. AF-240 implementation follows the approved plan task by task; only its closure task may use the authorized one-row Pi-plus-Judge check.
-- AF-250 remains proposed and owns the final no-unsupported-row product acceptance matrix; AF-230 closure is not a complete source-product parity claim.
+- Do not run full external datasets automatically.
+- AF-250 owns the final no-unsupported-row product acceptance matrix and full-parity conclusion.
