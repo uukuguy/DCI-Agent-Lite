@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-15 04:09 +0800. **Session remains active — not a final handoff.** AF-240 is closed and AF-250 is active in the isolated `af-220-shared-dci-config` worktree.
+> Updated: 2026-07-15 04:47 +0800. **Session remains active — not a final handoff.** AF-240 is closed and AF-250 is active in the isolated `af-220-shared-dci-config` worktree.
 
 Active work package: AF-250
 
@@ -12,6 +12,7 @@ Active work package: AF-250
 - Full migration is not yet claimed. AF-250 must execute the final cross-product acceptance matrix, including both original example scripts and the installed Pi-default Asterion application.
 - AF-250 Task 1 now has a strict eight-row product matrix, real model-free behavior selectors, exact owners, seven body-free provider case IDs, and four pending package-owned Climb hypotheses.
 - AF-250 Task 2 restores both source Judge Make entry points with their own `PYTHONPATH=src` boundary and executes all four source/Asterion examples model-free with exact pairwise argv semantics and single-invocation enforcement.
+- AF-250 Task 3 independently compares native source/Asterion run, Judge/cache, QA/IR batch, and export semantics through product-owned fake transports; its review is clean.
 
 ## Committed / unpushed state
 
@@ -19,12 +20,13 @@ Active work package: AF-250
 - AF-240 Climb confirmation: `6e651b3`; lifecycle contract correction: `16ceec5`.
 - AF-240 closure/state changes are committed at `3e28d5c` and the independent-review repair at `b15d5f1`.
 - AF-250 Task 1 landed at `447395b`, its review repair at `dac19dc`, and its approval at `0e5b9ba`.
-- AF-250 Task 2 landed at `4f254fd` with its journal record at `3575f4e`; the Task 2 review repair is the latest commit after this checkpoint update.
+- AF-250 Task 2 landed at `4f254fd`, review repair at `bff32d7`, and approval at `1894a7c`.
+- AF-250 Task 3 landed at `b5ff060`, review repair at `2410820`, and approval at `feb6441`.
 - Commits are local/unpushed unless Git reports otherwise.
 
 ## Next action
 
-Execute Task 3 of `docs/superpowers/plans/2026-07-15-af-250-product-acceptance-matrix.md`: add narrow test-only canonical normalizers and stable cross-product semantic comparisons for run, Judge/cache, batch, and export behavior.
+Execute Task 4 of `docs/superpowers/plans/2026-07-15-af-250-product-acceptance-matrix.md`: prove the 533-row inventory, 12 launcher pairs, isolated wheel, and installed Pi-default application as one product.
 
 ## Open questions / defects to verify
 
@@ -44,8 +46,8 @@ Execute Task 3 of `docs/superpowers/plans/2026-07-15-af-250-product-acceptance-m
 python3 tools/project_scope_check.py
 git status --short
 git log --oneline -12
-uv run python -m unittest tests.test_asterion_dci_product_parity -v
-uv run python -m unittest tests.test_asterion_dci_product_parity tests.test_judge tests.test_asterion_dci_judge tests.test_asterion_dci_batch tests.test_asterion_dci_export -v
+uv run python -m unittest tests.test_asterion_dci_product_parity tests.test_asterion_dci_batch_launchers tests.test_distribution_boundaries tests.test_builtin_dci_application -v
+python3 tools/verify_asterion_dci_product.py
 ```
 
 ## Guardrails
