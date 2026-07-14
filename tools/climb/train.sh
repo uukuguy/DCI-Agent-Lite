@@ -175,7 +175,10 @@ cat >"$run_dir/manifest.json" <<EOF
   "cycle": null,
   "hypothesis_id": "$1",
   "paradigm": "$paradigm",
-  "run_id": "$run_id"
+  "run_id": "$run_id",
+  "evidence_kind": "$([ "${1#AF-240-H-}" != "$1" ] && printf inventory_readiness || printf capability_acceptance)",
+  "candidate_status": "$([ "${1#AF-240-H-}" != "$1" ] && printf pending || printf tracked)",
+  "product_confirmation": $([ "${1#AF-240-H-}" != "$1" ] && printf false || printf true)
 }
 EOF
 
@@ -556,12 +559,44 @@ elif [ "$1" = "AF-230-H-004" ]; then
         echo "ERROR: AF-230-H-004 operator and terminal parity failed; see $run_dir/train.log" >&2
         exit 1
     fi
-elif [ "$1" = "AF-240-H-001" ] || [ "$1" = "AF-240-H-002" ] || [ "$1" = "AF-240-H-003" ] || [ "$1" = "AF-240-H-004" ]; then
+elif [ "$1" = "AF-240-H-001" ]; then
     if ! uv run python -m unittest \
-        tests.test_climb_tools.Af240InventoryTests.test_af240_inventory_maps_complete_source_surface \
-        tests.test_climb_tools.Af240InventoryTests.test_af240_inventory_validator_rejects_missing_duplicate_placeholder_owner_and_tests \
+        tests.test_climb_tools.Af240InventoryTests.test_af240_h001_dataset_mapping_readiness \
+        tests.test_climb_tools.Af240InventoryTests.test_af240_h001_prompt_mapping_readiness \
+        tests.test_climb_tools.Af240InventoryTests.test_af240_h001_retrieval_mapping_readiness \
+        tests.test_climb_tools.Af240InventoryTests.test_af240_h001_ir_metric_mapping_readiness \
         -v >"$run_dir/train.log" 2>&1; then
-        echo "ERROR: $1 AF-240 executable inventory acceptance failed; see $run_dir/train.log" >&2
+        echo "ERROR: $1 AF-240 inventory readiness failed; see $run_dir/train.log" >&2
+        exit 1
+    fi
+elif [ "$1" = "AF-240-H-002" ]; then
+    if ! uv run python -m unittest \
+        tests.test_climb_tools.Af240InventoryTests.test_af240_h002_nested_coordinator_mapping_readiness \
+        tests.test_climb_tools.Af240InventoryTests.test_af240_h002_durable_query_mapping_readiness \
+        tests.test_climb_tools.Af240InventoryTests.test_af240_h002_reuse_mapping_readiness \
+        tests.test_climb_tools.Af240InventoryTests.test_af240_h002_cancellation_mapping_readiness \
+        -v >"$run_dir/train.log" 2>&1; then
+        echo "ERROR: $1 AF-240 inventory readiness failed; see $run_dir/train.log" >&2
+        exit 1
+    fi
+elif [ "$1" = "AF-240-H-003" ]; then
+    if ! uv run python -m unittest \
+        tests.test_climb_tools.Af240InventoryTests.test_af240_h003_judge_mapping_readiness \
+        tests.test_climb_tools.Af240InventoryTests.test_af240_h003_aggregate_metric_mapping_readiness \
+        tests.test_climb_tools.Af240InventoryTests.test_af240_h003_analysis_mapping_readiness \
+        tests.test_climb_tools.Af240InventoryTests.test_af240_h003_figure_mapping_readiness \
+        -v >"$run_dir/train.log" 2>&1; then
+        echo "ERROR: $1 AF-240 inventory readiness failed; see $run_dir/train.log" >&2
+        exit 1
+    fi
+elif [ "$1" = "AF-240-H-004" ]; then
+    if ! uv run python -m unittest \
+        tests.test_climb_tools.Af240InventoryTests.test_af240_h004_extractor_mapping_readiness \
+        tests.test_climb_tools.Af240InventoryTests.test_af240_h004_export_mapping_readiness \
+        tests.test_climb_tools.Af240InventoryTests.test_af240_h004_launcher_mapping_readiness \
+        tests.test_climb_tools.Af240InventoryTests.test_af240_h004_installed_resource_mapping_readiness \
+        -v >"$run_dir/train.log" 2>&1; then
+        echo "ERROR: $1 AF-240 inventory readiness failed; see $run_dir/train.log" >&2
         exit 1
     fi
 elif [ "$1" = "H-003" ]; then

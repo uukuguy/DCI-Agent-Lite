@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import ast
 import copy
+import importlib
 import json
 import os
 import shutil
@@ -38,15 +39,228 @@ AF240_OWNERS = {
     "scripts.asterion",
 }
 AF240_FORBIDDEN = {"placeholder", "tbd", "todo", "unsupported", "unknown", "n/a"}
+AF240_SOURCE_METRICS = {
+    "agent_usage.cache_read_tokens",
+    "agent_usage.cache_write_tokens",
+    "agent_usage.cost_cache_read",
+    "agent_usage.cost_cache_write",
+    "agent_usage.cost_input",
+    "agent_usage.cost_output",
+    "agent_usage.cost_total",
+    "agent_usage.input_tokens",
+    "agent_usage.output_tokens",
+    "agent_usage.total_tokens",
+    "analysis.cost_efficiency.agent_tokens_per_correct",
+    "analysis.cost_efficiency.cost_per_correct_usd",
+    "analysis.incorrect_queries.overall_cost_total",
+    "analysis.incorrect_queries.tool_call_count",
+    "analysis.incorrect_queries.turn_count",
+    "analysis.incorrect_queries.wall_time_seconds",
+    "analysis.per_query.agent_cache_read_tokens",
+    "analysis.per_query.agent_cost_total",
+    "analysis.per_query.agent_input_tokens",
+    "analysis.per_query.agent_output_tokens",
+    "analysis.per_query.agent_total_tokens",
+    "analysis.per_query.answer_char_count",
+    "analysis.per_query.event_count",
+    "analysis.per_query.gold_doc_count",
+    "analysis.per_query.judge_cost_total",
+    "analysis.per_query.judge_total_tokens",
+    "analysis.per_query.launcher_wall_time_seconds",
+    "analysis.per_query.non_tool_time_seconds",
+    "analysis.per_query.overall_cost_total",
+    "analysis.per_query.question_char_count",
+    "analysis.per_query.question_word_count",
+    "analysis.per_query.request_count",
+    "analysis.per_query.tool_call_count",
+    "analysis.per_query.tool_counts.*",
+    "analysis.per_query.tool_durations.*",
+    "analysis.per_query.tool_error_count",
+    "analysis.per_query.tool_time_seconds",
+    "analysis.per_query.tool_time_share",
+    "analysis.per_query.turn_count",
+    "analysis.per_query.wall_time_seconds",
+    "analysis.rankings.highest_token_queries.value",
+    "analysis.rankings.most_expensive_queries.value",
+    "analysis.rankings.most_tool_heavy_queries.value",
+    "analysis.rankings.slowest_queries.value",
+    "analysis.tool_summary.accuracy_when_used",
+    "analysis.tool_summary.avg_calls_per_query",
+    "analysis.tool_summary.avg_calls_when_used",
+    "analysis.tool_summary.avg_duration_per_call_seconds",
+    "analysis.tool_summary.correct_when_used",
+    "analysis.tool_summary.queries_used",
+    "analysis.tool_summary.queries_used_rate",
+    "analysis.tool_summary.total_calls",
+    "analysis.tool_summary.total_duration_seconds",
+    "analysis.tool_summary.total_error_count",
+    "numeric_summary.count",
+    "numeric_summary.max",
+    "numeric_summary.mean",
+    "numeric_summary.median",
+    "numeric_summary.min",
+    "numeric_summary.p10",
+    "numeric_summary.p25",
+    "numeric_summary.p75",
+    "numeric_summary.p90",
+    "judge_cost.cached_input_cost",
+    "judge_cost.input_cost",
+    "judge_cost.output_cost",
+    "judge_cost.total_cost",
+    "judge_usage.input_tokens",
+    "judge_usage.input_tokens_details.cached_tokens",
+    "judge_usage.output_tokens",
+    "judge_usage.total_tokens",
+    "query.event_count",
+    "query.is_correct",
+    "query.launcher_returncode",
+    "query.launcher_wall_time_seconds",
+    "query.ndcg_at_10",
+    "query.non_tool_time_seconds",
+    "query.request_count",
+    "query.tool_time_seconds",
+    "query.turn_count",
+    "query.wall_time_seconds",
+    "summary.accuracy.over_judged",
+    "summary.accuracy.over_total",
+    "summary.averages.agent_total_tokens",
+    "summary.averages.judge_total_tokens",
+    "summary.averages.overall_cost_total",
+    "summary.averages.tool_call_count",
+    "summary.averages.tool_time_seconds",
+    "summary.averages.turn_count",
+    "summary.averages.wall_time_seconds",
+    "summary.counts.correct",
+    "summary.counts.failed_runs",
+    "summary.counts.incorrect_or_unjudged",
+    "summary.counts.judged",
+    "summary.counts.total",
+    "summary.ndcg_at_10",
+    "summary.totals.agent_cache_read_tokens",
+    "summary.totals.agent_cache_write_tokens",
+    "summary.totals.agent_cost_total",
+    "summary.totals.agent_input_tokens",
+    "summary.totals.agent_output_tokens",
+    "summary.totals.agent_total_tokens",
+    "summary.totals.event_count",
+    "summary.totals.judge_cost_total",
+    "summary.totals.judge_input_tokens",
+    "summary.totals.judge_output_tokens",
+    "summary.totals.judge_total_tokens",
+    "summary.totals.launcher_wall_time_seconds",
+    "summary.totals.non_tool_time_seconds",
+    "summary.totals.overall_cost_total",
+    "summary.totals.tool_call_count",
+    "summary.totals.tool_error_count",
+    "summary.totals.tool_time_seconds",
+    "summary.totals.turn_count",
+    "summary.totals.wall_time_seconds",
+    "tool_metrics.by_tool.*.call_count",
+    "tool_metrics.by_tool.*.duration_seconds",
+    "tool_metrics.by_tool.*.error_count",
+    "tool_metrics.call_count",
+    "tool_metrics.duration_measured_call_count",
+    "tool_metrics.duration_missing_call_count",
+    "tool_metrics.duration_seconds",
+    "tool_metrics.error_count",
+}
+AF240_SOURCE_METRICS |= {
+    f"analysis.slices.*.{metric}.{statistic}"
+    for metric in (
+        "agent_total_tokens",
+        "overall_cost_total",
+        "question_word_count",
+        "tool_call_count",
+        "tool_error_count",
+        "tool_time_seconds",
+        "tool_time_share",
+        "turn_count",
+        "wall_time_seconds",
+    )
+    for statistic in (
+        "count",
+        "max",
+        "mean",
+        "median",
+        "min",
+        "p10",
+        "p25",
+        "p75",
+        "p90",
+    )
+}
+AF240_READINESS_TESTS = {
+    "AF-240-H-001": (
+        "test_af240_h001_dataset_mapping_readiness",
+        "test_af240_h001_prompt_mapping_readiness",
+        "test_af240_h001_retrieval_mapping_readiness",
+        "test_af240_h001_ir_metric_mapping_readiness",
+    ),
+    "AF-240-H-002": (
+        "test_af240_h002_nested_coordinator_mapping_readiness",
+        "test_af240_h002_durable_query_mapping_readiness",
+        "test_af240_h002_reuse_mapping_readiness",
+        "test_af240_h002_cancellation_mapping_readiness",
+    ),
+    "AF-240-H-003": (
+        "test_af240_h003_judge_mapping_readiness",
+        "test_af240_h003_aggregate_metric_mapping_readiness",
+        "test_af240_h003_analysis_mapping_readiness",
+        "test_af240_h003_figure_mapping_readiness",
+    ),
+    "AF-240-H-004": (
+        "test_af240_h004_extractor_mapping_readiness",
+        "test_af240_h004_export_mapping_readiness",
+        "test_af240_h004_launcher_mapping_readiness",
+        "test_af240_h004_installed_resource_mapping_readiness",
+    ),
+}
+AF240_FUTURE_TEST_PREFIXES = {
+    "AF-240 Task 1": "tests.test_asterion_dci_datasets.",
+    "AF-240 Task 2": "tests.test_asterion_dci_evaluation.",
+    "AF-240 Task 3": "tests.test_asterion_dci_batch.",
+    "AF-240 Task 4": "tests.test_asterion_dci_analysis.",
+    "AF-240 Task 5": "tests.test_asterion_dci_export.",
+    "AF-240 Task 6": "tests.test_asterion_dci_batch_launchers.",
+}
 
 
 def _af240_source_functions(path: str) -> set[str]:
     tree = ast.parse((REPO_ROOT / path).read_text(encoding="utf-8"))
     return {
         node.name
-        for node in tree.body
+        for node in ast.walk(tree)
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
     }
+
+
+def _resolve_test_name(name: str) -> bool:
+    parts = name.split(".")
+    for index in range(len(parts), 0, -1):
+        try:
+            value: object = importlib.import_module(".".join(parts[:index]))
+        except ModuleNotFoundError:
+            continue
+        try:
+            for part in parts[index:]:
+                value = getattr(value, part)
+        except AttributeError:
+            return False
+        return callable(value)
+    return False
+
+
+def _resolve_current_owner(owner: str, symbol: str) -> bool:
+    try:
+        value: object = importlib.import_module(owner)
+    except ModuleNotFoundError:
+        return False
+    try:
+        for part in symbol.split("."):
+            value = getattr(value, part)
+    except AttributeError:
+        return False
+    return value is not None
 
 
 def _af240_source_flags(path: str) -> set[str]:
@@ -86,19 +300,39 @@ def _validate_af240_inventory(inventory: dict[str, object]) -> None:
         serialized = json.dumps(row, sort_keys=True).casefold()
         if any(token in serialized for token in AF240_FORBIDDEN):
             raise ValueError(f"placeholder value in {row_id}")
-        for field in ("current_asterion_owner", "target_asterion_owner"):
-            if row.get(field) not in AF240_OWNERS:
-                raise ValueError(f"unknown owner in {row_id}")
-        tests = row.get("verification_tests")
-        if not isinstance(tests, list) or not tests:
-            raise ValueError(f"missing verification tests in {row_id}")
-        if not all(
-            isinstance(test, str)
-            and test.startswith("tests.")
-            and ".test_" in test
-            for test in tests
+        status = row.get("implementation_status")
+        if status not in {"implemented", "missing"}:
+            raise ValueError(f"invalid implementation status in {row_id}")
+        target_owner = row.get("target_asterion_owner")
+        if target_owner not in AF240_OWNERS:
+            raise ValueError(f"unknown target owner in {row_id}")
+        target_task = row.get("target_task")
+        if target_task not in AF240_FUTURE_TEST_PREFIXES:
+            raise ValueError(f"invalid target task in {row_id}")
+        future_test = row.get("future_acceptance_test")
+        if not (
+            isinstance(future_test, str)
+            and future_test.startswith("tests.")
+            and ".test_" in future_test
         ):
-            raise ValueError(f"verification must name focused tests in {row_id}")
+            raise ValueError(f"invalid future acceptance test in {row_id}")
+        if not future_test.startswith(AF240_FUTURE_TEST_PREFIXES[target_task]):
+            raise ValueError(f"future acceptance test does not match target task in {row_id}")
+        current_owner = row.get("current_asterion_owner")
+        current_symbol = row.get("current_symbol")
+        current_tests = row.get("current_verification_tests")
+        if status == "missing":
+            if current_owner is not None or current_symbol is not None or current_tests != []:
+                raise ValueError(f"missing behavior claims current evidence in {row_id}")
+        else:
+            if not isinstance(current_owner, str) or not isinstance(current_symbol, str):
+                raise ValueError(f"implemented behavior lacks current owner in {row_id}")
+            if not _resolve_current_owner(current_owner, current_symbol):
+                raise ValueError(f"current owner does not resolve in {row_id}")
+            if not isinstance(current_tests, list) or not current_tests:
+                raise ValueError(f"implemented behavior lacks current tests in {row_id}")
+            if not all(_resolve_test_name(test) for test in current_tests):
+                raise ValueError(f"current verification test does not resolve in {row_id}")
     if row_ids != sorted(row_ids) or len(row_ids) != len(set(row_ids)):
         raise ValueError("inventory ids must be unique and stably sorted")
 
@@ -126,6 +360,11 @@ def _validate_af240_inventory(inventory: dict[str, object]) -> None:
     }
     if mapped_launchers != expected_launchers:
         raise ValueError("launcher inventory is incomplete")
+    mapped_metrics = {
+        row["source_name"] for row in rows if row.get("source_kind") == "metric"
+    }
+    if mapped_metrics != AF240_SOURCE_METRICS:
+        raise ValueError("source metric inventory is incomplete or fabricated")
 
 
 class Af240InventoryTests(unittest.TestCase):
@@ -247,25 +486,146 @@ class Af240InventoryTests(unittest.TestCase):
         metric_names = {
             row["source_name"] for row in rows if row["source_kind"] == "metric"
         }
-        self.assertTrue(
-            {
-                "accuracy.over_total",
-                "accuracy.over_judged",
-                "ndcg_at_10",
-                "wall_time_seconds",
-                "tool.calls",
-                "tool.errors",
-                "tool.duration_seconds",
-                "agent.total_tokens",
-                "judge.total_tokens",
-                "overall_cost_total",
-                "percentiles.p50",
-                "percentiles.p90",
-                "percentiles.p95",
-                "outcome_slices",
-                "per_tool_analysis",
-            }.issubset(metric_names)
+        self.assertEqual(metric_names, AF240_SOURCE_METRICS)
+
+    def _rows(self) -> list[dict[str, object]]:
+        inventory = self._inventory()
+        _validate_af240_inventory(inventory)
+        return inventory["rows"]
+
+    def _assert_function_task(self, names: set[str], task: str) -> None:
+        rows = self._rows()
+        mapped = {
+            row["source_name"]
+            for row in rows
+            if row["source_kind"] == "function"
+            and row["source_path"] == "scripts/bcplus_eval/run_bcplus_eval.py"
+            and row["target_task"] == task
+        }
+        self.assertTrue(names.issubset(mapped))
+
+    def test_af240_h001_dataset_mapping_readiness(self) -> None:
+        self._assert_function_task({"read_jsonl"}, "AF-240 Task 1")
+
+    def test_af240_h001_prompt_mapping_readiness(self) -> None:
+        self._assert_function_task(
+            {"build_benchmark_prompt", "build_ir_prompt"}, "AF-240 Task 1"
         )
+
+    def test_af240_h001_retrieval_mapping_readiness(self) -> None:
+        self._assert_function_task(
+            {"parse_retrieved_docs", "normalize_retrieved_path"}, "AF-240 Task 1"
+        )
+
+    def test_af240_h001_ir_metric_mapping_readiness(self) -> None:
+        self._assert_function_task(
+            {"compute_ndcg_at_k", "compute_ir_ndcg"}, "AF-240 Task 1"
+        )
+
+    def test_af240_h002_nested_coordinator_mapping_readiness(self) -> None:
+        self._assert_function_task(
+            {"persist_aggregate", "worker"}, "AF-240 Task 3"
+        )
+
+    def test_af240_h002_durable_query_mapping_readiness(self) -> None:
+        rows = self._rows()
+        names = {
+            row["source_name"]
+            for row in rows
+            if row["source_kind"] == "durable_output"
+            and row["source_path"] == "scripts/bcplus_eval/run_bcplus_eval.py"
+        }
+        self.assertTrue({"item.json", "result.json", "results.jsonl", "summary.json"}.issubset(names))
+
+    def test_af240_h002_reuse_mapping_readiness(self) -> None:
+        rows = self._rows()
+        names = {
+            row["source_name"] for row in rows if row["source_kind"] == "cache_rule"
+        }
+        self.assertEqual(
+            names,
+            {
+                "completed-result-exact-judge-config",
+                "completed-native-run-judge-only",
+                "failed-or-incomplete-compatible-resume",
+                "malformed-evidence-fail-closed",
+                "dataset-order-aggregate-publication",
+            },
+        )
+
+    def test_af240_h002_cancellation_mapping_readiness(self) -> None:
+        rows = self._rows()
+        row = next(row for row in rows if row["source_name"] == "cooperative-cancellation")
+        self.assertEqual(row["source_kind"], "target_feature")
+        self.assertEqual(row["target_task"], "AF-240 Task 3")
+
+    def test_af240_h003_judge_mapping_readiness(self) -> None:
+        self._assert_function_task(
+            {"judge_answer_async", "judge_result_succeeded"}, "AF-240 Task 2"
+        )
+
+    def test_af240_h003_aggregate_metric_mapping_readiness(self) -> None:
+        rows = self._rows()
+        self.assertEqual(
+            {row["source_name"] for row in rows if row["source_kind"] == "metric"},
+            AF240_SOURCE_METRICS,
+        )
+
+    def test_af240_h003_analysis_mapping_readiness(self) -> None:
+        self._assert_function_task(
+            {"compute_detailed_analysis", "rank_records", "write_analysis_artifacts"},
+            "AF-240 Task 4",
+        )
+
+    def test_af240_h003_figure_mapping_readiness(self) -> None:
+        rows = self._rows()
+        outputs = {
+            row["source_name"]
+            for row in rows
+            if row["source_kind"] == "durable_output"
+            and str(row["source_name"]).endswith(".png")
+        }
+        self.assertEqual(
+            outputs,
+            {
+                "analysis_figures/metric_distributions.png",
+                "analysis_figures/runtime_breakdown.png",
+                "analysis_figures/scatter_overview.png",
+                "analysis_figures/tool_summary.png",
+            },
+        )
+
+    def test_af240_h004_extractor_mapping_readiness(self) -> None:
+        inventory = self._inventory()
+        _validate_af240_inventory(inventory)
+        self.assertIn("canary-sha256-repeated-key-xor-base64", inventory["extractor_contract"]["semantics"])
+
+    def test_af240_h004_export_mapping_readiness(self) -> None:
+        rows = self._rows()
+        paths = {
+            row["source_path"]
+            for row in rows
+            if row["source_kind"] == "function" and "export_" in row["source_path"]
+        }
+        self.assertEqual(
+            paths,
+            {
+                "src/dci/benchmark/export_bc_plus_docs.py",
+                "src/dci/benchmark/export_bright_docs.py",
+            },
+        )
+
+    def test_af240_h004_launcher_mapping_readiness(self) -> None:
+        rows = self._rows()
+        launchers = [row for row in rows if row["source_kind"] == "launcher"]
+        self.assertEqual(len(launchers), 12)
+        self.assertEqual({row["launcher_family"] for row in launchers}, {"bcplus", "qa", "bright"})
+
+    def test_af240_h004_installed_resource_mapping_readiness(self) -> None:
+        rows = self._rows()
+        row = next(row for row in rows if row["source_name"] == "installed-batch-profiles")
+        self.assertEqual(row["source_kind"], "target_feature")
+        self.assertEqual(row["target_task"], "AF-240 Task 6")
 
     def test_af240_inventory_validator_rejects_missing_duplicate_placeholder_owner_and_tests(self) -> None:
         inventory = self._inventory()
@@ -281,6 +641,11 @@ class Af240InventoryTests(unittest.TestCase):
             )
         ]
         mutations.append(missing)
+        nested = copy.deepcopy(inventory)
+        nested["rows"] = [
+            row for row in nested["rows"] if row["source_name"] != "worker"
+        ]
+        mutations.append(nested)
         duplicate = copy.deepcopy(inventory)
         duplicate["rows"].append(copy.deepcopy(duplicate["rows"][0]))
         mutations.append(duplicate)
@@ -288,11 +653,33 @@ class Af240InventoryTests(unittest.TestCase):
         placeholder["rows"][0]["target_symbol"] = "TBD"
         mutations.append(placeholder)
         owner = copy.deepcopy(inventory)
-        owner["rows"][0]["target_asterion_owner"] = "mystery.owner"
+        owner["rows"][0].update(
+            implementation_status="implemented",
+            current_asterion_owner="asterion.dci.analysis",
+            current_symbol="compute_detailed_analysis",
+            current_verification_tests=[
+                "tests.test_climb_tools.Af240InventoryTests.test_af240_h003_analysis_mapping_readiness"
+            ],
+        )
         mutations.append(owner)
         tests = copy.deepcopy(inventory)
-        tests["rows"][0]["verification_tests"] = []
+        tests["rows"][0].update(
+            implementation_status="implemented",
+            current_asterion_owner="asterion.dci.benchmark",
+            current_symbol="run_benchmark",
+            current_verification_tests=["tests.test_asterion_dci_benchmark.NoClass.test_absent"],
+        )
         mutations.append(tests)
+        metrics = copy.deepcopy(inventory)
+        metrics["rows"] = [
+            row
+            for row in metrics["rows"]
+            if row["source_name"] != "numeric_summary.p10"
+        ]
+        mutations.append(metrics)
+        target_task = copy.deepcopy(inventory)
+        target_task["rows"][0]["target_task"] = "AF-240 Task 1"
+        mutations.append(target_task)
         for index, mutation in enumerate(mutations):
             with self.subTest(mutation=index), self.assertRaises(ValueError):
                 _validate_af240_inventory(mutation)
@@ -2252,17 +2639,53 @@ class ClimbToolTests(unittest.TestCase):
     def test_af240_train_registers_every_batch_parity_hypothesis(self) -> None:
         train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
 
-        for hypothesis_id in (
-            "AF-240-H-001",
-            "AF-240-H-002",
-            "AF-240-H-003",
-            "AF-240-H-004",
-        ):
+        all_names = {name for names in AF240_READINESS_TESTS.values() for name in names}
+        self.assertEqual(len(all_names), 16)
+        for hypothesis_id, expected_names in AF240_READINESS_TESTS.items():
             with self.subTest(hypothesis_id=hypothesis_id):
-                self.assertIn(hypothesis_id, train_script)
-        self.assertIn("tests.test_climb_tools.Af240InventoryTests", train_script)
+                marker = f'elif [ "$1" = "{hypothesis_id}" ]; then'
+                start = train_script.rindex(marker)
+                end = train_script.find("\nelif ", start + len(marker))
+                branch = train_script[start : end if end >= 0 else None]
+                self.assertEqual(
+                    {name for name in all_names if name in branch}, set(expected_names)
+                )
+        self.assertIn('"evidence_kind":', train_script)
+        self.assertIn("inventory_readiness", train_script)
+        self.assertIn('"product_confirmation":', train_script)
+
+    def test_af240_hypotheses_are_pending_inventory_candidates_with_distinct_commands(self) -> None:
+        hypotheses = yaml.safe_load(
+            (REPO_ROOT / "docs/status/climb/hypotheses.yaml").read_text()
+        )["hypotheses"]
+        indexed = {item["id"]: item for item in hypotheses}
+        commands = []
+        for hypothesis_id, expected_names in AF240_READINESS_TESTS.items():
+            item = indexed[hypothesis_id]
+            self.assertEqual(item["status"], "pending")
+            self.assertEqual(item["evidence_kind"], "inventory_readiness")
+            self.assertIs(item["product_confirmation"], False)
+            command = item["verification_command"]
+            self.assertEqual(
+                {name for name in expected_names if name in command}, set(expected_names)
+            )
+            self.assertNotIn("test_af240_inventory_maps_complete_source_surface", command)
+            commands.append(command)
+        self.assertEqual(len(commands), len(set(commands)))
 
     def test_af240_local_eval_reports_batch_parity_dimensions(self) -> None:
+        eval_script = (REPO_ROOT / "tools/climb/eval-local.sh").read_text()
+        all_names = {name for names in AF240_READINESS_TESTS.values() for name in names}
+        for hypothesis_id, expected_names in AF240_READINESS_TESTS.items():
+            marker = f"    {hypothesis_id})"
+            start = eval_script.index(marker)
+            end = eval_script.find("\n    AF-240-H-", start + len(marker))
+            if end < 0:
+                end = eval_script.find("\n    *)", start + len(marker))
+            branch = eval_script[start:end]
+            self.assertEqual(
+                {name for name in all_names if name in branch}, set(expected_names)
+            )
         expected_dimensions = {
             "AF-240-H-001": {
                 "dataset_contract",
@@ -2307,6 +2730,9 @@ class ClimbToolTests(unittest.TestCase):
                 self.assertEqual(evaluation["hypothesis_id"], hypothesis_id)
                 self.assertEqual(evaluation["total"], 4)
                 self.assertEqual(set(evaluation["per_task"]), dimensions)
+                self.assertEqual(evaluation["evidence_kind"], "inventory_readiness")
+                self.assertEqual(evaluation["candidate_status"], "pending")
+                self.assertIs(evaluation["product_confirmation"], False)
 
 
 if __name__ == "__main__":

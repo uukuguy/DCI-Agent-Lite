@@ -889,40 +889,40 @@ case "$HYPOTHESIS_ID" in
         second_dimension="prompt_contract"
         third_dimension="retrieval_parsing"
         fourth_dimension="ir_metric"
-        immutable_test="tests.test_climb_tools.Af240InventoryTests.test_af240_inventory_maps_complete_source_surface"
-        repeat_test="tests.test_climb_tools.Af240InventoryTests.test_af240_inventory_maps_complete_source_surface"
-        dirty_test="tests.test_climb_tools.Af240InventoryTests.test_af240_inventory_validator_rejects_missing_duplicate_placeholder_owner_and_tests"
-        override_test="tests.test_climb_tools.Af240InventoryTests.test_af240_inventory_validator_rejects_missing_duplicate_placeholder_owner_and_tests"
+        immutable_test="tests.test_climb_tools.Af240InventoryTests.test_af240_h001_dataset_mapping_readiness"
+        repeat_test="tests.test_climb_tools.Af240InventoryTests.test_af240_h001_prompt_mapping_readiness"
+        dirty_test="tests.test_climb_tools.Af240InventoryTests.test_af240_h001_retrieval_mapping_readiness"
+        override_test="tests.test_climb_tools.Af240InventoryTests.test_af240_h001_ir_metric_mapping_readiness"
         ;;
     AF-240-H-002)
         first_dimension="bounded_concurrency"
         second_dimension="durable_query_state"
         third_dimension="exact_reuse"
         fourth_dimension="compatible_resume"
-        immutable_test="tests.test_climb_tools.Af240InventoryTests.test_af240_inventory_maps_complete_source_surface"
-        repeat_test="tests.test_climb_tools.Af240InventoryTests.test_af240_inventory_maps_complete_source_surface"
-        dirty_test="tests.test_climb_tools.Af240InventoryTests.test_af240_inventory_validator_rejects_missing_duplicate_placeholder_owner_and_tests"
-        override_test="tests.test_climb_tools.Af240InventoryTests.test_af240_inventory_validator_rejects_missing_duplicate_placeholder_owner_and_tests"
+        immutable_test="tests.test_climb_tools.Af240InventoryTests.test_af240_h002_nested_coordinator_mapping_readiness"
+        repeat_test="tests.test_climb_tools.Af240InventoryTests.test_af240_h002_durable_query_mapping_readiness"
+        dirty_test="tests.test_climb_tools.Af240InventoryTests.test_af240_h002_reuse_mapping_readiness"
+        override_test="tests.test_climb_tools.Af240InventoryTests.test_af240_h002_cancellation_mapping_readiness"
         ;;
     AF-240-H-003)
         first_dimension="judge_retry_cache"
         second_dimension="aggregate_metrics"
         third_dimension="detailed_analysis"
         fourth_dimension="reproducible_figures"
-        immutable_test="tests.test_climb_tools.Af240InventoryTests.test_af240_inventory_maps_complete_source_surface"
-        repeat_test="tests.test_climb_tools.Af240InventoryTests.test_af240_inventory_maps_complete_source_surface"
-        dirty_test="tests.test_climb_tools.Af240InventoryTests.test_af240_inventory_validator_rejects_missing_duplicate_placeholder_owner_and_tests"
-        override_test="tests.test_climb_tools.Af240InventoryTests.test_af240_inventory_validator_rejects_missing_duplicate_placeholder_owner_and_tests"
+        immutable_test="tests.test_climb_tools.Af240InventoryTests.test_af240_h003_judge_mapping_readiness"
+        repeat_test="tests.test_climb_tools.Af240InventoryTests.test_af240_h003_aggregate_metric_mapping_readiness"
+        dirty_test="tests.test_climb_tools.Af240InventoryTests.test_af240_h003_analysis_mapping_readiness"
+        override_test="tests.test_climb_tools.Af240InventoryTests.test_af240_h003_figure_mapping_readiness"
         ;;
     AF-240-H-004)
         first_dimension="bcplus_qa_export"
         second_dimension="corpus_exports"
         third_dimension="launcher_profiles"
         fourth_dimension="installed_resources"
-        immutable_test="tests.test_climb_tools.Af240InventoryTests.test_af240_inventory_maps_complete_source_surface"
-        repeat_test="tests.test_climb_tools.Af240InventoryTests.test_af240_inventory_maps_complete_source_surface"
-        dirty_test="tests.test_climb_tools.Af240InventoryTests.test_af240_inventory_validator_rejects_missing_duplicate_placeholder_owner_and_tests"
-        override_test="tests.test_climb_tools.Af240InventoryTests.test_af240_inventory_validator_rejects_missing_duplicate_placeholder_owner_and_tests"
+        immutable_test="tests.test_climb_tools.Af240InventoryTests.test_af240_h004_extractor_mapping_readiness"
+        repeat_test="tests.test_climb_tools.Af240InventoryTests.test_af240_h004_export_mapping_readiness"
+        dirty_test="tests.test_climb_tools.Af240InventoryTests.test_af240_h004_launcher_mapping_readiness"
+        override_test="tests.test_climb_tools.Af240InventoryTests.test_af240_h004_installed_resource_mapping_readiness"
         ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2
@@ -939,6 +939,9 @@ total=$((immutable_resolution + repeat_validation + dirty_checkout_safety + over
 cat >"$RUN_DIR/local-eval.json" <<EOF
 {
   "hypothesis_id": "$HYPOTHESIS_ID",
+  "evidence_kind": "$([ "${HYPOTHESIS_ID#AF-240-H-}" != "$HYPOTHESIS_ID" ] && printf inventory_readiness || printf capability_acceptance)",
+  "candidate_status": "$([ "${HYPOTHESIS_ID#AF-240-H-}" != "$HYPOTHESIS_ID" ] && printf pending || printf tracked)",
+  "product_confirmation": $([ "${HYPOTHESIS_ID#AF-240-H-}" != "$HYPOTHESIS_ID" ] && printf false || printf true),
   "total": $total,
   "per_task": {
     "$first_dimension": $immutable_resolution,
