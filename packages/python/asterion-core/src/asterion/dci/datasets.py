@@ -1,0 +1,303 @@
+"""Strict, deterministic dataset and prompt helpers for Asterion DCI batches."""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import unicodedata
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+
+class DatasetError(ValueError):
+    """Safe public error for malformed or ambiguous benchmark input."""
+
+
+_ALLOWED_FIELDS = frozenset({"query_id", "query", "answer", "gold_docs", "gold_ids"})
+_WINDOWS_RESERVED = frozenset(
+    {"CON", "PRN", "AUX", "NUL"}
+    | {f"COM{index}" for index in range(1, 10)}
+    | {f"LPT{index}" for index in range(1, 10)}
+)
+_AGGREGATE_RESERVED = frozenset(
+    {
+        "analysis",
+        "analysis.json",
+        "analysis.jsonl",
+        "analysis.md",
+        "analysis_figures",
+        "config",
+        "config.json",
+        "results",
+        "results.jsonl",
+        "summary",
+        "summary.json",
+    }
+)
+_WINDOWS_INVALID = frozenset('<>:"|?*')
+
+
+@dataclass(frozen=True, slots=True)
+class BenchmarkRow:
+    """One validated source-order dataset row with immutable collection fields."""
+
+    query_id: str
+    query: str
+    answer: str | None = None
+    gold_docs: tuple[str, ...] | None = None
+    gold_ids: tuple[str, ...] | None = None
+
+    @property
+    def is_ir(self) -> bool:
+        return self.gold_docs is not None or self.gold_ids is not None
+
+    def as_dict(self) -> dict[str, object]:
+        value: dict[str, object] = {"query_id": self.query_id, "query": self.query}
+        for name in ("answer", "gold_docs", "gold_ids"):
+            field = getattr(self, name)
+            if field is not None:
+                value[name] = list(field) if isinstance(field, tuple) else field
+        return value
+
+
+def _require_nonempty_string(value: Any, *, field: str) -> str:
+    if type(value) is not str or not value.strip():
+        raise DatasetError(f"DCI dataset {field} must be a non-empty string")
+    return value
+
+
+def _optional_string(value: Any, *, field: str) -> str | None:
+    if value is None:
+        raise DatasetError(f"DCI dataset {field} must be a non-empty string")
+    return _require_nonempty_string(value, field=field)
+
+
+def _document_list(value: Any, *, field: str) -> tuple[str, ...]:
+    if type(value) is not list or not value:
+        raise DatasetError(f"DCI dataset {field} must be a non-empty string list")
+    documents = tuple(_require_nonempty_string(item, field=field) for item in value)
+    return documents
+
+
+def portable_query_id_key(query_id: str) -> str:
+    """Validate an ID and return its reusable portable collision identity."""
+
+    query_id = _require_nonempty_string(query_id, field="query ID")
+    if query_id in {".", ".."} or query_id[-1] in {".", " "}:
+        raise DatasetError("DCI dataset query ID is not portable")
+    if any(
+        character in "/\\" or ord(character) < 32 or ord(character) == 127
+        for character in query_id
+    ):
+        raise DatasetError("DCI dataset query ID is not portable")
+    if any(character in _WINDOWS_INVALID for character in query_id):
+        raise DatasetError("DCI dataset query ID is not portable")
+
+    portable = unicodedata.normalize("NFKC", query_id)
+    if portable in {".", ".."} or portable[-1] in {".", " "}:
+        raise DatasetError("DCI dataset query ID is not portable")
+    if any(
+        character in "/\\"
+        or character in _WINDOWS_INVALID
+        or ord(character) < 32
+        or ord(character) == 127
+        for character in portable
+    ):
+        raise DatasetError("DCI dataset query ID is not portable")
+    normalized = portable.casefold()
+    reserved_stem = normalized.split(".", 1)[0].upper()
+    if reserved_stem in _WINDOWS_RESERVED or normalized in _AGGREGATE_RESERVED:
+        raise DatasetError("DCI dataset query ID is reserved")
+
+    return re.sub(r"\d+", lambda match: f"#{int(match.group(0))}#", normalized)
+
+
+def _object_without_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    value: dict[str, Any] = {}
+    for key, item in pairs:
+        if key in value:
+            raise DatasetError("DCI dataset JSON contains duplicate keys")
+        value[key] = item
+    return value
+
+
+def _row_from_value(value: Any) -> BenchmarkRow:
+    if type(value) is not dict:
+        raise DatasetError("DCI dataset row must be an object")
+    unknown = set(value).difference(_ALLOWED_FIELDS)
+    if unknown:
+        raise DatasetError("DCI dataset row contains unsupported fields")
+
+    query_id = _require_nonempty_string(value.get("query_id"), field="query ID")
+    query = _require_nonempty_string(value.get("query"), field="query")
+    answer = (
+        _optional_string(value["answer"], field="answer") if "answer" in value else None
+    )
+    has_gold_docs = "gold_docs" in value
+    has_gold_ids = "gold_ids" in value
+    gold_docs = (
+        _document_list(value["gold_docs"], field="gold_docs") if has_gold_docs else None
+    )
+    gold_ids = (
+        _document_list(value["gold_ids"], field="gold_ids") if has_gold_ids else None
+    )
+    if not has_gold_docs and not has_gold_ids and answer is None:
+        raise DatasetError("DCI QA dataset row requires answer")
+    portable_query_id_key(query_id)
+    return BenchmarkRow(
+        query_id=query_id,
+        query=query,
+        answer=answer,
+        gold_docs=gold_docs,
+        gold_ids=gold_ids,
+    )
+
+
+def load_benchmark_rows(path: Path) -> tuple[BenchmarkRow, ...]:
+    """Load strict UTF-8 JSONL without sorting or filesystem mutation."""
+
+    try:
+        lines = Path(path).read_text(encoding="utf-8", errors="strict").splitlines()
+    except (OSError, UnicodeError) as error:
+        raise DatasetError("DCI benchmark dataset is invalid") from error
+
+    rows: list[BenchmarkRow] = []
+    identities: set[str] = set()
+    for line_number, line in enumerate(lines, start=1):
+        if not line.strip():
+            continue
+        try:
+            value = json.loads(line, object_pairs_hook=_object_without_duplicate_keys)
+            row = _row_from_value(value)
+        except (json.JSONDecodeError, DatasetError) as error:
+            raise DatasetError(
+                f"DCI benchmark dataset is invalid at line {line_number}"
+            ) from error
+        identity = portable_query_id_key(row.query_id)
+        if identity in identities:
+            raise DatasetError(
+                f"DCI benchmark dataset has colliding query ID at line {line_number}"
+            )
+        identities.add(identity)
+        rows.append(row)
+    if not rows:
+        raise DatasetError("DCI benchmark dataset is empty")
+    return tuple(rows)
+
+
+def read_jsonl(path: Path) -> tuple[BenchmarkRow, ...]:
+    """Source-compatible name for the strict Asterion dataset loader."""
+
+    return load_benchmark_rows(path)
+
+
+def parse_retrieved_documents(result_text: str) -> list[str]:
+    if type(result_text) is not str:
+        raise DatasetError("DCI retrieval result must be a string")
+    normalized = result_text.replace("\\n", "\n")
+    section = re.search(
+        r"Relevant Documents.*?(1\..*?)(?:\n\n|\Z)", normalized, re.DOTALL
+    )
+    if section is None:
+        return []
+    paths: list[str] = []
+    for raw_line in section.group(1).splitlines():
+        line = re.sub(r"^[\d]+\.\s*", "", raw_line.strip())
+        line = re.sub(r"^[-*]\s*", "", line).strip()
+        if line and not line.startswith("("):
+            paths.append(line)
+    return paths
+
+
+def parse_retrieved_docs(result_text: str) -> list[str]:
+    return parse_retrieved_documents(result_text)
+
+
+def normalize_retrieved_path(path: str, corpus_dir: Path | None) -> str:
+    if type(path) is not str or not path:
+        raise DatasetError("DCI retrieved path must be a non-empty string")
+    normalized = path.replace("\\", "/")
+    if corpus_dir is not None:
+        prefix = str(corpus_dir).replace("\\", "/").rstrip("/")
+        if normalized.startswith(prefix + "/"):
+            return normalized[len(prefix) + 1 :]
+    normalized = re.sub(r"^\.?/+", "", normalized)
+    return normalized.rsplit("/", 1)[-1]
+
+
+def canonical_input_identity(path: Path) -> Path:
+    """Return a lexical absolute input identity without touching the filesystem."""
+
+    return Path(os.path.abspath(os.path.normpath(os.fspath(path))))
+
+
+def build_benchmark_prompt(query: str, corpus_dir: Path) -> str:
+    query = _require_nonempty_string(query, field="query")
+    corpus = canonical_input_identity(corpus_dir)
+    return (
+        "Answer the following question. "
+        f"The answer is contained in the corpus directory at @{corpus}. "
+        "**Do Not use web search!** Use ripgrep (rg) instead of grep for fast searching.\n\n"
+        "QUESTION:\n"
+        f"{query}\n"
+    )
+
+
+def build_qa_prompt(query: str, corpus_dir: Path) -> str:
+    return build_benchmark_prompt(query, corpus_dir)
+
+
+def build_ir_prompt(
+    query: str, corpus_dir: Path, corpus_hint: str | None = None
+) -> str:
+    query = _require_nonempty_string(query, field="query")
+    corpus = canonical_input_identity(corpus_dir)
+    if corpus_hint is not None:
+        corpus_hint = _require_nonempty_string(corpus_hint, field="corpus_hint")
+    corpus_hint_section = f"CORPUS STRUCTURE:\n{corpus_hint}\n\n" if corpus_hint else ""
+    return (
+        f"You are a careful research assistant. Answer the question below using ONLY documents in @{corpus}.\n"
+        "Do not use online search or any external tools beyond Grep and Bash.\n\n"
+        f"Question:\n{query}\n\n"
+        f"{corpus_hint_section}"
+        "SEARCH STRATEGY (follow exactly):\n"
+        "1. Use Grep/Bash ONLY — do NOT use the Agent tool, spawn subagents, or browse the web.\n"
+        "2. Run multiple Grep/Bash searches IN PARALLEL within a single response to save time.\n"
+        "3. Use diverse, targeted keywords to maximize recall before drawing conclusions.\n"
+        "4. After each round, reflect on gaps and launch follow-up searches to cover missing angles.\n"
+        "5. Do NOT stop after finding a few documents — exhaust all plausible search angles.\n\n"
+        "RETRIEVAL INSTRUCTIONS:\n"
+        "- Both recall AND precision matter equally — the output is evaluated with NDCG, which penalizes both missing relevant documents and including irrelevant ones.\n"
+        "- Find EVERY document that is genuinely relevant. Missing a gold document hurts recall.\n"
+        "- Read each candidate document carefully before including it. Including an irrelevant document hurts precision.\n"
+        "- A document is relevant only if it directly addresses the question or provides essential supporting evidence for the answer. Do NOT include tangential or loosely related documents.\n\n"
+        "RANKING INSTRUCTIONS:\n"
+        "- Rank the final list by relevance: the most directly useful document for answering the question goes first. Ranking quality affects NDCG score.\n\n"
+        "Your response MUST follow this exact format:\n"
+        "Relevant Documents (ranked by relevance, most relevant first; maximum 20):\n"
+        "1. {corpus}/path/to/doc1.txt\n"
+        "2. {corpus}/path/to/doc2.txt\n"
+        "3. {corpus}/path/to/doc3.txt\n"
+        "(use full relative paths from the working directory; list at most 20 documents; omit any document that is not directly relevant)\n\n"
+        "Explanation: {step-by-step reasoning with inline citations, e.g. [{corpus}/relative_path]}\n"
+        "Exact Answer: {concise final answer only}\n"
+        "Confidence: {0–100%; use below 50% if evidence is weak, ambiguous, or missing}\n"
+    )
+
+
+__all__ = [
+    "BenchmarkRow",
+    "DatasetError",
+    "build_benchmark_prompt",
+    "build_ir_prompt",
+    "build_qa_prompt",
+    "canonical_input_identity",
+    "load_benchmark_rows",
+    "normalize_retrieved_path",
+    "parse_retrieved_docs",
+    "parse_retrieved_documents",
+    "portable_query_id_key",
+    "read_jsonl",
+]

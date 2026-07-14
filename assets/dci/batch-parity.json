@@ -1549,12 +1549,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "function",
       "source_name": "build_benchmark_prompt",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.datasets",
       "target_asterion_owner": "asterion.dci.datasets",
       "target_symbol": "build_benchmark_prompt",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "build_benchmark_prompt",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_datasets.AsterionDciDatasetTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_build_benchmark_prompt"
+      ],
       "target_task": "AF-240 Task 1",
       "future_acceptance": {
         "task": "AF-240 Task 1",
@@ -1591,12 +1593,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "function",
       "source_name": "build_ir_prompt",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.datasets",
       "target_asterion_owner": "asterion.dci.datasets",
       "target_symbol": "build_ir_prompt",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "build_ir_prompt",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_datasets.AsterionDciDatasetTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_build_ir_prompt"
+      ],
       "target_task": "AF-240 Task 1",
       "future_acceptance": {
         "task": "AF-240 Task 1",
@@ -1696,12 +1700,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "function",
       "source_name": "compute_ir_ndcg",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.metrics",
       "target_asterion_owner": "asterion.dci.metrics",
       "target_symbol": "compute_ir_ndcg",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "compute_ir_ndcg",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_metrics.AsterionDciMetricTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_compute_ir_ndcg"
+      ],
       "target_task": "AF-240 Task 1",
       "future_acceptance": {
         "task": "AF-240 Task 1",
@@ -1717,12 +1723,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "function",
       "source_name": "compute_ndcg_at_k",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.metrics",
       "target_asterion_owner": "asterion.dci.metrics",
       "target_symbol": "compute_ndcg_at_k",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "compute_ndcg_at_k",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_metrics.AsterionDciMetricTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_compute_ndcg_at_k"
+      ],
       "target_task": "AF-240 Task 1",
       "future_acceptance": {
         "task": "AF-240 Task 1",
@@ -2137,12 +2145,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "function",
       "source_name": "normalize_retrieved_path",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.datasets",
       "target_asterion_owner": "asterion.dci.datasets",
       "target_symbol": "normalize_retrieved_path",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "normalize_retrieved_path",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_metrics.AsterionDciMetricTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_normalize_retrieved_path"
+      ],
       "target_task": "AF-240 Task 1",
       "future_acceptance": {
         "task": "AF-240 Task 1",
@@ -2200,12 +2210,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "function",
       "source_name": "parse_retrieved_docs",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.datasets",
       "target_asterion_owner": "asterion.dci.datasets",
       "target_symbol": "parse_retrieved_docs",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "parse_retrieved_docs",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_metrics.AsterionDciMetricTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_parse_retrieved_docs"
+      ],
       "target_task": "AF-240 Task 1",
       "future_acceptance": {
         "task": "AF-240 Task 1",
@@ -2410,12 +2422,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "function",
       "source_name": "read_jsonl",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.datasets",
       "target_asterion_owner": "asterion.dci.datasets",
       "target_symbol": "read_jsonl",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "read_jsonl",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_datasets.AsterionDciDatasetTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_read_jsonl"
+      ],
       "target_task": "AF-240 Task 1",
       "future_acceptance": {
         "task": "AF-240 Task 1",
