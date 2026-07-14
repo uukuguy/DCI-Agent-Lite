@@ -671,3 +671,4 @@
 - 05:47 Corrected AF-240 retained-evidence classification: only a non-secret environment-variable-name selector matched; credential values matched zero. It remains credential-clean and supports only the one-row Pi-plus-Judge and exact-reuse cases.
 - 05:57 AF-250 post-cycle governance test now verifies the recorded confirmed 4/4 results and exhausted hypothesis queue; its two focused Climb tests pass.
 - 05:57 Full Python discovery ran 1260 tests with exactly four expected failures: two direct absent-manifest tests and the AF-095/AF-210 evaluator tests that intentionally invoke that failing full suite. All other Task 6 gates pass.
+- 05:58 Blocked AF-250 audit commits truthful local evidence, failed bounded acceptance, and Climb state. [14c66fe]
