@@ -20,7 +20,7 @@ Active work package: AF-250
 
 ## Next action
 
-Govern AF-250: derive an executable matrix directly from the complete-product design and both runnable products, add a reviewed AF-250 plan/session, then execute every row. Start with source `scripts/examples/dci_basic_example.sh` and `dci_runtime_context_example.sh`, Asterion equivalents, installed `asterion-dci`, and the prior 533-row inventory.
+Execute Task 1 of `docs/superpowers/plans/2026-07-15-af-250-product-acceptance-matrix.md`: register the AF-250 Climb session, define the strict eight-row executable product matrix, digest-bind the prior 533-row inventory, and add the safe local verifier.
 
 ## Open questions / defects to verify
 

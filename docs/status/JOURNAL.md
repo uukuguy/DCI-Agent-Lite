@@ -618,3 +618,5 @@
 - 03:12 AF-230/AF-240 result sessions now match the authoritative runs ledger, with a regression covering both packages.
 - 03:15 AF-240 review repair narrows the session name to batch/evaluation/export scope and corrects the committed resume boundary; 23 focused tests pass.
 - 03:16 AF-240 closure ownership and scope-label repairs are committed after independent review. [b15d5f1]
+- 03:18 AF-240 reviewed recovery boundary now names both closure and repair commits accurately. [f4b074d]
+- 03:24 AF-250 plan defines eight executable product rows, 533 delegated batch rows, seven bounded real cases, and four governed Climb hypotheses.

@@ -277,7 +277,7 @@
 - Dependencies: AF-240
 - Acceptance: the checked-in matrix has no unsupported source behavior and every row has reproducible fixture or bounded provider-backed evidence before any full-parity conclusion.
 - Design: `docs/superpowers/specs/2026-07-13-asterion-dci-complete-product-parity-design.md`
-- Plan: governed after AF-240 closure.
+- Plan: `docs/superpowers/plans/2026-07-15-af-250-product-acceptance-matrix.md`
 
 ## AF-095 — Asterion framework identity and extraction
 
