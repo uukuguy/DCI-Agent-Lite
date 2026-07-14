@@ -183,7 +183,8 @@ bash scripts/asterion/bright/run_bio.sh
 reuses exact completed evidence; `fresh` rejects existing output, while `reuse`
 requires exact reusable evidence. QA uses Judge accuracy; BRIGHT profiles select
 IR mode and NDCG. Analysis and reproducible figures are written by default and
-can be disabled with `--no-analysis` or `--no-figures`. Both commands are
+figures alone can be disabled with `--no-figures`; disable both with
+`--no-analysis --no-figures`. Both commands are
 product-local and require operator authorization before a real Judge or Pi
 request. Installed `pi.reference` applications share this native implementation.
 
