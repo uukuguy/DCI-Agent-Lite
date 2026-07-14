@@ -596,6 +596,13 @@ class AsterionDciRunTests(unittest.TestCase):
             "../sentinel-local-relative/pi.git",
             r"C:\sentinel-local-windows\pi.git",
             "localhost:/sentinel-local-scp/pi.git",
+            "http://127.1/sentinel-loopback-short/pi.git",
+            "ssh://127.0.1/sentinel-loopback-dotted/pi.git",
+            "git://2130706433/sentinel-loopback-integer/pi.git",
+            "http://0x7f000001/sentinel-loopback-hex/pi.git",
+            "ssh://017700000001/sentinel-loopback-octal/pi.git",
+            "127.1:sentinel-loopback-scp-short/pi.git",
+            "git@2130706433:sentinel-loopback-scp-integer/pi.git",
         )
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)

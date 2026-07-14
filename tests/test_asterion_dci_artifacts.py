@@ -154,6 +154,13 @@ class AsterionDciArtifactTests(unittest.TestCase):
             r"\\localhost\sentinel-unc\pi.git",
             "localhost:/sentinel-scp-local/pi.git",
             "sentinel-user@localhost:sentinel-scp-user/pi.git",
+            "http://127.1/sentinel-loopback-short/pi.git",
+            "ssh://127.0.1/sentinel-loopback-dotted/pi.git",
+            "git://2130706433/sentinel-loopback-integer/pi.git",
+            "http://0x7f000001/sentinel-loopback-hex/pi.git",
+            "ssh://017700000001/sentinel-loopback-octal/pi.git",
+            "127.1:sentinel-loopback-scp-short/pi.git",
+            "git@2130706433:sentinel-loopback-scp-integer/pi.git",
         )
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -228,13 +235,24 @@ class AsterionDciArtifactTests(unittest.TestCase):
                 cwd=repo,
                 check=True,
             )
+            expected_origins = (
+                (
+                    "git@example.invalid:team/repo.git",
+                    {"host": "example.invalid", "path": "/team/repo.git"},
+                ),
+                ("ssh://x/team/repo.git", {"host": "x", "path": "/team/repo.git"}),
+                ("git@x:team/repo.git", {"host": "x", "path": "/team/repo.git"}),
+            )
 
-            provenance = collect_pi_provenance(package_dir, lock_file, None)
-
-        self.assertEqual(
-            provenance["origin"],
-            {"host": "example.invalid", "path": "/team/repo.git"},
-        )
+            for origin, expected in expected_origins:
+                with self.subTest(origin=origin):
+                    subprocess.run(
+                        ["git", "remote", "set-url", "origin", origin],
+                        cwd=repo,
+                        check=True,
+                    )
+                    provenance = collect_pi_provenance(package_dir, lock_file, None)
+                    self.assertEqual(provenance["origin"], expected)
 
     def test_stderr_tail_is_exactly_utf8_bounded_for_multibyte_text(self) -> None:
         cases = (

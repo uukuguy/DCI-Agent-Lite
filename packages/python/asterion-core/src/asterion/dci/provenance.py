@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ipaddress
 import re
+import socket
 import subprocess
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -11,6 +12,9 @@ from urllib.parse import urlsplit
 
 _REVISION_PATTERN = re.compile(r"[0-9a-fA-F]{40,64}")
 _SCP_ORIGIN_PATTERN = re.compile(r"^(?:[^@/:]+@)?(?P<host>[^/:]+):(?P<path>.+)$")
+_LEGACY_IPV4_PATTERN = re.compile(
+    r"(?:0[xX][0-9A-Fa-f]+|[0-9]+)(?:\.(?:0[xX][0-9A-Fa-f]+|[0-9]+)){0,3}"
+)
 _REMOTE_ORIGIN_SCHEMES = frozenset({"git", "http", "https", "ssh"})
 
 
@@ -63,12 +67,18 @@ def _is_remote_host(value: str | None) -> bool:
     if not value:
         return False
     host = value.lower().rstrip(".")
-    if host == "localhost" or host.endswith(".localhost") or len(host) == 1:
+    if host == "localhost" or host.endswith(".localhost"):
         return False
     try:
         return not ipaddress.ip_address(host).is_loopback
     except ValueError:
-        return True
+        if _LEGACY_IPV4_PATTERN.fullmatch(host) is None:
+            return True
+    try:
+        legacy_address = ipaddress.ip_address(socket.inet_aton(host))
+    except OSError:
+        return False
+    return not legacy_address.is_loopback
 
 
 def collect_pi_provenance(
