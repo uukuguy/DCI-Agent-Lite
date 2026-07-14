@@ -95,7 +95,7 @@ class AsterionDciExportTests(unittest.TestCase):
             )
             self.assertEqual(export_bcplus_qa(source, output), 3)
             rows = [json.loads(line) for line in output.read_text().splitlines()]
-            self.assertEqual([row["query_id"] for row in rows], ["1", "2", "3"])
+            self.assertEqual([row["query_id"] for row in rows], ["3", "1", "2"])
             before = output.stat().st_ino
             self.assertEqual(export_bcplus_qa(source, output), 3)
             self.assertEqual(output.stat().st_ino, before)
