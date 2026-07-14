@@ -2749,6 +2749,33 @@ class ClimbToolTests(unittest.TestCase):
             commands.append(command)
         self.assertEqual(len(commands), len(set(commands)))
 
+    def test_af230_and_af240_result_sessions_match_the_run_ledger(self) -> None:
+        hypotheses = yaml.safe_load(
+            (REPO_ROOT / "docs/status/climb/hypotheses.yaml").read_text()
+        )["hypotheses"]
+        with (REPO_ROOT / "docs/status/climb/runs.csv").open(newline="") as handle:
+            runs = {row["run_id"]: row for row in csv.DictReader(handle)}
+
+        for item in hypotheses:
+            if item.get("work_package_id") not in {"AF-230", "AF-240"}:
+                continue
+            for result in item["results"]:
+                with self.subTest(hypothesis=item["id"], run=result["run"]):
+                    ledger = runs[result["run"]]
+                    self.assertEqual(ledger["hypothesis_id"], item["id"])
+                    self.assertEqual(ledger["session"], result["session"])
+
+    def test_af240_session_name_stays_within_batch_package_scope(self) -> None:
+        session = json.loads(
+            (REPO_ROOT / "docs/status/climb/session-state.json").read_text()
+        )
+        target = (REPO_ROOT / "docs/status/climb/session-target.md").read_text()
+
+        self.assertEqual(
+            session["session"], "2026-07-15-af-240-batch-evaluation-export-parity"
+        )
+        self.assertNotIn("full source-parity", target.lower())
+
     def test_af240_local_eval_reports_batch_parity_dimensions(self) -> None:
         eval_script = (REPO_ROOT / "tools/climb/eval-local.sh").read_text()
         all_names = {name for names in AF240_READINESS_TESTS.values() for name in names}

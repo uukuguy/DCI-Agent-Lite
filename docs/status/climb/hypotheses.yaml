@@ -1592,7 +1592,7 @@ hypotheses:
   verification_command: uv run python -m unittest -v tests.test_asterion_dci_run tests.test_asterion_dci_artifacts
     tests.test_asterion_dci_application_executor tests.test_builtin_dci_application
   results:
-  - session: 2026-07-15-af-240-full-source-parity
+  - session: 2026-07-14-af-230-native-operator-artifact-parity
     cycle: 72
     run: 20260714-194356-dci-climb-af230h001
     local: 4
@@ -1696,7 +1696,7 @@ hypotheses:
     tests.test_climb_tools.Af240InventoryTests.test_af240_h001_retrieval_mapping_readiness
     tests.test_climb_tools.Af240InventoryTests.test_af240_h001_ir_metric_mapping_readiness
   results:
-  - session: 2026-07-14-af-230-native-operator-artifact-parity
+  - session: 2026-07-15-af-240-batch-evaluation-export-parity
     cycle: 76
     run: 20260715-025206-dci-climb-af240h001
     local: 4
@@ -1725,7 +1725,7 @@ hypotheses:
     tests.test_climb_tools.Af240InventoryTests.test_af240_h002_reuse_mapping_readiness
     tests.test_climb_tools.Af240InventoryTests.test_af240_h002_cancellation_mapping_readiness
   results:
-  - session: 2026-07-15-af-240-full-source-parity
+  - session: 2026-07-15-af-240-batch-evaluation-export-parity
     cycle: 77
     run: 20260715-025313-dci-climb-af240h002
     local: 4
@@ -1754,7 +1754,7 @@ hypotheses:
     tests.test_climb_tools.Af240InventoryTests.test_af240_h003_analysis_mapping_readiness
     tests.test_climb_tools.Af240InventoryTests.test_af240_h003_figure_mapping_readiness
   results:
-  - session: 2026-07-15-af-240-full-source-parity
+  - session: 2026-07-15-af-240-batch-evaluation-export-parity
     cycle: 78
     run: 20260715-025315-dci-climb-af240h003
     local: 4
@@ -1783,7 +1783,7 @@ hypotheses:
     tests.test_climb_tools.Af240InventoryTests.test_af240_h004_launcher_mapping_readiness
     tests.test_climb_tools.Af240InventoryTests.test_af240_h004_installed_resource_mapping_readiness
   results:
-  - session: 2026-07-15-af-240-full-source-parity
+  - session: 2026-07-15-af-240-batch-evaluation-export-parity
     cycle: 79
     run: 20260715-025318-dci-climb-af240h004
     local: 4

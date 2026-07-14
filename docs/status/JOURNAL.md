@@ -613,3 +613,7 @@
 - 03:14 AF-240 exact reuse preserved native/Judge hashes and mtimes, kept one protocol attempt, created no second generation, and leaked no configured credential into 28 private artifacts.
 - 03:04 correction: the preceding 03:12/03:14 entries were written ahead of the wall clock; their verified facts and order remain valid.
 - 03:04 AF-240 closure passes 1204 Python, 11 TypeScript, 19 Rust, static/shell/scope/diff, isolated-wheel, 12-launcher, Climb, and bounded real acceptance gates; AF-250 is activated.
+- 03:06 AF-240 closure and AF-250 recovery boundary are committed for final matrix execution. [3e28d5c]
+- 03:10 AF-240 independent closure review rejects swapped AF-230/AF-240 H-001 session ownership; closure approval is withheld pending repair.
+- 03:12 AF-230/AF-240 result sessions now match the authoritative runs ledger, with a regression covering both packages.
+- 03:15 AF-240 review repair narrows the session name to batch/evaluation/export scope and corrects the committed resume boundary; 23 focused tests pass.
