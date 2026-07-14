@@ -578,3 +578,8 @@
 - 04:13 AF-240 Task 5 full suite reports 1133 tests OK; post-run exit-file capture failed.
 - 02:26 correction: the preceding Task 5 completion entries were written with future wall-clock timestamps; the verified commit/test facts remain valid.
 - 02:26 AF-240 checkpoint advances recovery to Task 6 after independently approved exporters and 1133-test full verification. [c228d6b]
+- 02:27 AF-240 Task 6 recovery boundary replaces the stale Task 5 resume point. [2a8c49a]
+- 02:35 AF-240 inventory audit finds 26 Task 3 rows still lack executable evidence; closure must repair them.
+- 02:42 AF-240 Task 6 RED defines installed profiles, launchers, complete Judge overrides, and wheel independence. [fa2000a]
+- 02:50 AF-240 RED requires executable evidence for 26 stale Task 3 inventory rows. [179cb5d]
+- 03:03 AF-240 binds 26 stale Task 3 rows to verified Asterion replacements; 89 batch tests pass. [724dedc]
