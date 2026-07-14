@@ -549,6 +549,7 @@ def _write_private_text_at(
     value: str,
     *,
     append: bool = False,
+    durable: bool = False,
 ) -> None:
     _validate_leaf_name(name)
     _reject_symlink_at(directory_fd, name, label="artifact target")
@@ -559,6 +560,8 @@ def _write_private_text_at(
         with os.fdopen(descriptor, "a" if append else "w", encoding="utf-8") as handle:
             handle.write(value)
             handle.flush()
+            if durable:
+                os.fsync(handle.fileno())
     except BaseException:
         try:
             os.close(descriptor)
@@ -574,6 +577,70 @@ def _write_private_text(path: Path, value: str, *, append: bool = False) -> None
         _write_private_text_at(directory_fd, destination.name, value, append=append)
     finally:
         os.close(directory_fd)
+
+
+def _protocol_request_for_attempt(
+    request: DciRunRequest,
+    *,
+    attempt: int,
+    timeout_seconds: float | None,
+) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "protocol": PROTOCOL_VERSION,
+        "run_id": f"{request.run_id}-attempt-{attempt:04d}",
+        "input": {"text": request.question},
+        "requested_capabilities": map_pi_capabilities(request.tools),
+    }
+    if timeout_seconds is not None and timeout_seconds > 0:
+        deadline_ms = int(round(timeout_seconds * 1000))
+        if deadline_ms <= MAX_DEADLINE_MS:
+            payload["deadline_ms"] = max(1, deadline_ms)
+    return payload
+
+
+def _validate_attempt_record(value: object, number: int) -> dict[str, Any]:
+    if not isinstance(value, dict) or set(value) != {
+        "attempt",
+        "status",
+        "command_summary",
+        "timeout_seconds",
+        "stderr_tail_characters",
+    }:
+        raise DciArtifactError("DCI resume evidence is invalid")
+    timeout = value["timeout_seconds"]
+    stderr_characters = value["stderr_tail_characters"]
+    summary = value["command_summary"]
+    if not isinstance(summary, dict) or set(summary) != {
+        "executable",
+        "mode",
+        "option_names",
+        "configured_extra_argument_groups",
+        "typed_extra_argument_count",
+    }:
+        raise DciArtifactError("DCI resume evidence is invalid")
+    extra_count = summary["configured_extra_argument_groups"]
+    typed_count = summary["typed_extra_argument_count"]
+    if (
+        value["attempt"] != number
+        or isinstance(value["attempt"], bool)
+        or value["status"] not in {"running", "failed", "incomplete", "completed"}
+        or summary["executable"] != "node"
+        or summary["mode"] != "rpc"
+        or not isinstance(summary["option_names"], list)
+        or not all(isinstance(item, str) and item for item in summary["option_names"])
+        or isinstance(extra_count, bool)
+        or not isinstance(extra_count, int)
+        or extra_count < 0
+        or isinstance(typed_count, bool)
+        or not isinstance(typed_count, int)
+        or typed_count < 0
+        or not _valid_timeout(timeout)
+        or isinstance(stderr_characters, bool)
+        or not isinstance(stderr_characters, int)
+        or stderr_characters < 0
+    ):
+        raise DciArtifactError("DCI resume evidence is invalid")
+    return value
 
 
 def _resume_preflight(
@@ -645,13 +712,10 @@ def _resume_preflight(
     protocol_fd = _open_existing_directory_at(root_fd, "protocol")
     try:
         expected_names: set[str] = set()
+        stale_terminal: tuple[str, dict[str, object]] | None = None
         for number, attempt in enumerate(attempts, 1):
-            if (
-                not isinstance(attempt, dict)
-                or attempt.get("attempt") != number
-                or attempt.get("status")
-                not in {"running", "failed", "incomplete", "completed"}
-            ):
+            attempt = _validate_attempt_record(attempt, number)
+            if attempt["status"] == "running" and number != len(attempts):
                 raise DciArtifactError("DCI resume evidence is invalid")
             stem = f"attempt-{number:04d}"
             request_name = f"{stem}.request.json"
@@ -659,31 +723,49 @@ def _resume_preflight(
             expected_names.update((request_name, events_name))
             prior_request = _read_json_object_at(protocol_fd, request_name)
             validate_run_request(prior_request)
-            expected_run_id = f"{request.run_id}-{stem}"
-            if (
-                prior_request.get("run_id") != expected_run_id
-                or prior_request.get("input") != {"text": request.question}
-                or prior_request.get("requested_capabilities")
-                != map_pi_capabilities(request.tools)
-            ):
+            expected_request = _protocol_request_for_attempt(
+                request,
+                attempt=number,
+                timeout_seconds=attempt["timeout_seconds"],
+            )
+            if prior_request != expected_request:
                 raise DciArtifactError("DCI resume evidence is invalid")
             prior_events = _read_jsonl_at(protocol_fd, events_name)
             if attempt.get("status") == "running" and prior_events:
-                prior_events.append(
-                    {
-                        "protocol": PROTOCOL_VERSION,
-                        "run_id": prior_events[0].get("run_id"),
-                        "sequence": len(prior_events) + 1,
-                        "type": "run.failed",
-                        "payload": {
-                            "code": "resume_preflight",
-                            "message": "resume preflight",
-                        },
-                    }
-                )
+                terminal = {
+                    "protocol": PROTOCOL_VERSION,
+                    "run_id": prior_events[0].get("run_id"),
+                    "sequence": len(prior_events) + 1,
+                    "type": "run.failed",
+                    "payload": {
+                        "code": "stale_attempt",
+                        "message": "Prior attempt ended before finalization.",
+                    },
+                }
+                prior_events.append(terminal)
+                stale_terminal = (events_name, terminal)
             validate_event_stream(prior_events)
         if set(os.listdir(protocol_fd)) != expected_names:
             raise DciArtifactError("DCI resume evidence is invalid")
+        if stale_terminal is not None:
+            events_name, terminal = stale_terminal
+            _write_private_text_at(
+                protocol_fd,
+                events_name,
+                json.dumps(terminal, ensure_ascii=False, separators=(",", ":")) + "\n",
+                append=True,
+                durable=True,
+            )
+            attempts[-1]["status"] = "failed"
+            state["status"] = "failed"
+            conversation["status"] = "failed"
+            conversation_full["status"] = "failed"
+            conversation_full["pending_message"] = None
+            latest_context["status"] = "failed"
+            _atomic_write_json_at(root_fd, "state.json", state)
+            _atomic_write_json_at(root_fd, "conversation.json", conversation)
+            _atomic_write_json_at(root_fd, "conversation_full.json", conversation_full)
+            _atomic_write_json_at(root_fd, "latest_model_context.json", latest_context)
         return protocol_fd, conversation_full, latest_context
     except BaseException:
         os.close(protocol_fd)
@@ -892,16 +974,11 @@ class DciRunRecorder:
             self.normalized: list[dict[str, object]] = []
             self._restore_tool_timing_indexes()
             capabilities = map_pi_capabilities(request.tools)
-            protocol_request: dict[str, object] = {
-                "protocol": PROTOCOL_VERSION,
-                "run_id": f"{request.run_id}-{attempt_stem}",
-                "input": {"text": request.question},
-                "requested_capabilities": capabilities,
-            }
-            if request.timeout_seconds is not None and request.timeout_seconds > 0:
-                deadline_ms = int(round(request.timeout_seconds * 1000))
-                if deadline_ms <= MAX_DEADLINE_MS:
-                    protocol_request["deadline_ms"] = max(1, deadline_ms)
+            protocol_request = _protocol_request_for_attempt(
+                request,
+                attempt=attempt,
+                timeout_seconds=request.timeout_seconds,
+            )
             validate_run_request(protocol_request)
             _write_exclusive_json_at(
                 self._protocol_fd, self._protocol_request_name, protocol_request

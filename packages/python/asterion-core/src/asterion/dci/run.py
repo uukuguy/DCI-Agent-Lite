@@ -270,7 +270,7 @@ def resume_request_from_output_dir(
         raise DciRunError("DCI resume validation failed")
     else:
         resumed_timeout = float(timeout_seconds)
-    return DciRunRequest(
+    candidate = DciRunRequest(
         run_id=run_id,
         question=question,
         cwd=cwd,
@@ -293,6 +293,11 @@ def resume_request_from_output_dir(
         resume=True,
         stream_text=stream_text,
     )
+    try:
+        validate_dci_run_request(candidate)
+    except (TypeError, ValueError):
+        raise DciRunError("DCI resume validation failed") from None
+    return candidate
 
 
 def run_pi_research(
@@ -465,7 +470,7 @@ def _optional_timeout(state: dict[str, object], name: str) -> float | None:
         return None
     if (
         isinstance(value, bool)
-        or not isinstance(value, (int, float))
+        or not isinstance(value, float)
         or not math.isfinite(value)
         or value < 0
     ):

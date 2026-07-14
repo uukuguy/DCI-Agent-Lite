@@ -162,6 +162,74 @@ class LifecyclePiClient(FixturePiClient):
 
 
 class AsterionDciRunTests(unittest.TestCase):
+    def test_resume_reconstruction_directly_rejects_invalid_candidate_values(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            paths = resolve_dci_paths(root)
+            output = root / "run"
+            request = DciRunRequest(run_id="run-1", question="question", cwd=root)
+            with patch("asterion.dci.run.PiRpcClient", FailingPiClient):
+                with self.assertRaises(DciRunError):
+                    run_pi_research(paths, request, output_dir=output)
+            state_path = output / "state.json"
+            baseline = json.loads(state_path.read_text())
+            for field, value in (
+                ("max_turns", -7),
+                ("timeout_seconds", 7),
+                ("keep_session", 1),
+                ("thinking_level", "bogus"),
+                ("cwd", "relative"),
+                ("pi_package_dir", "relative"),
+            ):
+                with self.subTest(field=field):
+                    state = dict(baseline)
+                    state[field] = value
+                    state_path.write_text(json.dumps(state), encoding="utf-8")
+                    with self.assertRaisesRegex(
+                        DciRunError, "resume validation failed"
+                    ):
+                        resume_request_from_output_dir(output)
+            state_path.write_text(json.dumps(baseline), encoding="utf-8")
+
+    def test_resume_rejects_prior_deadline_mismatch_without_mutation_or_client(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            paths = resolve_dci_paths(root)
+            output = root / "run"
+            request = DciRunRequest(
+                run_id="run-1", question="question", cwd=root, timeout_seconds=12.5
+            )
+            with patch("asterion.dci.run.PiRpcClient", FailingPiClient):
+                with self.assertRaises(DciRunError):
+                    run_pi_research(paths, request, output_dir=output)
+            protocol_path = output / "protocol/attempt-0001.request.json"
+            protocol = json.loads(protocol_path.read_text())
+            protocol["deadline_ms"] = 1
+            protocol_path.write_text(json.dumps(protocol), encoding="utf-8")
+            before = {
+                p.relative_to(output): p.read_bytes()
+                for p in output.rglob("*")
+                if p.is_file() and p.name != ".dci-run.lock"
+            }
+            with patch("asterion.dci.run.PiRpcClient") as client:
+                with self.assertRaisesRegex(DciRunError, "resume validation failed"):
+                    run_pi_research(
+                        paths, replace(request, resume=True), output_dir=output
+                    )
+            client.assert_not_called()
+            self.assertEqual(
+                before,
+                {
+                    p.relative_to(output): p.read_bytes()
+                    for p in output.rglob("*")
+                    if p.is_file() and p.name != ".dci-run.lock"
+                },
+            )
+
     def test_resume_preflight_rejects_missing_and_orphan_evidence_without_mutation(
         self,
     ) -> None:
@@ -634,6 +702,18 @@ class AsterionDciRunTests(unittest.TestCase):
             self.assertTrue(
                 (output_dir / "protocol/attempt-0002.request.json").is_file()
             )
+            for number in (1, 2):
+                events = [
+                    json.loads(line)
+                    for line in (
+                        output_dir / f"protocol/attempt-{number:04d}.events.jsonl"
+                    )
+                    .read_text(encoding="utf-8")
+                    .splitlines()
+                ]
+                validate_event_stream(events)
+            state = json.loads((output_dir / "state.json").read_text())
+            self.assertEqual(state["attempts"][0]["status"], "failed")
 
     def test_two_resume_contenders_construct_at_most_one_client(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:

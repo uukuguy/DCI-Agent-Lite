@@ -499,3 +499,4 @@
 - 18:22 AF-230 strict resume persists immutable semantics and serializes contenders before Pi construction. [02e5e56]
 - 18:32 AF-230 Task 4 review repair adds complete locked preflight, exclusive attempts, strict validation, timeout continuity, single feature authority, and stop-before-unlock lifecycle. [pending repair commit]
 - 18:35 AF-230 hardened resume evidence and child lifecycle to fail closed before Pi. [e32c10a]
+- 18:41 AF-230 Task 4 R2 validates reconstructed requests, durably terminalizes stale attempts, and enforces exact per-attempt deadline evidence. [pending R2 commit]
