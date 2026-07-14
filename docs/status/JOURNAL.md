@@ -631,3 +631,5 @@
 - 03:37 AF-250 executable product matrix and pending Climb governance landed for safe final acceptance. [447395b]
 - 03:47 AF-250 Task 1 review RED reproduces Bash option injection and rejects missing owners, real selectors, and provider-case coverage.
 - 03:50 AF-250 Task 1 review repair passes 162 governance tests and 22 real row selectors with exact local-command safety.
+- 03:52 AF-250 matrix evidence hardened after review to prevent command bypass and self-certification. [dac19dc]
+- 03:55 AF-250 Task 1 independently approves eight executable rows, exact command shapes, meaningful owners/selectors, and all seven provider cases.
