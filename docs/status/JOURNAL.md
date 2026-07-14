@@ -637,3 +637,4 @@
 - 04:03 AF-250 Task 2 RED reproduces the source Judge Make boundary failure without caller `PYTHONPATH`: `ModuleNotFoundError: No module named 'dci'`.
 - 04:03 AF-250 Task 2 restores independent source Judge entry points and model-free exact argv parity across all four source/Asterion example scripts.
 - 04:03 AF-250 Task 2 GREEN passes 57 focused tests, compile, Ruff, four-script Bash syntax, scope, and diff gates without provider or Judge requests.
+- 04:04 AF-250 Task 2 restores independent Judge Make entry points and exact model-free example parity. [4f254fd]
