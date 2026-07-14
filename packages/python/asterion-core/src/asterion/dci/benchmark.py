@@ -12,6 +12,7 @@ import stat
 import threading
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -546,26 +547,32 @@ async def _run_row(
         finally:
             native_authority.close()
     except asyncio.CancelledError:
-        generation, available = _terminal_native_evidence(authority, request, paths)
+        generation, available, evidence_fingerprint = _terminal_native_evidence(
+            authority, request, paths
+        )
         result = _failed_result(
             row.query_id,
             item["row_fingerprint"],
             "cancelled",
             native_generation=generation,
             native_evidence_available=available,
+            native_evidence_fingerprint=evidence_fingerprint,
         )
         query.write_json("result.json", result)
         raise
     except DciBenchmarkError:
         raise
     except Exception:
-        generation, available = _terminal_native_evidence(authority, request, paths)
+        generation, available, evidence_fingerprint = _terminal_native_evidence(
+            authority, request, paths
+        )
         result = _failed_result(
             row.query_id,
             item["row_fingerprint"],
             "failed",
             native_generation=generation,
             native_evidence_available=available,
+            native_evidence_fingerprint=evidence_fingerprint,
         )
         query.write_json("result.json", result)
         return result
@@ -900,6 +907,7 @@ def _validate_terminal_result(
         != {
             "schema", "query_id", "row_fingerprint", "status",
             "native_generation", "native_evidence_available",
+            "native_evidence_fingerprint",
         }
         or value.get("schema") != "asterion.dci.batch-result/v1"
         or value.get("query_id") != item.get("query_id")
@@ -911,16 +919,31 @@ def _validate_terminal_result(
             or not _NATIVE_GENERATION_PATTERN.fullmatch(value["native_generation"])
         )
         or type(value.get("native_evidence_available")) is not bool
+        or value.get("native_evidence_fingerprint") is not None
+        and (
+            not isinstance(value.get("native_evidence_fingerprint"), str)
+            or re.fullmatch(r"[0-9a-f]{64}", value["native_evidence_fingerprint"])
+            is None
+        )
         or (
             value.get("status") == "not_started"
             and (
                 value.get("native_generation") is not None
                 or value.get("native_evidence_available") is not False
+                or value.get("native_evidence_fingerprint") is not None
             )
         )
         or (
             value.get("native_evidence_available") is True
             and value.get("native_generation") is None
+        )
+        or (
+            value.get("native_evidence_available") is True
+            and value.get("native_evidence_fingerprint") is None
+        )
+        or (
+            value.get("native_evidence_available") is False
+            and value.get("native_evidence_fingerprint") is not None
         )
     ):
         raise DciBenchmarkError("DCI benchmark terminal result is invalid")
@@ -1056,11 +1079,11 @@ def _terminal_native_evidence(
     authority: _RowAuthority,
     request: BenchmarkRequest,
     paths: DciPaths,
-) -> tuple[str | None, bool]:
+) -> tuple[str | None, bool, str | None]:
     native = authority.native
     generation = authority.generation
     if native is None or generation is None:
-        return None, False
+        return None, False, None
     try:
         resume_request = resume_request_from_output_dir(
             Path(generation),
@@ -1071,12 +1094,33 @@ def _terminal_native_evidence(
             native.fd, path=Path(generation), wait=True
         )
         try:
-            validate_resumable_run_evidence(native_lock, resume_request, paths)
+            state, _question, final, stderr, context = validate_resumable_run_evidence(
+                native_lock, resume_request, paths
+            )
         finally:
             native_lock.release()
     except (DciArtifactError, DciRunError, OSError, ValueError):
-        return generation, False
-    return generation, True
+        return generation, False, None
+    return generation, True, _terminal_evidence_fingerprint(
+        state=state, context=context, final_text=final, stderr_text=stderr
+    )
+
+
+def _terminal_evidence_fingerprint(
+    *,
+    state: Mapping[str, Any],
+    context: Mapping[str, Any],
+    final_text: str,
+    stderr_text: str,
+) -> str:
+    return _fingerprint(
+        {
+            "state": state,
+            "latest_model_context": context,
+            "final_text": final_text,
+            "stderr_text": stderr_text,
+        }
+    )
 
 
 def _failed_result(
@@ -1086,6 +1130,7 @@ def _failed_result(
     *,
     native_generation: str | None = None,
     native_evidence_available: bool = False,
+    native_evidence_fingerprint: str | None = None,
 ) -> dict[str, object]:
     return {
         "schema": "asterion.dci.batch-result/v1",
@@ -1094,6 +1139,7 @@ def _failed_result(
         "status": status,
         "native_generation": native_generation,
         "native_evidence_available": native_evidence_available,
+        "native_evidence_fingerprint": native_evidence_fingerprint,
     }
 
 
@@ -1219,6 +1265,17 @@ def _analysis_results(
                                 native_lock, resume_request, paths
                             )
                         )
+                        if result.get(
+                            "native_evidence_fingerprint"
+                        ) != _terminal_evidence_fingerprint(
+                            state=state,
+                            context=context,
+                            final_text=final_text,
+                            stderr_text=stderr_text,
+                        ):
+                            raise DciBenchmarkError(
+                                "DCI benchmark analysis evidence is invalid"
+                            )
                     finally:
                         native_lock.release()
                 except (DciArtifactError, DciRunError, OSError, ValueError) as error:

@@ -149,18 +149,14 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
                 await run_benchmark_async(request, paths=resolve_dci_paths(root))
 
     async def test_terminal_fingerprint_missing_and_mismatch_fail_closed(self) -> None:
-        for mutation in ("missing", "mismatch"):
-            with self.subTest(mutation=mutation), tempfile.TemporaryDirectory() as directory:
+        with tempfile.TemporaryDirectory() as directory:
                 root = Path(directory).resolve()
                 request = _request(root)
                 with patch("asterion.dci.run.PiRpcClient", _MeasuredFailingFixtureClient):
                     await run_benchmark_async(request, paths=resolve_dci_paths(root))
                 result_path = request.output_root / "q-0" / "result.json"
                 result = json.loads(result_path.read_text())
-                if mutation == "missing":
-                    result.pop("native_evidence_fingerprint")
-                else:
-                    result["native_evidence_fingerprint"] = "0" * 64
+                result.pop("native_evidence_fingerprint")
                 result_path.write_text(json.dumps(result))
                 with (
                     patch("asterion.dci.benchmark._run_pi_async") as run,
@@ -168,6 +164,29 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
                 ):
                     await run_benchmark_async(request, paths=resolve_dci_paths(root))
                 run.assert_not_called()
+
+        from asterion.dci import benchmark as benchmark_module
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            request = _request(root)
+            publish = benchmark_module._publish_aggregates
+
+            def forge_then_publish(*args: object, **kwargs: object) -> None:
+                results = args[1]
+                for result in results.values():
+                    result["native_evidence_fingerprint"] = "0" * 64
+                publish(*args, **kwargs)
+
+            with (
+                patch("asterion.dci.run.PiRpcClient", _MeasuredFailingFixtureClient),
+                patch(
+                    "asterion.dci.benchmark._publish_aggregates",
+                    side_effect=forge_then_publish,
+                ),
+                self.assertRaisesRegex(DciBenchmarkError, "analysis evidence is invalid"),
+            ):
+                await run_benchmark_async(request, paths=resolve_dci_paths(root))
 
     async def test_cancelled_post_result_message_mutation_fails_analysis_closed(self) -> None:
         from asterion.dci import benchmark as benchmark_module

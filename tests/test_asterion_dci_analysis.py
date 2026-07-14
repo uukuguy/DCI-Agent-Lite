@@ -98,7 +98,6 @@ def _judge(correct: bool) -> dict[str, object]:
 
 class AsterionDciAnalysisTests(unittest.TestCase):
     def test_exact_safe_float_inventory_acceptance_rejects_wrong_implementation(self) -> None:
-        import io
         from asterion.dci import analysis as analysis_module
 
         result = unittest.TestResult()
@@ -109,6 +108,43 @@ class AsterionDciAnalysisTests(unittest.TestCase):
             case.run(result)
         self.assertEqual(result.testsRun, 1)
         self.assertTrue(result.failures or result.errors)
+
+    def test_function_and_artifact_acceptance_rejects_wrong_targets(self) -> None:
+        import io
+        from PIL import Image
+        from asterion.dci import analysis as analysis_module
+
+        blank = io.BytesIO()
+        Image.new("RGB", (32, 32), "white").save(blank, format="PNG")
+        mutations = (
+            ("format_number", "test_scripts_bcplus_eval_run_bcplus_eval_py_function_format_number", lambda *_a, **_k: "wrong"),
+            ("rank_records", "test_scripts_bcplus_eval_run_bcplus_eval_py_function_rank_records", lambda *_a, **_k: []),
+            ("plot_scatter_overview", "test_scripts_bcplus_eval_run_bcplus_eval_py_function_plot_scatter_overview", lambda *_a, **_k: blank.getvalue()),
+            ("write_analysis_artifacts", "test_scripts_bcplus_eval_run_bcplus_eval_py_function_write_analysis_artifacts", lambda *_a, **_k: {}),
+        )
+        for symbol, method, replacement in mutations:
+            with self.subTest(symbol=symbol), patch.object(
+                analysis_module, symbol, replacement
+            ):
+                result = unittest.TestResult()
+                AsterionDciAnalysisTests(method).run(result)
+                self.assertTrue(result.failures or result.errors)
+
+        _golden_behavior_surface.cache_clear()
+        try:
+            with patch(
+                f"{__name__}.write_analysis_artifacts",
+                lambda **_kwargs: {
+                    "analysis_figures/scatter_overview.png": blank.getvalue()
+                },
+            ):
+                result = unittest.TestResult()
+                AsterionDciAnalysisTests(
+                    "test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_analysis_figures_scatter_overview_png"
+                ).run(result)
+                self.assertTrue(result.failures or result.errors)
+        finally:
+            _golden_behavior_surface.cache_clear()
 
     def test_independent_surface_rejects_metric_and_artifact_mutations(self) -> None:
         source = _source_behavior_surface()
@@ -450,6 +486,138 @@ def _assert_surfaces_equal(test: unittest.TestCase, path: str) -> None:
     )
 
 
+def _assert_image_semantics(
+    test: unittest.TestCase, target: bytes, source: bytes, *, tolerance: float
+) -> None:
+    import io
+    import numpy as np
+    from PIL import Image
+
+    def normalized(value: bytes) -> np.ndarray:
+        with Image.open(io.BytesIO(value)) as image:
+            return np.asarray(
+                image.convert("RGB").resize((96, 64), Image.Resampling.BILINEAR),
+                dtype=float,
+            ) / 255.0
+
+    target_image = normalized(target)
+    source_image = normalized(source)
+    test.assertLess(float(np.abs(target_image - source_image).mean()), tolerance)
+
+
+def _assert_function_parity(
+    test: unittest.TestCase, symbol: str, analysis_module: object
+) -> None:
+    from scripts.bcplus_eval import run_bcplus_eval as source
+
+    target = getattr(analysis_module, symbol)
+    if symbol == "safe_float":
+        test.assertEqual(target(7), source.safe_float(7))
+        test.assertEqual(target("invalid"), source.safe_float("invalid"))
+    elif symbol == "compute_percentile":
+        test.assertEqual(target([10.0, 20.0, 30.0], 0.25), 15.0)
+        test.assertIsNone(target([], 0.5))
+    elif symbol == "summarize_numeric":
+        test.assertEqual(target([40, 10, 30, 20]), source.summarize_numeric([40, 10, 30, 20]))
+    elif symbol in {"format_number", "format_seconds", "format_usd"}:
+        values = {
+            "format_number": ((12.345, 2), source.format_number(12.345, 2)),
+            "format_seconds": ((12.345,), source.format_seconds(12.345)),
+            "format_usd": ((12.345,), source.format_usd(12.345)),
+        }
+        arguments, expected = values[symbol]
+        test.assertEqual(target(*arguments), expected)
+    elif symbol == "enrich_results":
+        target_rows, target_tools = target(
+            [_golden_behavior_surface()["result"]],
+            [{"query_id": "q-1", "query": "golden question", "answer": "gold"}],
+        )
+        source_rows, source_tools = source.enrich_results(
+            [_source_behavior_surface()["result"]],
+            [{"query_id": "q-1", "query": "golden question", "answer": "gold"}],
+        )
+        test.assertEqual(target_tools, source_tools)
+        for key, expected in source_rows[0].items():
+            test.assertEqual(target_rows[0][key], expected, key)
+    elif symbol == "build_slice_stats":
+        records = _source_behavior_surface()["analysis"]["per_query_metrics"]
+        test.assertEqual(target(records), source.build_slice_stats(records))
+    elif symbol == "rank_records":
+        records = [
+            {"query_id": "b", "score": 2, "is_correct": False, "wall_time_seconds": 2,
+             "overall_cost_total": 1, "tool_call_count": 1, "turn_count": 1},
+            {"query_id": "a", "score": 2, "is_correct": True, "wall_time_seconds": 1,
+             "overall_cost_total": 1, "tool_call_count": 1, "turn_count": 1},
+        ]
+        test.assertEqual([row["query_id"] for row in target(records, "score")], ["a", "b"])
+    elif symbol == "compute_detailed_analysis":
+        candidate = target(
+            results=[_golden_behavior_surface()["result"]],
+            rows=[{"query_id": "q-1", "query": "golden question", "answer": "gold"}],
+            summary=aggregate_results([_golden_behavior_surface()["result"]]),
+        )
+        test.assertEqual(candidate["tool_summary"]["read"]["total_error_count"], 1.0)
+        test.assertEqual(candidate["rankings"]["slowest_queries"][0]["query_id"], "q-1")
+    elif symbol in {"scatter_by_outcome", "add_boxplot_panel"}:
+        from matplotlib import pyplot as plt
+        records = _source_behavior_surface()["analysis"]["per_query_metrics"]
+        figure, axis = plt.subplots()
+        if symbol == "scatter_by_outcome":
+            target(axis, records, x_key="wall_time_seconds", y_key="overall_cost_total",
+                   xlabel="Wall", ylabel="Cost", size_key="agent_total_tokens")
+            test.assertEqual((axis.get_xlabel(), axis.get_ylabel()), ("Wall", "Cost"))
+            test.assertEqual(len(axis.collections), 2)
+        else:
+            target(axis, records, metric_key="wall_time_seconds", title="Wall", ylabel="Seconds")
+            test.assertEqual((axis.get_title(), axis.get_ylabel()), ("Wall", "Seconds"))
+            test.assertGreater(len(axis.patches), 0)
+        plt.close(figure)
+    elif symbol.startswith("plot_"):
+        names = {
+            "plot_scatter_overview": "analysis_figures/scatter_overview.png",
+            "plot_runtime_breakdown": "analysis_figures/runtime_breakdown.png",
+            "plot_metric_distributions": "analysis_figures/metric_distributions.png",
+            "plot_tool_summary": "analysis_figures/tool_summary.png",
+        }
+        tolerances = {
+            "plot_scatter_overview": 0.01,
+            "plot_runtime_breakdown": 0.23,
+            "plot_metric_distributions": 0.01,
+            "plot_tool_summary": 0.16,
+        }
+        argument = (
+            _golden_behavior_surface()["analysis"]
+            if symbol == "plot_tool_summary"
+            else _golden_behavior_surface()["analysis"]["per_query_metrics"]
+        )
+        _assert_image_semantics(
+            test, target(argument), _source_behavior_surface()["artifacts"][names[symbol]],
+            tolerance=tolerances[symbol],
+        )
+    elif symbol == "write_markdown_report":
+        rendered = target(
+            summary=_golden_behavior_surface()["summary"],
+            analysis=_golden_behavior_surface()["analysis"],
+        )
+        test.assertEqual(rendered.encode(), _source_behavior_surface()["artifacts"]["analysis.md"])
+    elif symbol == "write_analysis_artifacts":
+        surface = _golden_behavior_surface()
+        artifacts = target(
+            results=[surface["result"]],
+            rows=[{"query_id": "q-1", "query": "golden question", "answer": "gold"}],
+            summary=aggregate_results([surface["result"]]), include_figures=True,
+        )
+        test.assertEqual(
+            set(artifacts),
+            {"analysis.json", "analysis.jsonl", "analysis.md", "analysis_figures/scatter_overview.png",
+             "analysis_figures/runtime_breakdown.png", "analysis_figures/metric_distributions.png",
+             "analysis_figures/tool_summary.png"},
+        )
+        test.assertEqual(json.loads(artifacts["analysis.json"])["tool_summary"]["read"]["total_error_count"], 1.0)
+    else:
+        raise AssertionError(f"uncovered function inventory symbol: {symbol}")
+
+
 def _resolve_metric(surface: dict[str, object], path: str) -> object:
     parts = path.split(".")
     value: object
@@ -481,13 +649,7 @@ def _task4_behavior_test(row: dict[str, object]):
         kind = row["source_kind"]
         if kind == "function":
             symbol = str(row["target_symbol"])
-            self.assertTrue(callable(getattr(analysis_module, symbol)))
-            # Every mapped callable is exercised by the independent source-derived
-            # metric or artifact surface, rather than certified by existence alone.
-            self.assertEqual(
-                _resolve_metric(_golden_behavior_surface(), "summary.counts.total"),
-                _resolve_metric(_source_behavior_surface(), "summary.counts.total"),
-            )
+            _assert_function_parity(self, symbol, analysis_module)
         elif kind == "metric":
             _assert_surfaces_equal(self, str(row["source_name"]))
         else:
@@ -508,16 +670,14 @@ def _task4_behavior_test(row: dict[str, object]):
                 self.assertEqual(target_json["slices"], source_json["slices"])
                 self.assertEqual(target_json["tool_summary"], source_json["tool_summary"])
             elif name.endswith(".png"):
-                import matplotlib.image as mpimg
-                import io
-                import numpy as np
-                target_image = mpimg.imread(io.BytesIO(artifacts[name]))
-                source_image = mpimg.imread(io.BytesIO(source_artifacts[name]))
-                self.assertEqual(target_image.shape[2:], source_image.shape[2:])
-                self.assertLess(abs(target_image.shape[0] / source_image.shape[0] - 1), 0.08)
-                self.assertLess(abs(target_image.shape[1] / source_image.shape[1] - 1), 0.08)
-                self.assertTrue(
-                    np.allclose(target_image.mean(axis=(0, 1)), source_image.mean(axis=(0, 1)), atol=0.25)
+                tolerance = {
+                    "analysis_figures/scatter_overview.png": 0.01,
+                    "analysis_figures/runtime_breakdown.png": 0.23,
+                    "analysis_figures/metric_distributions.png": 0.01,
+                    "analysis_figures/tool_summary.png": 0.16,
+                }[name]
+                _assert_image_semantics(
+                    self, artifacts[name], source_artifacts[name], tolerance=tolerance
                 )
             elif name == "analysis.jsonl":
                 target_rows = [json.loads(line) for line in artifacts[name].splitlines()]
