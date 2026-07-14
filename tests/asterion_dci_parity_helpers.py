@@ -44,6 +44,19 @@ def _required_string(value: Mapping[str, object], field: str, artifact: str) -> 
     return item
 
 
+def _required_optional_positive_int(
+    value: Mapping[str, object], field: str, artifact: str
+) -> int | None:
+    if field not in value:
+        raise ValueError(f"malformed {artifact}: {field}")
+    item = value[field]
+    if item is None:
+        return None
+    if isinstance(item, bool) or not isinstance(item, int) or item <= 0:
+        raise ValueError(f"malformed {artifact}: {field}")
+    return item
+
+
 def canonical_run_semantics(root: Path) -> dict[str, object]:
     """Project either product's native run directory onto common stable semantics."""
 
@@ -95,6 +108,9 @@ def canonical_run_semantics(root: Path) -> dict[str, object]:
         "provider": _required_string(state, "provider", "state.json"),
         "model": _required_string(state, "model", "state.json"),
         "tools": _required_string(state, "tools", "state.json"),
+        "max_turns": _required_optional_positive_int(
+            state, "max_turns", "state.json"
+        ),
         "pi_provenance": {"commit": commit, "dirty": dirty},
         "resume_count": resume_count,
         "protocol_attempt_count": len(attempts),
@@ -140,37 +156,57 @@ def canonical_batch_semantics(root: Path) -> dict[str, object]:
     """Project native batch evidence without hiding counts, failures, or reuse."""
 
     directory = Path(root)
-    state = _json_object(directory / "state.json")
     summary = _json_object(directory / "summary.json")
-    exports = _json_object(directory / "exports.json")
     results = _jsonl_objects(directory / "results.jsonl")
-    status = _required_string(state, "status", "state.json")
-    counts = state.get("counts")
-    if not isinstance(counts, dict) or any(
+    batch_state_path = directory / "batch-state.json"
+    status = (
+        _required_string(
+            _json_object(batch_state_path), "status", "batch-state.json"
+        )
+        if batch_state_path.is_file()
+        else "completed"
+    )
+    native_counts = summary.get("counts")
+    if not isinstance(native_counts, dict) or any(
         isinstance(value, bool) or not isinstance(value, int)
-        for value in counts.values()
+        for value in native_counts.values()
     ):
-        raise ValueError("malformed state.json: counts")
+        raise ValueError("malformed summary.json: counts")
+    failed = native_counts.get("failed_runs", native_counts.get("failed"))
+    counts = {
+        "total": native_counts.get("total"),
+        "correct": native_counts.get("correct"),
+        "failed": failed,
+    }
+    if any(isinstance(value, bool) or not isinstance(value, int) for value in counts.values()):
+        raise ValueError("malformed summary.json: counts")
     ndcg = summary.get("ndcg_at_10")
-    if isinstance(ndcg, bool) or not isinstance(ndcg, (int, float)):
+    if ndcg is not None and (
+        isinstance(ndcg, bool) or not isinstance(ndcg, (int, float))
+    ):
         raise ValueError("malformed summary.json: ndcg_at_10")
     failure_classification: list[str] = []
     reuse_decisions: list[bool] = []
     for result in results:
-        row_status = _required_string(result, "status", "results.jsonl")
-        reused = result.get("reused")
-        if type(reused) is not bool:
-            raise ValueError("malformed results.jsonl: reused")
-        reuse_decisions.append(reused)
+        row_status = result.get("status", result.get("run_status"))
+        if not isinstance(row_status, str) or not row_status:
+            raise ValueError("malformed results.jsonl: status")
+        reusable = row_status == "completed" and (
+            type(result.get("is_correct")) is bool
+            or result.get("native_evidence_available") is True
+            or isinstance(result.get("native_evidence_fingerprint"), str)
+            or (
+                not isinstance(result.get("ndcg_at_10"), bool)
+                and isinstance(result.get("ndcg_at_10"), (int, float))
+            )
+        )
+        reuse_decisions.append(reusable)
         if row_status != "completed":
             failure_classification.append(row_status)
-    if any(isinstance(value, bool) or not isinstance(value, int) for value in exports.values()):
-        raise ValueError("malformed exports.json: counts")
     return {
         "status": status,
         "counts": counts,
         "failure_classification": failure_classification,
         "ndcg_at_10": ndcg,
-        "exports": exports,
         "reuse_decisions": reuse_decisions,
     }

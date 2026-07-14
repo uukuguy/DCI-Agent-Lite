@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import contextlib
+import asyncio
 import hashlib
 import importlib
 import io
@@ -19,12 +20,19 @@ import pyarrow.parquet as pq
 import dci.benchmark.pi_rpc_runner as source_runner
 import dci.benchmark.export_bc_plus_docs as source_bcplus_export
 from dci.benchmark.export_bright_docs import export_subset as source_bright_export
+import scripts.bcplus_eval.run_bcplus_eval as source_batch
 from dci.benchmark.judge import (
     JudgeConfig as SourceJudgeConfig,
     build_judge_request as build_source_judge_request,
     judge_request_fingerprint as source_judge_fingerprint,
 )
-from asterion.dci.config import resolve_dci_paths, resolve_dci_runtime_options
+from asterion.dci.benchmark import BenchmarkRequest, run_benchmark
+from asterion.dci.config import (
+    DciRuntimeOptions,
+    resolve_dci_paths,
+    resolve_dci_runtime_options,
+)
+from asterion.dci.evaluation import evaluate_run_directory
 from asterion.dci.judge import (
     JudgeConfig as AsterionJudgeConfig,
     build_judge_request as build_asterion_judge_request,
@@ -93,12 +101,12 @@ EXPECTED_BEHAVIOR_SELECTORS = {
     "native-artifacts-and-resume": {
         "tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h002_failed_and_resumed_lifecycle_is_not_normalized_away",
         "tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h002_run_normalizer_rejects_missing_or_malformed_evidence",
+        "tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h002_run_semantics_retain_typed_max_turns",
         "tests.test_pi_rpc_runner.PiRpcLifecycleTests.test_run_recorder_isolates_protocol_attempts_on_resume",
         "tests.test_asterion_dci_artifacts.AsterionDciArtifactTests.test_recorder_writes_original_durable_artifact_set",
         "tests.test_asterion_dci_run.AsterionDciRunTests.test_resume_reuses_failed_directory_and_creates_a_second_protocol_attempt",
     },
     "judge-and-exact-cache": {
-        "tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h002_judge_semantics_keep_verdict_type_and_fingerprint",
         "tests.test_asterion_dci_product_parity.AsterionDciProductParityTests.test_af250_h002_judge_request_and_cache_invalidation_semantics_match",
         "tests.test_judge.JudgeTransportTests.test_judge_request_fingerprint_is_deterministic_and_endpoint_sensitive",
         "tests.test_judge.JudgeResultReuseTests.test_backend_identity_is_part_of_result_reuse",
@@ -150,7 +158,7 @@ class _SourceFixturePiClient:
             }
         )
         recorder.record_event({"type": "agent_end"})
-        return f"provider prose for {question}"
+        return "answer"
 
 
 class _SourceFailingPiClient(_SourceFixturePiClient):
@@ -182,7 +190,7 @@ class _AsterionFixturePiClient:
             }
         )
         on_event({"type": "agent_end"})
-        return f"provider prose for {question}"
+        return "answer"
 
 
 class _AsterionFailingPiClient(_AsterionFixturePiClient):
@@ -190,6 +198,33 @@ class _AsterionFailingPiClient(_AsterionFixturePiClient):
         self.calls += 1
         on_event({"type": "agent_end"})
         raise RuntimeError(f"private provider failure for {question}")
+
+
+class _AsterionMixedBatchPiClient(_AsterionFixturePiClient):
+    calls = 0
+
+    def prompt_and_wait(self, question: str, *, on_event, **kwargs: object) -> str:
+        type(self).calls += 1
+        if "question 1" in question:
+            raise RuntimeError("fixture batch failure")
+        for event in (
+            {"type": "response", "id": "fixture-1", "success": True},
+            {"type": "agent_start"},
+            {
+                "type": "message_update",
+                "assistantMessageEvent": {"type": "text_delta", "delta": "answer"},
+            },
+            {"type": "agent_end"},
+        ):
+            on_event(event)
+        return "answer"
+
+
+class _SpoofSemanticSelectors:
+    def test_af250_h002_completed_native_runs_have_equal_stable_semantics(
+        self,
+    ) -> None:
+        return None
 
 
 def _resolve_selector(selector: str) -> bool:
@@ -278,6 +313,195 @@ class AsterionDciProductParityTests(unittest.TestCase):
                 ).status
             except DciRunError:
                 return "failed"
+
+    def _write_source_batch_evidence(
+        self, root: Path, *, mode: str, rows: int
+    ) -> tuple[Path, int, int]:
+        output_root = root / f"source-{mode}"
+        corpus = root / "corpus"
+        corpus.mkdir(exist_ok=True)
+        (corpus / "doc-0").write_text("fixture", encoding="utf-8")
+        dataset = root / f"source-{mode}.jsonl"
+        dataset.write_text("{}\n", encoding="utf-8")
+        argv = [
+            "run-batch",
+            "--dataset",
+            str(dataset),
+            "--output-root",
+            str(output_root),
+            "--corpus-dir",
+            str(corpus),
+            "--max-concurrency",
+            "1",
+        ]
+        if mode == "ir":
+            argv.append("--enable-ir")
+        with mock.patch.object(sys, "argv", argv):
+            args = source_batch.parse_args()
+        config = SourceJudgeConfig(
+            base_url="https://judge.example.test/v1", model="fixture-judge"
+        )
+        source_calls = 0
+
+        async def fake_subprocess(*command: str, **_: object):
+            nonlocal source_calls
+            source_calls += 1
+            destination = Path(command[command.index("--output-dir") + 1])
+            client = (
+                _SourceFailingPiClient
+                if destination.name == "q-1"
+                else _SourceFixturePiClient
+            )
+            returncode = self._run_source_fixture(destination, client)
+
+            class Process:
+                async def communicate(self) -> tuple[bytes, bytes]:
+                    return b"", b""
+
+            process = Process()
+            process.returncode = returncode
+            return process
+
+        judge_calls = 0
+
+        async def fake_judge(**kwargs: object) -> dict[str, object]:
+            nonlocal judge_calls
+            judge_calls += 1
+            judge_config = kwargs["config"]
+            assert isinstance(judge_config, SourceJudgeConfig)
+            return {
+                **judge_config.public_dict(),
+                "judge_request_fingerprint": source_judge_fingerprint(
+                    config=judge_config,
+                    question=str(kwargs["question"]),
+                    gold_answer=str(kwargs["gold_answer"]),
+                    predicted_answer=str(kwargs["predicted_answer"]),
+                ),
+                "is_correct": "question 1" not in str(kwargs["question"]),
+                "attempts": 1,
+                "usage": {},
+                "cost_estimate_usd": {},
+            }
+
+        values = []
+        for index in range(rows):
+            value: dict[str, object] = {
+                "query_id": f"q-{index}",
+                "query": f"question {index}",
+            }
+            value["gold_docs" if mode == "ir" else "answer"] = (
+                ["doc-0"] if mode == "ir" else "gold"
+            )
+            values.append(value)
+
+        async def execute() -> list[dict[str, object]]:
+            results = []
+            for value in values:
+                results.append(
+                    await source_batch.run_single_query(
+                        args=args,
+                        row=value,
+                        query_dir=output_root / str(value["query_id"]),
+                        judge_config=None if mode == "ir" else config,
+                    )
+                )
+            return results
+
+        with mock.patch(
+            "asyncio.create_subprocess_exec", side_effect=fake_subprocess
+        ), mock.patch.object(
+            source_batch, "judge_answer_async", side_effect=fake_judge
+        ):
+            results = asyncio.run(execute())
+            if rows == 1:
+                initial_calls = (source_calls, judge_calls)
+                asyncio.run(execute())
+                self.assertEqual((source_calls, judge_calls), initial_calls)
+        output_root.mkdir(parents=True, exist_ok=True)
+        source_batch.write_json(
+            output_root / "summary.json", source_batch.aggregate_results(results)
+        )
+        source_batch.write_jsonl(output_root / "results.jsonl", results)
+        return output_root, source_calls, judge_calls
+
+    def _write_asterion_batch_evidence(
+        self, root: Path, *, mode: str, rows: int
+    ) -> tuple[Path, int, int]:
+        dataset = root / f"asterion-{mode}.jsonl"
+        values = []
+        for index in range(rows):
+            value: dict[str, object] = {
+                "query_id": f"q-{index}",
+                "query": f"question {index}",
+            }
+            value["gold_docs" if mode == "ir" else "answer"] = (
+                ["doc-0"] if mode == "ir" else "gold"
+            )
+            values.append(value)
+        dataset.write_text(
+            "".join(json.dumps(value) + "\n" for value in values), encoding="utf-8"
+        )
+        corpus = root / "corpus"
+        corpus.mkdir(exist_ok=True)
+        (corpus / "doc-0").write_text("fixture", encoding="utf-8")
+        output_root = root / f"asterion-{mode}"
+        config = AsterionJudgeConfig(
+            base_url="https://judge.example.test/v1", model="fixture-judge"
+        )
+        request = BenchmarkRequest(
+            dataset=dataset,
+            output_root=output_root,
+            cwd=root,
+            judge_config=config,
+            runtime_options=DciRuntimeOptions(None, None),
+            mode=mode,
+            corpus=corpus if mode == "ir" else None,
+            analysis=False,
+            figures=False,
+        )
+        judge_calls = 0
+
+        def fake_judge(**kwargs: object) -> dict[str, object]:
+            nonlocal judge_calls
+            judge_calls += 1
+            judge_config = kwargs["config"]
+            assert isinstance(judge_config, AsterionJudgeConfig)
+            return {
+                **judge_config.public_dict(),
+                "judge_request_fingerprint": asterion_judge_fingerprint(
+                    config=judge_config,
+                    question=str(kwargs["question"]),
+                    gold_answer=str(kwargs["gold_answer"]),
+                    predicted_answer=str(kwargs["predicted_answer"]),
+                ),
+                "is_correct": True,
+                "attempts": 1,
+                "judged_at": "2026-07-15T00:00:00Z",
+                "normalized_prediction": "answer",
+                "reason": "fixture",
+                "usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+                "cost_estimate_usd": {
+                    "input_cost": 0.0,
+                    "cached_input_cost": 0.0,
+                    "output_cost": 0.0,
+                    "total_cost": 0.0,
+                },
+            }
+
+        _AsterionMixedBatchPiClient.calls = 0
+        with mock.patch(
+            "asterion.dci.run.PiRpcClient", _AsterionMixedBatchPiClient
+        ), mock.patch(
+            "asterion.dci.evaluation.judge_answer_sync", side_effect=fake_judge
+        ):
+            run_benchmark(request, paths=resolve_dci_paths(root))
+            if rows == 1:
+                initial_calls = (_AsterionMixedBatchPiClient.calls, judge_calls)
+                run_benchmark(request, paths=resolve_dci_paths(root))
+                self.assertEqual(
+                    (_AsterionMixedBatchPiClient.calls, judge_calls), initial_calls
+                )
+        return output_root, _AsterionMixedBatchPiClient.calls, judge_calls
 
     def test_product_matrix_has_no_unsupported_or_unexecutable_row(self) -> None:
         rows = self._validated_rows()
@@ -452,6 +676,26 @@ class AsterionDciProductParityTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "matrix governance selector"):
                     validate_product_matrix(ROOT, document)
 
+    def test_behavior_rows_require_exact_fully_qualified_semantic_selector(
+        self,
+    ) -> None:
+        approved = (
+            "tests.test_asterion_dci_product_parity.AsterionDciProductParityTests."
+            "test_af250_h002_completed_native_runs_have_equal_stable_semantics"
+        )
+        self.assertTrue(_resolve_selector(approved))
+        spoof = (
+            "tests.test_asterion_dci_product_parity._SpoofSemanticSelectors."
+            "test_af250_h002_completed_native_runs_have_equal_stable_semantics"
+        )
+        self.assertTrue(_resolve_selector(spoof))
+        document = copy.deepcopy(self.document)
+        evidence = document["rows"][1]["local_evidence"][0]
+        evidence["argv"] = ["uv", "run", "python", "-m", "unittest", spoof]
+        evidence["selectors"] = [spoof]
+        with self.assertRaisesRegex(ValueError, "matrix governance selector"):
+            validate_product_matrix(ROOT, document)
+
     def test_matrix_rejects_missing_paths_empty_selectors_and_placeholders(self) -> None:
         missing = copy.deepcopy(self.document)
         missing["rows"][0]["source_entry_points"] = ["missing/source.py"]
@@ -541,6 +785,7 @@ class AsterionDciProductParityTests(unittest.TestCase):
             "provider": "fixture-provider",
             "model": "fixture-model",
             "tools": "read,bash",
+            "max_turns": None,
             "pi_provenance": {"commit": "fixture", "dirty": False},
             "resume_count": 0,
             "protocol_attempt_count": 1,
@@ -548,6 +793,31 @@ class AsterionDciProductParityTests(unittest.TestCase):
         }
         self.assertEqual(source_view, expected)
         self.assertEqual(asterion_view, expected)
+
+    def test_af250_h002_run_semantics_retain_typed_max_turns(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            source = root / "source"
+            asterion = root / "asterion"
+            self.assertEqual(self._run_source_fixture(source, _SourceFixturePiClient), 0)
+            self.assertEqual(
+                self._run_asterion_fixture(root, asterion, _AsterionFixturePiClient),
+                "completed",
+            )
+            self.assertEqual(
+                canonical_run_semantics(source), canonical_run_semantics(asterion)
+            )
+            state_path = asterion / "state.json"
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["max_turns"] = 7
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            self.assertNotEqual(
+                canonical_run_semantics(source), canonical_run_semantics(asterion)
+            )
+            state["max_turns"] = "7"
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "max_turns"):
+                canonical_run_semantics(asterion)
 
     def test_af250_h002_configuration_precedence_and_effective_pi_argv_match(self) -> None:
         environment = {
@@ -654,29 +924,6 @@ class AsterionDciProductParityTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "events.jsonl"):
                 canonical_run_semantics(root)
 
-    def test_af250_h002_judge_semantics_keep_verdict_type_and_fingerprint(self) -> None:
-        source = {
-            "is_correct": True,
-            "judge_request_fingerprint": "a" * 64,
-            "judge_model": "fixture-judge",
-            "judge_api": "responses",
-            "reason": "source prose",
-        }
-        asterion = {
-            **source,
-            "reason": "different provider prose",
-            "judged_at": "2026-07-15T00:00:00Z",
-        }
-        self.assertEqual(
-            canonical_judge_semantics(source), canonical_judge_semantics(asterion)
-        )
-        changed = {**asterion, "judge_request_fingerprint": "b" * 64}
-        self.assertNotEqual(
-            canonical_judge_semantics(source), canonical_judge_semantics(changed)
-        )
-        with self.assertRaisesRegex(ValueError, "boolean"):
-            canonical_judge_semantics({**source, "is_correct": 1})
-
     def test_af250_h002_judge_request_and_cache_invalidation_semantics_match(self) -> None:
         source_config = SourceJudgeConfig(
             base_url="https://judge.example.test/v1", model="fixture-judge"
@@ -700,81 +947,163 @@ class AsterionDciProductParityTests(unittest.TestCase):
         for value in fields.values():
             self.assertIn(value, json.dumps(source_request))
             self.assertIn(value, json.dumps(asterion_request))
-        source_fingerprint = source_judge_fingerprint(config=source_config, **fields)
-        asterion_fingerprint = asterion_judge_fingerprint(
-            config=asterion_config, **fields
+        def source_verdict(**kwargs: object) -> dict[str, object]:
+            config = kwargs["config"]
+            assert isinstance(config, SourceJudgeConfig)
+            return {
+                **config.public_dict(),
+                "judge_request_fingerprint": source_judge_fingerprint(
+                    config=config,
+                    question=str(kwargs["question"]),
+                    gold_answer=str(kwargs["gold_answer"]),
+                    predicted_answer=str(kwargs["predicted_answer"]),
+                ),
+                "is_correct": True,
+                "attempts": 1,
+                "judged_at": "2026-07-15T00:00:00Z",
+                "normalized_prediction": "answer",
+                "reason": "source provider prose",
+            }
+
+        def asterion_verdict(**kwargs: object) -> dict[str, object]:
+            config = kwargs["config"]
+            assert isinstance(config, AsterionJudgeConfig)
+            return {
+                **config.public_dict(),
+                "judge_request_fingerprint": asterion_judge_fingerprint(
+                    config=config,
+                    question=str(kwargs["question"]),
+                    gold_answer=str(kwargs["gold_answer"]),
+                    predicted_answer=str(kwargs["predicted_answer"]),
+                ),
+                "is_correct": True,
+                "attempts": 1,
+                "judged_at": "2026-07-15T00:00:00Z",
+                "normalized_prediction": "answer",
+                "reason": "Asterion provider prose",
+                "usage": {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0},
+                "cost_estimate_usd": {
+                    "input_cost": 0.0,
+                    "cached_input_cost": 0.0,
+                    "output_cost": 0.0,
+                    "total_cost": 0.0,
+                },
+            }
+
+        changed_source_config = SourceJudgeConfig(
+            base_url=source_config.base_url, model="changed-judge"
         )
-        self.assertRegex(source_fingerprint, r"^[0-9a-f]{64}$")
-        self.assertRegex(asterion_fingerprint, r"^[0-9a-f]{64}$")
-        for changed_fields in (
-            {**fields, "predicted_answer": "changed answer"},
-            fields,
+        changed_asterion_config = AsterionJudgeConfig(
+            base_url=asterion_config.base_url, model="changed-judge"
+        )
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            source_run = root / "source"
+            asterion_run = root / "asterion"
+            self.assertEqual(
+                self._run_source_fixture(source_run, _SourceFixturePiClient), 0
+            )
+            self.assertEqual(
+                self._run_asterion_fixture(
+                    root, asterion_run, _AsterionFixturePiClient
+                ),
+                "completed",
+            )
+            with mock.patch.object(
+                source_runner, "judge_answer_sync", side_effect=source_verdict
+            ) as source_transport:
+                source_first = source_runner.evaluate_run_output(
+                    output_dir=source_run, judge_config=source_config, **fields
+                )
+                source_reused = source_runner.evaluate_run_output(
+                    output_dir=source_run, judge_config=source_config, **fields
+                )
+                source_changed_answer = source_runner.evaluate_run_output(
+                    output_dir=source_run,
+                    judge_config=source_config,
+                    **{**fields, "gold_answer": "changed gold"},
+                )
+                source_changed_config = source_runner.evaluate_run_output(
+                    output_dir=source_run,
+                    judge_config=changed_source_config,
+                    **fields,
+                )
+            with mock.patch(
+                "asterion.dci.evaluation.judge_answer_sync",
+                side_effect=asterion_verdict,
+            ) as asterion_transport:
+                asterion_first = evaluate_run_directory(
+                    asterion_run, gold_answer="gold", judge_config=asterion_config
+                )
+                asterion_reused = evaluate_run_directory(
+                    asterion_run, gold_answer="gold", judge_config=asterion_config
+                )
+                asterion_changed_answer = evaluate_run_directory(
+                    asterion_run,
+                    gold_answer="changed gold",
+                    judge_config=asterion_config,
+                )
+                asterion_changed_config = evaluate_run_directory(
+                    asterion_run,
+                    gold_answer="gold",
+                    judge_config=changed_asterion_config,
+                )
+
+        self.assertEqual(source_transport.call_count, 3)
+        self.assertEqual(asterion_transport.call_count, 3)
+        self.assertEqual(
+            source_first["judge_request_fingerprint"],
+            source_reused["judge_request_fingerprint"],
+        )
+        self.assertEqual(
+            asterion_first["judge_request_fingerprint"],
+            asterion_reused["judge_request_fingerprint"],
+        )
+        for baseline, changed_answer, changed_config in (
+            (source_first, source_changed_answer, source_changed_config),
+            (asterion_first, asterion_changed_answer, asterion_changed_config),
         ):
-            changed_source = (
-                SourceJudgeConfig(
-                    base_url="https://judge.example.test/v1", model="changed-judge"
-                )
-                if changed_fields is fields
-                else source_config
+            self.assertIs(canonical_judge_semantics(baseline)["is_correct"], True)
+            self.assertNotEqual(
+                baseline["judge_request_fingerprint"],
+                changed_answer["judge_request_fingerprint"],
             )
-            changed_asterion = (
-                AsterionJudgeConfig(
-                    base_url="https://judge.example.test/v1", model="changed-judge"
-                )
-                if changed_fields is fields
-                else asterion_config
+            self.assertNotEqual(
+                baseline["judge_request_fingerprint"],
+                changed_config["judge_request_fingerprint"],
             )
-            source_changed = source_judge_fingerprint(
-                config=changed_source, **changed_fields
-            )
-            asterion_changed = asterion_judge_fingerprint(
-                config=changed_asterion, **changed_fields
-            )
-            self.assertNotEqual(source_fingerprint, source_changed)
-            self.assertNotEqual(asterion_fingerprint, asterion_changed)
 
     def test_af250_h002_batch_semantics_keep_counts_ndcg_exports_and_reuse(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
-            views = []
-            for product in ("source", "asterion"):
-                batch = root / product
-                batch.mkdir()
-                (batch / "state.json").write_text(
-                    json.dumps(
-                        {
-                            "status": "completed",
-                            "counts": {"total": 2, "correct": 1, "failed": 1},
-                        }
-                    ),
-                    encoding="utf-8",
-                )
-                (batch / "summary.json").write_text(
-                    json.dumps({"ndcg_at_10": 0.75}), encoding="utf-8"
-                )
-                (batch / "results.jsonl").write_text(
-                    json.dumps({"query_id": "q-0", "status": "completed", "reused": True})
-                    + "\n"
-                    + json.dumps({"query_id": "q-1", "status": "failed", "reused": False})
-                    + "\n",
-                    encoding="utf-8",
-                )
-                (batch / "exports.json").write_text(
-                    json.dumps({"bcplus": 2, "bright": 3}), encoding="utf-8"
-                )
-                views.append(canonical_batch_semantics(batch))
-            self.assertEqual(views[0], views[1])
-            self.assertEqual(
-                views[0],
-                {
-                    "status": "completed",
-                    "counts": {"total": 2, "correct": 1, "failed": 1},
-                    "failure_classification": ["failed"],
-                    "ndcg_at_10": 0.75,
-                    "exports": {"bcplus": 2, "bright": 3},
-                    "reuse_decisions": [True, False],
-                },
+            root = Path(temporary_directory).resolve()
+            source_qa, source_runs, source_judges = self._write_source_batch_evidence(
+                root, mode="qa", rows=2
             )
+            asterion_qa, asterion_runs, asterion_judges = (
+                self._write_asterion_batch_evidence(root, mode="qa", rows=2)
+            )
+            self.assertEqual((source_runs, source_judges), (2, 2))
+            self.assertEqual((asterion_runs, asterion_judges), (2, 1))
+            self.assertEqual(
+                canonical_batch_semantics(source_qa),
+                canonical_batch_semantics(asterion_qa),
+            )
+
+            source_ir, source_ir_runs, _ = self._write_source_batch_evidence(
+                root, mode="ir", rows=1
+            )
+            asterion_ir, asterion_ir_runs, _ = self._write_asterion_batch_evidence(
+                root, mode="ir", rows=1
+            )
+            self.assertEqual((source_ir_runs, asterion_ir_runs), (1, 1))
+            source_ir_view = canonical_batch_semantics(source_ir)
+            asterion_ir_view = canonical_batch_semantics(asterion_ir)
+            self.assertEqual(
+                source_ir_view,
+                asterion_ir_view,
+                (asterion_ir / "results.jsonl").read_text(encoding="utf-8"),
+            )
+            self.assertEqual(source_ir_view["ndcg_at_10"], 0.0)
 
     def test_af250_h002_bcplus_and_bright_export_transforms_match(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:

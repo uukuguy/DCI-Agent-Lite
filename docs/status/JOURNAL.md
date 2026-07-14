@@ -647,3 +647,5 @@
 - 04:24 AF-250 Task 3 permits only an exact allowlist of executable H-002 product-semantic selectors through the matrix verifier; H-001 and non-executable H-002 governance selectors remain rejected.
 - 04:26 AF-250 Task 3 GREEN passes the exact focused run/Judge/batch/export suite plus compile, Ruff, scope, and diff gates without a provider or Judge HTTP request.
 - 04:27 AF-250 Task 3 adds stable independent-product semantic comparisons and executable matrix evidence. [b5ff060]
+- 04:35 AF-250 Task 3 review RED reproduces leaf-only selector spoofing, erased `max_turns`, and synthetic Judge/batch evidence that bypasses native product paths.
+- 04:43 AF-250 Task 3 review repair uses exact fully-qualified selectors and independent native fake Judge/batch executions; the exact focused suite and local gates pass model-free.
