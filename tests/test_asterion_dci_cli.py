@@ -33,6 +33,149 @@ def fixture_result(output_dir: Path) -> DciRunResult:
 
 
 class AsterionDciCliTests(unittest.TestCase):
+    def test_terminal_maps_operator_controls_without_artifacts(self) -> None:
+        class TtyStream(io.StringIO):
+            def isatty(self) -> bool:
+                return True
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            prompt = root / "prompt.txt"
+            prompt.write_text("prompt", encoding="utf-8")
+            with patch("asterion.dci.cli.run_pi_terminal", return_value=23) as terminal:
+                code = main(
+                    [
+                        "terminal",
+                        "--cwd",
+                        str(root),
+                        "--provider",
+                        "provider",
+                        "--model",
+                        "model --tools bash",
+                        "--tools",
+                        "read,bash",
+                        "--system-prompt-file",
+                        str(prompt),
+                        "--thinking-level",
+                        "high --model injected",
+                        "--node-max-old-space-size-mb",
+                        "4096",
+                        "--extra-arg=--custom value",
+                        "initial",
+                        "question",
+                    ],
+                    repo_root=root,
+                    stdin=TtyStream(),
+                    stdout=TtyStream(),
+                    stderr=io.StringIO(),
+                )
+
+        self.assertEqual(code, 23)
+        kwargs = terminal.call_args.kwargs
+        self.assertEqual(kwargs["cwd"], root)
+        self.assertEqual(kwargs["model"], "model --tools bash")
+        self.assertEqual(kwargs["thinking_level"], "high --model injected")
+        self.assertEqual(kwargs["extra_args"], ("--custom value",))
+        self.assertEqual(kwargs["initial_question"], "initial question")
+        self.assertEqual(kwargs["system_prompt_file"], prompt)
+
+    def test_terminal_question_file_has_priority_and_resources_are_preflighted(
+        self,
+    ) -> None:
+        class TtyStream(io.StringIO):
+            def isatty(self) -> bool:
+                return True
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            question = root / "question.txt"
+            question.write_text("from file\n", encoding="utf-8")
+            with patch("asterion.dci.cli.run_pi_terminal", return_value=0) as terminal:
+                self.assertEqual(
+                    main(
+                        ["terminal", "--question-file", str(question), "ignored"],
+                        repo_root=root,
+                        stdin=TtyStream(),
+                        stdout=TtyStream(),
+                        stderr=io.StringIO(),
+                    ),
+                    0,
+                )
+            self.assertEqual(terminal.call_args.kwargs["initial_question"], "from file")
+
+            unsafe = root / "unsafe.txt"
+            unsafe.symlink_to(question)
+            with patch("asterion.dci.cli.run_pi_terminal") as terminal:
+                for argv in (
+                    ["terminal", "--question-file", str(unsafe)],
+                    ["terminal", "--system-prompt-file", "missing.txt"],
+                ):
+                    with self.subTest(argv=argv):
+                        self.assertEqual(
+                            main(
+                                argv,
+                                repo_root=root,
+                                stdin=TtyStream(),
+                                stdout=TtyStream(),
+                                stderr=io.StringIO(),
+                            ),
+                            2,
+                        )
+            terminal.assert_not_called()
+
+    def test_terminal_redacts_node_and_child_failures(self) -> None:
+        class TtyStream(io.StringIO):
+            def isatty(self) -> bool:
+                return True
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            stderr = io.StringIO()
+            with patch(
+                "asterion.dci.cli.run_pi_terminal",
+                side_effect=RuntimeError("sentinel-secret-node-detail"),
+            ):
+                code = main(
+                    ["terminal"],
+                    repo_root=Path(temporary_directory),
+                    stdin=TtyStream(),
+                    stdout=TtyStream(),
+                    stderr=stderr,
+                )
+
+        self.assertEqual(code, 2)
+        self.assertEqual(stderr.getvalue(), "DCI Pi terminal failed\n")
+        self.assertNotIn("sentinel", stderr.getvalue())
+
+    def test_terminal_rejects_non_tty_and_runner_only_options_before_child(
+        self,
+    ) -> None:
+        class TtyStream(io.StringIO):
+            def isatty(self) -> bool:
+                return True
+
+        cases = (
+            (["terminal"], io.StringIO(), TtyStream()),
+            (["terminal"], TtyStream(), io.StringIO()),
+            (["terminal", "--rpc-timeout-seconds", "1"], TtyStream(), TtyStream()),
+            (["terminal", "--max-turns", "1"], TtyStream(), TtyStream()),
+            (["terminal", "--output-dir", "run"], TtyStream(), TtyStream()),
+            (["terminal", "--no-session"], TtyStream(), TtyStream()),
+        )
+        with patch("asterion.dci.cli.run_pi_terminal") as terminal:
+            for argv, stdin, stdout in cases:
+                with self.subTest(argv=argv):
+                    self.assertEqual(
+                        main(
+                            argv,
+                            repo_root=Path.cwd(),
+                            stdin=stdin,
+                            stdout=stdout,
+                            stderr=io.StringIO(),
+                        ),
+                        2,
+                    )
+        terminal.assert_not_called()
+
     def test_run_generates_distinct_default_ids_and_destinations(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)

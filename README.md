@@ -80,6 +80,28 @@ Pi child. Missing, unreadable, or symlinked resources are rejected before Pi
 starts. `system-prompt --append-system-prompt-file` uses the same resource
 boundary before prompt rendering.
 
+For an interactive Pi session, use the independent terminal command:
+
+```bash
+asterion-dci terminal \
+  --cwd "$PWD/corpus/wiki_corpus" \
+  --provider openai \
+  --model gpt-5.4-nano \
+  --tools read,bash \
+  --thinking-level high \
+  "Answer using only the local corpus."
+```
+
+`terminal` requires both stdin and stdout to be TTYs, preserves Pi session
+state, and returns Pi's exit status. It accepts positional question tokens or
+`--question-file`, provider/model/tools, system and appended prompt files,
+thinking level, Node heap, and repeatable `--extra-arg` values. It deliberately
+has no RPC mode, `--no-session`, resume, evaluation, output-directory, or
+conversation-artifact controls and creates no Asterion run directory. Prompt
+and question resources use the same preflight rules as `run`. Before Pi starts,
+Asterion verifies a Node >=20 executable from `PATH` or an nvm installation;
+missing, older, or unprobeable Node installations fail with a body-free error.
+
 Omitting `--run-id` creates a collision-resistant UTC-and-random identifier
 under `outputs/asterion-dci-runs/`. An explicit `--run-id` remains stable, and
 an existing explicit ID or `--output-dir` is rejected rather than reused.

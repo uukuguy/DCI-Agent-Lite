@@ -22,6 +22,7 @@ from asterion.dci.benchmark import BenchmarkRequest, DciBenchmarkError, run_benc
 from asterion.dci.artifacts import DciConversationFeatures
 from asterion.dci.evaluation import DciEvaluationError, evaluate_run_directory
 from asterion.dci.judge import JudgeConfig
+from asterion.dci.pi_rpc import run_pi_terminal
 from asterion.dci.run import (
     DciRunError,
     DciRunResult,
@@ -55,6 +56,18 @@ def _parser() -> argparse.ArgumentParser:
     run.add_argument("--resume", action="store_true")
     run.add_argument("--eval-answer")
     run.add_argument("--eval-answer-file", type=Path)
+    terminal = commands.add_parser("terminal")
+    terminal.add_argument("question", nargs="*")
+    terminal.add_argument("--question-file", type=Path)
+    terminal.add_argument("--cwd", type=Path, default=Path("."))
+    terminal.add_argument("--provider")
+    terminal.add_argument("--model")
+    terminal.add_argument("--tools")
+    terminal.add_argument("--thinking-level")
+    terminal.add_argument("--node-max-old-space-size-mb", type=int)
+    terminal.add_argument("--extra-arg", action="append")
+    terminal.add_argument("--system-prompt-file", type=Path)
+    terminal.add_argument("--append-system-prompt-file", type=Path)
     resume = commands.add_parser("resume")
     resume.add_argument("--output-dir", type=Path, required=True)
     prompt = commands.add_parser("system-prompt")
@@ -193,6 +206,46 @@ def main(
             return 2
         _write_run_result(stdout, result)
         return 0
+    if args.command == "terminal":
+        try:
+            if not stdin.isatty() or not stdout.isatty():
+                raise ValueError("terminal requires an interactive TTY")
+            question_file = _resolve_resource(
+                args.question_file, invocation_cwd=invocation_cwd, repo_root=root
+            )
+            system_prompt_file = _resolve_resource(
+                args.system_prompt_file,
+                invocation_cwd=invocation_cwd,
+                repo_root=root,
+            )
+            append_system_prompt_file = _resolve_resource(
+                args.append_system_prompt_file,
+                invocation_cwd=invocation_cwd,
+                repo_root=root,
+            )
+            initial_question = _read_terminal_question(
+                args, question_file=question_file
+            )
+            options = _terminal_runtime_options(args)
+            return run_pi_terminal(
+                package_dir=paths.pi.package_dir,
+                cwd=_absolute_from_invocation(args.cwd, invocation_cwd),
+                agent_dir=paths.pi.agent_dir,
+                provider=options.provider,
+                model=options.model,
+                tools=options.tools,
+                system_prompt_file=system_prompt_file,
+                append_system_prompt_file=append_system_prompt_file,
+                thinking_level=options.thinking_level,
+                extra_args=options.extra_args,
+                node_max_old_space_size_mb=options.node_max_old_space_size_mb,
+                initial_question=initial_question,
+                stdin=stdin,
+                stdout=stdout,
+            )
+        except (OSError, RuntimeError, ValueError):
+            stderr.write("DCI Pi terminal failed\n")
+            return 2
     if args.resume:
         stderr.write("use asterion-dci resume --output-dir RUN_DIR\n")
         return 2
@@ -302,6 +355,16 @@ def _read_question(
     return stdin.read().strip()
 
 
+def _read_terminal_question(
+    args: argparse.Namespace, *, question_file: Path | None
+) -> str | None:
+    if question_file is not None:
+        return question_file.read_text(encoding="utf-8").strip() or None
+    if args.question:
+        return " ".join(args.question).strip() or None
+    return None
+
+
 def _absolute_from_invocation(path: Path, invocation_cwd: Path) -> Path:
     candidate = path.expanduser()
     if not candidate.is_absolute():
@@ -386,6 +449,7 @@ def _write_command_failure(stderr: TextIO, command: str) -> None:
         "evaluate": "DCI evaluation failed\n",
         "benchmark": "DCI benchmark failed\n",
         "system-prompt": "DCI system prompt generation failed\n",
+        "terminal": "DCI Pi terminal failed\n",
     }
     stderr.write(messages.get(command, "DCI Pi execution failed\n"))
 
@@ -401,6 +465,23 @@ def _runtime_options(args: argparse.Namespace) -> DciRuntimeOptions:
         "node_max_old_space_size_mb": args.node_max_old_space_size_mb,
         "keep_session": args.keep_session,
         "extra_args": tuple(args.extra_arg or ()),
+    }
+    return resolve_dci_runtime_options(
+        {name: value for name, value in values.items() if value is not None}
+    )
+
+
+def _terminal_runtime_options(args: argparse.Namespace) -> DciRuntimeOptions:
+    values = {
+        "provider": args.provider,
+        "model": args.model,
+        "tools": args.tools,
+        "thinking_level": args.thinking_level,
+        "node_max_old_space_size_mb": args.node_max_old_space_size_mb,
+        "extra_args": tuple(args.extra_arg or ()),
+        "timeout_seconds": None,
+        "runtime_context_level": None,
+        "keep_session": True,
     }
     return resolve_dci_runtime_options(
         {name: value for name, value in values.items() if value is not None}

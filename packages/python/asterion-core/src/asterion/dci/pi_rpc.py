@@ -6,31 +6,102 @@ import json
 import os
 import queue
 import shlex
+import shutil
 import subprocess
 import sys
 import threading
 import time
 from collections.abc import Callable, Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, TextIO
 
 
 _STDOUT_EOF = object()
 
 
+_NODE_FAILURE = "compatible Node runtime is unavailable (Node >=20 required)"
+
+
+def _node_major(version: str) -> int | None:
+    value = version.strip()
+    if not value.startswith("v"):
+        return None
+    major, separator, _rest = value[1:].partition(".")
+    if not separator or not major.isdecimal():
+        return None
+    return int(major)
+
+
+def _probe_node(candidate: str, environment: Mapping[str, str]) -> bool:
+    try:
+        result = subprocess.run(
+            [candidate, "--version"],
+            env=dict(environment),
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    major = _node_major(result.stdout) if result.returncode == 0 else None
+    return major is not None and major >= 20
+
+
+def _nvm_node_candidates(environment: Mapping[str, str]) -> tuple[str, ...]:
+    nvm_dir = Path(environment.get("NVM_DIR", str(Path.home() / ".nvm")))
+    versions_dir = nvm_dir / "versions" / "node"
+    try:
+        entries = tuple(versions_dir.iterdir())
+    except OSError:
+        return ()
+    candidates: list[tuple[tuple[int, ...], str]] = []
+    for entry in entries:
+        version = entry.name.removeprefix("v")
+        parts = version.split(".")
+        if len(parts) != 3 or not all(part.isdecimal() for part in parts):
+            continue
+        parsed = tuple(int(part) for part in parts)
+        node = entry / "bin" / "node"
+        if parsed[0] >= 20 and node.is_file() and os.access(node, os.X_OK):
+            candidates.append((parsed, str(node)))
+    return tuple(path for _version, path in sorted(candidates, reverse=True))
+
+
+def resolve_node_bin(environment: Mapping[str, str] | None = None) -> str:
+    """Resolve and verify a Node >=20 executable without invoking Pi."""
+
+    resolved_environment = dict(os.environ if environment is None else environment)
+    path_node = shutil.which("node", path=resolved_environment.get("PATH"))
+    candidates = ((path_node,) if path_node is not None else ()) + _nvm_node_candidates(
+        resolved_environment
+    )
+    for candidate in dict.fromkeys(candidates):
+        if _probe_node(candidate, resolved_environment):
+            return candidate
+    raise RuntimeError(_NODE_FAILURE)
+
+
 def _node_bin() -> str:
-    """Return the normal Node command; callers always use direct argv."""
+    """Return a verified Node executable; callers always use direct argv."""
 
-    return "node"
-
-
-def _node_env(base: Mapping[str, str]) -> dict[str, str]:
-    """Copy the inherited environment for a direct Node child process."""
-
-    return dict(base)
+    return resolve_node_bin(os.environ)
 
 
-def ensure_built_pi_cli(package_dir: Path) -> Path:
+def _node_env(base: Mapping[str, str], node_bin: str | None = None) -> dict[str, str]:
+    """Copy the inherited environment and optionally select a verified Node bin."""
+
+    environment = dict(base)
+    if node_bin is not None and Path(node_bin).parent != Path("."):
+        node_dir = str(Path(node_bin).parent)
+        current_path = environment.get("PATH", "")
+        environment["PATH"] = os.pathsep.join(
+            value for value in (node_dir, current_path) if value
+        )
+    return environment
+
+
+def ensure_built_pi_cli(package_dir: Path, *, node_bin: str | None = None) -> Path:
     """Return Pi's built CLI, building its checkout only when required."""
 
     dist_cli = Path(package_dir) / "dist" / "cli.js"
@@ -40,7 +111,7 @@ def ensure_built_pi_cli(package_dir: Path) -> Path:
     subprocess.run(
         ["npm", "run", "build"],
         cwd=pi_repo_root,
-        env=_node_env(os.environ),
+        env=_node_env(os.environ, node_bin),
         check=True,
     )
     if not dist_cli.exists():
@@ -66,10 +137,15 @@ def build_pi_command(
     append_system_prompt_file: Path | None,
     extra_args: list[str],
     messages: list[str] | None = None,
+    node_bin: str | None = None,
 ) -> list[str]:
     """Build the Pi command as a literal argv list."""
 
-    command = [_node_bin(), str(ensure_built_pi_cli(package_dir))]
+    selected_node = _node_bin() if node_bin is None else node_bin
+    command = [
+        selected_node,
+        str(ensure_built_pi_cli(package_dir, node_bin=selected_node)),
+    ]
     if mode:
         command.extend(["--mode", mode])
     if provider:
@@ -88,6 +164,73 @@ def build_pi_command(
     if messages:
         command.extend(messages)
     return command
+
+
+def _pi_child_environment(
+    *, agent_dir: Path, node_bin: str, node_max_old_space_size_mb: int | None
+) -> dict[str, str]:
+    environment = _node_env(os.environ, node_bin)
+    environment["PI_CODING_AGENT_DIR"] = str(agent_dir)
+    if node_max_old_space_size_mb is not None:
+        heap_option = f"--max-old-space-size={node_max_old_space_size_mb}"
+        current_options = environment.get("NODE_OPTIONS", "").strip()
+        environment["NODE_OPTIONS"] = " ".join(
+            value for value in (current_options, heap_option) if value
+        )
+    return environment
+
+
+def run_pi_terminal(
+    *,
+    package_dir: Path,
+    cwd: Path,
+    agent_dir: Path,
+    provider: str | None,
+    model: str | None,
+    tools: str | None,
+    system_prompt_file: Path | None,
+    append_system_prompt_file: Path | None,
+    thinking_level: str | None,
+    extra_args: tuple[str, ...],
+    node_max_old_space_size_mb: int | None,
+    initial_question: str | None,
+    stdin: TextIO | None = None,
+    stdout: TextIO | None = None,
+) -> int:
+    """Run Pi's interactive UI with session persistence and no artifacts."""
+
+    terminal_stdin = sys.stdin if stdin is None else stdin
+    terminal_stdout = sys.stdout if stdout is None else stdout
+    if not terminal_stdin.isatty() or not terminal_stdout.isatty():
+        raise RuntimeError("Pi terminal requires interactive stdin/stdout TTY")
+    node_bin = resolve_node_bin(os.environ)
+    literal_controls = (
+        ["--thinking", thinking_level] if thinking_level is not None else []
+    )
+    command = build_pi_command(
+        package_dir=package_dir,
+        mode=None,
+        provider=provider,
+        model=model,
+        tools=tools,
+        no_session=False,
+        system_prompt_file=system_prompt_file,
+        append_system_prompt_file=append_system_prompt_file,
+        extra_args=[*expand_extra_args(extra_args), *literal_controls],
+        messages=[initial_question] if initial_question else None,
+        node_bin=node_bin,
+    )
+    result = subprocess.run(
+        command,
+        cwd=cwd,
+        env=_pi_child_environment(
+            agent_dir=agent_dir,
+            node_bin=node_bin,
+            node_max_old_space_size_mb=node_max_old_space_size_mb,
+        ),
+        check=False,
+    )
+    return result.returncode
 
 
 class PiRpcClient:
@@ -133,7 +276,7 @@ class PiRpcClient:
         self._stderr_thread: threading.Thread | None = None
         self._request_id = 0
 
-    def _build_command(self) -> list[str]:
+    def _build_command(self, *, node_bin: str | None = None) -> list[str]:
         return build_pi_command(
             package_dir=self.package_dir,
             mode="rpc",
@@ -144,26 +287,25 @@ class PiRpcClient:
             system_prompt_file=self.system_prompt_file,
             append_system_prompt_file=self.append_system_prompt_file,
             extra_args=[*expand_extra_args(self.extra_args), *self.literal_extra_args],
+            node_bin=node_bin,
         )
 
-    def _child_environment(self) -> dict[str, str]:
+    def _child_environment(self, *, node_bin: str | None = None) -> dict[str, str]:
         """Build the Pi child environment without replacing inherited Node settings."""
 
-        environment = _node_env(os.environ)
-        environment["PI_CODING_AGENT_DIR"] = str(self.agent_dir)
-        if self.node_max_old_space_size_mb is not None:
-            heap_option = f"--max-old-space-size={self.node_max_old_space_size_mb}"
-            current_options = environment.get("NODE_OPTIONS", "").strip()
-            environment["NODE_OPTIONS"] = " ".join(
-                value for value in (current_options, heap_option) if value
-            )
-        return environment
+        selected_node = "node" if node_bin is None else node_bin
+        return _pi_child_environment(
+            agent_dir=self.agent_dir,
+            node_bin=selected_node,
+            node_max_old_space_size_mb=self.node_max_old_space_size_mb,
+        )
 
     def start(self) -> None:
         if self.proc is not None:
             raise RuntimeError("RPC client already started")
-        environment = self._child_environment()
-        self.command = self._build_command()
+        node_bin = resolve_node_bin(os.environ)
+        environment = self._child_environment(node_bin=node_bin)
+        self.command = self._build_command(node_bin=node_bin)
         self.proc = subprocess.Popen(
             self.command,
             cwd=self.cwd,
@@ -188,7 +330,9 @@ class PiRpcClient:
                     self._stdout_queue.put(RuntimeError("Pi RPC emitted invalid JSONL"))
                     return
                 if not isinstance(payload, dict):
-                    self._stdout_queue.put(RuntimeError("Pi RPC emitted a non-object JSON value"))
+                    self._stdout_queue.put(
+                        RuntimeError("Pi RPC emitted a non-object JSON value")
+                    )
                     return
                 self._stdout_queue.put(payload)
         finally:
@@ -225,10 +369,14 @@ class PiRpcClient:
     def _send(self, payload: dict[str, Any]) -> None:
         if self.proc is None or self.proc.stdin is None:
             raise RuntimeError("RPC client is not running")
-        self.proc.stdin.write((json.dumps(payload, separators=(",", ":")) + "\n").encode())
+        self.proc.stdin.write(
+            (json.dumps(payload, separators=(",", ":")) + "\n").encode()
+        )
         self.proc.stdin.flush()
 
-    def _read_json_line(self, *, timeout_seconds: float | None = None) -> dict[str, Any]:
+    def _read_json_line(
+        self, *, timeout_seconds: float | None = None
+    ) -> dict[str, Any]:
         try:
             item = self._stdout_queue.get(timeout=timeout_seconds)
         except queue.Empty as error:
@@ -262,7 +410,9 @@ class PiRpcClient:
                 "pendingMessageCount": int,
             }.items():
                 value = state.get(field)
-                if not isinstance(value, expected) or (expected is int and isinstance(value, bool)):
+                if not isinstance(value, expected) or (
+                    expected is int and isinstance(value, bool)
+                ):
                     raise RuntimeError("Pi RPC get_state shape is invalid")
             return state
 
@@ -281,17 +431,25 @@ class PiRpcClient:
         turns = 0
         sent_abort = False
         settled = False
-        deadline = time.monotonic() + timeout_seconds if timeout_seconds and timeout_seconds > 0 else None
+        deadline = (
+            time.monotonic() + timeout_seconds
+            if timeout_seconds and timeout_seconds > 0
+            else None
+        )
         while True:
             try:
-                remaining = None if deadline is None else max(0.0, deadline - time.monotonic())
+                remaining = (
+                    None if deadline is None else max(0.0, deadline - time.monotonic())
+                )
                 event = self._read_json_line(timeout_seconds=remaining)
             except TimeoutError as error:
                 try:
                     self._send({"id": self._next_id(), "type": "abort"})
                 except (BrokenPipeError, RuntimeError):
                     pass
-                raise RuntimeError(f"RPC prompt timed out after {timeout_seconds:g} seconds") from error
+                raise RuntimeError(
+                    f"RPC prompt timed out after {timeout_seconds:g} seconds"
+                ) from error
             if on_event is not None:
                 on_event(event)
             event_type = event.get("type")
@@ -309,11 +467,17 @@ class PiRpcClient:
                 if max_turns is not None and turns > max_turns and not sent_abort:
                     self._send({"id": self._next_id(), "type": "abort"})
                     sent_abort = True
-                    print(f"[runner] Reached max_turns={max_turns}; sent RPC abort.", file=sys.stderr)
+                    print(
+                        f"[runner] Reached max_turns={max_turns}; sent RPC abort.",
+                        file=sys.stderr,
+                    )
                 continue
             if event_type == "message_update":
                 assistant_event = event.get("assistantMessageEvent", {})
-                if isinstance(assistant_event, Mapping) and assistant_event.get("type") == "text_delta":
+                if (
+                    isinstance(assistant_event, Mapping)
+                    and assistant_event.get("type") == "text_delta"
+                ):
                     delta = assistant_event.get("delta")
                     if isinstance(delta, str):
                         text_parts.append(delta)
@@ -321,27 +485,42 @@ class PiRpcClient:
                             print(delta, end="", file=sys.stdout, flush=True)
                 continue
             if event_type == "tool_execution_start" and self.show_tools:
-                print(f"[tool:start] {event.get('toolName', 'unknown')}", file=sys.stderr)
+                print(
+                    f"[tool:start] {event.get('toolName', 'unknown')}", file=sys.stderr
+                )
                 continue
             if event_type == "tool_execution_end" and self.show_tools:
                 error_state = "yes" if event.get("isError") else "no"
-                print(f"[tool:end] {event.get('toolName', 'unknown')} error={error_state}", file=sys.stderr)
+                print(
+                    f"[tool:end] {event.get('toolName', 'unknown')} error={error_state}",
+                    file=sys.stderr,
+                )
                 continue
             if event_type == "agent_end":
                 if not prompt_ack:
-                    raise RuntimeError("Received agent_end before prompt acknowledgement")
+                    raise RuntimeError(
+                        "Received agent_end before prompt acknowledgement"
+                    )
                 if "willRetry" not in event:
                     break
                 continue
             if event_type == "agent_settled":
                 if not prompt_ack:
-                    raise RuntimeError("Received agent_settled before prompt acknowledgement")
+                    raise RuntimeError(
+                        "Received agent_settled before prompt acknowledgement"
+                    )
                 settled = True
                 break
         if settled:
             state = self.probe_protocol(timeout_seconds=10.0)
-            if state["isStreaming"] or state["isCompacting"] or state["pendingMessageCount"] != 0:
-                raise RuntimeError("Pi RPC agent_settled postcondition failed: session is not idle")
+            if (
+                state["isStreaming"]
+                or state["isCompacting"]
+                or state["pendingMessageCount"] != 0
+            ):
+                raise RuntimeError(
+                    "Pi RPC agent_settled postcondition failed: session is not idle"
+                )
         return "".join(text_parts)
 
     def get_stderr(self) -> str:
