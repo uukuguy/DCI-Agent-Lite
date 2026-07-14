@@ -433,6 +433,50 @@ class AsterionDciCliTests(unittest.TestCase):
         self.assertEqual(stderr.getvalue(), "DCI Pi execution failed\n")
         self.assertNotIn("synthetic-secret", stderr.getvalue())
 
+    def test_commands_redact_invocation_cwd_oserror_before_any_boundary(self) -> None:
+        cases = (
+            (["run", "question"], "DCI Pi execution failed\n"),
+            (["system-prompt"], "DCI system prompt generation failed\n"),
+            (
+                ["benchmark", "--dataset", "data.jsonl", "--output-root", "out"],
+                "DCI benchmark failed\n",
+            ),
+            (
+                ["evaluate", "--output-dir", "run", "--gold-answer", "gold"],
+                "DCI evaluation failed\n",
+            ),
+            (["resume", "--output-dir", "run"], "DCI Pi execution failed\n"),
+        )
+        for argv, expected_error in cases:
+            with self.subTest(argv=argv):
+                with (
+                    patch(
+                        "asterion.dci.cli.Path.cwd",
+                        side_effect=PermissionError("credential=setup-secret"),
+                    ),
+                    patch("asterion.dci.cli.run_pi_research") as run,
+                    patch("asterion.dci.cli.render_pi_system_prompt") as render,
+                    patch("asterion.dci.cli.run_benchmark") as benchmark,
+                    patch("asterion.dci.cli.evaluate_run_directory") as evaluate,
+                    patch("asterion.dci.cli.resume_request_from_output_dir") as resume,
+                ):
+                    stderr = io.StringIO()
+                    code = main(
+                        argv,
+                        stdin=io.StringIO(),
+                        stdout=io.StringIO(),
+                        stderr=stderr,
+                    )
+
+            self.assertEqual(code, 2)
+            self.assertEqual(stderr.getvalue(), expected_error)
+            self.assertNotIn("setup-secret", stderr.getvalue())
+            run.assert_not_called()
+            render.assert_not_called()
+            benchmark.assert_not_called()
+            evaluate.assert_not_called()
+            resume.assert_not_called()
+
     def test_asterion_examples_use_shared_env_and_package_command(self) -> None:
         for path in (
             ROOT / "scripts/examples/asterion_dci_basic_example.sh",

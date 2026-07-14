@@ -38,7 +38,7 @@ def _parser() -> argparse.ArgumentParser:
     run = commands.add_parser("run")
     run.add_argument("question", nargs="*")
     run.add_argument("--question-file", type=Path)
-    run.add_argument("--cwd", type=Path, default=Path.cwd())
+    run.add_argument("--cwd", type=Path, default=Path("."))
     _add_runtime_option_arguments(run)
     run.add_argument("--max-turns", type=int)
     run.add_argument("--show-tools", action="store_true")
@@ -57,7 +57,7 @@ def _parser() -> argparse.ArgumentParser:
     resume = commands.add_parser("resume")
     resume.add_argument("--output-dir", type=Path, required=True)
     prompt = commands.add_parser("system-prompt")
-    prompt.add_argument("--cwd", type=Path, default=Path.cwd())
+    prompt.add_argument("--cwd", type=Path, default=Path("."))
     prompt.add_argument("--tools")
     prompt.add_argument("--append-system-prompt-file", type=Path)
     evaluate = commands.add_parser("evaluate")
@@ -67,7 +67,7 @@ def _parser() -> argparse.ArgumentParser:
     benchmark = commands.add_parser("benchmark")
     benchmark.add_argument("--dataset", type=Path, required=True)
     benchmark.add_argument("--output-root", type=Path, required=True)
-    benchmark.add_argument("--cwd", type=Path, default=Path.cwd())
+    benchmark.add_argument("--cwd", type=Path, default=Path("."))
     _add_runtime_option_arguments(benchmark)
     benchmark.add_argument("--limit", type=int)
     return parser
@@ -137,7 +137,7 @@ def main(
                 BenchmarkRequest(
                     dataset=args.dataset,
                     output_root=args.output_root,
-                    cwd=args.cwd,
+                    cwd=_absolute_from_invocation(args.cwd, invocation_cwd),
                     judge_config=JudgeConfig.from_env(),
                     runtime_options=_runtime_options(args),
                     limit=args.limit,
