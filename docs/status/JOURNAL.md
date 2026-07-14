@@ -569,3 +569,5 @@
 - 02:49 AF-240 Task 5 exposes reserved aliases, parent collisions, and unowned-temp deletion before repair. [8963dc5]
 - 02:57 AF-240 Task 5 exposes live lock and marker mutation before export preflight repair. [bdd60c9]
 - 03:08 AF-240 Task 5 hardens portable namespaces to preserve control and unowned files. [4a361b5]
+- 03:18 AF-240 Task 5 exposes completion-marker loss during rejected BRIGHT alias reruns. [d5aca13]
+- 03:29 AF-240 Task 5 preflights BRIGHT destinations to reject aliases before mutation. [5653e78]
