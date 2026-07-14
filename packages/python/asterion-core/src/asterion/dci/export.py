@@ -193,10 +193,6 @@ def _portable_key(value: str) -> tuple[object, ...]:
     return tuple(pieces)
 
 
-def _natural_key(path: Path) -> tuple[object, ...]:
-    return _portable_key(path.name)
-
-
 def _has_symlink(path: Path) -> bool:
     current = path if path.is_absolute() else path.absolute()
     for candidate in (current, *current.parents):
@@ -249,7 +245,7 @@ class _ParquetInputs:
         try:
             self.fd = _open_directory_fd(source, create=False)
             names = [name for name in os.listdir(self.fd) if name.endswith(".parquet")]
-            self.names = sorted(names, key=lambda name: _natural_key(Path(name)))
+            self.names = sorted(names)
             if not self.names:
                 raise DciExportError("parquet source unavailable")
         except DciExportError:
