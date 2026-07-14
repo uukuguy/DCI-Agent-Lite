@@ -555,6 +555,9 @@ class AsterionDciExportTests(unittest.TestCase):
             marker.unlink()
             self.assertEqual(export_subset(source, output), 1)
             marker_inode = marker.stat().st_ino
+            lock = output / ".asterion-dci-export.lock"
+            lock.write_text("SENTINEL")
+            lock_inode = lock.stat().st_ino
             nested = output / "nested"
             nested.mkdir()
             residue = nested / (".asterion-dci-export-tmp-doc-" + "c" * 32)
@@ -564,6 +567,20 @@ class AsterionDciExportTests(unittest.TestCase):
             self.assertTrue(residue.is_dir())
             self.assertEqual(marker.read_text(), "1\n")
             self.assertEqual(marker.stat().st_ino, marker_inode)
+            self.assertEqual(lock.read_text(), "SENTINEL")
+            self.assertEqual(lock.stat().st_ino, lock_inode)
+
+    def test_bright_collision_ledger_stores_fixed_content_identity(self) -> None:
+        body = b"x" * (4 * 1024 * 1024)
+        ledger = export_module._BrightCollisionLedger()
+        ledger.add(Path("large.txt"), body)
+        self.assertEqual(
+            tuple(ledger.records.values()),
+            (("large.txt", len(body), hashlib.sha256(body).digest()),),
+        )
+        self.assertFalse(
+            any(isinstance(field, bytes) and len(field) == len(body) for field in next(iter(ledger.records.values())))
+        )
 
     def test_bright_parent_portable_collisions_fail_across_reruns(self) -> None:
         pairs = (
