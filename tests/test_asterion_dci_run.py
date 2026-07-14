@@ -6,8 +6,10 @@ import json
 import os
 import subprocess
 import tempfile
+import threading
 import unittest
 from contextlib import redirect_stderr
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -156,6 +158,324 @@ class LifecyclePiClient(FixturePiClient):
 
 
 class AsterionDciRunTests(unittest.TestCase):
+    def test_resume_rejects_missing_state_without_creating_a_directory_or_client(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            paths = resolve_dci_paths(root)
+            output_dir = root / "missing"
+            request = DciRunRequest(
+                run_id="run-1",
+                question="question",
+                cwd=root,
+                resume=True,
+            )
+            with patch("asterion.dci.run.PiRpcClient") as client:
+                with self.assertRaisesRegex(DciRunError, "resume validation failed"):
+                    run_pi_research(paths, request, output_dir=output_dir)
+            client.assert_not_called()
+            self.assertFalse(output_dir.exists())
+
+    def test_resume_rejects_each_changed_or_malformed_immutable_semantic_before_client(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            paths = resolve_dci_paths(root)
+            system_prompt = root / "system.txt"
+            append_prompt = root / "append.txt"
+            system_prompt.write_text("system", encoding="utf-8")
+            append_prompt.write_text("append", encoding="utf-8")
+            features = DciConversationFeatures(strip_thinking=True)
+            original = DciRunRequest(
+                run_id="run-1",
+                question="question",
+                cwd=root,
+                provider="provider",
+                model="model",
+                tools="read,bash",
+                max_turns=9,
+                timeout_seconds=90.0,
+                runtime_context_level="level3",
+                thinking_level="high",
+                node_max_old_space_size_mb=8192,
+                keep_session=True,
+                extra_args=("--secret value",),
+                show_tools=True,
+                system_prompt_file=system_prompt,
+                append_system_prompt_file=append_prompt,
+                stream_text=False,
+            )
+            baseline = root / "baseline"
+            with patch("asterion.dci.run.PiRpcClient", FailingPiClient):
+                with self.assertRaises(DciRunError):
+                    run_pi_research(
+                        paths,
+                        original,
+                        output_dir=baseline,
+                        conversation_features=features,
+                    )
+
+            mutations = {
+                "run_id": "run-2",
+                "question": "changed",
+                "cwd": root / "changed",
+                "provider": "changed-provider",
+                "model": "changed-model",
+                "tools": "read",
+                "max_turns": 10,
+                "runtime_context_level": "level2",
+                "thinking_level": "low",
+                "node_max_old_space_size_mb": 4096,
+                "keep_session": False,
+                "extra_args": ("--different",),
+                "show_tools": False,
+                "system_prompt_file": root / "different-system.txt",
+                "append_system_prompt_file": root / "different-append.txt",
+                "stream_text": True,
+            }
+            for field, value in mutations.items():
+                with self.subTest(field=field):
+                    request = replace(original, **{field: value}, resume=True)
+                    with patch("asterion.dci.run.PiRpcClient") as client:
+                        with self.assertRaisesRegex(DciRunError, "resume validation failed"):
+                            run_pi_research(
+                                paths,
+                                request,
+                                output_dir=baseline,
+                                conversation_features=features,
+                            )
+                    client.assert_not_called()
+
+            for label, changed_paths in (
+                (
+                    "package_dir",
+                    replace(
+                        paths,
+                        pi=replace(paths.pi, package_dir=root / "different-package"),
+                    ),
+                ),
+                (
+                    "agent_dir",
+                    replace(paths, pi=replace(paths.pi, agent_dir=root / "different-agent")),
+                ),
+            ):
+                with self.subTest(field=label):
+                    with patch("asterion.dci.run.PiRpcClient") as client:
+                        with self.assertRaisesRegex(DciRunError, "resume validation failed"):
+                            run_pi_research(
+                                changed_paths,
+                                replace(original, resume=True),
+                                output_dir=baseline,
+                                conversation_features=features,
+                            )
+                    client.assert_not_called()
+
+            with patch("asterion.dci.run.PiRpcClient") as client:
+                with self.assertRaisesRegex(DciRunError, "resume validation failed"):
+                    run_pi_research(
+                        paths,
+                        replace(original, resume=True),
+                        output_dir=baseline,
+                        conversation_features=DciConversationFeatures(strip_usage=True),
+                    )
+            client.assert_not_called()
+
+            state_path = baseline / "state.json"
+            baseline_state = json.loads(state_path.read_text(encoding="utf-8"))
+            malformed = {
+                "run_id": 1,
+                "question": None,
+                "cwd": [],
+                "provider": 1,
+                "model": {},
+                "tools": False,
+                "max_turns": True,
+                "timeout_seconds": "90",
+                "runtime_context_level": 1,
+                "thinking_level": [],
+                "node_max_old_space_size_mb": 1.5,
+                "keep_session": 1,
+                "extra_args_count": True,
+                "extra_args_fingerprint": None,
+                "show_tools": 0,
+                "system_prompt_file": [],
+                "append_system_prompt_file": {},
+                "stream_text": 1,
+                "pi_package_dir": False,
+                "pi_agent_dir": 7,
+                "conversation_features": [],
+            }
+            for field, value in malformed.items():
+                with self.subTest(malformed=field):
+                    state = dict(baseline_state)
+                    state[field] = value
+                    state_path.write_text(json.dumps(state), encoding="utf-8")
+                    with patch("asterion.dci.run.PiRpcClient") as client:
+                        with self.assertRaisesRegex(DciRunError, "resume validation failed"):
+                            run_pi_research(
+                                paths,
+                                replace(original, resume=True),
+                                output_dir=baseline,
+                                conversation_features=features,
+                            )
+                    client.assert_not_called()
+            for field in (
+                "run_id",
+                "question",
+                "cwd",
+                "provider",
+                "model",
+                "tools",
+                "max_turns",
+                "timeout_seconds",
+                "runtime_context_level",
+                "thinking_level",
+                "node_max_old_space_size_mb",
+                "keep_session",
+                "extra_args_count",
+                "extra_args_fingerprint",
+                "show_tools",
+                "system_prompt_file",
+                "append_system_prompt_file",
+                "stream_text",
+                "pi_package_dir",
+                "pi_agent_dir",
+                "conversation_features",
+            ):
+                with self.subTest(missing=field):
+                    state = dict(baseline_state)
+                    state.pop(field)
+                    state_path.write_text(json.dumps(state), encoding="utf-8")
+                    with patch("asterion.dci.run.PiRpcClient") as client:
+                        with self.assertRaisesRegex(DciRunError, "resume validation failed"):
+                            run_pi_research(
+                                paths,
+                                replace(original, resume=True),
+                                output_dir=baseline,
+                                conversation_features=features,
+                            )
+                    client.assert_not_called()
+            state_path.write_text(json.dumps(baseline_state), encoding="utf-8")
+
+    def test_resume_reconstruction_requires_matching_extra_args_and_allows_timeout_change(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            paths = resolve_dci_paths(root)
+            output_dir = root / "failed"
+            original = DciRunRequest(
+                run_id="run-1",
+                question="question",
+                cwd=root,
+                timeout_seconds=90.0,
+                extra_args=("--private value",),
+            )
+            with patch("asterion.dci.run.PiRpcClient", FailingPiClient):
+                with self.assertRaises(DciRunError):
+                    run_pi_research(paths, original, output_dir=output_dir)
+
+            with self.assertRaisesRegex(DciRunError, "resume validation failed"):
+                resume_request_from_output_dir(output_dir)
+            with self.assertRaisesRegex(DciRunError, "resume validation failed"):
+                resume_request_from_output_dir(output_dir, extra_args=("--wrong",))
+
+            resumed = resume_request_from_output_dir(
+                output_dir,
+                extra_args=original.extra_args,
+                timeout_seconds=12.5,
+            )
+            self.assertEqual(resumed.extra_args, original.extra_args)
+            self.assertEqual(resumed.timeout_seconds, 12.5)
+            self.assertEqual(resumed.pi_package_dir, paths.pi.package_dir)
+            self.assertEqual(resumed.pi_agent_dir, paths.pi.agent_dir)
+            with patch("asterion.dci.run.PiRpcClient", FixturePiClient):
+                result = run_pi_research(paths, resumed, output_dir=output_dir)
+            protocol = json.loads(
+                (output_dir / "protocol/attempt-0002.request.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(result.status, "completed")
+            self.assertEqual(protocol["deadline_ms"], 12_500)
+
+    def test_running_state_resumes_only_after_the_os_directory_lock_is_acquired(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            paths = resolve_dci_paths(root)
+            output_dir = root / "running"
+            request = DciRunRequest(run_id="run-1", question="question", cwd=root)
+            from asterion.dci.artifacts import DciRunRecorder
+
+            recorder = DciRunRecorder(output_dir=output_dir, request=request, paths=paths)
+            try:
+                with patch("asterion.dci.run.PiRpcClient") as client:
+                    with self.assertRaisesRegex(DciRunError, "resume validation failed"):
+                        run_pi_research(
+                            paths,
+                            replace(request, resume=True),
+                            output_dir=output_dir,
+                        )
+                client.assert_not_called()
+            finally:
+                recorder.close()
+
+            with patch("asterion.dci.run.PiRpcClient", FixturePiClient):
+                result = run_pi_research(
+                    paths,
+                    replace(request, resume=True),
+                    output_dir=output_dir,
+                )
+            self.assertEqual(result.status, "completed")
+            self.assertTrue((output_dir / "protocol/attempt-0002.request.json").is_file())
+
+    def test_two_resume_contenders_construct_at_most_one_client(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            paths = resolve_dci_paths(root)
+            output_dir = root / "failed"
+            request = DciRunRequest(run_id="run-1", question="question", cwd=root)
+            with patch("asterion.dci.run.PiRpcClient", FailingPiClient):
+                with self.assertRaises(DciRunError):
+                    run_pi_research(paths, request, output_dir=output_dir)
+
+            constructed = 0
+            constructed_lock = threading.Lock()
+            entered = threading.Event()
+            release = threading.Event()
+
+            class BlockingClient(FixturePiClient):
+                def __init__(self, **kwargs: object) -> None:
+                    nonlocal constructed
+                    super().__init__(**kwargs)
+                    with constructed_lock:
+                        constructed += 1
+
+                def prompt_and_wait(self, *_: object, **__: object) -> str:
+                    entered.set()
+                    release.wait(timeout=5)
+                    return "answer"
+
+            errors: list[Exception] = []
+
+            def contend() -> None:
+                try:
+                    run_pi_research(
+                        paths,
+                        replace(request, resume=True),
+                        output_dir=output_dir,
+                    )
+                except Exception as exc:  # noqa: BLE001 - assertion captures public boundary
+                    errors.append(exc)
+
+            with patch("asterion.dci.run.PiRpcClient", BlockingClient):
+                first = threading.Thread(target=contend)
+                first.start()
+                self.assertTrue(entered.wait(timeout=5))
+                second = threading.Thread(target=contend)
+                second.start()
+                second.join(timeout=5)
+                release.set()
+                first.join(timeout=5)
+
+            self.assertEqual(constructed, 1)
+            self.assertEqual(len(errors), 1)
+            self.assertIsInstance(errors[0], DciRunError)
+
     def test_production_path_rejects_output_symlink_before_client_or_target_write(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
@@ -486,10 +806,20 @@ class AsterionDciRunTests(unittest.TestCase):
                     "model",
                     "tools",
                     "max_turns",
+                    "timeout_seconds",
                     "runtime_context_level",
                     "thinking_level",
                     "node_max_old_space_size_mb",
                     "keep_session",
+                    "extra_args_count",
+                    "extra_args_fingerprint",
+                    "show_tools",
+                    "system_prompt_file",
+                    "append_system_prompt_file",
+                    "stream_text",
+                    "conversation_features",
+                    "pi_package_dir",
+                    "pi_agent_dir",
                     "resume_count",
                 }.issubset(state)
             )

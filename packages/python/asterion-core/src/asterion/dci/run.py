@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import json
+import math
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -38,6 +38,9 @@ class DciRunRequest:
     show_tools: bool = False
     system_prompt_file: Path | None = None
     append_system_prompt_file: Path | None = None
+    conversation_features: DciConversationFeatures | None = None
+    pi_package_dir: Path | None = None
+    pi_agent_dir: Path | None = None
     resume: bool = False
     stream_text: bool = True
 
@@ -54,6 +57,9 @@ class DciRunResult:
 
 class DciRunError(RuntimeError):
     """Safe public error for a failed Pi execution."""
+
+
+_RESUME_TIMEOUT_UNSET = object()
 
 
 def request_from_runtime_options(
@@ -83,10 +89,31 @@ def request_from_runtime_options(
     )
 
 
-def resume_request_from_output_dir(output_dir: Path) -> DciRunRequest:
+def resume_request_from_output_dir(
+    output_dir: Path,
+    *,
+    extra_args: tuple[str, ...] | None = None,
+    timeout_seconds: float | None | object = _RESUME_TIMEOUT_UNSET,
+) -> DciRunRequest:
     """Reconstruct a safe immutable resume request from native run state."""
 
-    state = _load_resume_state(Path(output_dir).resolve())
+    from asterion.dci.artifacts import (
+        DciArtifactError,
+        DciRunLock,
+        DciConversationFeatures,
+        _read_json_object_at,
+        extra_args_fingerprint,
+    )
+
+    lock = None
+    try:
+        lock = DciRunLock.acquire(Path(output_dir).absolute(), create=False)
+        state = _read_json_object_at(lock._directory_fd, "state.json")
+    except (DciArtifactError, OSError, ValueError):
+        raise DciRunError("DCI resume validation failed") from None
+    finally:
+        if lock is not None:
+            lock.release()
     status = _required_string(state, "status")
     if status not in {"failed", "incomplete", "running"}:
         raise DciRunError("DCI resume validation failed")
@@ -97,10 +124,52 @@ def resume_request_from_output_dir(output_dir: Path) -> DciRunRequest:
     model = _optional_string(state, "model")
     tools = _required_string(state, "tools")
     max_turns = _optional_int(state, "max_turns")
+    persisted_timeout = _optional_timeout(state, "timeout_seconds")
     runtime_context_level = _optional_string(state, "runtime_context_level")
     thinking_level = _optional_string(state, "thinking_level")
     node_max_old_space_size_mb = _optional_positive_int(state, "node_max_old_space_size_mb")
     keep_session = _required_bool(state, "keep_session")
+    extra_args_count = _required_nonnegative_int(state, "extra_args_count")
+    persisted_fingerprint = _required_string(state, "extra_args_fingerprint")
+    if extra_args is None:
+        if extra_args_count:
+            raise DciRunError("DCI resume validation failed")
+        supplied_extra_args: tuple[str, ...] = ()
+    else:
+        supplied_extra_args = extra_args
+    try:
+        supplied_fingerprint = extra_args_fingerprint(supplied_extra_args)
+    except ValueError:
+        raise DciRunError("DCI resume validation failed") from None
+    if len(supplied_extra_args) != extra_args_count or supplied_fingerprint != persisted_fingerprint:
+        raise DciRunError("DCI resume validation failed")
+    show_tools = _required_bool(state, "show_tools")
+    system_prompt = _optional_path(state, "system_prompt_file")
+    append_system_prompt = _optional_path(state, "append_system_prompt_file")
+    stream_text = _required_bool(state, "stream_text")
+    if "conversation_features" not in state:
+        raise DciRunError("DCI resume validation failed")
+    try:
+        conversation_features = DciConversationFeatures.from_mapping(
+            state.get("conversation_features")
+        )
+    except ValueError:
+        raise DciRunError("DCI resume validation failed") from None
+    pi_package_dir = Path(_required_string(state, "pi_package_dir"))
+    pi_agent_dir = Path(_required_string(state, "pi_agent_dir"))
+    if timeout_seconds is _RESUME_TIMEOUT_UNSET:
+        resumed_timeout = persisted_timeout
+    elif timeout_seconds is None:
+        resumed_timeout = None
+    elif (
+        isinstance(timeout_seconds, bool)
+        or not isinstance(timeout_seconds, (int, float))
+        or not math.isfinite(timeout_seconds)
+        or timeout_seconds < 0
+    ):
+        raise DciRunError("DCI resume validation failed")
+    else:
+        resumed_timeout = float(timeout_seconds)
     return DciRunRequest(
         run_id=run_id,
         question=question,
@@ -109,11 +178,20 @@ def resume_request_from_output_dir(output_dir: Path) -> DciRunRequest:
         model=model,
         tools=tools,
         max_turns=max_turns,
+        timeout_seconds=resumed_timeout,
         runtime_context_level=runtime_context_level,
         thinking_level=thinking_level,
         node_max_old_space_size_mb=node_max_old_space_size_mb,
         keep_session=keep_session,
+        extra_args=supplied_extra_args,
+        show_tools=show_tools,
+        system_prompt_file=system_prompt,
+        append_system_prompt_file=append_system_prompt,
+        conversation_features=conversation_features,
+        pi_package_dir=pi_package_dir,
+        pi_agent_dir=pi_agent_dir,
         resume=True,
+        stream_text=stream_text,
     )
 
 
@@ -131,11 +209,16 @@ def run_pi_research(
     destination = Path(output_dir) if output_dir is not None else paths.output_root / request.run_id
     destination = destination.absolute()
     try:
+        effective_features = (
+            conversation_features
+            if conversation_features is not None
+            else request.conversation_features
+        )
         recorder = DciRunRecorder(
             output_dir=destination,
             request=request,
             paths=paths,
-            features=conversation_features,
+            features=effective_features,
             resume=request.resume,
         )
     except DciArtifactError as exc:
@@ -208,16 +291,6 @@ def _pi_extra_args(request: DciRunRequest) -> tuple[str, ...]:
     return tuple(values)
 
 
-def _load_resume_state(destination: Path) -> dict[str, object]:
-    try:
-        value = json.loads((destination / "state.json").read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        raise DciRunError("DCI resume validation failed") from None
-    if not isinstance(value, dict):
-        raise DciRunError("DCI resume validation failed")
-    return value
-
-
 def _required_string(state: dict[str, object], name: str) -> str:
     value = state.get(name)
     if not isinstance(value, str) or not value:
@@ -248,6 +321,32 @@ def _optional_positive_int(state: dict[str, object], name: str) -> int | None:
     if value is not None and value <= 0:
         raise DciRunError("DCI resume validation failed")
     return value
+
+
+def _required_nonnegative_int(state: dict[str, object], name: str) -> int:
+    value = _optional_int(state, name)
+    if value is None or value < 0:
+        raise DciRunError("DCI resume validation failed")
+    return value
+
+
+def _optional_timeout(state: dict[str, object], name: str) -> float | None:
+    value = state.get(name)
+    if value is None:
+        return None
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, (int, float))
+        or not math.isfinite(value)
+        or value < 0
+    ):
+        raise DciRunError("DCI resume validation failed")
+    return float(value)
+
+
+def _optional_path(state: dict[str, object], name: str) -> Path | None:
+    value = _optional_string(state, name)
+    return Path(value) if value is not None else None
 
 
 def _required_bool(state: dict[str, object], name: str) -> bool:

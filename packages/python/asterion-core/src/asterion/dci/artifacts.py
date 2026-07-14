@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import re
 import secrets
@@ -207,13 +208,14 @@ def _lock_payload(path: Path) -> dict[str, Any]:
     return _validate_lock_payload(_read_json_object(path))
 
 
-def _acquire_directory_fd(path: Path) -> int:
+def _acquire_directory_fd(path: Path, *, create: bool) -> int:
     """Open, verify, privatize, and exclusively lock one run directory."""
 
     if fcntl is None:
         raise DciArtifactError("DCI run locking is unavailable")
     _reject_symlink(path, label="output directory")
-    path.mkdir(parents=True, mode=0o700, exist_ok=True)
+    if create:
+        path.mkdir(parents=True, mode=0o700, exist_ok=True)
     _reject_symlink(path, label="output directory")
     flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
     try:
@@ -257,9 +259,9 @@ class DciRunLock:
     _released: bool = False
 
     @classmethod
-    def acquire(cls, output_dir: Path) -> DciRunLock:
+    def acquire(cls, output_dir: Path, *, create: bool = True) -> DciRunLock:
         directory = Path(output_dir)
-        descriptor = _acquire_directory_fd(directory)
+        descriptor = _acquire_directory_fd(directory, create=create)
         try:
             lock_path = directory.absolute() / cls.LOCK_NAME
             owner_token = secrets.token_hex(32)
@@ -380,11 +382,40 @@ def _bounded_text_tail(value: str, maximum_bytes: int) -> str:
     return encoded[-maximum_bytes:].decode("utf-8", errors="ignore")
 
 
+def extra_args_fingerprint(values: tuple[str, ...]) -> str:
+    """Return a stable identity for private Pi arguments without persisting their values."""
+
+    if not isinstance(values, tuple) or any(not isinstance(value, str) for value in values):
+        raise ValueError("DCI extra arguments are invalid")
+    payload = json.dumps(list(values), ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _same_typed_value(actual: object, expected: object) -> bool:
+    if expected is None:
+        return actual is None
+    return type(actual) is type(expected) and actual == expected
+
+
+def _valid_timeout(value: object) -> bool:
+    return value is None or (
+        not isinstance(value, bool)
+        and isinstance(value, (int, float))
+        and math.isfinite(value)
+        and value >= 0
+    )
+
+
 def _validate_recorder_resume_state(
     state: dict[str, Any],
     request: DciRunRequest,
+    paths: DciPaths,
 ) -> None:
     if state.get("status") not in {"failed", "incomplete", "running"}:
+        raise DciArtifactError("DCI resume state is invalid")
+    if request.pi_package_dir is not None and request.pi_package_dir != paths.pi.package_dir:
+        raise DciArtifactError("DCI resume state is invalid")
+    if request.pi_agent_dir is not None and request.pi_agent_dir != paths.pi.agent_dir:
         raise DciArtifactError("DCI resume state is invalid")
     expected = {
         "run_id": request.run_id,
@@ -398,8 +429,27 @@ def _validate_recorder_resume_state(
         "thinking_level": request.thinking_level,
         "node_max_old_space_size_mb": request.node_max_old_space_size_mb,
         "keep_session": request.keep_session,
+        "extra_args_count": len(request.extra_args),
+        "extra_args_fingerprint": extra_args_fingerprint(request.extra_args),
+        "show_tools": request.show_tools,
+        "system_prompt_file": (
+            str(request.system_prompt_file) if request.system_prompt_file is not None else None
+        ),
+        "append_system_prompt_file": (
+            str(request.append_system_prompt_file)
+            if request.append_system_prompt_file is not None
+            else None
+        ),
+        "stream_text": request.stream_text,
+        "pi_package_dir": str(paths.pi.package_dir),
+        "pi_agent_dir": str(paths.pi.agent_dir),
     }
-    if any(state.get(name) != value for name, value in expected.items()):
+    if any(
+        name not in state or not _same_typed_value(state[name], value)
+        for name, value in expected.items()
+    ):
+        raise DciArtifactError("DCI resume state is invalid")
+    if "timeout_seconds" not in state or not _valid_timeout(state["timeout_seconds"]):
         raise DciArtifactError("DCI resume state is invalid")
 
 
@@ -452,7 +502,7 @@ class DciRunRecorder:
         self.request = request
         self.paths = paths
         self.features = features or DciConversationFeatures()
-        self.lock = DciRunLock.acquire(self.output_dir)
+        self.lock = DciRunLock.acquire(self.output_dir, create=not resume)
         self._root_fd = self.lock._directory_fd
         self._protocol_fd: int | None = None
         self._closed = False
@@ -468,7 +518,9 @@ class DciRunRecorder:
         try:
             if resume:
                 self.state = _read_json_object_at(self._root_fd, "state.json")
-                _validate_recorder_resume_state(self.state, request)
+                _validate_recorder_resume_state(self.state, request, paths)
+                if "conversation_features" not in self.state:
+                    raise DciArtifactError("DCI resume state is invalid")
                 persisted_features = DciConversationFeatures.from_mapping(
                     self.state.get("conversation_features")
                 )
@@ -513,6 +565,7 @@ class DciRunRecorder:
                     "model": request.model,
                     "tools": request.tools,
                     "max_turns": request.max_turns,
+                    "timeout_seconds": request.timeout_seconds,
                     "runtime_context_level": request.runtime_context_level,
                     "runtime_context_control": (
                         {
@@ -526,6 +579,9 @@ class DciRunRecorder:
                     "thinking_level": request.thinking_level,
                     "node_max_old_space_size_mb": request.node_max_old_space_size_mb,
                     "keep_session": request.keep_session,
+                    "extra_args_count": len(request.extra_args),
+                    "extra_args_fingerprint": extra_args_fingerprint(request.extra_args),
+                    "show_tools": request.show_tools,
                     "system_prompt_file": (
                         str(request.system_prompt_file) if request.system_prompt_file else None
                     ),
@@ -534,6 +590,9 @@ class DciRunRecorder:
                         if request.append_system_prompt_file
                         else None
                     ),
+                    "stream_text": request.stream_text,
+                    "pi_package_dir": str(paths.pi.package_dir),
+                    "pi_agent_dir": str(paths.pi.agent_dir),
                     "conversation_features": self.features.to_mapping(),
                     "event_count": 0,
                     "last_event_type": None,

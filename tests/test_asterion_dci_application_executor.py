@@ -7,10 +7,46 @@ from pathlib import Path
 from unittest.mock import patch
 
 from asterion.dci.application_executor import EnvironmentDciRunExecutor
+from asterion.dci.artifacts import DciConversationFeatures
 from asterion.dci.run import DciRunRequest
 
 
 class AsterionDciApplicationExecutorTests(unittest.TestCase):
+    def test_application_executor_preserves_request_operator_semantics_without_streaming(self) -> None:
+        calls: list[DciRunRequest] = []
+
+        def run_native(_: object, request: DciRunRequest) -> object:
+            calls.append(request)
+            return object()
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            system_prompt = root / "system.txt"
+            append_prompt = root / "append.txt"
+            features = DciConversationFeatures(strip_usage=True)
+            executor = EnvironmentDciRunExecutor(repo_root=root, run_native=run_native)
+            with patch.dict(os.environ, {}, clear=True):
+                executor.run(
+                    DciRunRequest(
+                        run_id="application-run",
+                        question="question",
+                        cwd=root,
+                        max_turns=7,
+                        show_tools=True,
+                        system_prompt_file=system_prompt,
+                        append_system_prompt_file=append_prompt,
+                        conversation_features=features,
+                    )
+                )
+
+        mapped = calls[0]
+        self.assertEqual(mapped.max_turns, 7)
+        self.assertTrue(mapped.show_tools)
+        self.assertEqual(mapped.system_prompt_file, system_prompt)
+        self.assertEqual(mapped.append_system_prompt_file, append_prompt)
+        self.assertEqual(mapped.conversation_features, features)
+        self.assertFalse(mapped.stream_text)
+
     def test_application_executor_applies_shared_options(self) -> None:
         calls: list[tuple[object, DciRunRequest]] = []
 
