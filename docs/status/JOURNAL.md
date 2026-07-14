@@ -571,3 +571,6 @@
 - 03:08 AF-240 Task 5 hardens portable namespaces to preserve control and unowned files. [4a361b5]
 - 03:18 AF-240 Task 5 exposes completion-marker loss during rejected BRIGHT alias reruns. [d5aca13]
 - 03:29 AF-240 Task 5 preflights BRIGHT destinations to reject aliases before mutation. [5653e78]
+- 03:43 AF-240 Task 5 exposes source replacement and nonregular destination controls before repair. [8aa1485]
+- 03:48 AF-240 Task 5 requires immutable source authority, preserved locks, and fixed-size content identities. [2686ef6]
+- 04:02 AF-240 Task 5 snapshots parquet inputs to close preflight TOCTOU without corpus memory. [1c58697]
