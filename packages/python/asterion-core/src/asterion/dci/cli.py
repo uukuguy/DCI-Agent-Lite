@@ -5,12 +5,14 @@ from __future__ import annotations
 import argparse
 import contextlib
 import io
+import json
 import os
 import secrets
 import stat
 import sys
 from dataclasses import replace
 from datetime import datetime, timezone
+from importlib import resources
 from pathlib import Path
 from typing import TextIO
 
@@ -88,19 +90,20 @@ def _parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--gold-answer", required=True)
     evaluate.add_argument("--answer")
     benchmark = commands.add_parser("benchmark")
-    benchmark.add_argument("--dataset", type=Path, required=True)
-    benchmark.add_argument("--output-root", type=Path, required=True)
-    benchmark.add_argument("--cwd", type=Path, default=Path("."))
+    benchmark.add_argument("--dataset", type=Path)
+    benchmark.add_argument("--output-root", type=Path)
+    benchmark.add_argument("--cwd", type=Path)
     _add_runtime_option_arguments(benchmark)
     benchmark.add_argument("--limit", type=int)
-    benchmark.add_argument("--mode", choices=("qa", "ir"), default="qa")
+    benchmark.add_argument("--mode", choices=("qa", "ir"))
+    benchmark.add_argument("--enable-ir", action="store_true")
     benchmark.add_argument("--profile")
-    benchmark.add_argument("--corpus", type=Path)
+    benchmark.add_argument("--corpus", "--corpus-dir", dest="corpus", type=Path)
     benchmark.add_argument("--corpus-hint")
-    benchmark.add_argument("--max-concurrency", type=int, default=1)
+    benchmark.add_argument("--max-concurrency", type=int)
     benchmark.add_argument("--max-turns", type=int)
     benchmark.add_argument(
-        "--resume-policy", choices=("compatible", "fresh", "reuse"), default="compatible"
+        "--resume-policy", choices=("compatible", "fresh", "reuse")
     )
     benchmark.add_argument("--no-analysis", action="store_true")
     benchmark.add_argument("--no-figures", action="store_true")
@@ -115,6 +118,9 @@ def _parser() -> argparse.ArgumentParser:
     )
     benchmark.add_argument("--conversation-strip-thinking", action="store_true")
     benchmark.add_argument("--conversation-strip-usage", action="store_true")
+    _add_judge_arguments(benchmark)
+    benchmark.add_argument("--package-dir", type=Path)
+    benchmark.add_argument("--agent-dir", type=Path)
     export = commands.add_parser("export")
     exporters = export.add_subparsers(dest="export_kind", required=True)
     bcplus = exporters.add_parser("bcplus")
@@ -139,10 +145,40 @@ def _add_runtime_option_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--tools")
     parser.add_argument("--rpc-timeout-seconds", type=float)
     parser.add_argument("--runtime-context-level")
-    parser.add_argument("--thinking-level")
+    parser.add_argument("--thinking-level", "--pi-thinking-level", dest="thinking_level")
     parser.add_argument("--node-max-old-space-size-mb", type=int)
     parser.add_argument("--keep-session", action="store_true", default=None)
-    parser.add_argument("--extra-arg", action="append")
+    parser.add_argument("--extra-arg", "--pi-extra-arg", dest="extra_arg", action="append")
+
+
+def _add_judge_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--judge-base-url")
+    parser.add_argument("--judge-api", choices=("responses", "chat-completions"))
+    parser.add_argument("--judge-model")
+    parser.add_argument("--judge-api-key-env")
+    parser.add_argument("--judge-timeout-seconds", type=int)
+    parser.add_argument("--judge-max-output-tokens", type=int)
+    parser.add_argument(
+        "--judge-json-mode",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+    )
+    parser.add_argument(
+        "--judge-strict-json-schema",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+    )
+    parser.add_argument(
+        "--judge-responses-store",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+    )
+    parser.add_argument(
+        "--judge-thinking", choices=("auto", "enabled", "disabled", "omit")
+    )
+    parser.add_argument("--judge-input-price-per-1m", type=float)
+    parser.add_argument("--judge-cached-input-price-per-1m", type=float)
+    parser.add_argument("--judge-output-price-per-1m", type=float)
 
 
 def main(
@@ -223,9 +259,16 @@ def main(
         return 0
     if args.command == "benchmark":
         try:
-            benchmark_output_root = _output_path_from_invocation(
-                args.output_root, invocation_cwd
+            _apply_benchmark_profile(
+                args, repo_root=root, invocation_cwd=invocation_cwd
             )
+            if args.package_dir is not None or args.agent_dir is not None:
+                raise ValueError("runner-owned Pi paths are not CLI controls")
+            if args.limit is not None and args.limit < 1:
+                raise ValueError("benchmark limit is invalid")
+            if args.max_concurrency < 1:
+                raise ValueError("benchmark concurrency is invalid")
+            benchmark_output_root = args.output_root
             if _path_has_symlink(benchmark_output_root):
                 raise ValueError("benchmark destination is unsafe")
             benchmark_system_prompt = _resolve_resource(
@@ -242,17 +285,13 @@ def main(
                 BenchmarkRequest(
                     dataset=args.dataset,
                     output_root=benchmark_output_root,
-                    cwd=_absolute_from_invocation(args.cwd, invocation_cwd),
-                    judge_config=JudgeConfig.from_env(),
+                    cwd=args.cwd,
+                    judge_config=_judge_config(args),
                     runtime_options=_runtime_options(args),
                     limit=args.limit,
                     mode=args.mode,
                     profile=args.profile,
-                    corpus=(
-                        _absolute_from_invocation(args.corpus, invocation_cwd)
-                        if args.corpus is not None
-                        else None
-                    ),
+                    corpus=args.corpus,
                     corpus_hint=args.corpus_hint,
                     max_concurrency=args.max_concurrency,
                     max_turns=args.max_turns,
@@ -591,6 +630,151 @@ def _requested_command(argv: list[str]) -> str:
         }
         else ""
     )
+
+
+_BATCH_PROFILE_FIELDS = frozenset(
+    {
+        "dataset",
+        "output_root",
+        "corpus",
+        "mode",
+        "provider",
+        "model",
+        "tools",
+        "max_turns",
+        "max_concurrency",
+        "runtime_context_level",
+        "thinking_level",
+        "node_max_old_space_size_mb",
+    }
+)
+_BATCH_PROFILE_PATH_FIELDS = frozenset({"dataset", "output_root", "corpus"})
+
+
+def _load_batch_profiles() -> dict[str, dict[str, object]]:
+    resource = resources.files("asterion.dci.resources").joinpath(
+        "batch-profiles.json"
+    )
+    document = json.loads(resource.read_text(encoding="utf-8"))
+    if (
+        not isinstance(document, dict)
+        or set(document) != {"schema", "profiles"}
+        or document.get("schema") != "asterion.dci.batch-profiles/v1"
+        or not isinstance(document.get("profiles"), dict)
+    ):
+        raise ValueError("batch profile resource is invalid")
+    profiles: dict[str, dict[str, object]] = {}
+    for name, value in document["profiles"].items():
+        if not isinstance(name, str) or not name or not isinstance(value, dict):
+            raise ValueError("batch profile resource is invalid")
+        if set(value) != _BATCH_PROFILE_FIELDS:
+            raise ValueError("batch profile resource is invalid")
+        for field in _BATCH_PROFILE_PATH_FIELDS:
+            path_value = value.get(field)
+            if not isinstance(path_value, str):
+                raise ValueError("batch profile resource is invalid")
+            path = Path(path_value)
+            if path.is_absolute() or ".." in path.parts:
+                raise ValueError("batch profile resource is invalid")
+        if value.get("mode") not in {"qa", "ir"}:
+            raise ValueError("batch profile resource is invalid")
+        for field in ("provider", "model", "tools"):
+            if not isinstance(value.get(field), str) or not value[field]:
+                raise ValueError("batch profile resource is invalid")
+        for field in (
+            "max_turns",
+            "max_concurrency",
+            "node_max_old_space_size_mb",
+        ):
+            number = value.get(field)
+            if isinstance(number, bool) or not isinstance(number, int) or number < 1:
+                raise ValueError("batch profile resource is invalid")
+        context_level = value.get("runtime_context_level")
+        thinking_level = value.get("thinking_level")
+        if not isinstance(context_level, str) or not context_level:
+            raise ValueError("batch profile resource is invalid")
+        if thinking_level is not None and (
+            not isinstance(thinking_level, str) or not thinking_level
+        ):
+            raise ValueError("batch profile resource is invalid")
+        profiles[name] = dict(value)
+    return profiles
+
+
+def _apply_benchmark_profile(
+    args: argparse.Namespace, *, repo_root: Path, invocation_cwd: Path
+) -> None:
+    explicit_mode = args.mode is not None
+    explicit_paths = {
+        field: getattr(args, field) is not None for field in _BATCH_PROFILE_PATH_FIELDS
+    }
+    if args.profile is not None:
+        profile = _load_batch_profiles().get(args.profile)
+        if profile is None:
+            raise ValueError("batch profile is unknown")
+        for field, value in profile.items():
+            if getattr(args, field) is None:
+                setattr(args, field, value)
+    if args.enable_ir:
+        if explicit_mode and args.mode != "ir":
+            raise ValueError("benchmark mode controls conflict")
+        args.mode = "ir"
+    if args.dataset is None or args.output_root is None:
+        raise ValueError("benchmark dataset and output are required")
+    args.mode = "qa" if args.mode is None else args.mode
+    args.max_concurrency = 1 if args.max_concurrency is None else args.max_concurrency
+    args.resume_policy = (
+        "compatible" if args.resume_policy is None else args.resume_policy
+    )
+    for field in _BATCH_PROFILE_PATH_FIELDS:
+        value = getattr(args, field)
+        if value is None:
+            continue
+        path = Path(value)
+        base = invocation_cwd if explicit_paths[field] else repo_root
+        if field == "output_root":
+            resolved = _output_path_from_invocation(path, base)
+        else:
+            resolved = _path_from_invocation(path, base)
+        setattr(args, field, resolved)
+    if args.cwd is None:
+        args.cwd = args.corpus if args.corpus is not None else invocation_cwd
+    else:
+        args.cwd = _path_from_invocation(args.cwd, invocation_cwd)
+
+
+def _judge_config(args: argparse.Namespace) -> JudgeConfig:
+    base = JudgeConfig.from_env()
+    argument_fields = {
+        "base_url": "judge_base_url",
+        "api": "judge_api",
+        "model": "judge_model",
+        "timeout_seconds": "judge_timeout_seconds",
+        "max_output_tokens": "judge_max_output_tokens",
+        "json_mode": "judge_json_mode",
+        "strict_json_schema": "judge_strict_json_schema",
+        "responses_store": "judge_responses_store",
+        "thinking": "judge_thinking",
+        "input_price_per_1m": "judge_input_price_per_1m",
+        "cached_input_price_per_1m": "judge_cached_input_price_per_1m",
+        "output_price_per_1m": "judge_output_price_per_1m",
+    }
+    overrides = {
+        field: value
+        for field, argument in argument_fields.items()
+        if (value := getattr(args, argument)) is not None
+    }
+    api_key_env = args.judge_api_key_env or base.api_key_env
+    direct_key = os.environ.get("DCI_EVAL_JUDGE_API_KEY", "").strip() or os.environ.get(
+        "ASTERION_DCI_JUDGE_API_KEY", ""
+    ).strip()
+    overrides.update(
+        {
+            "api_key_env": api_key_env,
+            "api_key": direct_key or os.environ.get(api_key_env, "").strip(),
+        }
+    )
+    return replace(base, **overrides)
 
 
 def _runtime_options(args: argparse.Namespace) -> DciRuntimeOptions:

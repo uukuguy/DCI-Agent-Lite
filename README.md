@@ -162,10 +162,30 @@ asterion-dci benchmark --dataset dataset.jsonl --output-root outputs/eval --cwd 
 
 Evaluation reuses only an exact fingerprint of the public judge configuration and
 fully shaped request. Batch rows must contain unique `query_id`, `query`, and
-`answer` fields. Both commands are product-local and require operator
-authorization before a real judge or Pi request. Installed `pi.reference`
-applications share this native Asterion DCI implementation; any Claude
-semantic-parity claim remains separately authorization-gated.
+`answer` fields. `--profile` loads one of twelve immutable BCPlus, QA, or BRIGHT
+profiles from the installed wheel; explicit dataset, corpus, output, runtime,
+limit, concurrency, prompt, Judge, reuse, analysis, and figure options override
+the profile. Use `--limit 1` for a bounded check. Omitting `--limit` is a
+deliberate full-dataset run and can incur substantial Pi and Judge usage.
+
+The one-to-one Pi-default wrappers under `scripts/asterion/{bcplus_eval,qa,bright}`
+load the shared repository `.env`, preflight their dataset and corpus, and call
+only `asterion-dci benchmark`. For example:
+
+```bash
+bash scripts/asterion/qa/run_hotpotqa_dev_sample50.sh --limit 1
+bash scripts/asterion/bcplus_eval/run_bcplus_eval_openai.sh level3 high --limit 1
+# deliberate full profile run (no limit)
+bash scripts/asterion/bright/run_bio.sh
+```
+
+`--resume-policy compatible` resumes compatible incomplete native rows and
+reuses exact completed evidence; `fresh` rejects existing output, while `reuse`
+requires exact reusable evidence. QA uses Judge accuracy; BRIGHT profiles select
+IR mode and NDCG. Analysis and reproducible figures are written by default and
+can be disabled with `--no-analysis` or `--no-figures`. Both commands are
+product-local and require operator authorization before a real Judge or Pi
+request. Installed `pi.reference` applications share this native implementation.
 
 The installed registry also exposes `claude-code.reference`. Its factory uses
 `ASTERION_CLAUDE_EXECUTABLE` (default `claude`) and `ASTERION_RUNTIME_CWD`, but

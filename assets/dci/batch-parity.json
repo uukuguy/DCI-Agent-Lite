@@ -72,10 +72,12 @@
       "source_path": "docs/superpowers/plans/2026-07-14-af-240-batch-evaluation-export-parity.md",
       "source_kind": "target_feature",
       "source_name": "installed-batch-profiles",
-      "implementation_status": "missing",
-      "current_asterion_owner": null,
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_asterion_owner": "asterion.dci.resources.batch-profiles.json",
+      "current_symbol": "batch-profiles.json",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_docs_superpowers_plans_2026_07_14_af_240_batch_evaluation_export_parity_md_target_feature_installed_batch_profiles"
+      ],
       "target_asterion_owner": "asterion.dci.resources.batch-profiles.json",
       "target_symbol": "batch-profiles.json",
       "target_task": "AF-240 Task 6",
@@ -121,7 +123,9 @@
       "target_symbol": "--no-decrypt",
       "implementation_status": "implemented",
       "current_symbol": "_parser",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_scripts_bcplus_eval_extract_bcplus_qa_py_cli_flag_no_decrypt"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_scripts_bcplus_eval_extract_bcplus_qa_py_cli_flag_no_decrypt"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -142,7 +146,9 @@
       "target_symbol": "--output",
       "implementation_status": "implemented",
       "current_symbol": "_parser",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_scripts_bcplus_eval_extract_bcplus_qa_py_cli_flag_output"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_scripts_bcplus_eval_extract_bcplus_qa_py_cli_flag_output"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -163,7 +169,9 @@
       "target_symbol": "--parquet-dir",
       "implementation_status": "implemented",
       "current_symbol": "_parser",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_scripts_bcplus_eval_extract_bcplus_qa_py_cli_flag_parquet_dir"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_scripts_bcplus_eval_extract_bcplus_qa_py_cli_flag_parquet_dir"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -184,7 +192,9 @@
       "target_symbol": "atomic BCPlus QA JSONL",
       "implementation_status": "implemented",
       "current_symbol": "export_bcplus_qa",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_scripts_bcplus_eval_extract_bcplus_qa_py_durable_output_output_jsonl"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_scripts_bcplus_eval_extract_bcplus_qa_py_durable_output_output_jsonl"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -205,7 +215,9 @@
       "target_symbol": "_decrypt",
       "implementation_status": "implemented",
       "current_symbol": "_decrypt",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_scripts_bcplus_eval_extract_bcplus_qa_py_function_decrypt"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_scripts_bcplus_eval_extract_bcplus_qa_py_function_decrypt"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -226,7 +238,9 @@
       "target_symbol": "_derive_key",
       "implementation_status": "implemented",
       "current_symbol": "_derive_key",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_scripts_bcplus_eval_extract_bcplus_qa_py_function_derive_key"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_scripts_bcplus_eval_extract_bcplus_qa_py_function_derive_key"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -247,7 +261,9 @@
       "target_symbol": "_pick_col",
       "implementation_status": "implemented",
       "current_symbol": "_pick_col",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_scripts_bcplus_eval_extract_bcplus_qa_py_function_pick_col"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_scripts_bcplus_eval_extract_bcplus_qa_py_function_pick_col"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -268,7 +284,9 @@
       "target_symbol": "main",
       "implementation_status": "implemented",
       "current_symbol": "main",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_scripts_bcplus_eval_extract_bcplus_qa_py_function_main"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_scripts_bcplus_eval_extract_bcplus_qa_py_function_main"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -284,7 +302,7 @@
       "source_path": "scripts/bcplus_eval/run_L3.sh",
       "source_kind": "launcher",
       "source_name": "bcplus.level3",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "scripts.asterion",
       "target_asterion_owner": "scripts.asterion",
       "target_symbol": "scripts/asterion/bcplus_eval/run_L3.sh",
       "launcher_family": "bcplus",
@@ -302,9 +320,11 @@
         "output_root": "outputs/bcplus_eval/openai_L3",
         "corpus_dir": "corpus/bc_plus_docs"
       },
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "scripts/asterion/bcplus_eval/run_L3.sh",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_l3_sh_launcher_bcplus_level3"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -320,7 +340,7 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval_openai.sh",
       "source_kind": "launcher",
       "source_name": "bcplus.dynamic-level-thinking",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "scripts.asterion",
       "target_asterion_owner": "scripts.asterion",
       "target_symbol": "scripts/asterion/bcplus_eval/run_bcplus_eval_openai.sh",
       "launcher_family": "bcplus",
@@ -338,9 +358,11 @@
         "output_root": "outputs/bcplus_eval/openai_${level}_concurrency10[_thinking${thinking_level}]",
         "corpus_dir": "corpus/bc_plus_docs"
       },
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "scripts/asterion/bcplus_eval/run_bcplus_eval_openai.sh",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_openai_sh_launcher_bcplus_dynamic_level_thinking"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -471,12 +493,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--agent-dir",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--agent-dir",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--agent-dir",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_agent_dir"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -492,12 +516,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--append-system-prompt-file",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--append-system-prompt-file",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--append-system-prompt-file",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_append_system_prompt_file"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -513,12 +539,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--corpus-dir",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--corpus-dir",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--corpus-dir",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_corpus_dir"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -534,12 +562,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--corpus-hint",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--corpus-hint",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--corpus-hint",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_corpus_hint"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -555,12 +585,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--dataset",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--dataset",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--dataset",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_dataset"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -576,12 +608,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--enable-ir",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--enable-ir",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--enable-ir",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_enable_ir"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -597,12 +631,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--judge-api",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--judge-api",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--judge-api",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_judge_api"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -618,12 +654,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--judge-api-key-env",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--judge-api-key-env",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--judge-api-key-env",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_judge_api_key_env"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -639,12 +677,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--judge-base-url",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--judge-base-url",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--judge-base-url",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_judge_base_url"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -660,12 +700,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--judge-cached-input-price-per-1m",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--judge-cached-input-price-per-1m",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--judge-cached-input-price-per-1m",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_judge_cached_input_price_per_1m"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -681,12 +723,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--judge-input-price-per-1m",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--judge-input-price-per-1m",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--judge-input-price-per-1m",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_judge_input_price_per_1m"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -702,12 +746,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--judge-model",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--judge-model",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--judge-model",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_judge_model"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -723,12 +769,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--judge-output-price-per-1m",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--judge-output-price-per-1m",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--judge-output-price-per-1m",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_judge_output_price_per_1m"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -744,12 +792,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--judge-timeout-seconds",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--judge-timeout-seconds",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--judge-timeout-seconds",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_judge_timeout_seconds"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -765,12 +815,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--limit",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--limit",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--limit",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_limit"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -786,12 +838,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--max-concurrency",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--max-concurrency",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--max-concurrency",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_max_concurrency"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -807,12 +861,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--max-turns",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--max-turns",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--max-turns",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_max_turns"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -828,12 +884,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--model",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--model",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--model",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_model"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -849,12 +907,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--node-max-old-space-size-mb",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--node-max-old-space-size-mb",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--node-max-old-space-size-mb",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_node_max_old_space_size_mb"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -870,12 +930,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--output-root",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--output-root",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--output-root",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_output_root"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -891,12 +953,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--package-dir",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--package-dir",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--package-dir",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_package_dir"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -912,12 +976,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--pi-extra-arg",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--pi-extra-arg",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--pi-extra-arg",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_pi_extra_arg"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -933,12 +999,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--pi-thinking-level",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--pi-thinking-level",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--pi-thinking-level",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_pi_thinking_level"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -954,12 +1022,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--provider",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--provider",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--provider",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_provider"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -975,12 +1045,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--runtime-context-level",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--runtime-context-level",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--runtime-context-level",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_runtime_context_level"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -996,12 +1068,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--system-prompt-file",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--system-prompt-file",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--system-prompt-file",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_system_prompt_file"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -1017,12 +1091,14 @@
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
       "source_name": "--tools",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "asterion.dci.cli",
       "target_symbol": "--tools",
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "--tools",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_tools"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -1204,7 +1280,9 @@
       "target_symbol": "conversation_full.json",
       "implementation_status": "implemented",
       "current_symbol": "DciRunRecorder",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_conversation_full_json"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_conversation_full_json"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -1225,7 +1303,9 @@
       "target_symbol": "conversation.json",
       "implementation_status": "implemented",
       "current_symbol": "DciRunRecorder",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_conversation_json"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_conversation_json"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -1246,7 +1326,9 @@
       "target_symbol": "eval_result.json",
       "implementation_status": "implemented",
       "current_symbol": "evaluate_run_directory_async",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_eval_result_json"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_eval_result_json"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -1267,7 +1349,9 @@
       "target_symbol": "events.jsonl",
       "implementation_status": "implemented",
       "current_symbol": "DciRunRecorder",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_events_jsonl"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_events_jsonl"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -1288,7 +1372,9 @@
       "target_symbol": "final.txt",
       "implementation_status": "implemented",
       "current_symbol": "DciRunRecorder",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_final_txt"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_final_txt"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -1355,7 +1441,9 @@
       "target_symbol": "latest_model_context.json",
       "implementation_status": "implemented",
       "current_symbol": "DciRunRecorder",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_latest_model_context_json"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_latest_model_context_json"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -1376,7 +1464,9 @@
       "target_symbol": "launcher_stderr.txt",
       "implementation_status": "implemented",
       "current_symbol": "run_pi_research",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_launcher_stderr_txt"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_launcher_stderr_txt"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -1397,7 +1487,9 @@
       "target_symbol": "launcher_stdout.txt",
       "implementation_status": "implemented",
       "current_symbol": "run_pi_research",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_launcher_stdout_txt"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_launcher_stdout_txt"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -1418,7 +1510,9 @@
       "target_symbol": "question.txt",
       "implementation_status": "implemented",
       "current_symbol": "DciRunRecorder",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_question_txt"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_question_txt"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -1485,7 +1579,9 @@
       "target_symbol": "state.json",
       "implementation_status": "implemented",
       "current_symbol": "DciRunRecorder",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_state_json"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_state_json"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -1506,7 +1602,9 @@
       "target_symbol": "stderr.txt",
       "implementation_status": "implemented",
       "current_symbol": "DciRunRecorder",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_stderr_txt"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_durable_output_stderr_txt"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -1573,7 +1671,9 @@
       "target_symbol": "aggregate_results",
       "implementation_status": "implemented",
       "current_symbol": "_publish_aggregates",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_aggregate_results"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_aggregate_results"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -1663,7 +1763,9 @@
       "target_symbol": "build_run_command",
       "implementation_status": "implemented",
       "current_symbol": "request_from_runtime_options",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_build_run_command"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_build_run_command"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -1707,7 +1809,9 @@
       "target_symbol": "build_subprocess_env",
       "implementation_status": "implemented",
       "current_symbol": "_pi_child_environment",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_build_subprocess_env"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_build_subprocess_env"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -1820,7 +1924,9 @@
       "target_symbol": "compute_run_batch_timing",
       "implementation_status": "implemented",
       "current_symbol": "compute_run_batch_timing",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_compute_run_batch_timing"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_compute_run_batch_timing"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -1864,7 +1970,9 @@
       "target_symbol": "existing_result_succeeded",
       "implementation_status": "implemented",
       "current_symbol": "_reusable_result",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_existing_result_succeeded"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_existing_result_succeeded"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -1885,7 +1993,9 @@
       "target_symbol": "existing_run_has_error",
       "implementation_status": "implemented",
       "current_symbol": "_native_state",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_existing_run_has_error"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_existing_run_has_error"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -1906,7 +2016,9 @@
       "target_symbol": "expand_extra_args",
       "implementation_status": "implemented",
       "current_symbol": "expand_extra_args",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_expand_extra_args"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_expand_extra_args"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -1927,7 +2039,9 @@
       "target_symbol": "extract_agent_usage_metrics",
       "implementation_status": "implemented",
       "current_symbol": "extract_agent_usage_metrics",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_extract_agent_usage_metrics"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_extract_agent_usage_metrics"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -1948,7 +2062,9 @@
       "target_symbol": "extract_tool_metrics",
       "implementation_status": "implemented",
       "current_symbol": "extract_tool_metrics",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_extract_tool_metrics"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_extract_tool_metrics"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -2038,7 +2154,9 @@
       "target_symbol": "gather_query_metrics",
       "implementation_status": "implemented",
       "current_symbol": "gather_query_metrics",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_gather_query_metrics"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_gather_query_metrics"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -2059,7 +2177,9 @@
       "target_symbol": "has_core_run_artifacts",
       "implementation_status": "implemented",
       "current_symbol": "validate_completed_run_evidence",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_has_core_run_artifacts"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_has_core_run_artifacts"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -2126,7 +2246,9 @@
       "target_symbol": "load_existing_query_result",
       "implementation_status": "implemented",
       "current_symbol": "_reusable_result",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_load_existing_query_result"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_load_existing_query_result"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -2170,7 +2292,9 @@
       "target_symbol": "main",
       "implementation_status": "implemented",
       "current_symbol": "run_benchmark_async",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_main"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_main"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -2191,7 +2315,9 @@
       "target_symbol": "main_async",
       "implementation_status": "implemented",
       "current_symbol": "run_benchmark_async",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_main_async"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_main_async"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -2235,7 +2361,9 @@
       "target_symbol": "parse_args",
       "implementation_status": "implemented",
       "current_symbol": "_parser",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_parse_args"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_parse_args"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -2256,7 +2384,9 @@
       "target_symbol": "parse_iso8601",
       "implementation_status": "implemented",
       "current_symbol": "seconds_between",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_parse_iso8601"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_parse_iso8601"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -2298,7 +2428,9 @@
       "implementation_status": "implemented",
       "current_asterion_owner": "asterion.dci.benchmark",
       "current_symbol": "_publish_aggregates",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_persist_aggregate"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_persist_aggregate"
+      ],
       "target_asterion_owner": "asterion.dci.benchmark",
       "target_symbol": "persist_aggregate",
       "target_task": "AF-240 Task 3",
@@ -2413,7 +2545,9 @@
       "target_symbol": "prepare_query_dir_for_run",
       "implementation_status": "implemented",
       "current_symbol": "_preflight_existing",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_prepare_query_dir_for_run"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_prepare_query_dir_for_run"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -2434,7 +2568,9 @@
       "target_symbol": "query_needs_execution_or_judging",
       "implementation_status": "implemented",
       "current_symbol": "_validate_exact_reuse",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_query_needs_execution_or_judging"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_query_needs_execution_or_judging"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -2478,7 +2614,9 @@
       "target_symbol": "read_json_if_exists",
       "implementation_status": "implemented",
       "current_symbol": "_Directory.read_optional_json",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_read_json_if_exists"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_read_json_if_exists"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -2522,7 +2660,9 @@
       "target_symbol": "read_text_if_exists",
       "implementation_status": "implemented",
       "current_symbol": "_Directory.read_optional_text",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_read_text_if_exists"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_read_text_if_exists"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -2543,7 +2683,9 @@
       "target_symbol": "resolve_repo_relative_path",
       "implementation_status": "implemented",
       "current_symbol": "_prepare",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_resolve_repo_relative_path"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_resolve_repo_relative_path"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -2564,7 +2706,9 @@
       "target_symbol": "run_single_query",
       "implementation_status": "implemented",
       "current_symbol": "_run_row",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_run_single_query"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_run_single_query"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -2631,7 +2775,9 @@
       "target_symbol": "seconds_between",
       "implementation_status": "implemented",
       "current_symbol": "seconds_between",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_seconds_between"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_seconds_between"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -2652,7 +2798,9 @@
       "target_symbol": "sum_dict_numbers",
       "implementation_status": "implemented",
       "current_symbol": "aggregate_results",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_sum_dict_numbers"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_sum_dict_numbers"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -2696,7 +2844,9 @@
       "target_symbol": "utc_now",
       "implementation_status": "implemented",
       "current_symbol": "_utc_now",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_utc_now"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_utc_now"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -2715,7 +2865,9 @@
       "implementation_status": "implemented",
       "current_asterion_owner": "asterion.dci.benchmark",
       "current_symbol": "run_benchmark_async",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_worker"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_worker"
+      ],
       "target_asterion_owner": "asterion.dci.benchmark",
       "target_symbol": "worker",
       "target_task": "AF-240 Task 3",
@@ -2761,7 +2913,9 @@
       "target_symbol": "write_json",
       "implementation_status": "implemented",
       "current_symbol": "_Directory.write_json",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_write_json"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_write_json"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -2782,7 +2936,9 @@
       "target_symbol": "write_jsonl",
       "implementation_status": "implemented",
       "current_symbol": "_publish_aggregates",
-      "current_verification_tests": ["tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_write_jsonl"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_write_jsonl"
+      ],
       "target_task": "AF-240 Task 3",
       "future_acceptance": {
         "task": "AF-240 Task 3",
@@ -11515,7 +11671,7 @@
       "source_path": "scripts/bright/run_bio.sh",
       "source_kind": "launcher",
       "source_name": "bright.biology",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "scripts.asterion",
       "target_asterion_owner": "scripts.asterion",
       "target_symbol": "scripts/asterion/bright/run_bio.sh",
       "launcher_family": "bright",
@@ -11533,9 +11689,11 @@
         "output_root": "outputs/bright/bio",
         "corpus_dir": "corpus/bright_corpus/biology"
       },
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "scripts/asterion/bright/run_bio.sh",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bright_run_bio_sh_launcher_bright_biology"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -11551,7 +11709,7 @@
       "source_path": "scripts/bright/run_earth_science.sh",
       "source_kind": "launcher",
       "source_name": "bright.earth-science",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "scripts.asterion",
       "target_asterion_owner": "scripts.asterion",
       "target_symbol": "scripts/asterion/bright/run_earth_science.sh",
       "launcher_family": "bright",
@@ -11569,9 +11727,11 @@
         "output_root": "outputs/bright/earth_science",
         "corpus_dir": "corpus/bright_corpus/earth_science"
       },
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "scripts/asterion/bright/run_earth_science.sh",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bright_run_earth_science_sh_launcher_bright_earth_science"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -11587,7 +11747,7 @@
       "source_path": "scripts/bright/run_economics.sh",
       "source_kind": "launcher",
       "source_name": "bright.economics",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "scripts.asterion",
       "target_asterion_owner": "scripts.asterion",
       "target_symbol": "scripts/asterion/bright/run_economics.sh",
       "launcher_family": "bright",
@@ -11605,9 +11765,11 @@
         "output_root": "outputs/bright/economics",
         "corpus_dir": "corpus/bright_corpus/economics"
       },
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "scripts/asterion/bright/run_economics.sh",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bright_run_economics_sh_launcher_bright_economics"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -11623,7 +11785,7 @@
       "source_path": "scripts/bright/run_robotics.sh",
       "source_kind": "launcher",
       "source_name": "bright.robotics",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "scripts.asterion",
       "target_asterion_owner": "scripts.asterion",
       "target_symbol": "scripts/asterion/bright/run_robotics.sh",
       "launcher_family": "bright",
@@ -11641,9 +11803,11 @@
         "output_root": "outputs/bright/robotics",
         "corpus_dir": "corpus/bright_corpus/robotics"
       },
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "scripts/asterion/bright/run_robotics.sh",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bright_run_robotics_sh_launcher_bright_robotics"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -11659,7 +11823,7 @@
       "source_path": "scripts/qa/run_2wikimultihopqa_dev_sample50.sh",
       "source_kind": "launcher",
       "source_name": "qa.2wikimultihopqa",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "scripts.asterion",
       "target_asterion_owner": "scripts.asterion",
       "target_symbol": "scripts/asterion/qa/run_2wikimultihopqa_dev_sample50.sh",
       "launcher_family": "qa",
@@ -11677,9 +11841,11 @@
         "output_root": "outputs/qa/openai_2wikimultihopqa_dev_sample50",
         "corpus_dir": "corpus/wiki_corpus"
       },
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "scripts/asterion/qa/run_2wikimultihopqa_dev_sample50.sh",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_qa_run_2wikimultihopqa_dev_sample50_sh_launcher_qa_2wikimultihopqa"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -11695,7 +11861,7 @@
       "source_path": "scripts/qa/run_bamboogle_test_sample50.sh",
       "source_kind": "launcher",
       "source_name": "qa.bamboogle",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "scripts.asterion",
       "target_asterion_owner": "scripts.asterion",
       "target_symbol": "scripts/asterion/qa/run_bamboogle_test_sample50.sh",
       "launcher_family": "qa",
@@ -11713,9 +11879,11 @@
         "output_root": "outputs/qa/openai_bamboogle_test_sample50",
         "corpus_dir": "corpus/wiki_corpus"
       },
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "scripts/asterion/qa/run_bamboogle_test_sample50.sh",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_qa_run_bamboogle_test_sample50_sh_launcher_qa_bamboogle"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -11731,7 +11899,7 @@
       "source_path": "scripts/qa/run_hotpotqa_dev_sample50.sh",
       "source_kind": "launcher",
       "source_name": "qa.hotpotqa",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "scripts.asterion",
       "target_asterion_owner": "scripts.asterion",
       "target_symbol": "scripts/asterion/qa/run_hotpotqa_dev_sample50.sh",
       "launcher_family": "qa",
@@ -11749,9 +11917,11 @@
         "output_root": "outputs/qa/openai_hotpotqa_dev_sample50",
         "corpus_dir": "corpus/wiki_corpus"
       },
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "scripts/asterion/qa/run_hotpotqa_dev_sample50.sh",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_qa_run_hotpotqa_dev_sample50_sh_launcher_qa_hotpotqa"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -11767,7 +11937,7 @@
       "source_path": "scripts/qa/run_musique_dev_sample50.sh",
       "source_kind": "launcher",
       "source_name": "qa.musique",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "scripts.asterion",
       "target_asterion_owner": "scripts.asterion",
       "target_symbol": "scripts/asterion/qa/run_musique_dev_sample50.sh",
       "launcher_family": "qa",
@@ -11785,9 +11955,11 @@
         "output_root": "outputs/qa/openai_musique_dev_sample50",
         "corpus_dir": "corpus/wiki_corpus"
       },
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "scripts/asterion/qa/run_musique_dev_sample50.sh",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_qa_run_musique_dev_sample50_sh_launcher_qa_musique"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -11803,7 +11975,7 @@
       "source_path": "scripts/qa/run_nq_test_sample50.sh",
       "source_kind": "launcher",
       "source_name": "qa.nq",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "scripts.asterion",
       "target_asterion_owner": "scripts.asterion",
       "target_symbol": "scripts/asterion/qa/run_nq_test_sample50.sh",
       "launcher_family": "qa",
@@ -11821,9 +11993,11 @@
         "output_root": "outputs/qa/openai_nq_test_sample50",
         "corpus_dir": "corpus/wiki_corpus"
       },
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "scripts/asterion/qa/run_nq_test_sample50.sh",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_qa_run_nq_test_sample50_sh_launcher_qa_nq"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -11839,7 +12013,7 @@
       "source_path": "scripts/qa/run_triviaqa_test_sample50.sh",
       "source_kind": "launcher",
       "source_name": "qa.triviaqa",
-      "current_asterion_owner": null,
+      "current_asterion_owner": "scripts.asterion",
       "target_asterion_owner": "scripts.asterion",
       "target_symbol": "scripts/asterion/qa/run_triviaqa_test_sample50.sh",
       "launcher_family": "qa",
@@ -11857,9 +12031,11 @@
         "output_root": "outputs/qa/openai_triviaqa_test_sample50",
         "corpus_dir": "corpus/wiki_corpus"
       },
-      "implementation_status": "missing",
-      "current_symbol": null,
-      "current_verification_tests": [],
+      "implementation_status": "implemented",
+      "current_symbol": "scripts/asterion/qa/run_triviaqa_test_sample50.sh",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_qa_run_triviaqa_test_sample50_sh_launcher_qa_triviaqa"
+      ],
       "target_task": "AF-240 Task 6",
       "future_acceptance": {
         "task": "AF-240 Task 6",
@@ -11880,7 +12056,9 @@
       "target_symbol": "--output-dir",
       "implementation_status": "implemented",
       "current_symbol": "_parser",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bc_plus_docs_py_cli_flag_output_dir"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bc_plus_docs_py_cli_flag_output_dir"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -11901,7 +12079,9 @@
       "target_symbol": "--source-dir",
       "implementation_status": "implemented",
       "current_symbol": "_parser",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bc_plus_docs_py_cli_flag_source_dir"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bc_plus_docs_py_cli_flag_source_dir"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -11922,7 +12102,9 @@
       "target_symbol": "bcplus document tree",
       "implementation_status": "implemented",
       "current_symbol": "export_bcplus",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bc_plus_docs_py_durable_output_domain_title_txt"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bc_plus_docs_py_durable_output_domain_title_txt"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -11943,7 +12125,9 @@
       "target_symbol": "build_filename",
       "implementation_status": "implemented",
       "current_symbol": "build_filename",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bc_plus_docs_py_function_build_filename"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bc_plus_docs_py_function_build_filename"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -11964,7 +12148,9 @@
       "target_symbol": "extract_title",
       "implementation_status": "implemented",
       "current_symbol": "extract_title",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bc_plus_docs_py_function_extract_title"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bc_plus_docs_py_function_extract_title"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -11985,7 +12171,9 @@
       "target_symbol": "get_domain",
       "implementation_status": "implemented",
       "current_symbol": "get_domain",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bc_plus_docs_py_function_get_domain"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bc_plus_docs_py_function_get_domain"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -12006,7 +12194,9 @@
       "target_symbol": "main",
       "implementation_status": "implemented",
       "current_symbol": "main",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bc_plus_docs_py_function_main"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bc_plus_docs_py_function_main"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -12027,7 +12217,9 @@
       "target_symbol": "parse_args",
       "implementation_status": "implemented",
       "current_symbol": "parse_args",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bc_plus_docs_py_function_parse_args"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bc_plus_docs_py_function_parse_args"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -12048,7 +12240,9 @@
       "target_symbol": "sanitize_name",
       "implementation_status": "implemented",
       "current_symbol": "sanitize_name",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bc_plus_docs_py_function_sanitize_name"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bc_plus_docs_py_function_sanitize_name"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -12069,7 +12263,9 @@
       "target_symbol": "unique_path",
       "implementation_status": "implemented",
       "current_symbol": "unique_path",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bc_plus_docs_py_function_unique_path"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bc_plus_docs_py_function_unique_path"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -12090,7 +12286,9 @@
       "target_symbol": "--output-root",
       "implementation_status": "implemented",
       "current_symbol": "_parser",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bright_docs_py_cli_flag_output_root"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bright_docs_py_cli_flag_output_root"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -12111,7 +12309,9 @@
       "target_symbol": "--source-root",
       "implementation_status": "implemented",
       "current_symbol": "_parser",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bright_docs_py_cli_flag_source_root"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bright_docs_py_cli_flag_source_root"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -12132,7 +12332,9 @@
       "target_symbol": "--subset",
       "implementation_status": "implemented",
       "current_symbol": "_parser",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bright_docs_py_cli_flag_subset"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bright_docs_py_cli_flag_subset"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -12153,7 +12355,9 @@
       "target_symbol": "subset completion marker",
       "implementation_status": "implemented",
       "current_symbol": "export_subset",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bright_docs_py_durable_output_dci_export_complete"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bright_docs_py_durable_output_dci_export_complete"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -12174,7 +12378,9 @@
       "target_symbol": "bright document tree",
       "implementation_status": "implemented",
       "current_symbol": "export_subset",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bright_docs_py_durable_output_subset_id"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bright_docs_py_durable_output_subset_id"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -12195,7 +12401,9 @@
       "target_symbol": "export_subset",
       "implementation_status": "implemented",
       "current_symbol": "export_subset",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bright_docs_py_function_export_subset"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bright_docs_py_function_export_subset"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -12216,7 +12424,9 @@
       "target_symbol": "main",
       "implementation_status": "implemented",
       "current_symbol": "main",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bright_docs_py_function_main"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bright_docs_py_function_main"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -12237,7 +12447,9 @@
       "target_symbol": "parse_args",
       "implementation_status": "implemented",
       "current_symbol": "parse_args",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bright_docs_py_function_parse_args"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bright_docs_py_function_parse_args"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",
@@ -12258,7 +12470,9 @@
       "target_symbol": "safe_relative_path",
       "implementation_status": "implemented",
       "current_symbol": "safe_relative_path",
-      "current_verification_tests": ["tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bright_docs_py_function_safe_relative_path"],
+      "current_verification_tests": [
+        "tests.test_asterion_dci_export.AsterionDciExportTests.test_src_dci_benchmark_export_bright_docs_py_function_safe_relative_path"
+      ],
       "target_task": "AF-240 Task 5",
       "future_acceptance": {
         "task": "AF-240 Task 5",

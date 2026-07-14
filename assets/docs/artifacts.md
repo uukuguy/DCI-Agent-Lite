@@ -111,3 +111,39 @@ did not enable `--keep-session`. `runtime_context_level` is recorded only as an
 unsupported diagnostic until Pi exposes a typed control. Run-directory files
 are private and atomically maintained, but the directory is not a read-only
 sandbox when bash is available.
+
+## Batch artifacts
+
+`asterion-dci benchmark` creates one Asterion-owned batch root. Inputs and
+configuration are fingerprinted before workers start; per-query native evidence
+is committed before incremental and final aggregates:
+
+```text
+outputs/asterion/<family>/<profile>/
+  config.json
+  batch-state.json
+  results.jsonl
+  summary.json
+  analysis.json
+  analysis.jsonl
+  analysis_figures/
+    scatter_overview.png
+    runtime_breakdown.png
+    metric_distributions.png
+    tool_summary.png
+  <query-id>/
+    item.json
+    input_question.txt
+    result.json
+    timing.json
+    native-generation-0001/ # private single-run evidence described above
+```
+
+QA rows bind their exact Judge request fingerprint and cached verdict. BRIGHT
+IR rows bind ranked-document evidence and NDCG. Batch and analysis files are
+private native artifacts: they include benchmark questions, gold answers, final
+answers, and Judge reasons. They exclude credentials and provider error bodies;
+framework projections remain body-free references. `--resume-policy compatible`
+continues only matching incomplete rows and reuses matching complete rows;
+`reuse` refuses to run a new Pi or Judge request. Figures require analysis, so
+use `--no-analysis --no-figures` together when disabling both.

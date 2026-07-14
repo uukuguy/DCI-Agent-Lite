@@ -248,3 +248,40 @@ The benchmark scripts use the following dataset and retrieval-corpus pairs. `Avg
 | BRIGHT-Economics | BRIGHT-Economics | 50,220 | 52 | `data/dci-bench/data/bright_economics/economics_full.jsonl` | `corpus/bright_corpus/economics/` |
 | BRIGHT-Robotics | BRIGHT-Robotics | 61,961 | 25 | `data/dci-bench/data/bright_robotics/bright_robotics.jsonl` | `corpus/bright_corpus/robotics/` |
 | Wikipedia-18 | NQ, TriviaQA, Bamboogle, HotpotQA, 2WikiMultiHopQA, MuSiQue | 21,015,324 | 100 | `data/dci-bench/data/{nq,triviaqa,bamboogle,hotpotqa,2wikimultihopqa,musique}/test.jsonl` | `corpus/wiki_corpus/` |
+
+## Asterion batch profiles and launchers
+
+The installed `asterion-dci` wheel contains immutable mappings for the two
+BCPlus launch modes, six QA datasets, and four BRIGHT IR datasets. Normal
+provider, model, Pi, Node, and Judge defaults come from the same repository
+`.env` and `DCI_*` variables used by source DCI. Command-line values take
+precedence; credentials are never accepted as literal command-line values.
+
+Use a profile directly or its one-to-one wrapper:
+
+```bash
+asterion-dci benchmark --profile qa.nq --limit 1
+bash scripts/asterion/qa/run_nq_test_sample50.sh --limit 1
+```
+
+All wrappers verify the declared dataset file and corpus directory before
+starting Pi. Set `ASTERION_DCI_BATCH_LIMIT=1` to bound any static wrapper, or
+pass `--limit 1` explicitly. The dynamic BCPlus wrapper instead accepts
+`CONTEXT_LEVEL [THINKING_LEVEL]` before additional benchmark options such as
+`--limit 1`.
+Leaving every limit unset intentionally evaluates the complete profile.
+
+For custom input, provide `--dataset`, `--output-root`, and `--corpus` (or the
+source-compatible `--corpus-dir`) directly. `--enable-ir` is the
+source-compatible spelling of `--mode ir`; `--pi-extra-arg` and
+`--pi-thinking-level` remain exact aliases for the Asterion spellings. Pi
+checkout paths stay under `DCI_PI_DIR`/`DCI_PI_PACKAGE_DIR`/`DCI_PI_AGENT_DIR`;
+the source runner-only `--package-dir` and `--agent-dir` arguments are rejected.
+
+`--resume-policy compatible` is the normal durable mode. Choose `fresh` for a
+new output root or `reuse` when every row must already have exact reusable
+native and Judge evidence. Analysis JSON/JSONL reports and figures are enabled by
+default. Disable figures alone with `--no-figures`, or both analysis and figures
+with `--no-analysis --no-figures`. BRIGHT profiles calculate IR NDCG rather
+than QA accuracy. See `asterion-dci benchmark --help` for the complete runtime,
+prompt, Judge, pricing, reuse, analysis, and figure controls.
