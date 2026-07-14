@@ -543,3 +543,4 @@
 - 23:42 AF-240 bound batch generations to query authority to block forged evidence traversal. [6813437]
 - 23:49 AF-240 reserves coordinator root names before output mutation to prevent query/evidence namespace collisions. [pending repair commit]
 - 23:50 AF-240 reserved coordinator namespaces to reject query collisions before mutation. [c2c80f4]
+- 23:55 AF-240 Task 3 R4 approved durable batch authority after 189 focused tests and all prior blocker rechecks. [pending approval commit]
