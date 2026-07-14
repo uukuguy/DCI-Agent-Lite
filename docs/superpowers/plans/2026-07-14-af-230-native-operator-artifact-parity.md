@@ -72,11 +72,11 @@ git commit -m "docs: register AF-230 Climb state"
 
 **Interfaces:**
 - Produces `DciRunLock.acquire(output_dir: Path) -> DciRunLock`, `release()`, `atomic_write_json(path, payload)`, and a resume-aware `DciRunRecorder(..., resume: bool)`.
-- The lock file stores only `pid`, `hostname`, `created_at`, and a random owner token. Same-host dead PID is the only automatically removable lock; a live local PID, foreign hostname, malformed lock, or symlink fails closed.
+- A nonblocking exclusive advisory lock on the opened, verified run-directory descriptor is the sole writer authority. Private lock metadata is diagnostic only, is never removed on release, and cannot authorize or reclaim a writer. Valid same-host metadata may be refreshed only after the OS lock is held; foreign, malformed, symlink metadata, or unavailable advisory locking fails closed.
 
 - [ ] **Step 1: Write failing boundary tests**
 
-Add tests that assert: run directory mode is `0700`; JSON files are `0600` where POSIX modes apply; output directory and lock symlinks are rejected; two acquisitions allow exactly one owner; a same-host nonexistent PID is reclaimable; foreign/malformed locks are not; and a fault before `Path.replace` leaves the previous JSON parseable.
+Add tests that assert: run directory mode is `0700`; JSON files are `0600` where POSIX modes apply; output directory and metadata symlinks are rejected; two acquisitions allow exactly one owner even if metadata is replaced; descriptor close permits the next owner; foreign/malformed metadata and unavailable advisory locking fail closed; release never removes replacement metadata; and a fault before `Path.replace` leaves the previous JSON parseable.
 
 - [ ] **Step 2: Prove RED**
 
@@ -86,7 +86,7 @@ Expected: FAIL because no lock/atomic/private boundary exists.
 
 - [ ] **Step 3: Implement the minimal boundary**
 
-Use `os.open(..., os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)` for lock acquisition and JSON temp files in the destination directory. Use `os.replace` only after flush/fsync, enforce containment with resolved parents, reject symlink run roots/targets, and remove a lock only when its owner token still matches.
+Open the verified run directory without following symlinks and acquire `flock(LOCK_EX | LOCK_NB)` on that descriptor before metadata validation or writes. Keep the descriptor open through the recorder lifecycle; release only unlocks/closes it and never removes metadata. Use exclusive private temporary files plus `os.replace` only after flush/fsync, enforce containment with resolved parents, and reject symlink roots/targets.
 
 - [ ] **Step 4: Verify and commit**
 
