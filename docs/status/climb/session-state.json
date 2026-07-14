@@ -1,11 +1,11 @@
 {
-  "session": "2026-07-14-af-220-shared-config-runnable-pi",
-  "phase": "completed",
-  "work_package_id": "AF-220",
-  "last_cycle": 70,
-  "next_hypothesis": null,
+  "session": "2026-07-14-af-230-native-operator-artifact-parity",
+  "phase": "implementation",
+  "work_package_id": "AF-230",
+  "last_cycle": 71,
+  "next_hypothesis": "AF-230-H-001",
   "in_flight": null,
-  "next_action": "Plan AF-230 native operator and artifact parity before registering a new Climb session.",
+  "next_action": "Start AF-230-H-001.",
   "falsified_routes": [
     "duplicate the authoritative Pi commit across setup.sh and .env.template",
     "convert the independent Pi checkout to vendored or submodule ownership",

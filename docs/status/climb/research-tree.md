@@ -5,14 +5,18 @@
 
 ## In-flight / session state
 
-- Phase: completed
-- Last cycle: 70
-- Next hypothesis: None
+- Phase: implementation
+- Last cycle: 71
+- Next hypothesis: AF-230-H-001
 - In flight: none
-- Next action: Plan AF-230 native operator and artifact parity before registering a new Climb session.
+- Next action: Start AF-230-H-001.
 
 ## Active hypotheses
 
+- **AF-230-H-001** (pending, rank 0.90): Make one private atomic recorder the only production owner of native DCI run and resume artifacts.
+- **AF-230-H-002** (pending, rank 0.80): Preserve complete native evidence while deriving privacy-safe processed conversation, tool-result, and provider-context views.
+- **AF-230-H-003** (pending, rank 0.70): Record credential-safe Pi provenance and isolate compatible resume attempts behind a fail-closed single-writer boundary.
+- **AF-230-H-004** (pending, rank 0.60): Complete package-local run inputs, resource resolution, and direct TTY-only Pi terminal parity without RPC artifacts.
 
 ## Run ladder
 
