@@ -659,3 +659,4 @@
 - 05:21 AF-250 Task 4 review RED reproduces unlinked delegated counts and unverified installed artifact URI/file claims.
 - 05:21 AF-250 Task 4 review repair passes 110 focused tests, exact 533+6 linkage, resolved artifacts, static, scope, and diff gates.
 - 05:23 AF-250 Task 4 independent re-review approves exact execution linkage and installed artifact validation with no findings.
+- 05:25 AF-250 Task 4 review repair binds executed selectors and validates resolved installed artifacts. [b58f68b]
