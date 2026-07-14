@@ -546,3 +546,6 @@
 - 23:55 AF-240 Task 3 R4 approved durable batch authority after 189 focused tests and all prior blocker rechecks. [3893b2e]
 - 23:59 AF-240 checkpoint advances recovery to Task 4 after independently approved batch coordination. [be2ced8]
 - 00:15 AF-240 Task 4 adds deterministic batch metrics, reports, and figures for source-analysis parity. [539ee0a]
+- 06:17 AF-240 adds RED regressions for unavailable metrics and truthful disabled-figure reports. [9b0059d]
+- 00:48 correction: preceding AF-240 RED regression entry used an incorrect timestamp.
+- 00:48 AF-240 binds analysis to validated native evidence and preserves terminal metrics. [58ec826]
