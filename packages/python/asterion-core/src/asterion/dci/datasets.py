@@ -37,6 +37,7 @@ _AGGREGATE_RESERVED = frozenset(
     }
 )
 _WINDOWS_INVALID = frozenset('<>:"|?*')
+_DISALLOWED_UNICODE_CATEGORIES = frozenset({"Cc", "Cf", "Cs"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -81,31 +82,39 @@ def _document_list(value: Any, *, field: str) -> tuple[str, ...]:
     return documents
 
 
+def _is_noncharacter(character: str) -> bool:
+    codepoint = ord(character)
+    return 0xFDD0 <= codepoint <= 0xFDEF or codepoint & 0xFFFE == 0xFFFE
+
+
+def _contains_unsafe_scalar(value: str) -> bool:
+    return any(
+        unicodedata.category(character) in _DISALLOWED_UNICODE_CATEGORIES
+        or character in {"\u2028", "\u2029"}
+        or _is_noncharacter(character)
+        for character in value
+    )
+
+
+def _validate_portable_characters(value: str) -> None:
+    if _contains_unsafe_scalar(value) or any(
+        character in "/\\" or character in _WINDOWS_INVALID for character in value
+    ):
+        raise DatasetError("DCI dataset query ID is not portable")
+
+
 def portable_query_id_key(query_id: str) -> str:
     """Validate an ID and return its reusable portable collision identity."""
 
     query_id = _require_nonempty_string(query_id, field="query ID")
     if query_id in {".", ".."} or query_id[-1] in {".", " "}:
         raise DatasetError("DCI dataset query ID is not portable")
-    if any(
-        character in "/\\" or ord(character) < 32 or ord(character) == 127
-        for character in query_id
-    ):
-        raise DatasetError("DCI dataset query ID is not portable")
-    if any(character in _WINDOWS_INVALID for character in query_id):
-        raise DatasetError("DCI dataset query ID is not portable")
+    _validate_portable_characters(query_id)
 
     portable = unicodedata.normalize("NFKC", query_id)
     if portable in {".", ".."} or portable[-1] in {".", " "}:
         raise DatasetError("DCI dataset query ID is not portable")
-    if any(
-        character in "/\\"
-        or character in _WINDOWS_INVALID
-        or ord(character) < 32
-        or ord(character) == 127
-        for character in portable
-    ):
-        raise DatasetError("DCI dataset query ID is not portable")
+    _validate_portable_characters(portable)
     normalized = portable.casefold()
     reserved_stem = normalized.split(".", 1)[0].upper()
     if reserved_stem in _WINDOWS_RESERVED or normalized in _AGGREGATE_RESERVED:
@@ -143,8 +152,12 @@ def _row_from_value(value: Any) -> BenchmarkRow:
     gold_ids = (
         _document_list(value["gold_ids"], field="gold_ids") if has_gold_ids else None
     )
-    if not has_gold_docs and not has_gold_ids and answer is None:
-        raise DatasetError("DCI QA dataset row requires answer")
+    gold_alias_count = int(has_gold_docs) + int(has_gold_ids)
+    if answer is not None:
+        if gold_alias_count:
+            raise DatasetError("DCI QA dataset row cannot contain IR gold documents")
+    elif gold_alias_count != 1:
+        raise DatasetError("DCI IR dataset row requires exactly one gold alias")
     portable_query_id_key(query_id)
     return BenchmarkRow(
         query_id=query_id,
@@ -159,29 +172,32 @@ def load_benchmark_rows(path: Path) -> tuple[BenchmarkRow, ...]:
     """Load strict UTF-8 JSONL without sorting or filesystem mutation."""
 
     try:
-        lines = Path(path).read_text(encoding="utf-8", errors="strict").splitlines()
+        rows: list[BenchmarkRow] = []
+        identities: set[str] = set()
+        with Path(path).open("r", encoding="utf-8", errors="strict") as handle:
+            for line_number, line in enumerate(handle, start=1):
+                if not line.strip():
+                    continue
+                try:
+                    value = json.loads(
+                        line, object_pairs_hook=_object_without_duplicate_keys
+                    )
+                    row = _row_from_value(value)
+                except (json.JSONDecodeError, DatasetError) as error:
+                    raise DatasetError(
+                        f"DCI benchmark dataset is invalid at line {line_number}"
+                    ) from error
+                identity = portable_query_id_key(row.query_id)
+                if identity in identities:
+                    raise DatasetError(
+                        f"DCI benchmark dataset has colliding query ID at line {line_number}"
+                    )
+                identities.add(identity)
+                rows.append(row)
+    except DatasetError:
+        raise
     except (OSError, UnicodeError) as error:
         raise DatasetError("DCI benchmark dataset is invalid") from error
-
-    rows: list[BenchmarkRow] = []
-    identities: set[str] = set()
-    for line_number, line in enumerate(lines, start=1):
-        if not line.strip():
-            continue
-        try:
-            value = json.loads(line, object_pairs_hook=_object_without_duplicate_keys)
-            row = _row_from_value(value)
-        except (json.JSONDecodeError, DatasetError) as error:
-            raise DatasetError(
-                f"DCI benchmark dataset is invalid at line {line_number}"
-            ) from error
-        identity = portable_query_id_key(row.query_id)
-        if identity in identities:
-            raise DatasetError(
-                f"DCI benchmark dataset has colliding query ID at line {line_number}"
-            )
-        identities.add(identity)
-        rows.append(row)
     if not rows:
         raise DatasetError("DCI benchmark dataset is empty")
     return tuple(rows)
@@ -219,11 +235,11 @@ def normalize_retrieved_path(path: str, corpus_dir: Path | None) -> str:
     if type(path) is not str or not path:
         raise DatasetError("DCI retrieved path must be a non-empty string")
     normalized = path.replace("\\", "/")
+    normalized = re.sub(r"^\.?/+", "", normalized)
     if corpus_dir is not None:
         prefix = str(corpus_dir).replace("\\", "/").rstrip("/")
         if normalized.startswith(prefix + "/"):
             return normalized[len(prefix) + 1 :]
-    normalized = re.sub(r"^\.?/+", "", normalized)
     return normalized.rsplit("/", 1)[-1]
 
 
@@ -233,9 +249,16 @@ def canonical_input_identity(path: Path) -> Path:
     return Path(os.path.abspath(os.path.normpath(os.fspath(path))))
 
 
+def _safe_corpus_identity(path: Path) -> Path:
+    identity = canonical_input_identity(path)
+    if _contains_unsafe_scalar(str(identity)):
+        raise DatasetError("DCI prompt corpus identity is invalid")
+    return identity
+
+
 def build_benchmark_prompt(query: str, corpus_dir: Path) -> str:
     query = _require_nonempty_string(query, field="query")
-    corpus = canonical_input_identity(corpus_dir)
+    corpus = _safe_corpus_identity(corpus_dir)
     return (
         "Answer the following question. "
         f"The answer is contained in the corpus directory at @{corpus}. "
@@ -253,9 +276,9 @@ def build_ir_prompt(
     query: str, corpus_dir: Path, corpus_hint: str | None = None
 ) -> str:
     query = _require_nonempty_string(query, field="query")
-    corpus = canonical_input_identity(corpus_dir)
-    if corpus_hint is not None:
-        corpus_hint = _require_nonempty_string(corpus_hint, field="corpus_hint")
+    corpus = _safe_corpus_identity(corpus_dir)
+    if corpus_hint is not None and type(corpus_hint) is not str:
+        raise DatasetError("DCI corpus_hint must be a string")
     corpus_hint_section = f"CORPUS STRUCTURE:\n{corpus_hint}\n\n" if corpus_hint else ""
     return (
         f"You are a careful research assistant. Answer the question below using ONLY documents in @{corpus}.\n"

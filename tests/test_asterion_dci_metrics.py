@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import random
 import unittest
 from pathlib import Path
 
@@ -35,11 +36,12 @@ class AsterionDciMetricTests(unittest.TestCase):
     ) -> None:
         corpus = Path("/work/corpus")
         cases = {
-            "/work/corpus/topic/a.txt": "topic/a.txt",
-            r"\work\corpus\topic\a.txt": "topic/a.txt",
+            "/work/corpus/topic/a.txt": "a.txt",
+            r"\work\corpus\topic\a.txt": "a.txt",
             "./topic/a.txt": "a.txt",
             "/elsewhere/topic/a.txt": "a.txt",
             "a.txt": "a.txt",
+            r"C:\corpus\topic\a.txt": "a.txt",
         }
         for value, expected in cases.items():
             with self.subTest(value=value):
@@ -50,6 +52,9 @@ class AsterionDciMetricTests(unittest.TestCase):
     ) -> None:
         self.assertEqual(compute_ndcg_at_k(["a"], set(), 10), 0.0)
         self.assertEqual(ndcg_at_k(["a"], {"a"}, 1), 1.0)
+        self.assertEqual(ndcg_at_k(("a",), frozenset({"a"}), 1), 1.0)
+        self.assertEqual(ndcg_at_k([], {"a"}, 10), 0.0)
+        self.assertEqual(ndcg_at_k(["x", "a"], {"a"}, 1), 0.0)
         expected = (1 / math.log2(3)) / (1 + 1 / math.log2(3))
         self.assertAlmostEqual(ndcg_at_k(["x", "b"], {"a", "b"}, 2), expected)
         # Source rank semantics count duplicate relevant documents independently.
@@ -57,8 +62,13 @@ class AsterionDciMetricTests(unittest.TestCase):
         for invalid in (0, -1, True, 1.0, "10"):
             with self.subTest(invalid=invalid), self.assertRaises(MetricError):
                 ndcg_at_k(["a"], {"a"}, invalid)  # type: ignore[arg-type]
-        with self.assertRaises(MetricError):
-            ndcg_at_k("a", {"a"}, 1)
+        invalid_retrieved = ("a", b"a", {"a": 1}, {"a"}, iter(["a"]), [1])
+        for invalid in invalid_retrieved:
+            with self.subTest(retrieved=repr(invalid)), self.assertRaises(MetricError):
+                ndcg_at_k(invalid, {"a"}, 1)  # type: ignore[arg-type]
+        for invalid_gold in (["a"], {1}, "a", {"a": 1}):
+            with self.subTest(gold=repr(invalid_gold)), self.assertRaises(MetricError):
+                ndcg_at_k(["a"], invalid_gold, 1)  # type: ignore[arg-type]
 
     def test_scripts_bcplus_eval_run_bcplus_eval_py_function_compute_ir_ndcg(
         self,
@@ -84,6 +94,54 @@ class AsterionDciMetricTests(unittest.TestCase):
                 {"query_id": "q", "gold_docs": False, "gold_ids": ["gold.txt"]},
                 None,
             )
+        with self.assertRaises(MetricError):
+            compute_ir_ndcg(
+                final,
+                {"query_id": "q", "gold_docs": ["a"], "gold_ids": ["b"]},
+                None,
+            )
+
+    def test_source_normalization_order_preserves_full_prefix_and_self_doc_semantics(
+        self,
+    ) -> None:
+        corpus = Path("/work/corpus")
+        final = (
+            "Relevant Documents:\n1. /work/corpus/topic/gold.txt\n2. /work/corpus/q.txt"
+        )
+        self.assertEqual(
+            compute_ir_ndcg(
+                final, {"query_id": "q", "gold_docs": ["topic/gold.txt"]}, corpus
+            ),
+            1.0,
+        )
+
+    def test_normalization_matches_source_property_matrix(self) -> None:
+        from scripts.bcplus_eval.run_bcplus_eval import (
+            normalize_retrieved_path as source_normalize,
+        )
+
+        randomizer = random.Random(240)
+        corpora = (
+            None,
+            Path("/work/corpus"),
+            Path(r"C:\corpus"),
+            Path("relative/corpus"),
+        )
+        prefixes = ("", "./", "/", "/work/corpus/", "C:\\corpus\\")
+        for _ in range(500):
+            parts = [
+                f"part-{randomizer.randrange(8)}",
+                f"doc-{randomizer.randrange(12)}.txt",
+            ]
+            value = randomizer.choice(prefixes) + randomizer.choice(("/", "\\")).join(
+                parts
+            )
+            corpus = randomizer.choice(corpora)
+            with self.subTest(value=value, corpus=corpus):
+                self.assertEqual(
+                    normalize_retrieved_path(value, corpus),
+                    source_normalize(value, corpus),
+                )
 
 
 if __name__ == "__main__":

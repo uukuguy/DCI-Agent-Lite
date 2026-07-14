@@ -40,7 +40,11 @@ def normalize_retrieved_path(path: str, corpus_dir: Path | None) -> str:
 def ndcg_at_k(retrieved: Sequence[str], gold_set: Set[str], k: int) -> float:
     if type(k) is not int or k <= 0:
         raise MetricError("DCI NDCG k must be a positive integer")
-    if isinstance(retrieved, (str, bytes)) or not isinstance(gold_set, Set):
+    if (
+        isinstance(retrieved, (str, bytes))
+        or not isinstance(retrieved, Sequence)
+        or not isinstance(gold_set, Set)
+    ):
         raise MetricError("DCI NDCG collections are invalid")
     if any(type(document) is not str for document in retrieved) or any(
         type(document) is not str for document in gold_set
@@ -79,6 +83,8 @@ def _gold_documents(row: BenchmarkRow | Mapping[str, Any]) -> tuple[str, ...]:
             or any(type(item) is not str or not item for item in candidate)
         ):
             raise MetricError("DCI IR gold documents must be strings")
+    if gold_docs is not None and gold_ids is not None:
+        raise MetricError("DCI IR row must use exactly one gold alias")
     value = gold_docs or gold_ids or ()
     return tuple(value)
 

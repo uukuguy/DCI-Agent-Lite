@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+import unicodedata
 from pathlib import Path
 
 from asterion.dci.datasets import (
@@ -41,13 +42,13 @@ class AsterionDciDatasetTests(unittest.TestCase):
     ) -> None:
         path = self._dataset(
             b'{"query_id":"bright-1","query":"find docs","gold_docs":["a.txt","b.txt"]}\n'
-            b'{"query_id":"bright-2","query":"find ids","gold_ids":["c.txt"],"answer":"optional"}\n'
+            b'{"query_id":"bright-2","query":"find ids","gold_ids":["c.txt"]}\n'
         )
         first, second = load_benchmark_rows(path)
         self.assertEqual(first.gold_docs, ("a.txt", "b.txt"))
         self.assertIsNone(first.answer)
         self.assertEqual(second.gold_ids, ("c.txt",))
-        self.assertEqual(second.answer, "optional")
+        self.assertIsNone(second.answer)
 
     def test_preserves_representative_six_qa_and_four_bright_row_order(self) -> None:
         values = [
@@ -97,6 +98,8 @@ class AsterionDciDatasetTests(unittest.TestCase):
             {"query_id": "q", "query": "q", "gold_docs": []},
             {"query_id": "q", "query": "q", "gold_ids": [1]},
             {"query_id": "q", "query": "q", "gold_docs": [""]},
+            {"query_id": "q", "query": "q", "answer": "a", "gold_docs": ["x"]},
+            {"query_id": "q", "query": "q", "gold_docs": ["x"], "gold_ids": ["x"]},
         ]
         for value in invalid_objects:
             payload = (json.dumps(value) + "\n").encode()
@@ -138,12 +141,60 @@ class AsterionDciDatasetTests(unittest.TestCase):
             "trail ",
             "a／b",
             "fullwidth：colon",
+            "next\u0085line",
+            "joined\u200dword",
+            "line\u2028separator",
+            "paragraph\u2029separator",
+            "surrogate\ud800",
+            "noncharacter\ufdd0",
+            "plane-noncharacter\U0010ffff",
         ):
             with (
                 self.subTest(query_id=query_id),
                 self.assertRaisesRegex(DatasetError, "query ID"),
             ):
                 portable_query_id_key(query_id)
+
+        for query_id in ("日本語", "emoji-😀", "café", "a b"):
+            with self.subTest(printable=query_id):
+                self.assertTrue(portable_query_id_key(query_id))
+
+    def test_portable_query_id_rejects_every_disallowed_unicode_scalar_property(
+        self,
+    ) -> None:
+        for codepoint in range(0x110000):
+            character = chr(codepoint)
+            is_noncharacter = (
+                0xFDD0 <= codepoint <= 0xFDEF or codepoint & 0xFFFE == 0xFFFE
+            )
+            if (
+                unicodedata.category(character) in {"Cc", "Cf", "Cs"}
+                or codepoint in {0x2028, 0x2029}
+                or is_noncharacter
+            ):
+                with self.assertRaises(DatasetError):
+                    portable_query_id_key(f"a{character}b")
+
+    def test_jsonl_uses_physical_newlines_and_reports_physical_line_numbers(
+        self,
+    ) -> None:
+        first = {"query_id": "q-1", "query": "a\u2028b\u2029c", "answer": "x"}
+        second = {"query_id": "q-2", "query": "second", "answer": "y"}
+        path = self._dataset(
+            (
+                json.dumps(first, ensure_ascii=False)
+                + "\n\n"
+                + json.dumps(second)
+                + "\n"
+            ).encode()
+        )
+        rows = load_benchmark_rows(path)
+        self.assertEqual(rows[0].query, "a\u2028b\u2029c")
+        self.assertEqual([row.query_id for row in rows], ["q-1", "q-2"])
+
+        invalid = self._dataset(b'{"query_id":"q","query":"x","answer":"a"}\n\n{bad}\n')
+        with self.assertRaisesRegex(DatasetError, "line 3"):
+            load_benchmark_rows(invalid)
 
     def test_scripts_bcplus_eval_run_bcplus_eval_py_function_build_benchmark_prompt(
         self,
@@ -192,6 +243,36 @@ class AsterionDciDatasetTests(unittest.TestCase):
             "Exact Answer: {concise final answer only}\n"
             "Confidence: {0–100%; use below 50% if evidence is weak, ambiguous, or missing}\n",
         )
+
+    def test_prompt_corpus_identity_and_hint_branch_are_source_compatible(self) -> None:
+        from scripts.bcplus_eval.run_bcplus_eval import (
+            build_benchmark_prompt as source_qa_prompt,
+            build_ir_prompt as source_ir_prompt,
+        )
+
+        corpus = Path("/tmp/corpus with space")
+        qa = build_qa_prompt("Q", corpus)
+        self.assertIn("@/tmp/corpus with space. ", qa)
+        self.assertEqual(qa, source_qa_prompt("Q", corpus))
+        self.assertEqual(
+            build_ir_prompt("Q", corpus, ""), source_ir_prompt("Q", corpus, "")
+        )
+        self.assertEqual(
+            build_ir_prompt("Q", corpus, "   "), source_ir_prompt("Q", corpus, "   ")
+        )
+        for unsafe in (
+            "bad\npath",
+            "bad\rpath",
+            "bad\u0085path",
+            "bad\u200dpath",
+            "bad\u2028path",
+            "bad\u2029path",
+            "bad\ud800path",
+            "bad\ufdd0path",
+            "bad\U0010ffffpath",
+        ):
+            with self.subTest(unsafe=repr(unsafe)), self.assertRaises(DatasetError):
+                build_qa_prompt("Q", Path(unsafe))
 
 
 if __name__ == "__main__":
