@@ -662,3 +662,12 @@
 - 05:25 AF-250 Task 4 review repair binds executed selectors and validates resolved installed artifacts. [b58f68b]
 - 05:27 AF-250 Task 4 independently approves exact execution linkage, installed artifacts, and wheel/application boundaries.
 - 05:28 AF-250 Task 4 approval committed before bounded real Pi/Judge acceptance begins. [53ec557]
+- 05:29 Recovery checkpoint directs AF-250 to bounded body-free real Pi/Judge acceptance. [3da5f24]
+- 05:41 AF-250-H-001 confirmed 4/4; package acceptance recorded.
+- 05:41 AF-250-H-002 confirmed 4/4; package acceptance recorded.
+- 05:41 AF-250-H-003 confirmed 4/4; package acceptance recorded.
+- 05:42 AF-250-H-004 confirmed 4/4; package acceptance recorded.
+- 05:47 AF-250 final local audit: all 8 product rows, 533 delegated selectors, 12 launcher pairs, and four Climb hypotheses pass without provider execution; full-product acceptance remains blocked because five fresh real cases failed and the required 7-case manifest is intentionally absent.
+- 05:47 Corrected AF-240 retained-evidence classification: only a non-secret environment-variable-name selector matched; credential values matched zero. It remains credential-clean and supports only the one-row Pi-plus-Judge and exact-reuse cases.
+- 05:57 AF-250 post-cycle governance test now verifies the recorded confirmed 4/4 results and exhausted hypothesis queue; its two focused Climb tests pass.
+- 05:57 Full Python discovery ran 1260 tests with exactly four expected failures: two direct absent-manifest tests and the AF-095/AF-210 evaluator tests that intentionally invoke that failing full suite. All other Task 6 gates pass.

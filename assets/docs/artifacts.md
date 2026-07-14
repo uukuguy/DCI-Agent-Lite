@@ -147,3 +147,18 @@ framework projections remain body-free references. `--resume-policy compatible`
 continues only matching incomplete rows and reuses matching complete rows;
 `reuse` refuses to run a new Pi or Judge request. Figures require analysis, so
 use `--no-analysis --no-figures` together when disabling both.
+
+## Product-acceptance evidence
+
+AF-250 keeps public acceptance evidence separate from private native artifacts.
+The local verifier records only executable local/model-free matrix results; it
+does not create a provider-backed acceptance record. A
+`product-acceptance.json` manifest is valid only when all seven bounded real
+cases completed successfully with body-free structural checks. It must not
+contain credentials, provider bodies, or private paths.
+
+No manifest is present when any required real case failed. That absence is a
+truthful blocked-acceptance signal, not a missing artifact to reconstruct from
+private native evidence. Retained one-row Pi-plus-Judge/reuse evidence may
+support only its corresponding two case IDs and cannot establish other failed
+example or application cases.

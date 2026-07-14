@@ -1,22 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (78 runs).
+> Deterministic summary generated from tracked state (82 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
-- Phase: active
-- Last cycle: 79
-- Next hypothesis: AF-250-H-001
+- Phase: implementation
+- Last cycle: 83
+- Next hypothesis: None
 - In flight: none
-- Next action: Strengthen and execute the AF-250 product matrix before any full-parity conclusion.
+- Next action: Trigger Knowledge Layer.
 
 ## Active hypotheses
 
-- **AF-250-H-001** (pending, rank 0.90): Prove source/Asterion runnable-surface completeness through the exact eight-row product matrix.
-- **AF-250-H-002** (pending, rank 0.80): Prove stable cross-product semantic comparison across independently owned DCI entry points.
-- **AF-250-H-003** (pending, rank 0.70): Prove installed wheel/application independence from the source-only DCI product.
-- **AF-250-H-004** (pending, rank 0.60): Govern bounded real evidence and final matrix closure without executing providers during local verification.
 
 ## Run ladder
 
@@ -100,6 +96,10 @@
 | 20260715-025313-dci-climb-af240h002 | AF-240-H-002 | 4 | confirmed 4/4 |
 | 20260715-025315-dci-climb-af240h003 | AF-240-H-003 | 4 | confirmed 4/4 |
 | 20260715-025318-dci-climb-af240h004 | AF-240-H-004 | 4 | confirmed 4/4 |
+| 20260715-054129-dci-climb-af250h001 | AF-250-H-001 | 4 | confirmed 4/4 |
+| 20260715-054139-dci-climb-af250h002 | AF-250-H-002 | 4 | confirmed 4/4 |
+| 20260715-054148-dci-climb-af250h003 | AF-250-H-003 | 4 | confirmed 4/4 |
+| 20260715-054158-dci-climb-af250h004 | AF-250-H-004 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

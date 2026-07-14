@@ -1,61 +1,38 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-15 05:28 +0800. **Session remains active — not a final handoff.** AF-240 is closed and AF-250 is active in the isolated `af-220-shared-dci-config` worktree.
+> Updated: 2026-07-15 05:57 +0800. **Session remains active — not a final handoff.** AF-250 remains the active, blocked package in the isolated `af-220-shared-dci-config` worktree.
 
 Active work package: AF-250
 
 ## TL;DR
 
-- AF-220 through AF-240 are completed. AF-240 confirms all four Climb hypotheses 4/4 and maps all 533 batch/evaluation/export inventory rows to executable Asterion evidence.
-- AF-240 final gates passed 1204 Python, 11 TypeScript, and 19 Rust tests; compile, Ruff, 12 launcher shell checks, scope/diff, model-free launcher preflights, and isolated-wheel/resource/help/import checks also passed.
-- One bounded one-row Pi-plus-Judge recovery batch completed with one correct verdict and 28 credential-clean private artifacts. Exact reuse kept native/Judge hashes and mtimes unchanged, retained one protocol attempt, and created no second generation.
-- Full migration is not yet claimed. AF-250 must execute the final cross-product acceptance matrix, including both original example scripts and the installed Pi-default Asterion application.
-- AF-250 Task 1 now has a strict eight-row product matrix, real model-free behavior selectors, exact owners, seven body-free provider case IDs, and four pending package-owned Climb hypotheses.
-- AF-250 Task 2 restores both source Judge Make entry points with their own `PYTHONPATH=src` boundary and executes all four source/Asterion examples model-free with exact pairwise argv semantics and single-invocation enforcement.
-- AF-250 Task 3 independently compares native source/Asterion run, Judge/cache, QA/IR batch, and export semantics through product-owned fake transports; its review is clean.
-- AF-250 Task 4 independently proves all eight local/model-free product rows, exact 533+6 selector execution, 12 launcher pairs, and isolated installed wheel/application behavior.
+- AF-250 local/model-free implementation evidence is complete: the eight product rows, all 533 delegated batch selectors, twelve launcher pairs, and the isolated installed wheel/application proof pass. The local verifier makes zero provider calls.
+- AF-250-H-001 through H-004 are confirmed 4/4 in Climb cycles 80–83; the generated tree has no pending AF-250 hypothesis.
+- Full-product acceptance is blocked, not complete. Fresh source default/recovery/runtime cases exited 1 with failed native state and no event/final evidence; fresh Asterion basic/runtime and supported `uv run asterion` application cases exited 2 before native state. The one authorized non-default recovery is spent.
+- `assets/dci/product-acceptance.json` is intentionally absent because no truthful, complete seven-case body-free manifest can be written. The untracked negative acceptance test fails for that exact reason and must be preserved.
+- Retained AF-240 one-row Pi-plus-Judge/reuse evidence is credential-clean: only a non-secret environment-variable-name selector matched; credential values matched zero. It supports only `one-row-pi-judge` and `one-row-exact-reuse`.
 
-## Committed / unpushed state
+## Verification
 
-- Branch: `af-220-shared-dci-config`.
-- AF-240 Climb confirmation: `6e651b3`; lifecycle contract correction: `16ceec5`.
-- AF-240 closure/state changes are committed at `3e28d5c` and the independent-review repair at `b15d5f1`.
-- AF-250 Task 1 landed at `447395b`, its review repair at `dac19dc`, and its approval at `0e5b9ba`.
-- AF-250 Task 2 landed at `4f254fd`, review repair at `bff32d7`, and approval at `1894a7c`.
-- AF-250 Task 3 landed at `b5ff060`, review repair at `2410820`, and approval at `feb6441`.
-- AF-250 Task 4 landed at `62395ec`, review repair at `b58f68b`, and approval at `53ec557`.
-- Commits are local/unpushed unless Git reports otherwise.
+- `python3 tools/verify_asterion_dci_product.py`: 8/8 PASS; 533/533 delegated; 12/12 launchers; 6/6 batch extras; zero provider-backed execution.
+- Compile, Ruff, TypeScript (11), Rust (19), shell syntax, scope, and diff checks pass.
+- Full Python discovery has four expected failures: the two direct missing-manifest tests plus AF-095-H-004 and AF-210-H-004 closure-evaluator tests that invoke the full suite. This is a blocked audit, not a closure signal.
 
 ## Next action
 
-Execute Task 5 of `docs/superpowers/plans/2026-07-15-af-250-product-acceptance-matrix.md`: record bounded real Pi and Judge acceptance in a body-free manifest; do not run full datasets.
-
-## Open questions / defects to verify
-
-- The root-configured default Provider rejected the AF-240 acceptance at zero usage. The authorized recovery used the existing OpenRouter credential with Pi and completed; do not interpret the default account quota as an Asterion defect.
-- No user decision is currently required. Do not download or start full corpora.
+Do not run another provider, Judge, or dataset command without new operator authorization. Resolve the external provider/runtime failure, then collect successful bounded real evidence for the five failed cases before creating the seven-case manifest and reconsidering AF-250.
 
 ## Ruled-out paths
 
-- Do not claim full parity from AF-240 closure or inventory counts alone; AF-250 executable evidence is mandatory.
-- Do not import, launch, or modify `src/dci` from Asterion production code. The original DCI stays independently runnable and may receive only bounded compatibility repairs under AF-250.
-- Do not redirect the Pi-default migration to another agent runtime.
-- Do not run full BCPlus/QA/BRIGHT datasets automatically or persist credentials/provider bodies.
+- Do not manufacture or backfill the missing manifest from failed runs or retained AF-240 artifacts.
+- Do not claim complete migration or close AF-250 from local/fixture evidence or Climb confirmation.
+- Do not modify `pi/`, persist credentials, or copy provider bodies/private paths into public evidence.
 
 ## Ready commands
 
 ```bash
 python3 tools/project_scope_check.py
-git status --short
-git log --oneline -12
-uv run python -m unittest tests.test_asterion_dci_product_parity tests.test_asterion_dci_batch_launchers tests.test_distribution_boundaries tests.test_builtin_dci_application -v
 python3 tools/verify_asterion_dci_product.py
 uv run python -m unittest tests.test_asterion_dci_product_acceptance -v
+git status --short
 ```
-
-## Guardrails
-
-- Active package is AF-250; register any Climb hypotheses under AF-250 before running them.
-- Root `.env` is the shared configuration surface; never print or persist its credentials.
-- Treat `pi/` as an external checkout and do not edit it.
-- Keep AF-250 fixtures tiny and reproducible; separate local, Pi-only, and Pi-plus-Judge evidence.

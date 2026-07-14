@@ -276,6 +276,7 @@
 - Scope: make every complete-product parity matrix row executable and record reproducible local, Pi, and Pi-plus-Judge evidence.
 - Dependencies: AF-240
 - Acceptance: the checked-in matrix has no unsupported source behavior and every row has reproducible fixture or bounded provider-backed evidence before any full-parity conclusion.
+- Current audit: all eight local/model-free rows pass; all 533 delegated batch selectors resolve and pass; all twelve launcher pairs and four local Climb hypotheses pass. Full-product acceptance remains blocked: five fresh real source/Asterion/application cases failed, the one authorized non-default recovery is spent, and no truthful seven-case `assets/dci/product-acceptance.json` exists. Retained AF-240 one-row Pi-plus-Judge/reuse evidence is credential-clean and supports only those two case IDs.
 - Design: `docs/superpowers/specs/2026-07-13-asterion-dci-complete-product-parity-design.md`
 - Plan: `docs/superpowers/plans/2026-07-15-af-250-product-acceptance-matrix.md`
 

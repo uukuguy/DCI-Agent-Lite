@@ -2871,11 +2871,18 @@ class ClimbToolTests(unittest.TestCase):
         )["hypotheses"]
         indexed = {item["id"]: item for item in hypotheses}
         commands: list[str] = []
-        for hypothesis_id, selectors in AF250_MATRIX_TESTS.items():
+        for cycle, (hypothesis_id, selectors) in enumerate(
+            AF250_MATRIX_TESTS.items(), start=80
+        ):
             item = indexed[hypothesis_id]
             self.assertEqual(item["work_package_id"], "AF-250")
-            self.assertEqual(item["status"], "pending")
-            self.assertEqual(item.get("results"), [])
+            self.assertEqual(item["status"], "confirmed")
+            self.assertEqual(len(item.get("results", [])), 1)
+            result = item["results"][0]
+            self.assertEqual(result["session"], "2026-07-15-af-250-product-acceptance-matrix")
+            self.assertEqual(result["cycle"], cycle)
+            self.assertEqual(result["local"], 4)
+            self.assertEqual(result["verdict"], "confirmed 4/4")
             command = item["verification_command"]
             self.assertEqual({name for name in selectors if name in command}, set(selectors))
             commands.append(command)
@@ -2886,8 +2893,8 @@ class ClimbToolTests(unittest.TestCase):
         )
         self.assertEqual(session["session"], "2026-07-15-af-250-product-acceptance-matrix")
         self.assertEqual(session["work_package_id"], "AF-250")
-        self.assertEqual(session["phase"], "active")
-        self.assertEqual(session["next_hypothesis"], "AF-250-H-001")
+        self.assertEqual(session["phase"], "implementation")
+        self.assertIsNone(session["next_hypothesis"])
         self.assertIsNone(session["in_flight"])
 
     def test_af250_train_registers_distinct_executable_selectors(self) -> None:
