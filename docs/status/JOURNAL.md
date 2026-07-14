@@ -509,3 +509,4 @@
 - 19:13 AF-230 Task 5 preserves output symlinks for no-follow rejection before run, resume, or benchmark. [e533481]
 - 19:26 AF-230 terminal adds verified Node>=20 selection and literal TTY Pi launch without RPC artifacts. [295c601]
 - 19:36 AF-230 terminal now redacts parse/probe failures and preflights Node, prompt rendering, and cwd before Pi. [6aa575f]
+- 19:42 AF-230 Task 7 registers all four native operator hypotheses in the deterministic Climb adapter; focused adapter tests, shell syntax, scope, and diff checks pass. [pending adapter commit]

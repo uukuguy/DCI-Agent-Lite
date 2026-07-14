@@ -844,6 +844,46 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_asterion_dci_cli.AsterionDciCliTests.test_asterion_examples_use_shared_env_and_package_command"
         override_test="tests.test_asterion_dci_cli.AsterionDciCliTests.test_asterion_examples_validate_missing_provider_before_pi"
         ;;
+    AF-230-H-001)
+        first_dimension="private_atomic_recorder"
+        second_dimension="unified_production_path"
+        third_dimension="resume_writer_safety"
+        fourth_dimension="application_projection"
+        immutable_test="tests.test_asterion_dci_artifacts.AsterionDciArtifactTests.test_recorder_creates_private_run_directory_and_json_files"
+        repeat_test="tests.test_asterion_dci_run.AsterionDciRunTests.test_completed_run_writes_native_artifacts_and_protocol_projection"
+        dirty_test="tests.test_asterion_dci_run.AsterionDciRunTests.test_two_resume_contenders_construct_at_most_one_client"
+        override_test="tests.test_asterion_dci_application_executor.AsterionDciApplicationExecutorTests.test_application_executor_preserves_request_operator_semantics_without_streaming"
+        ;;
+    AF-230-H-002)
+        first_dimension="full_processed_separation"
+        second_dimension="safe_tool_externalization"
+        third_dimension="latest_provider_context"
+        fourth_dimension="protocol_digest"
+        immutable_test="tests.test_asterion_dci_artifacts.AsterionDciArtifactTests.test_processed_conversation_externalizes_and_clears_tool_result_bodies"
+        repeat_test="tests.test_asterion_dci_artifacts.AsterionDciArtifactTests.test_processed_view_keeps_full_evidence_private_and_uses_safe_collision_names"
+        dirty_test="tests.test_asterion_dci_run.AsterionDciRunTests.test_production_path_records_complete_conversation_and_latest_context"
+        override_test="tests.test_asterion_dci_run.AsterionDciRunTests.test_completed_run_writes_native_artifacts_and_protocol_projection"
+        ;;
+    AF-230-H-003)
+        first_dimension="credential_safe_provenance"
+        second_dimension="attempt_isolation"
+        third_dimension="terminal_status_validation"
+        fourth_dimension="lock_lifetime"
+        immutable_test="tests.test_asterion_dci_artifacts.AsterionDciArtifactTests.test_pi_provenance_is_revision_exact_and_credential_safe"
+        repeat_test="tests.test_asterion_dci_run.AsterionDciRunTests.test_resume_reuses_failed_directory_and_creates_a_second_protocol_attempt"
+        dirty_test="tests.test_asterion_dci_run.AsterionDciRunTests.test_resume_rejects_relabelled_completed_or_mismatched_run_id_stream_without_mutation"
+        override_test="tests.test_asterion_dci_run.AsterionDciRunTests.test_directory_lock_is_held_until_client_stop_finishes"
+        ;;
+    AF-230-H-004)
+        first_dimension="run_input_resources"
+        second_dimension="conversation_controls"
+        third_dimension="terminal_literal_boundary"
+        fourth_dimension="node_selection"
+        immutable_test="tests.test_asterion_dci_cli.AsterionDciCliTests.test_run_resolves_resources_before_child_cwd_with_repo_fallback"
+        repeat_test="tests.test_asterion_dci_cli.AsterionDciCliTests.test_run_maps_all_conversation_controls_exactly"
+        dirty_test="tests.test_asterion_dci_pi_rpc.PiRpcCommandTests.test_terminal_uses_literal_argv_inherited_heap_and_exit_status"
+        override_test="tests.test_asterion_dci_pi_rpc.PiRpcCommandTests.test_node_resolution_falls_back_to_highest_valid_nvm_node"
+        ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2
         exit 2
