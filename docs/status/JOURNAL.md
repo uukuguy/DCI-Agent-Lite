@@ -554,3 +554,4 @@
 - 01:06 correction: preceding AF-240 R3 repair entry used an incorrect timestamp.
 - 01:14 AF-240 adds a RED regression proving blank runtime charts passed acceptance. [1f0f506]
 - 01:14 AF-240 restores runtime chart semantics and kills blank PNG mutations. [cea5306]
+- 01:18 AF-240 Task 4 R5 approves terminal evidence, executable analysis parity, and deterministic figures. [cea5306; R5]
