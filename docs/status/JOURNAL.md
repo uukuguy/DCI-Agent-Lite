@@ -494,3 +494,4 @@
 - 17:51 AF-230 Task 3 omits local origins and preserves byte-bounded UTF-8 stderr tails to prevent provenance leakage and overflow. [8f13368]
 - 17:56 AF-230 Task 3 normalizes legacy IPv4 loopbacks while preserving explicit one-character remote aliases for truthful safe provenance. [5609a9d]
 - 18:03 AF-230 Task 3 strictly parses legacy IPv4 widths and rejects overflow or unspecified origins without socket-dependent wrapping. [9e09508]
+- 18:08 AF-230 Task 3 narrows numeric classification so digit-leading remote aliases remain truthful without weakening unsafe-address rejection. [3a0ab07]
