@@ -2728,7 +2728,7 @@ class ClimbToolTests(unittest.TestCase):
         self.assertIn("inventory_readiness", train_script)
         self.assertIn('"product_confirmation":', train_script)
 
-    def test_af240_hypotheses_are_pending_inventory_candidates_with_distinct_commands(self) -> None:
+    def test_af240_hypotheses_are_confirmed_inventory_candidates_with_distinct_commands(self) -> None:
         hypotheses = yaml.safe_load(
             (REPO_ROOT / "docs/status/climb/hypotheses.yaml").read_text()
         )["hypotheses"]
@@ -2736,9 +2736,11 @@ class ClimbToolTests(unittest.TestCase):
         commands = []
         for hypothesis_id, expected_names in AF240_READINESS_TESTS.items():
             item = indexed[hypothesis_id]
-            self.assertEqual(item["status"], "pending")
+            self.assertEqual(item["status"], "confirmed")
             self.assertEqual(item["evidence_kind"], "inventory_readiness")
             self.assertIs(item["product_confirmation"], False)
+            self.assertEqual(item["results"][-1]["local"], 4)
+            self.assertEqual(item["results"][-1]["verdict"], "confirmed 4/4")
             command = item["verification_command"]
             self.assertEqual(
                 {name for name in expected_names if name in command}, set(expected_names)

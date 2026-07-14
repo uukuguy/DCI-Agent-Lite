@@ -605,3 +605,6 @@
 - 02:53 AF-240-H-003 confirmed 4/4; package acceptance recorded.
 - 02:53 AF-240-H-004 confirmed 4/4; package acceptance recorded.
 - 02:54 AF-240 Climb session ownership repaired from the completed AF-230 session before package closure; all four AF-240 results now share the AF-240 session identity.
+- 02:55 AF-240 confirms all four Climb hypotheses at 4/4 under the correct package session. [6e651b3]
+- 03:00 AF-240 full discovery exposed one stale pending-only Climb assertion after legitimate confirmation; the lifecycle contract now requires 4/4 results.
+- 03:04 AF-240 bounded real batch reached Pi but the configured provider rejected generation at zero usage; no Judge request occurred and the package remains unclosed.
