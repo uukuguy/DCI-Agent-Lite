@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import re
+import secrets
 import stat
 import sys
 import unicodedata
@@ -36,6 +37,7 @@ BRIGHT_SUBSETS = ("biology", "earth_science", "economics", "robotics")
 COMPLETE_MARKER = ".dci_export_complete"
 LOCK_NAME = ".asterion-dci-export.lock"
 TEMP_PREFIX = ".asterion-dci-export-tmp-"
+TEMP_RE = re.compile(rf"^{re.escape(TEMP_PREFIX)}(?:doc|qa)-[0-9a-f]{{32}}$")
 MAX_STEM_LEN = 140
 MAX_COMPONENT_UNITS = 240
 TITLE_RE = re.compile(r"(?mi)^title:\s*(.+?)\s*$")
@@ -178,7 +180,7 @@ def safe_relative_path(value: str) -> Path:
             raise DciExportError("unsafe document id")
         if INVALID_CHARS_RE.search(part) or _windows_reserved(part):
             raise DciExportError("unsafe document id")
-        if part in {COMPLETE_MARKER, LOCK_NAME} or part.startswith(TEMP_PREFIX):
+        if _is_reserved_component(part):
             raise DciExportError("reserved document id")
         if not _component_fits(part):
             raise DciExportError("document id component is too long")
@@ -191,6 +193,21 @@ def _portable_key(value: str) -> tuple[object, ...]:
     for piece in NATURAL_RE.split(normalized):
         pieces.append(int(piece) if piece.isdigit() else piece)
     return tuple(pieces)
+
+
+def _portable_text(value: str) -> str:
+    return unicodedata.normalize("NFKC", value).casefold().rstrip(" .")
+
+
+def _is_reserved_component(value: str) -> bool:
+    key = _portable_key(value)
+    if key in {_portable_key(LOCK_NAME), _portable_key(COMPLETE_MARKER)}:
+        return True
+    return _portable_text(value).startswith(_portable_text(TEMP_PREFIX))
+
+
+def _is_strict_temporary(value: str) -> bool:
+    return TEMP_RE.fullmatch(value) is not None
 
 
 def _has_symlink(path: Path) -> bool:
@@ -292,10 +309,23 @@ class _SafeDirectory:
 
     def child(self, name: str) -> _SafeDirectory:
         _validate_component(name)
+        if _is_reserved_component(name):
+            raise DciExportError("reserved destination component")
+        key = _portable_key(name)
+        exact = False
         try:
-            os.mkdir(name, 0o700, dir_fd=self.fd)
-        except FileExistsError:
-            pass
+            for existing in os.listdir(self.fd):
+                if _portable_key(existing) != key:
+                    continue
+                if existing != name:
+                    raise DciExportError("portable parent collision")
+                exact = True
+            if not exact:
+                os.mkdir(name, 0o700, dir_fd=self.fd)
+        except DciExportError:
+            raise
+        except OSError as error:
+            raise DciExportError("destination inventory failed") from error
         flags = (
             os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0)
         )
@@ -347,7 +377,7 @@ class _SafeDirectory:
         existing = self.read(name)
         if existing == data:
             return False
-        temp = f"{TEMP_PREFIX}{os.getpid()}-{hashlib.sha256(data).hexdigest()[:16]}"
+        temp = f"{TEMP_PREFIX}doc-{secrets.token_hex(16)}"
         flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
         try:
             fd = os.open(temp, flags, 0o600, dir_fd=self.fd)
@@ -479,13 +509,11 @@ def _remove_stale_temporaries(root: _SafeDirectory) -> None:
     try:
         names = os.listdir(root.fd)
         for name in names:
-            if not name.startswith(TEMP_PREFIX):
+            if not _portable_text(name).startswith(_portable_text(TEMP_PREFIX)):
                 continue
             info = os.stat(name, dir_fd=root.fd, follow_symlinks=False)
-            if not stat.S_ISREG(info.st_mode):
+            if not _is_strict_temporary(name) or not stat.S_ISREG(info.st_mode):
                 raise DciExportError("unsafe interrupted publication")
-            os.unlink(name, dir_fd=root.fd)
-        os.fsync(root.fd)
     except DciExportError:
         raise
     except OSError as error:
@@ -512,8 +540,7 @@ def export_bcplus_qa(parquet_dir: Path, output: Path, *, decrypt: bool = True) -
     target = _destination(output)
     _validate_component(target.name)
     if (
-        target.name in {COMPLETE_MARKER, LOCK_NAME}
-        or target.name.startswith(TEMP_PREFIX)
+        _is_reserved_component(target.name)
         or target.name.rstrip(" .") != target.name
         or _windows_reserved(target.name)
         or not _component_fits(target.name)
@@ -528,7 +555,7 @@ def export_bcplus_qa(parquet_dir: Path, output: Path, *, decrypt: bool = True) -
         inputs.close()
         raise
     try:
-        temp_name = f"{TEMP_PREFIX}qa-{os.getpid()}"
+        temp_name = f"{TEMP_PREFIX}qa-{secrets.token_hex(16)}"
         flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
         try:
             fd = os.open(temp_name, flags, 0o600, dir_fd=root.fd)
@@ -609,8 +636,10 @@ def _existing_names(directory: _SafeDirectory) -> dict[tuple[object, ...], str]:
     except OSError as error:
         raise DciExportError("destination inventory failed") from error
     for name in values:
-        if name.startswith(TEMP_PREFIX) or name == LOCK_NAME:
+        if name == LOCK_NAME or _is_strict_temporary(name):
             continue
+        if _is_reserved_component(name):
+            raise DciExportError("portable reserved-name collision")
         key = _portable_key(name)
         previous = names.get(key)
         if previous is not None and previous != name:
@@ -712,6 +741,37 @@ def _open_relative(root: _SafeDirectory, relative: Path) -> tuple[_SafeDirectory
         raise
 
 
+def _bright_record(
+    row: dict[str, object], identity: str, content: str
+) -> tuple[Path, bytes]:
+    if (
+        not isinstance(row[identity], str)
+        or row[content] is not None
+        and not isinstance(row[content], str)
+    ):
+        raise DciExportError("invalid BRIGHT row")
+    return safe_relative_path(row[identity]), (row[content] or "").encode("utf-8")
+
+
+def _validate_bright_inputs(inputs: _ParquetInputs) -> None:
+    collision_ledger: dict[tuple[tuple[object, ...], ...], str] = {}
+    for name in inputs.names:
+        with inputs.parquet(name) as parquet:
+            identity, content = _schema_columns(parquet, (("id",), ("content",)))
+            _require_string_columns(parquet, (identity, content))
+            for index in range(parquet.num_row_groups):
+                for row in parquet.read_row_group(
+                    index, columns=[identity, content]
+                ).to_pylist():
+                    relative, _ = _bright_record(row, identity, content)
+                    key = tuple(_portable_key(part) for part in relative.parts)
+                    logical = relative.as_posix()
+                    previous = collision_ledger.get(key)
+                    if previous is not None and previous != logical:
+                        raise DciExportError("portable document id collision")
+                    collision_ledger[key] = logical
+
+
 def export_subset(source_dir: Path, output_dir: Path) -> int:
     source = _input_dir(source_dir)
     output = _destination(output_dir)
@@ -719,6 +779,7 @@ def export_subset(source_dir: Path, output_dir: Path) -> int:
     count = 0
     inputs = _ParquetInputs(source)
     try:
+        _validate_bright_inputs(inputs)
         locked = _locked_root(output)
         root = locked.__enter__()
     except Exception:
@@ -741,13 +802,7 @@ def export_subset(source_dir: Path, output_dir: Path) -> int:
                         for row in parquet.read_row_group(
                             index, columns=[identity, content]
                         ).to_pylist():
-                            if (
-                                not isinstance(row[identity], str)
-                                or row[content] is not None
-                                and not isinstance(row[content], str)
-                            ):
-                                raise DciExportError("invalid BRIGHT row")
-                            relative = safe_relative_path(str(row[identity]))
+                            relative, data = _bright_record(row, identity, content)
                             key = tuple(_portable_key(part) for part in relative.parts)
                             logical = relative.as_posix()
                             previous = collision_ledger.get(key)
@@ -756,7 +811,6 @@ def export_subset(source_dir: Path, output_dir: Path) -> int:
                             collision_ledger[key] = logical
                             directory, name = _open_relative(root, relative)
                             try:
-                                data = (row[content] or "").encode("utf-8")
                                 existing_names = _existing_names(directory)
                                 equivalent = existing_names.get(_portable_key(name))
                                 if equivalent is not None and equivalent != name:

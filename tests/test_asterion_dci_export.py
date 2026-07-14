@@ -467,7 +467,7 @@ class AsterionDciExportTests(unittest.TestCase):
             )
             with self.assertRaises(DciExportError):
                 export_subset(source, output)
-            self.assertFalse((output / ".dci_export_complete").exists())
+            self.assertEqual((output / ".dci_export_complete").read_text(), "1\n")
             _parquet(
                 source / "p.parquet",
                 [{"id": "1", "query": "q", "answer": "a"}],
