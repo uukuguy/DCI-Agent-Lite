@@ -154,6 +154,18 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
             self.assertNotIn("--thinking-level", unset_args)
             self.assertNotIn("--limit", unset_args)
 
+            limit_log = root / "limit.log"
+            result = subprocess.run(
+                ["bash", str(launcher), "level5", "--limit", "9"],
+                env=env | {"CAPTURE_ARGS": str(limit_log)},
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            limit_args = limit_log.read_text(encoding="utf-8").splitlines()
+            self.assertNotIn("--thinking-level", limit_args)
+            self.assertEqual(limit_args[-2:], ["--limit", "9"])
+
             explicit_log = root / "explicit.log"
             result = subprocess.run(
                 [
