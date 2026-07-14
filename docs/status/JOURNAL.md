@@ -532,3 +532,4 @@
 - 21:18 AF-240 Task 1 R2 guarantees UTF-8 durable text and cross-platform component lengths. [0c22a81]
 - 22:18 AF-240 Task 2 adds bounded Judge retries and locked evaluation to prevent duplicate calls and unsafe cache reuse. [9780083]
 - 22:42 AF-240 Task 2 repair binds completed evidence and transactional cache pairs to prevent forged or split evaluation reuse. [04654ba]
+- 23:19 AF-240 Task 2 R2 binds resumed evidence and manifest-recovers durable evaluation publication across crash boundaries. [abe1f50]
