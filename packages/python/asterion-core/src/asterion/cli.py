@@ -16,6 +16,12 @@ from asterion.applications.discovery import (
     load_application_provider,
 )
 from asterion.applications.provider import ApplicationProviderError, InstalledApplication
+from asterion.applications.product import (
+    CapabilityProductDescription,
+    VerificationRequest,
+    VerificationResult,
+    validate_verification_result,
+)
 from asterion.applications.selection import (
     parse_application_selector,
     select_installed_application,
@@ -103,6 +109,47 @@ def main(
             ]
             stdout.write(json.dumps(payload, sort_keys=True) + "\n")
             return 0
+        if args.command == "describe":
+            provider = load_application_provider(
+                args.provider, entry_points=entry_points
+            )
+            if provider.product is None:
+                raise ApplicationProviderError("capability description is unavailable")
+            if args.json:
+                stdout.write(
+                    json.dumps(
+                        _description_payload(provider.product.description),
+                        sort_keys=True,
+                    )
+                    + "\n"
+                )
+            else:
+                _render_description(provider.product.description, stdout)
+            return 0
+        if args.command == "verify":
+            provider = load_application_provider(
+                args.provider, entry_points=entry_points
+            )
+            if provider.product is None:
+                raise ApplicationProviderError("capability verification is unavailable")
+            description = provider.product.description
+            if args.level not in {profile.level for profile in description.profiles}:
+                raise ApplicationProviderError("verification level is invalid")
+            request = VerificationRequest(
+                level=args.level,
+                env_file=_optional_absolute_path(args.env_file),
+                corpus_root=_optional_absolute_path(args.corpus_root),
+                output_root=_optional_absolute_path(args.output_root),
+                acceptance_root=_optional_absolute_path(args.acceptance_root),
+            )
+            result = validate_verification_result(
+                provider.product.verifier(request), description
+            )
+            if args.json:
+                stdout.write(json.dumps(_verification_payload(result), sort_keys=True) + "\n")
+            else:
+                _render_verification(result, stdout)
+            return 0 if result.status == "PASS" else 1
         if sum(
             value is not None
             for value in (args.application, args.assembly, args.legacy_assembly)
@@ -230,6 +277,21 @@ def _parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
     list_command = subparsers.add_parser("list")
     list_command.add_argument("--provider")
+    describe = subparsers.add_parser(
+        "describe", help="show one provider's capability product"
+    )
+    describe.add_argument("--provider", required=True)
+    describe.add_argument("--json", action="store_true")
+    verify = subparsers.add_parser(
+        "verify", help="verify one provider's capability product"
+    )
+    verify.add_argument("--provider", required=True)
+    verify.add_argument("--level", required=True)
+    verify.add_argument("--env-file")
+    verify.add_argument("--corpus-root")
+    verify.add_argument("--output-root")
+    verify.add_argument("--acceptance-root")
+    verify.add_argument("--json", action="store_true")
     run = subparsers.add_parser("run")
     run.add_argument("--provider", required=True)
     run.add_argument("--runtime", required=True)
@@ -245,6 +307,106 @@ def _parser() -> argparse.ArgumentParser:
     )
     run.add_argument("legacy_assembly", nargs="?")
     return parser
+
+
+def _description_payload(description: CapabilityProductDescription) -> dict[str, object]:
+    return {
+        "product_id": description.product_id,
+        "version": description.version,
+        "summary": description.summary,
+        "functions": [
+            {
+                "function_id": function.function_id,
+                "summary": function.summary,
+                "argv": list(function.argv),
+            }
+            for function in description.functions
+        ],
+        "configuration": [
+            {
+                "name": requirement.name,
+                "purpose": requirement.purpose,
+                "required_for": list(requirement.required_for),
+                "secret": requirement.secret,
+                "default": None if requirement.secret else requirement.default,
+                "hint": requirement.hint,
+            }
+            for requirement in description.configuration
+        ],
+        "profiles": [
+            {
+                "level": profile.level,
+                "summary": profile.summary,
+                "cost_class": profile.cost_class,
+                "external_request_count": profile.external_request_count,
+                "full_dataset": profile.full_dataset,
+            }
+            for profile in description.profiles
+        ],
+    }
+
+
+def _verification_payload(result: VerificationResult) -> dict[str, object]:
+    return {
+        "product_id": result.product_id,
+        "level": result.level,
+        "status": result.status,
+        "checks": [
+            {
+                "check_id": check.check_id,
+                "summary": check.summary,
+                "status": check.status,
+                "artifact_refs": list(check.artifact_refs),
+                "counts": dict(check.counts),
+            }
+            for check in result.checks
+        ],
+        "external_request_count": result.external_request_count,
+        "full_dataset_ran": result.full_dataset_ran,
+    }
+
+
+def _render_description(
+    description: CapabilityProductDescription, stdout: TextIO
+) -> None:
+    stdout.write(f"{description.product_id} {description.version}\n")
+    stdout.write(f"{description.summary}\n\nFunctions:\n")
+    for function in description.functions:
+        stdout.write(f"  {function.function_id}: {function.summary}\n")
+        stdout.write(f"    command: {' '.join(function.argv)}\n")
+    stdout.write("\nConfiguration:\n")
+    for requirement in description.configuration:
+        suffix = " (secret)" if requirement.secret else ""
+        stdout.write(f"  {requirement.name}{suffix}: {requirement.purpose}\n")
+        stdout.write(f"    {requirement.hint}\n")
+    stdout.write("\nVerification levels:\n")
+    for profile in description.profiles:
+        stdout.write(f"  {profile.level}: {profile.summary}\n")
+        stdout.write(
+            f"    external requests: {profile.external_request_count}; "
+            f"full dataset: {'yes' if profile.full_dataset else 'no'}\n"
+        )
+
+
+def _render_verification(result: VerificationResult, stdout: TextIO) -> None:
+    stdout.write(f"{result.product_id} verification: {result.level}\n")
+    for check in result.checks:
+        stdout.write(f"[{check.status}] {check.check_id}: {check.summary}\n")
+        if check.counts:
+            stdout.write(
+                "  counts: "
+                + ", ".join(f"{key}={value}" for key, value in check.counts)
+                + "\n"
+            )
+        if check.artifact_refs:
+            stdout.write("  artifacts: " + ", ".join(check.artifact_refs) + "\n")
+    stdout.write(f"Overall: {result.status}\n")
+    stdout.write(f"External requests: {result.external_request_count}\n")
+    stdout.write(f"Full dataset ran: {'yes' if result.full_dataset_ran else 'no'}\n")
+
+
+def _optional_absolute_path(value: str | None) -> Path | None:
+    return None if value is None else Path(value).expanduser().resolve()
 
 
 def _thaw(value: object) -> object:

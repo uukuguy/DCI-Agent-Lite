@@ -12,6 +12,15 @@ from unittest.mock import patch
 from asterion.cli import _parser, main
 from asterion.applications.dci_agent_lite.provider import create_provider as create_dci_provider
 from asterion.applications.provider import InstalledApplication, InstalledApplicationProvider
+from asterion.applications.product import (
+    CapabilityFunction,
+    CapabilityProductDescription,
+    ConfigurationRequirement,
+    InstalledCapabilityProduct,
+    VerificationCheckResult,
+    VerificationProfile,
+    VerificationResult,
+)
 from asterion.dci.application_executor import EnvironmentDciRunExecutor
 from asterion.dci.pi_rpc import PiRpcClient
 from asterion.dci.run import DciRunRequest, DciRunResult
@@ -170,6 +179,167 @@ def configure_manager(manager, config):
 
 
 class AsterionCliTests(unittest.TestCase):
+    def _product_provider(self, root: Path, calls: list[object]) -> InstalledApplicationProvider:
+        valid = provider(root)
+        description = CapabilityProductDescription(
+            product_id="example-product",
+            version="1.0.0",
+            summary="Example product",
+            functions=(
+                CapabilityFunction(
+                    function_id="research",
+                    summary="Research a corpus",
+                    argv=("example", "run"),
+                ),
+            ),
+            configuration=(
+                ConfigurationRequirement(
+                    name="EXAMPLE_API_KEY",
+                    purpose="Provider credential",
+                    required_for=("basic",),
+                    secret=True,
+                    default=None,
+                    hint="Set this in .env",
+                ),
+            ),
+            profiles=(
+                VerificationProfile(
+                    level="basic",
+                    summary="Run a bounded check",
+                    cost_class="bounded-provider-backed",
+                    external_request_count=1,
+                    full_dataset=False,
+                ),
+                VerificationProfile(
+                    level="preflight",
+                    summary="Check prerequisites",
+                    cost_class="provider-free",
+                    external_request_count=0,
+                    full_dataset=False,
+                ),
+            ),
+        )
+
+        def verify(request):
+            calls.append(request)
+            return VerificationResult(
+                product_id="example-product",
+                level=request.level,
+                status="PASS",
+                checks=(
+                    VerificationCheckResult(
+                        check_id="configuration",
+                        summary="Configuration is ready",
+                        status="PASS",
+                        counts=(("present", 1),),
+                    ),
+                ),
+                external_request_count=0,
+                full_dataset_ran=False,
+            )
+
+        return InstalledApplicationProvider(
+            protocol=valid.protocol,
+            provider_id=valid.provider_id,
+            resource_root=valid.resource_root,
+            applications=valid.applications,
+            product=InstalledCapabilityProduct(description=description, verifier=verify),
+        )
+
+    def test_describe_loads_only_selected_product_and_renders_stable_json(self) -> None:
+        calls: list[object] = []
+        with tempfile.TemporaryDirectory() as temp_dir:
+            selected = FakeEntryPoint(
+                name="example-app",
+                factory=lambda: self._product_provider(Path(temp_dir), calls),
+            )
+            adjacent = FakeEntryPoint(
+                name="other-app",
+                factory=lambda: (_ for _ in ()).throw(AssertionError("loaded")),
+            )
+            stdout = io.StringIO()
+            code = main(
+                ["describe", "--provider", "example-app", "--json"],
+                entry_points=(selected, adjacent),
+                stdout=stdout,
+                stderr=io.StringIO(),
+            )
+
+        self.assertEqual(code, 0)
+        self.assertEqual(selected.loads, 1)
+        self.assertEqual(adjacent.loads, 0)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["product_id"], "example-product")
+        self.assertEqual(payload["functions"][0]["argv"], ["example", "run"])
+        self.assertNotIn("value", payload["configuration"][0])
+        self.assertEqual(calls, [])
+
+    def test_describe_human_output_is_plain_and_provider_without_product_fails(self) -> None:
+        calls: list[object] = []
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            supported = FakeEntryPoint(
+                name="example-app",
+                factory=lambda: self._product_provider(root, calls),
+            )
+            stdout = io.StringIO()
+            code = main(
+                ["describe", "--provider", "example-app"],
+                entry_points=(supported,),
+                stdout=stdout,
+                stderr=io.StringIO(),
+            )
+            unsupported = main(
+                ["describe", "--provider", "plain-app"],
+                entry_points=(
+                    FakeEntryPoint(name="plain-app", factory=lambda: provider(root)),
+                ),
+                stdout=io.StringIO(),
+                stderr=io.StringIO(),
+            )
+
+        self.assertEqual(code, 0)
+        self.assertIn("Example product", stdout.getvalue())
+        self.assertIn("research: Research a corpus", stdout.getvalue())
+        self.assertEqual(unsupported, 2)
+
+    def test_verify_normalizes_paths_calls_once_and_reports_the_bound(self) -> None:
+        calls: list[object] = []
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            entry = FakeEntryPoint(
+                name="example-app",
+                factory=lambda: self._product_provider(root, calls),
+            )
+            stdout = io.StringIO()
+            code = main(
+                [
+                    "verify",
+                    "--provider",
+                    "example-app",
+                    "--level",
+                    "preflight",
+                    "--env-file",
+                    ".env.fixture",
+                    "--corpus-root",
+                    "corpus",
+                    "--output-root",
+                    "outputs",
+                ],
+                entry_points=(entry,),
+                stdout=stdout,
+                stderr=io.StringIO(),
+            )
+
+        self.assertEqual(code, 0)
+        self.assertEqual(len(calls), 1)
+        request = calls[0]
+        self.assertTrue(request.env_file.is_absolute())
+        self.assertTrue(request.corpus_root.is_absolute())
+        self.assertIn("Overall: PASS", stdout.getvalue())
+        self.assertIn("External requests: 0", stdout.getvalue())
+        self.assertIn("Full dataset ran: no", stdout.getvalue())
+
     def test_list_reports_metadata_without_loading_provider(self) -> None:
         entry = FakeEntryPoint(name="example-app", factory=lambda: None)
         stdout = io.StringIO()
