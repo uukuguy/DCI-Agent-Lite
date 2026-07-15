@@ -1,8 +1,8 @@
 # Framework Worklist
 
-> Canonical active work-package ledger. No action may begin without exactly one `in_progress` package or explicit user authorization recorded in its package.
+> Canonical work-package ledger. An `active` lifecycle requires exactly one `in_progress` package; a `complete` lifecycle permits none and forbids autonomous dispatch.
 
-> Project lifecycle: active
+> Project lifecycle: complete
 
 ## AF-000 — Framework control plane
 
@@ -273,12 +273,12 @@
 
 ## AF-250 — Product acceptance matrix
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Asterion DCI complete capability-package reference product
 - Scope: make every complete-product parity matrix row executable and record reproducible local, Pi, and Pi-plus-Judge evidence.
 - Dependencies: AF-240
 - Acceptance: the checked-in matrix has no unsupported source behavior and every row has reproducible fixture or bounded provider-backed evidence before any full-parity conclusion.
-- Closure evidence: all eight local/model-free rows pass; all 533 delegated batch selectors, twelve launcher pairs, six batch extras, and AF-250-H-001 through H-005 pass. Seven bounded real source/Asterion/application/Pi-plus-Judge/reuse cases completed successfully; the credential-clean body-free manifest is digest-bound into the product matrix, and the private-artifact verifier independently recomputes its modes/hashes plus completion, Judge, and exact-reuse invariants. Full closure passes 1266 Python, 11 TypeScript, and 19 Rust tests plus compile, Ruff, shell, scope, diff, installed-wheel/application, and both acceptance-verifier modes. No full dataset ran. The package remains the active terminal governance anchor until branch integration or a successor package is explicitly selected.
+- Closure evidence: all eight local/model-free rows pass; all 533 delegated batch selectors, twelve launcher pairs, six batch extras, and AF-250-H-001 through H-005 pass. Seven bounded real source/Asterion/application/Pi-plus-Judge/reuse cases completed successfully; the credential-clean body-free manifest is digest-bound into the product matrix, and the private-artifact verifier independently recomputes its modes/hashes plus completion, Judge, and exact-reuse invariants. Full closure passes 1266 Python, 11 TypeScript, and 19 Rust tests plus compile, Ruff, shell, scope, diff, installed-wheel/application, and both acceptance-verifier modes. No full dataset ran. The complete procedure is `docs/verification/asterion-dci-validation-guide.md`.
 - Design: `docs/superpowers/specs/2026-07-13-asterion-dci-complete-product-parity-design.md`
 - Plan: `docs/superpowers/plans/2026-07-15-af-250-product-acceptance-matrix.md`
 

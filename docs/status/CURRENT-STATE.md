@@ -4,11 +4,11 @@
 
 - Project: Asterion framework under development in the DCI-Agent-Lite repository; DCI remains the first capability and reference application.
 - Current branch: `af-220-shared-dci-config`
-- Theme-level focus: complete and prove Asterion DCI as the first capability-package reference product against the source DCI product.
+- Theme-level focus: Asterion DCI migration milestone completed and independently verifiable against the source DCI product.
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: AF-250 — product acceptance matrix.
+- Active work package: none.
 
 ## Current Architecture
 
@@ -18,9 +18,7 @@
 - Language roles: Python owns research/evaluation/orchestration, TypeScript owns Node/service integration, and Rust is reserved for controlled execution infrastructure.
 - Governance: `docs/status/WORKLIST.md` is the sole active package ledger. A scope audit must pass before manager dispatch or climb execution.
 - Maintenance history: Pi/Judge reliability H-001 through H-019 is completed and remains available as reference-maintenance evidence; it is not an active roadmap stream.
-- Claude Code provider access: the adapter supports stored login and inherited environment-configured backends; provider-backed UAT is deferred while the local account is unavailable and does not block host-language work.
-- Installed DCI compatibility: the bundled DCI application declares exact Pi and Claude runtime identities through paired composition-equivalent canonical assemblies; generic application selection picks the unique matching assembly before runtime construction, and fixture-only CLI proof does not authorize or invoke Claude.
-- Complete DCI direction: `src/dci` remains an independent source-only comparison baseline. AF-180 through AF-210 established independent Asterion DCI components, but their local closure is not a claim of full source-product parity: shared `.env` forwarding, complete operator controls, batch/export semantics, Asterion examples, and provider-backed acceptance are governed by active AF-220 followed by AF-230 through AF-250. Asterion will share normal `DCI_*` configuration with the baseline while keeping Asterion-owned output paths; neither product imports or launches the other.
+- Complete DCI result: `src/dci` remains an independent source-only comparison baseline. AF-180 through AF-250 completed shared `.env` forwarding, complete operator controls, batch/export semantics, Asterion examples, installed Pi application, and bounded provider-backed acceptance. Asterion shares normal `DCI_*` configuration with the baseline while keeping Asterion-owned output paths; neither product imports or launches the other.
 - AF-220 acceptance: its four Climb hypotheses are confirmed 4/4. Using only process-local shared configuration and main-repository external resources, both model-free prerequisites, both real Pi examples, the project-entrypoint installed application, and the one-row Pi-plus-Judge benchmark passed. Native state/evaluation schemas and the application's single body-free JSON projection were verified; this closes AF-220 only.
 - AF-230 acceptance: all four Climb hypotheses are confirmed 4/4. Asterion now owns the private descriptor-relative recorder, complete/processed conversation evidence, credential-safe Pi provenance, isolated digest-bound attempts, strict single-writer resume, package-local input/resource controls, and direct TTY-only Pi terminal mode. Full local closure passed, and one authorized Pi-default run completed with private parseable artifacts, truthful context state, safe provenance, a matching final digest, and a body-free application projection without a Judge request.
 - AF-240 acceptance: all four Climb hypotheses are confirmed 4/4 and all 533 source inventory rows resolve to executable Asterion evidence. Asterion owns concurrent QA/IR orchestration, exact reuse, Judge cache identity, aggregates, detailed analysis/figures, exports, installed profiles, and 12 launchers. Closure passed 1204 Python, 11 TypeScript, and 19 Rust tests plus all static, shell, isolated-wheel, and governance gates. A bounded one-row Pi-plus-Judge batch produced one correct verdict and 28 credential-clean private artifacts; exact reuse preserved native/Judge hashes and mtimes without another protocol attempt or generation.
@@ -56,10 +54,7 @@
 
 ## Open Problems (theme-level)
 
-- Provider-backed acceptance of the first non-Pi runtime when credentials or a compatible gateway become available.
-- Provider-backed Claude acceptance remains deferred because the local CLI is unauthenticated. AF-160 instead validates the installed runtime factory and existing command/fixture/redaction boundary without a provider request.
-- A future provider-backed Claude parity claim requires separate operator authorization and evidence; fixture-only compatibility remains insufficient.
-- Complete source-DCI product parity is implemented and accepted through AF-250. Future provider/runtime additions or full-dataset performance studies are separate work, not migration gaps.
+- No open Asterion DCI migration gap remains. Future runtime additions or full-dataset performance studies are separate work and require explicit lifecycle reopening.
 
 ## Key Files
 
@@ -108,4 +103,4 @@
 1. Read this file, then `docs/architecture/agent-framework.md` and `docs/status/WORKLIST.md`.
 2. Read `RESUME-NEXT-SESSION.md`, recent JOURNAL entries, and the relevant collaboration-memory entry.
 3. Run `git status --short`, `git log --oneline -5`, and `python3 tools/project_scope_check.py`.
-4. Work only on the named active package; repair state before dispatch when the scope audit fails.
+4. Do not dispatch implementation while lifecycle is complete. New work must first add an approved package, set lifecycle to `active`, and update the recovery marker atomically.

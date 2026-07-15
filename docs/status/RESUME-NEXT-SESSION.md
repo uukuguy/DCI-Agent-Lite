@@ -1,40 +1,59 @@
-# Live Session Checkpoint
+# Terminal Migration Checkpoint
 
-> Updated: 2026-07-15 06:38 +0800. **Session remains active — not a final handoff.** AF-250 migration implementation and acceptance are complete in the isolated `af-220-shared-dci-config` worktree.
+> Updated: 2026-07-15 07:42 +0800. Asterion DCI migration and product acceptance are complete.
 
-Active work package: AF-250
+Active work package: none
 
 ## TL;DR
 
-- AF-250 accepted implementation is committed at `327a070` on `af-220-shared-dci-config`.
-- AF-250 implementation and bounded product acceptance are complete: eight product rows, 533 delegated selectors, twelve launcher pairs, six batch extras, isolated installed-wheel/application proof, and seven real source/Asterion/application/Pi-plus-Judge/reuse cases pass.
-- The earlier real-run failures were caused by the isolated worktree lacking the external main-repository `corpus/`, not by a missing Asterion DCI behavior. Explicit shared Pi/corpus paths plus the repository-root `.env` produced successful bounded runs.
-- `assets/dci/product-acceptance.json` contains only commands, inherited variable names, exit codes, modes, hashes, counts, verdict booleans, and timestamps. Credential values matched zero; provider bodies and private paths are excluded. A caller-owned private acceptance root retains all seven native cases for digest/mode/semantic revalidation.
-- The product matrix digest-binds that seven-case manifest. AF-250-H-005 was reconfirmed 4/4 with private-native mutation coverage in cycle 85 after its initial cycle 84, following H-001 through H-004 in cycles 80–83.
+- AF-250 and every worklist package are completed; repository lifecycle is `complete`.
+- Asterion DCI independently implements the original Pi-based DCI product surface without importing or launching `src/dci`.
+- Acceptance covers eight model-free rows, 533 delegated selectors, twelve launcher pairs, six batch extras, an isolated installed wheel/application, and seven bounded real source/Asterion/application/Pi-plus-Judge/reuse cases.
+- The authoritative runnable procedure is `docs/verification/asterion-dci-validation-guide.md`.
+- No full dataset ran; full-dataset performance is separate operator-authorized work, not a migration gap.
 
-## Verification
+## Committed state
 
-- `uv run python tools/verify_asterion_dci_product.py`: 8/8 rows, 533/533 delegated, 12/12 launchers, 6/6 batch extras, 7/7 bounded acceptance, zero provider execution during verification.
-- With the shared `.env` exported, `--acceptance-root "$AF250_ACCEPTANCE_ROOT" --validate-only` reports private acceptance 7/7 after rehashing artifacts, parsing lifecycle/Judge evidence, comparing reuse mtimes, and scanning actual credential values without printing them.
-- Full discovery passes 1266/1266 Python tests; TypeScript passes 11/11 and Rust passes 19/19.
-- Compile, Ruff, shell syntax, scope, Rust fmt/Clippy, installed wheel/application proof, and diff checks pass.
+- Product implementation and acceptance: `327a070`.
+- Accepted recovery checkpoint: `41de2db`.
+- Terminal lifecycle design and plan: `6d42ebf`, `3345aa2`.
+- Explicit lifecycle governance: `3717c63`.
+- Full functional verification guide: `673ac03`.
 
-## Next action
+The final terminal-state commit is the newest commit after these entries. The
+branch is `af-220-shared-dci-config`; inspect `git log --oneline -8` rather than
+relying on chat history.
 
-Commit the cohesive AF-250 recovery/acceptance changes after independent review. Keep AF-250 as the terminal active governance anchor until branch integration or a successor package is explicitly selected.
+## Verified evidence
+
+- Public product verifier: 8/8 rows, 533/533 delegated selectors, 12/12 launcher pairs, 6/6 batch extras, bounded acceptance 7/7, zero provider execution during verification.
+- Retained native evidence: private acceptance 7/7 after digest, mode, lifecycle, Judge, exact-reuse, mtime, and credential-value checks.
+- Closure baseline before the terminal documentation change: 1266 Python, 11 TypeScript, and 19 Rust tests plus compile, Ruff, shell, scope, diff, wheel/application, and both verifier modes.
+- Terminal changes must pass the same gates before final completion is reported.
+
+## Reopening rule
+
+There is no implementation next action. Before any new autonomous work, add an
+approved work package to `docs/status/WORKLIST.md`, change its status to
+`in_progress`, change lifecycle to `active`, update this marker and CURRENT,
+and run `python3 tools/project_scope_check.py`. Do not reuse AF-250 as a generic
+maintenance anchor.
 
 ## Ruled-out paths
 
-- Do not treat the former worktree-local missing `corpus/` condition as a product failure.
-- Do not rerun full datasets to reconfirm bounded acceptance.
-- Do not modify `pi/`, persist credentials, or copy provider bodies/private paths into public evidence.
+- Do not infer completion from worklist status alone; use the verification guide and executable evidence.
+- Do not rerun a full dataset merely to reconfirm bounded migration acceptance.
+- Do not modify the external `pi/` checkout or persist credentials, provider bodies, corpora, or private evidence paths.
+- Do not make `src/dci` and Asterion import or launch one another.
 
 ## Ready commands
 
 ```bash
 python3 tools/project_scope_check.py
 uv run python tools/verify_asterion_dci_product.py
-uv run python tools/verify_asterion_dci_product.py --acceptance-root "$AF250_ACCEPTANCE_ROOT" --validate-only
-uv run python -m unittest tests.test_asterion_dci_product_acceptance -v
+uv run python tools/verify_asterion_dci_product.py \
+  --acceptance-root "$AF250_ACCEPTANCE_ROOT" \
+  --validate-only
+uv run python -m unittest discover -v
 git status --short
 ```

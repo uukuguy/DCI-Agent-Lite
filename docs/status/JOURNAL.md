@@ -687,3 +687,8 @@
 - 07:05 Final full discovery passes 1266/1266 Python tests after the approved review repair.
 - 07:06 Final closure gates pass 11 TypeScript, 19 Rust, compile, Ruff, shell, scope, diff, public product 8/8+533/533+12/12+6/6+7/7, and private native acceptance 7/7.
 - 07:07 AF-250 private-native acceptance closes full DCI migration with reviewed 7/7 evidence. [327a070]
+- 07:08 AF-250 completion checkpoint makes the reviewed migration state recoverable. [41de2db]
+- 07:16 Terminal closeout design defines the final verification guide and explicit completed lifecycle. [6d42ebf]
+- 07:26 Explicit lifecycle validation makes zero-active terminal state governable. [3717c63]
+- 07:35 One runnable guide makes full source-to-Asterion DCI verification reproducible. [673ac03]
+- 07:42 AF-250 enters explicit terminal lifecycle after accepted full migration evidence.

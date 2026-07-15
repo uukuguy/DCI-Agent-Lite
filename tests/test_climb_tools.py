@@ -792,10 +792,10 @@ class Af240InventoryTests(unittest.TestCase):
 
 
 class ClimbToolTests(unittest.TestCase):
-    def test_live_checkpoint_retains_scope_audit_package_marker(self) -> None:
+    def test_terminal_checkpoint_retains_scope_audit_none_marker(self) -> None:
         resume = (REPO_ROOT / "docs/status/RESUME-NEXT-SESSION.md").read_text()
 
-        self.assertRegex(resume, r"(?m)^Active work package: AF-[0-9]+$")
+        self.assertRegex(resume, r"(?m)^Active work package: none$")
 
     def test_regen_tree_serializes_tracked_hypothesis_state(self) -> None:
         result = subprocess.run(
@@ -2905,9 +2905,21 @@ class ClimbToolTests(unittest.TestCase):
         )
         self.assertEqual(session["session"], "2026-07-15-af-250-product-acceptance-matrix")
         self.assertEqual(session["work_package_id"], "AF-250")
-        self.assertEqual(session["phase"], "implementation")
+        self.assertEqual(session["phase"], "completed")
         self.assertIsNone(session["next_hypothesis"])
         self.assertIsNone(session["in_flight"])
+
+        worklist = (REPO_ROOT / "docs/status/WORKLIST.md").read_text()
+        self.assertIn("> Project lifecycle: complete", worklist)
+        af250 = worklist.split("## AF-250 — Product acceptance matrix", 1)[1]
+        af250 = af250.split("\n## ", 1)[0]
+        self.assertIn("- Status: completed", af250)
+
+        current = (REPO_ROOT / "docs/status/CURRENT-STATE.md").read_text()
+        resume = (REPO_ROOT / "docs/status/RESUME-NEXT-SESSION.md").read_text()
+        self.assertIn("Active work package: none", current)
+        self.assertIn("Active work package: none", resume)
+        self.assertNotIn("Commit the cohesive AF-250", resume)
 
     def test_af250_train_registers_distinct_executable_selectors(self) -> None:
         train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
