@@ -11,8 +11,10 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 from pathlib import PurePosixPath
+from unittest.mock import patch
 
 from tools.verify_asterion_dci_product import (
+    _required_acceptance_credential_values,
     load_product_matrix,
     validate_acceptance_artifacts,
     validate_acceptance_document,
@@ -143,6 +145,69 @@ def validate_manifest(document: object) -> None:
 
 
 class AsterionDciProductAcceptanceTests(unittest.TestCase):
+    def test_private_acceptance_requires_manifest_referenced_credentials(
+        self,
+    ) -> None:
+        cases = (
+            {
+                "inherited_configuration": [
+                    "PROVIDER_API_KEY",
+                    "DCI_EVAL_JUDGE_API_KEY_ENV",
+                ]
+            },
+        )
+        with patch.dict(
+            os.environ,
+            {"UNRELATED_PASSWORD": "irrelevant"},
+            clear=True,
+        ):
+            with self.assertRaisesRegex(ValueError, "referenced credential"):
+                _required_acceptance_credential_values(cases)
+
+        with patch.dict(
+            os.environ,
+            {"PROVIDER_API_KEY": "provider-secret"},
+            clear=True,
+        ):
+            with self.assertRaisesRegex(ValueError, "DCI_EVAL_JUDGE_API_KEY_ENV"):
+                _required_acceptance_credential_values(cases)
+
+        with patch.dict(
+            os.environ,
+            {
+                "DCI_EVAL_JUDGE_API_KEY_ENV": "CUSTOM_JUDGE_KEY",
+                "CUSTOM_JUDGE_KEY": "judge-secret",
+            },
+            clear=True,
+        ):
+            with self.assertRaisesRegex(ValueError, "PROVIDER_API_KEY"):
+                _required_acceptance_credential_values(cases)
+
+        with patch.dict(
+            os.environ,
+            {
+                "PROVIDER_API_KEY": "provider-secret",
+                "DCI_EVAL_JUDGE_API_KEY_ENV": "CUSTOM_JUDGE_KEY",
+            },
+            clear=True,
+        ):
+            with self.assertRaisesRegex(ValueError, "CUSTOM_JUDGE_KEY"):
+                _required_acceptance_credential_values(cases)
+
+        with patch.dict(
+            os.environ,
+            {
+                "PROVIDER_API_KEY": "provider-secret",
+                "DCI_EVAL_JUDGE_API_KEY_ENV": "CUSTOM_JUDGE_KEY",
+                "CUSTOM_JUDGE_KEY": "judge-secret",
+            },
+            clear=True,
+        ):
+            self.assertEqual(
+                _required_acceptance_credential_values(cases),
+                ("provider-secret", "judge-secret"),
+            )
+
     def load_manifest(self) -> dict[str, object]:
         self.assertTrue(MANIFEST_PATH.is_file(), "acceptance manifest is required")
         return json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))

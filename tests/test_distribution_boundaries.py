@@ -47,8 +47,18 @@ class SourceDistributionBoundaryTests(unittest.TestCase):
             "provider-free",
             "bounded provider-backed",
             "full-dataset",
+            'source "$DCI_ENV_FILE"',
+            ': "${ASTERION_DCI_CORPUS_ROOT:',
+            "project-entrypoint Pi-default application",
+            "isolated-wheel proof is performed by",
         ):
             self.assertIn(required, text)
+
+        self.assertNotIn(
+            'ASTERION_DCI_CORPUS_ROOT="${ASTERION_DCI_CORPUS_ROOT:-$PWD/corpus}"',
+            text,
+        )
+        self.assertNotIn("wheel-installed generic application", text)
 
         for launcher in (
             "scripts/asterion/bcplus_eval/run_L3.sh",

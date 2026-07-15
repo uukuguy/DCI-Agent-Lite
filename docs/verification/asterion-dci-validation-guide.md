@@ -19,7 +19,9 @@ Both products load the repository-root `.env`. It must define `DCI_PROVIDER`,
 `DCI_PI_DIR` selects the external Pi checkout; `./pi` is preferred. Never print
 `.env`, credentials, provider bodies, or private evidence paths.
 
-Use an absolute `$ASTERION_DCI_CORPUS_ROOT` from another worktree and use
+Set `$ASTERION_DCI_CORPUS_ROOT` to an absolute corpus root before any real
+Asterion command; this is required even in the main checkout so a missing
+worktree corpus cannot silently select the wrong path. Use
 `$ASTERION_DCI_OUTPUT_ROOT` for Asterion artifacts. Supply retained private
 evidence only through `$AF250_ACCEPTANCE_ROOT`.
 
@@ -83,7 +85,9 @@ These call `asterion-dci`, never `src/dci`.
 Command class: **bounded provider-backed**
 
 ```bash
-export ASTERION_DCI_CORPUS_ROOT="${ASTERION_DCI_CORPUS_ROOT:-$PWD/corpus}"
+: "${ASTERION_DCI_CORPUS_ROOT:?Set an absolute corpus root}"
+test "${ASTERION_DCI_CORPUS_ROOT#/}" != "$ASTERION_DCI_CORPUS_ROOT"
+test -d "$ASTERION_DCI_CORPUS_ROOT"
 export ASTERION_DCI_OUTPUT_ROOT="${ASTERION_DCI_OUTPUT_ROOT:-$PWD/outputs/asterion-dci-runs}"
 bash scripts/examples/asterion_dci_basic_example.sh
 bash scripts/examples/asterion_dci_runtime_context_example.sh high
@@ -94,15 +98,19 @@ settled `events.jsonl`, `conversation_full.json`, `conversation.json`,
 `latest_model_context.json`, `final.txt`, `stderr.txt`, `tool_results/`, and a
 `protocol/` attempt. The runtime-context verdict is true.
 
-## 6. Tier 3 — installed Pi-default application
+## 6. Tier 3 — project-entrypoint Pi-default application
 
-This checks the wheel-installed generic application against the same native
-Asterion DCI workflow, explicitly selecting Pi.
+This checks the repository project entrypoint against the same native Asterion
+DCI workflow, explicitly selecting Pi. It is not an isolated installation; the
+isolated-wheel proof is performed by `verify_asterion_dci_product.py`, which
+builds a wheel, creates a separate environment outside the repository, verifies
+that `dci` is absent, and runs the installed application model-free.
 
 Command class: **bounded provider-backed**
 
 ```bash
-export ASTERION_RUNTIME_CWD="${ASTERION_DCI_CORPUS_ROOT:-$PWD/corpus}/wiki_corpus"
+: "${ASTERION_DCI_CORPUS_ROOT:?Set an absolute corpus root}"
+export ASTERION_RUNTIME_CWD="$ASTERION_DCI_CORPUS_ROOT/wiki_corpus"
 uv run asterion run \
   --provider dci-agent-lite \
   --application dci.research-capability@1.0.0 \
@@ -111,15 +119,17 @@ uv run asterion run \
 ```
 
 Pass: the command exits zero, returns a body-free result, and references a
-completed native Asterion run. The installed wheel contains no `dci` package.
+completed native Asterion run. The separate public product verifier proves the
+installed wheel contains no `dci` package.
 
 ## 7. Tier 3 — complete operator command surface
 
 Command class: **provider-free**
 
 ```bash
+: "${ASTERION_DCI_CORPUS_ROOT:?Set an absolute corpus root}"
 uv run asterion-dci system-prompt \
-  --cwd "${ASTERION_DCI_CORPUS_ROOT:-$PWD/corpus}/wiki_corpus" \
+  --cwd "$ASTERION_DCI_CORPUS_ROOT/wiki_corpus" \
   --tools read,bash
 ```
 
@@ -128,7 +138,7 @@ Command class: **bounded provider-backed**
 ```bash
 RUN_DIR="${ASTERION_DCI_OUTPUT_ROOT:-$PWD/outputs/asterion-dci-runs}/guide-run"
 uv run asterion-dci run \
-  --cwd "${ASTERION_DCI_CORPUS_ROOT:-$PWD/corpus}/wiki_corpus" \
+  --cwd "$ASTERION_DCI_CORPUS_ROOT/wiki_corpus" \
   --tools read,bash --max-turns 6 \
   --conversation-externalize-tool-results \
   --conversation-strip-thinking \
@@ -155,7 +165,7 @@ Command class: **bounded provider-backed**
 
 ```bash
 uv run asterion-dci terminal \
-  --cwd "${ASTERION_DCI_CORPUS_ROOT:-$PWD/corpus}/wiki_corpus" \
+  --cwd "$ASTERION_DCI_CORPUS_ROOT/wiki_corpus" \
   --provider "$DCI_PROVIDER" --model "$DCI_MODEL" \
   --tools read,bash "Use only the local corpus."
 ```
@@ -225,11 +235,21 @@ Pass: 8/8 rows, 533/533 selectors, 12/12 launcher pairs, 6/6 extras, bounded
 acceptance 7/7, and zero provider-backed execution.
 
 Validate retained native evidence without another provider request. Never put
-the concrete private path in a committed file.
+the concrete private path in a committed file. The verifier deliberately fails
+when none of the credentials referenced by the acceptance manifest is exported;
+an unrelated environment password does not count. Select the repository-root
+`.env`, or explicitly point `DCI_ENV_FILE` at the shared main-checkout file from
+another worktree, and source it without printing values.
 
 Command class: **provider-free**
 
 ```bash
+DCI_ENV_FILE="${DCI_ENV_FILE:-.env}"
+test -f "$DCI_ENV_FILE"
+set -a
+source "$DCI_ENV_FILE"
+set +a
+: "${AF250_ACCEPTANCE_ROOT:?Set the caller-owned retained evidence root}"
 uv run python tools/verify_asterion_dci_product.py \
   --acceptance-root "$AF250_ACCEPTANCE_ROOT" \
   --validate-only

@@ -28,8 +28,8 @@ relying on chat history.
 
 - Public product verifier: 8/8 rows, 533/533 delegated selectors, 12/12 launcher pairs, 6/6 batch extras, bounded acceptance 7/7, zero provider execution during verification.
 - Retained native evidence: private acceptance 7/7 after digest, mode, lifecycle, Judge, exact-reuse, mtime, and credential-value checks.
-- Closure baseline before the terminal documentation change: 1266 Python, 11 TypeScript, and 19 Rust tests plus compile, Ruff, shell, scope, diff, wheel/application, and both verifier modes.
-- Terminal changes must pass the same gates before final completion is reported.
+- Final terminal closure: 1275 Python, 11 TypeScript, and 19 Rust tests plus compile, Ruff, shell, scope, explicit terminal-dispatch rejection, diff, wheel/application, and both verifier modes.
+- Independent closeout review is approved with no Critical or Important findings.
 
 ## Reopening rule
 

@@ -233,6 +233,50 @@ def _credential_values_from_environment() -> tuple[str, ...]:
     )
 
 
+def _required_acceptance_credential_values(
+    cases: tuple[dict[str, object], ...],
+) -> tuple[str, ...]:
+    """Resolve only credentials named by the acceptance cases, including indirection."""
+    references: list[str] = []
+    for case in cases:
+        for name in cast(list[str], case["inherited_configuration"]):
+            if (
+                any(
+                    token in name.upper()
+                    for token in ("API_KEY", "TOKEN", "SECRET", "PASSWORD")
+                )
+                and name not in references
+            ):
+                references.append(name)
+
+    values: list[str] = []
+    for name in references:
+        if name.upper().endswith("_ENV"):
+            target = os.environ.get(name)
+            if not target:
+                raise ValueError(
+                    f"manifest-referenced credential indirection is not exported: {name}"
+                )
+            value = os.environ.get(target, "")
+            if not value:
+                raise ValueError(
+                    f"manifest-referenced credential is not exported: {target}"
+                )
+        else:
+            value = os.environ.get(name, "")
+            if not value:
+                raise ValueError(
+                    f"manifest-referenced credential is not exported: {name}"
+                )
+        if value not in values:
+            values.append(value)
+    if not references:
+        raise ValueError(
+            "private acceptance manifest contains no credential references"
+        )
+    return tuple(values)
+
+
 def validate_acceptance_document(
     document: object, *, credential_values: tuple[str, ...] = ()
 ) -> tuple[dict[str, object], ...]:
@@ -1133,13 +1177,15 @@ def main() -> int:
     rows = validate_product_matrix(root, load_product_matrix(root))
     if args.acceptance_root is not None:
         manifest = json.loads((root / ACCEPTANCE_PATH).read_text(encoding="utf-8"))
+        unchecked_cases = validate_acceptance_document(manifest)
+        credential_values = _required_acceptance_credential_values(unchecked_cases)
         cases = validate_acceptance_document(
-            manifest, credential_values=_credential_values_from_environment()
+            manifest, credential_values=credential_values
         )
         verified = validate_acceptance_artifacts(
             args.acceptance_root,
             cases,
-            credential_values=_credential_values_from_environment(),
+            credential_values=credential_values,
         )
         print(f"private-acceptance {verified}/{len(REQUIRED_PROVIDER_CASES)}")
     if args.validate_only:

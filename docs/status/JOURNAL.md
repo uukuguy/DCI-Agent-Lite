@@ -692,3 +692,5 @@
 - 07:26 Explicit lifecycle validation makes zero-active terminal state governable. [3717c63]
 - 07:35 One runnable guide makes full source-to-Asterion DCI verification reproducible. [673ac03]
 - 07:42 AF-250 enters explicit terminal lifecycle after accepted full migration evidence.
+- 07:46 Terminal state closes AF-250 and prevents dispatch without explicit lifecycle reopening. [e7baf75]
+- 08:17 Final closure passes 1275 Python, 11 TypeScript, 19 Rust, both 7/7 verifiers, static gates, and independent review.

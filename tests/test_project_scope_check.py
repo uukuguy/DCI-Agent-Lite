@@ -181,6 +181,36 @@ class ProjectScopeCheckTests(unittest.TestCase):
             json.loads(result.stdout)["errors"],
         )
 
+    def test_complete_lifecycle_rejects_requested_climb_hypothesis(self) -> None:
+        self.write(
+            "docs/status/WORKLIST.md",
+            "\n".join(
+                [
+                    "# Framework Worklist",
+                    "",
+                    "> Project lifecycle: complete",
+                    "",
+                    "## AF-000 — Framework control plane",
+                    "",
+                    "- Status: completed",
+                    "",
+                ]
+            ),
+        )
+        self.write("docs/status/RESUME-NEXT-SESSION.md", "Active work package: none\n")
+        self.write(
+            "docs/status/climb/hypotheses.yaml",
+            "hypotheses:\n- id: AF-000-H-001\n  work_package_id: AF-000\n",
+        )
+
+        result = self.run_check("--climb-hypothesis", "AF-000-H-001")
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(
+            "climb hypothesis AF-000-H-001 cannot dispatch without an active package",
+            json.loads(result.stdout)["errors"],
+        )
+
     def test_missing_or_unknown_lifecycle_is_rejected(self) -> None:
         worklist = (self.root / "docs/status/WORKLIST.md").read_text()
         self.write(

@@ -146,7 +146,11 @@ def validate_hypothesis(
     if hypothesis is None or hypothesis.get("work_package_id") is None:
         errors.append(f"unparented climb hypothesis {hypothesis_id}")
         return
-    if active_id is not None and hypothesis["work_package_id"] != active_id:
+    if active_id is None:
+        errors.append(
+            f"climb hypothesis {hypothesis_id} cannot dispatch without an active package"
+        )
+    elif hypothesis["work_package_id"] != active_id:
         errors.append(
             f"climb hypothesis {hypothesis_id} belongs to {hypothesis['work_package_id']}, not {active_id}"
         )
