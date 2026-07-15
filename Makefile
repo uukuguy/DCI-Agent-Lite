@@ -1,4 +1,9 @@
-.PHONY: example runtime-example asterion-example asterion-runtime-example check-pi-rpc check-judge check-judge-config test-typescript-host test-rust-executor check-rust-executor codex-example deepseek-example
+ASTERION_PROVIDER ?= dci-agent-lite
+ASTERION_ENV_FILE ?= .env
+ASTERION_CORPUS_ROOT ?= $(CURDIR)/corpus
+ASTERION_VERIFY_OUTPUT_ROOT ?= $(CURDIR)/outputs/asterion-verification
+
+.PHONY: example runtime-example asterion-example asterion-runtime-example asterion-describe asterion-verify-preflight asterion-verify-basic asterion-verify-acceptance asterion-verify-complete check-pi-rpc check-judge check-judge-config test-typescript-host test-rust-executor check-rust-executor codex-example deepseek-example
 
 example:
 	bash scripts/examples/dci_basic_example.sh
@@ -11,6 +16,26 @@ asterion-example:
 
 asterion-runtime-example:
 	bash scripts/examples/asterion_dci_runtime_context_example.sh
+
+asterion-describe:
+	uv run asterion describe --provider "$(ASTERION_PROVIDER)"
+
+asterion-verify-preflight:
+	uv run asterion verify --provider "$(ASTERION_PROVIDER)" --level preflight \
+		--env-file "$(ASTERION_ENV_FILE)" --corpus-root "$(ASTERION_CORPUS_ROOT)"
+
+asterion-verify-basic:
+	uv run asterion verify --provider "$(ASTERION_PROVIDER)" --level basic \
+		--env-file "$(ASTERION_ENV_FILE)" --corpus-root "$(ASTERION_CORPUS_ROOT)" \
+		--output-root "$(ASTERION_VERIFY_OUTPUT_ROOT)"
+
+asterion-verify-acceptance:
+	uv run asterion verify --provider "$(ASTERION_PROVIDER)" --level acceptance
+
+asterion-verify-complete:
+	uv run asterion verify --provider "$(ASTERION_PROVIDER)" --level complete \
+		--env-file "$(ASTERION_ENV_FILE)" --corpus-root "$(ASTERION_CORPUS_ROOT)" \
+		--output-root "$(ASTERION_VERIFY_OUTPUT_ROOT)"
 
 check-pi-rpc:
 	uv run python scripts/check_pi_rpc.py
