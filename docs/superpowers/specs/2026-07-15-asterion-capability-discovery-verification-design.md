@@ -45,7 +45,7 @@ The Asterion provider boundary gains immutable public values for:
 - configuration fields with name, purpose, required/optional status, default,
   secret flag, and validation hint;
 - verification profiles with level, cost class, checks, prerequisites, and
-  whether external requests or full datasets are allowed;
+  the number of provider-backed operations and whether full datasets are allowed;
 - verification results with check ID, status, safe message, artifact
   references, and aggregate counts.
 
@@ -124,7 +124,10 @@ revalidates native artifacts and every manifest-referenced credential scan.
 
 Runs `preflight`, `basic`, then `acceptance` and presents one feature-oriented
 summary. It makes only the two named bounded Pi cases and the required Judge
-evaluation; it never launches a full dataset. This is the recommended command
+evaluation; it never launches a full dataset. Each Pi case has an explicit turn
+limit. The public count is the number of provider-backed operations (two Pi
+runs plus one Judge evaluation), not a claim that a multi-turn Pi run maps to
+one provider API request. This is the recommended command
 for answering “is the complete Asterion DCI capability working in my
 environment?”
 
@@ -140,8 +143,8 @@ asterion verify --provider dci-agent-lite --level complete --corpus-root ./corpu
 
 Human output uses plain function names and four statuses: `PASS`, `FAIL`,
 `SKIP`, and `NOT RUN`. A final table distinguishes configuration, real request,
-local contract, retained evidence, and full-dataset checks. It states external
-request counts and whether a full dataset ran.
+local contract, retained evidence, and full-dataset checks. It states
+provider-backed operation counts and whether a full dataset ran.
 
 `--json` emits the closed result schema without questions, answers,
 conversations, credentials, provider bodies, or private absolute paths.
@@ -164,8 +167,10 @@ but `asterion verify ... --level basic` is the primary entry point.
 - DCI tests prove `basic` maps to the two existing Asterion example semantics,
   `acceptance` delegates to the current product verifier, and `complete`
   executes levels in order without full-dataset launchers.
-- Isolated-wheel tests prove `describe` and provider-free verification work
-  outside the repository.
+- Source acceptance is loaded only from the verifier module's trusted source
+  checkout ancestor, never from the process working directory. Isolated-wheel
+  tests prove `describe` and preflight work outside the repository while source
+  acceptance reports `NOT RUN`.
 - One bounded real `complete` run is allowed using the shared `.env`; no full
   dataset is authorized.
 

@@ -695,3 +695,15 @@
 - 07:46 Terminal state closes AF-250 and prevents dispatch without explicit lifecycle reopening. [e7baf75]
 - 08:17 Final closure passes 1275 Python, 11 TypeScript, 19 Rust, both 7/7 verifiers, static gates, and independent review.
 - 08:42 AF-270 design makes capability functions, configuration, and verification discoverable without source inspection.
+- 08:47 Unified describe/verify contract turns accepted DCI evidence into an operator-facing product. [96b8463]
+- 08:56 AF-270 implementation plan makes unified capability verification executable task by task. [5da3d2c]
+- 09:05 Immutable product contracts let every Asterion provider describe and verify capabilities safely. [4b7246c]
+- 09:13 Generic describe/verify commands expose selected provider capabilities without loading adjacent code. [e015649]
+- 09:24 DCI self-description and provider-free preflight make setup and missing prerequisites visible safely. [e7c5d6c]
+- 09:35 Basic verification reproduces both DCI examples with exactly two Pi runs and one Judge. [983b831]
+- 09:48 Complete verification combines bounded examples with full model-free product acceptance. [5a44dfa]
+- 10:03 Beginner guide and Pi-auth-aware preflight make DCI verification runnable from the shared environment. [5aa2715]
+- 10:16 Console verification now loads the exact source acceptance tool independent of Python search paths. [8f2c7af]
+- 10:39 Governance tests preserve AF-250 closure while permitting an explicitly scoped successor package. [ed52992]
+- 11:08 Independent AF-270 review found one critical working-directory code-execution boundary, a private-evidence validation bypass, and inaccurate request-cost terminology; closure was withheld.
+- 11:31 Trusted module-ancestor discovery prevents installed products from executing a current-directory verifier, both basic Pi cases now carry six-turn limits, private `--validate-only` evidence is actually revalidated, and public output counts provider-backed operations rather than provider API requests. Focused 36-test, compile, Ruff, source acceptance 8/8+533/533+12/12+6/6+7/7, scope, and diff checks pass.

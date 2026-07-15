@@ -964,20 +964,9 @@ def verify_product_acceptance(
     rows = validate_product_matrix(canonical_root, matrix)
     private_acceptance = None
     if acceptance_root is not None:
-        manifest = json.loads(
-            (canonical_root / ACCEPTANCE_PATH).read_text(encoding="utf-8")
+        private_acceptance = validate_private_acceptance(
+            canonical_root, acceptance_root
         )
-        unchecked_cases = validate_acceptance_document(manifest)
-        credential_values = _required_acceptance_credential_values(unchecked_cases)
-        cases = validate_acceptance_document(
-            manifest, credential_values=credential_values
-        )
-        verified = validate_acceptance_artifacts(
-            acceptance_root,
-            cases,
-            credential_values=credential_values,
-        )
-        private_acceptance = (verified, len(REQUIRED_PROVIDER_CASES))
     result = run_local_evidence(canonical_root, rows)
     row_statuses = tuple(
         (
@@ -1000,6 +989,28 @@ def verify_product_acceptance(
         private_acceptance=private_acceptance,
         row_statuses=row_statuses,
     )
+
+
+def validate_private_acceptance(
+    root: Path, acceptance_root: Path
+) -> tuple[int, int]:
+    """Validate retained provider evidence without running local product rows."""
+
+    canonical_root = Path(root).resolve()
+    manifest = json.loads(
+        (canonical_root / ACCEPTANCE_PATH).read_text(encoding="utf-8")
+    )
+    unchecked_cases = validate_acceptance_document(manifest)
+    credential_values = _required_acceptance_credential_values(unchecked_cases)
+    cases = validate_acceptance_document(
+        manifest, credential_values=credential_values
+    )
+    verified = validate_acceptance_artifacts(
+        acceptance_root,
+        cases,
+        credential_values=credential_values,
+    )
+    return verified, len(REQUIRED_PROVIDER_CASES)
 
 
 def _fraction(value: str) -> tuple[int, int]:
@@ -1250,6 +1261,10 @@ def main() -> int:
     root = Path(__file__).resolve().parents[1]
     rows = validate_product_matrix(root, load_product_matrix(root))
     if args.validate_only:
+        if args.acceptance_root is not None:
+            actual, expected = validate_private_acceptance(root, args.acceptance_root)
+            print(f"private-acceptance {actual}/{expected}")
+            return 0 if actual == expected else 1
         for row in rows:
             print(f"{row['id']} VALID")
         return 0

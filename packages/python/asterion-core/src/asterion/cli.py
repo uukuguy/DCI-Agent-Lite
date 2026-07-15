@@ -338,7 +338,7 @@ def _description_payload(description: CapabilityProductDescription) -> dict[str,
                 "level": profile.level,
                 "summary": profile.summary,
                 "cost_class": profile.cost_class,
-                "external_request_count": profile.external_request_count,
+                "provider_backed_operation_count": profile.provider_backed_operation_count,
                 "full_dataset": profile.full_dataset,
             }
             for profile in description.profiles
@@ -361,7 +361,7 @@ def _verification_payload(result: VerificationResult) -> dict[str, object]:
             }
             for check in result.checks
         ],
-        "external_request_count": result.external_request_count,
+        "provider_backed_operation_count": result.provider_backed_operation_count,
         "full_dataset_ran": result.full_dataset_ran,
     }
 
@@ -383,7 +383,7 @@ def _render_description(
     for profile in description.profiles:
         stdout.write(f"  {profile.level}: {profile.summary}\n")
         stdout.write(
-            f"    external requests: {profile.external_request_count}; "
+            f"    provider-backed operations: {profile.provider_backed_operation_count}; "
             f"full dataset: {'yes' if profile.full_dataset else 'no'}\n"
         )
 
@@ -401,7 +401,9 @@ def _render_verification(result: VerificationResult, stdout: TextIO) -> None:
         if check.artifact_refs:
             stdout.write("  artifacts: " + ", ".join(check.artifact_refs) + "\n")
     stdout.write(f"Overall: {result.status}\n")
-    stdout.write(f"External requests: {result.external_request_count}\n")
+    stdout.write(
+        f"Provider-backed operations: {result.provider_backed_operation_count}\n"
+    )
     stdout.write(f"Full dataset ran: {'yes' if result.full_dataset_ran else 'no'}\n")
 
 

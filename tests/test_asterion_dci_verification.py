@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+import asterion.dci.verification as verification_module
 
 from asterion.applications.product import VerificationRequest
 from asterion.dci.run import DciRunResult
@@ -110,7 +111,7 @@ class DciDescriptionAndPreflightTests(unittest.TestCase):
                 result = verifier.preflight(env_file=env_file, corpus_root=root / "corpus")
 
         self.assertEqual(result.status, "PASS")
-        self.assertEqual(result.external_request_count, 0)
+        self.assertEqual(result.provider_backed_operation_count, 0)
         self.assertFalse(result.full_dataset_ran)
         self.assertEqual(backend.calls, [])
 
@@ -152,7 +153,7 @@ class DciBasicVerificationTests(unittest.TestCase):
                 result = verifier(request)
 
         self.assertEqual(result.status, "PASS")
-        self.assertEqual(result.external_request_count, 3)
+        self.assertEqual(result.provider_backed_operation_count, 3)
         self.assertFalse(result.full_dataset_ran)
         self.assertEqual([call[0] for call in backend.calls], ["run", "run", "judge"])
         first_request = backend.calls[0][1]
@@ -166,6 +167,7 @@ class DciBasicVerificationTests(unittest.TestCase):
             ("wiki_corpus", "bc_plus_docs"),
         )
         self.assertEqual((first_request.provider, first_request.model), ("openai", "fixture-model"))
+        self.assertEqual(first_request.max_turns, 6)
         self.assertEqual((second_request.max_turns, second_request.thinking_level), (6, "high"))
         self.assertNotEqual(backend.calls[0][2], backend.calls[1][2])
         self.assertEqual(backend.calls[2][2], "Adaku")
@@ -192,7 +194,7 @@ class DciBasicVerificationTests(unittest.TestCase):
                 )
 
         self.assertEqual(result.status, "FAIL")
-        self.assertEqual(result.external_request_count, 1)
+        self.assertEqual(result.provider_backed_operation_count, 1)
         self.assertEqual([call[0] for call in backend.calls], ["run"])
         self.assertNotIn("SECRET-PROVIDER-BODY", repr(result))
         public = repr(result)
@@ -210,7 +212,7 @@ class DciBasicVerificationTests(unittest.TestCase):
                 result = verifier.preflight(env_file=env_file, corpus_root=root / "corpus")
 
         self.assertEqual(result.status, "FAIL")
-        self.assertEqual(result.external_request_count, 0)
+        self.assertEqual(result.provider_backed_operation_count, 0)
         failed = {check.check_id for check in result.checks if check.status == "FAIL"}
         self.assertIn("environment", failed)
         self.assertIn("node", failed)
@@ -220,6 +222,33 @@ class DciBasicVerificationTests(unittest.TestCase):
 
 
 class DciAcceptanceVerificationTests(unittest.TestCase):
+    def test_installed_product_never_loads_acceptance_from_current_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir).resolve()
+            package_file = root / "site-packages/asterion/dci/verification.py"
+            package_file.parent.mkdir(parents=True)
+            package_file.write_text("# installed fixture\n")
+            malicious = root / "working/tools/verify_asterion_dci_product.py"
+            malicious.parent.mkdir(parents=True)
+            marker = root / "executed"
+            malicious.write_text(f"from pathlib import Path\nPath({str(marker)!r}).touch()\n")
+            with (
+                patch.object(verification_module, "__file__", str(package_file)),
+                patch("pathlib.Path.cwd", return_value=malicious.parents[1]),
+            ):
+                product = create_dci_product(backend=FixtureBackend())
+                result = product.verifier(
+                    VerificationRequest(
+                        level="acceptance",
+                        env_file=None,
+                        corpus_root=None,
+                        output_root=None,
+                        acceptance_root=None,
+                    )
+                )
+            self.assertEqual(result.status, "NOT RUN")
+            self.assertFalse(marker.exists())
+
     def test_source_acceptance_loader_does_not_depend_on_console_script_sys_path(self) -> None:
         root = Path(__file__).resolve().parents[1]
         previous = {
@@ -264,6 +293,7 @@ class DciAcceptanceVerificationTests(unittest.TestCase):
             repo_root=Path.cwd(),
             backend=backend,
             acceptance_runner=self._runner(calls),
+            acceptance_source_root=Path.cwd(),
         )
         result = verifier(
             VerificationRequest(
@@ -276,7 +306,7 @@ class DciAcceptanceVerificationTests(unittest.TestCase):
         )
 
         self.assertEqual(result.status, "PASS")
-        self.assertEqual(result.external_request_count, 0)
+        self.assertEqual(result.provider_backed_operation_count, 0)
         self.assertFalse(result.full_dataset_ran)
         self.assertEqual(backend.calls, [])
         self.assertEqual(len(calls), 1)
@@ -294,6 +324,7 @@ class DciAcceptanceVerificationTests(unittest.TestCase):
                 repo_root=root,
                 backend=backend,
                 acceptance_runner=self._runner(calls),
+                acceptance_source_root=root,
             )
             with patch.dict(os.environ, {}, clear=True):
                 result = verifier(
@@ -307,7 +338,7 @@ class DciAcceptanceVerificationTests(unittest.TestCase):
                 )
 
         self.assertEqual(result.status, "PASS")
-        self.assertEqual(result.external_request_count, 3)
+        self.assertEqual(result.provider_backed_operation_count, 3)
         self.assertFalse(result.full_dataset_ran)
         self.assertEqual([call[0] for call in backend.calls], ["run", "run", "judge"])
         self.assertEqual(calls[0][0], "acceptance")

@@ -853,6 +853,22 @@ class AsterionDciProductParityTests(unittest.TestCase):
         )
         self.assertNotIn(env["AF250_PRIVATE_SENTINEL"], result.stdout + result.stderr)
 
+    def test_validate_only_cli_does_not_ignore_an_acceptance_root(self) -> None:
+        result = subprocess.run(
+            [
+                "python3",
+                "tools/verify_asterion_dci_product.py",
+                "--validate-only",
+                "--acceptance-root",
+                "/tmp/af270-definitely-missing-private-evidence",
+            ],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotIn(" VALID", result.stdout)
+
     # AF-250-H-001: source/Asterion runnable-surface completeness.
     def test_af250_h001_exact_product_row_surface(self) -> None:
         self.assertEqual({row["id"] for row in self._validated_rows()}, REQUIRED_PRODUCT_ROWS)

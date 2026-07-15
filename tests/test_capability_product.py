@@ -46,7 +46,7 @@ def description() -> CapabilityProductDescription:
                 level="preflight",
                 summary="Check local prerequisites",
                 cost_class="provider-free",
-                external_request_count=0,
+                provider_backed_operation_count=0,
                 full_dataset=False,
             ),
         ),
@@ -93,7 +93,7 @@ class CapabilityProductTests(unittest.TestCase):
                         level="preflight",
                         summary="Unsafe",
                         cost_class="unknown",
-                        external_request_count=0,
+                        provider_backed_operation_count=0,
                         full_dataset=False,
                     ),
                 ),
@@ -119,7 +119,7 @@ class CapabilityProductTests(unittest.TestCase):
                     counts=(("present", 3),),
                 ),
             ),
-            external_request_count=0,
+            provider_backed_operation_count=0,
             full_dataset_ran=False,
         )
 
@@ -137,7 +137,7 @@ class CapabilityProductTests(unittest.TestCase):
                     counts=(),
                 ),
             ),
-            external_request_count=0,
+            provider_backed_operation_count=0,
             full_dataset_ran=False,
         )
         with self.assertRaises(CapabilityProductError):

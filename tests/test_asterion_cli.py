@@ -207,14 +207,14 @@ class AsterionCliTests(unittest.TestCase):
                     level="basic",
                     summary="Run a bounded check",
                     cost_class="bounded-provider-backed",
-                    external_request_count=1,
+                    provider_backed_operation_count=1,
                     full_dataset=False,
                 ),
                 VerificationProfile(
                     level="preflight",
                     summary="Check prerequisites",
                     cost_class="provider-free",
-                    external_request_count=0,
+                    provider_backed_operation_count=0,
                     full_dataset=False,
                 ),
             ),
@@ -234,7 +234,7 @@ class AsterionCliTests(unittest.TestCase):
                         counts=(("present", 1),),
                     ),
                 ),
-                external_request_count=0,
+                provider_backed_operation_count=0,
                 full_dataset_ran=False,
             )
 
@@ -337,7 +337,7 @@ class AsterionCliTests(unittest.TestCase):
         self.assertTrue(request.env_file.is_absolute())
         self.assertTrue(request.corpus_root.is_absolute())
         self.assertIn("Overall: PASS", stdout.getvalue())
-        self.assertIn("External requests: 0", stdout.getvalue())
+        self.assertIn("Provider-backed operations: 0", stdout.getvalue())
         self.assertIn("Full dataset ran: no", stdout.getvalue())
 
     def test_list_reports_metadata_without_loading_provider(self) -> None:

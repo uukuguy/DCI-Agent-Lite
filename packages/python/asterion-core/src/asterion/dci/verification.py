@@ -54,7 +54,7 @@ BASIC_CASES = (
         ),
         corpus_subdir="wiki_corpus",
         expected_answer=None,
-        max_turns=None,
+        max_turns=6,
         thinking_level="high",
     ),
     BasicVerificationCase(
@@ -311,6 +311,7 @@ class DciProductVerifier:
     repo_root: Path
     backend: DciVerificationBackend
     acceptance_runner: Callable[[Path, Path | None], object] = _run_product_acceptance
+    acceptance_source_root: Path | None = None
 
     def __call__(self, request: VerificationRequest) -> VerificationResult:
         if request.level == "preflight":
@@ -334,7 +335,7 @@ class DciProductVerifier:
                     status="NOT RUN",
                 ),
             ),
-            external_request_count=0,
+            provider_backed_operation_count=0,
             full_dataset_ran=False,
         )
 
@@ -342,7 +343,11 @@ class DciProductVerifier:
         """Run source-checkout product acceptance without provider requests."""
 
         try:
-            summary = self.acceptance_runner(self.repo_root, acceptance_root)
+            if self.acceptance_source_root is None:
+                raise ImportError("product acceptance verifier is unavailable")
+            summary = self.acceptance_runner(
+                self.acceptance_source_root, acceptance_root
+            )
             values = (
                 ("batch-extras", summary.batch_extras),
                 ("bounded-acceptance", summary.bounded_acceptance),
@@ -386,7 +391,7 @@ class DciProductVerifier:
                         status="NOT RUN",
                     ),
                 ),
-                external_request_count=0,
+                provider_backed_operation_count=0,
                 full_dataset_ran=False,
             )
         return VerificationResult(
@@ -394,7 +399,7 @@ class DciProductVerifier:
             level="acceptance",
             status="PASS" if all(check.status == "PASS" for check in checks) else "FAIL",
             checks=checks,
-            external_request_count=0,
+            provider_backed_operation_count=0,
             full_dataset_ran=False,
         )
 
@@ -412,18 +417,18 @@ class DciProductVerifier:
             )
         ]
         if preflight.status != "PASS":
-            return _complete_result(aggregate, external_requests=0)
+            return _complete_result(aggregate, provider_backed_operations=0)
         basic = self.basic(request)
         aggregate.extend(basic.checks)
         if basic.status != "PASS":
             return _complete_result(
-                aggregate, external_requests=basic.external_request_count
+                aggregate, provider_backed_operations=basic.provider_backed_operation_count
             )
         acceptance = self.acceptance(request.acceptance_root)
         aggregate.extend(acceptance.checks)
         return _complete_result(
             aggregate,
-            external_requests=basic.external_request_count,
+            provider_backed_operations=basic.provider_backed_operation_count,
             forced_status=acceptance.status,
         )
 
@@ -445,7 +450,7 @@ class DciProductVerifier:
                         status="FAIL",
                     ),
                 ),
-                external_request_count=0,
+                provider_backed_operation_count=0,
                 full_dataset_ran=False,
             )
         paths = resolve_dci_paths(self.repo_root)
@@ -504,7 +509,7 @@ class DciProductVerifier:
             level="basic",
             status="PASS" if len(checks) == len(BASIC_CASES) and all(check.status == "PASS" for check in checks) else "FAIL",
             checks=tuple(checks),
-            external_request_count=external_requests,
+            provider_backed_operation_count=external_requests,
             full_dataset_ran=False,
         )
 
@@ -566,7 +571,7 @@ class DciProductVerifier:
             level="preflight",
             status="PASS" if all(check.status == "PASS" for check in checks) else "FAIL",
             checks=checks,
-            external_request_count=0,
+            provider_backed_operation_count=0,
             full_dataset_ran=False,
         )
 
@@ -579,14 +584,42 @@ def create_dci_product(
     """Build the installed DCI product contract without performing verification."""
 
     root = Path.cwd().resolve() if repo_root is None else Path(repo_root).resolve()
+    acceptance_source_root = (
+        Path(repo_root).resolve()
+        if repo_root is not None
+        else _trusted_source_checkout_root()
+    )
     verifier = DciProductVerifier(
         repo_root=root,
         backend=LocalDciVerificationBackend() if backend is None else backend,
+        acceptance_source_root=acceptance_source_root,
     )
     return InstalledCapabilityProduct(
         description=DCI_PRODUCT_DESCRIPTION,
         verifier=verifier,
     )
+
+
+def _trusted_source_checkout_root() -> Path | None:
+    """Return only the checkout that physically contains this verifier module."""
+
+    module = Path(__file__).resolve()
+    relative_module = Path(
+        "packages/python/asterion-core/src/asterion/dci/verification.py"
+    )
+    for candidate in module.parents:
+        if (candidate / relative_module).resolve() != module:
+            continue
+        verifier = candidate / "tools/verify_asterion_dci_product.py"
+        acceptance = candidate / "assets/dci/product-acceptance.json"
+        if (
+            verifier.is_file()
+            and not verifier.is_symlink()
+            and acceptance.is_file()
+            and not acceptance.is_symlink()
+        ):
+            return candidate
+    return None
 
 
 def _provider_key_name(provider: str | None) -> str | None:
@@ -643,7 +676,7 @@ def _basic_request(
 def _complete_result(
     checks: list[VerificationCheckResult],
     *,
-    external_requests: int,
+    provider_backed_operations: int,
     forced_status: str | None = None,
 ) -> VerificationResult:
     ordered = tuple(sorted(checks, key=lambda check: check.check_id))
@@ -658,6 +691,6 @@ def _complete_result(
         level="complete",
         status=status,
         checks=ordered,
-        external_request_count=external_requests,
+        provider_backed_operation_count=provider_backed_operations,
         full_dataset_ran=False,
     )

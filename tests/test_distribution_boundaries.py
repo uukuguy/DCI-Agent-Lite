@@ -59,7 +59,7 @@ class SourceDistributionBoundaryTests(unittest.TestCase):
             "ANTHROPIC_API_KEY=<YOUR_PROVIDER_API_KEY>",
             "DCI_EVAL_JUDGE_API_KEY_ENV=OPENAI_API_KEY",
             "OPENAI_API_KEY=<YOUR_JUDGE_API_KEY>",
-            "External requests: 3",
+            "Provider-backed operations: 3",
             "Full dataset ran: no",
         ):
             self.assertIn(required, text)

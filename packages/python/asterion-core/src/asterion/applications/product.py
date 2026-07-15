@@ -43,7 +43,7 @@ class VerificationProfile:
     level: str
     summary: str
     cost_class: str
-    external_request_count: int
+    provider_backed_operation_count: int
     full_dataset: bool
 
 
@@ -81,7 +81,7 @@ class VerificationResult:
     level: str
     status: str
     checks: tuple[VerificationCheckResult, ...]
-    external_request_count: int
+    provider_backed_operation_count: int
     full_dataset_ran: bool
 
 
@@ -146,8 +146,8 @@ def validate_capability_product(
             or not _identifier(profile.level)
             or not _safe_text(profile.summary)
             or profile.cost_class not in _COST_CLASSES
-            or not isinstance(profile.external_request_count, int)
-            or profile.external_request_count < 0
+            or not isinstance(profile.provider_backed_operation_count, int)
+            or profile.provider_backed_operation_count < 0
             or not isinstance(profile.full_dataset, bool)
         ):
             raise CapabilityProductError("verification profile is invalid")
@@ -166,8 +166,8 @@ def validate_verification_result(
         or value.level not in levels
         or value.status not in _STATUSES
         or not isinstance(value.checks, tuple)
-        or not isinstance(value.external_request_count, int)
-        or value.external_request_count < 0
+        or not isinstance(value.provider_backed_operation_count, int)
+        or value.provider_backed_operation_count < 0
         or not isinstance(value.full_dataset_ran, bool)
     ):
         raise CapabilityProductError("verification result is invalid")

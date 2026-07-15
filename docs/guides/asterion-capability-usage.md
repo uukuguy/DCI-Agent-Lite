@@ -19,7 +19,7 @@ uv run asterion verify \
   --env-file .env \
   --corpus-root "$PWD/corpus"
 
-# 完整验证；会进行两次 Pi 生成和一次 Judge 请求
+# 完整验证；会进行两次有界 Pi 运行和一次 Judge 评测操作
 uv run asterion verify \
   --provider dci-agent-lite \
   --level complete \
@@ -104,10 +104,10 @@ uv run asterion verify \
 
 这条命令替代手动执行两个 Asterion 示例脚本，固定运行：
 
-1. `wiki_corpus`：回答伦敦大火起源街道的问题；一次 Pi 生成。
+1. `wiki_corpus`：回答伦敦大火起源街道的问题，`max_turns=6`、`thinking=high`；一次 Pi 运行。
 2. `bc_plus_docs`：回答 Bonang Matheba 访谈问题，`max_turns=6`、`thinking=high`；一次 Pi 生成，再由 Judge 对照 `Adaku` 评测。
 
-总上限是两次 Pi 生成加一次 Judge 请求。它不运行批量数据集。任何一步失败都会停止后续请求。
+命令固定调度两次 Pi 运行操作和一次 Judge 评测操作，每个 Pi 案例都有六轮限制。Pi 在一轮中可能搜索、读取文件并继续下一轮，所以终端显示的 `3` 是“provider-backed operations”，不是底层 provider API 请求数。它不运行批量数据集，任何一步失败都会停止后续操作。
 
 ## 不调用模型验证完整迁移：--level acceptance
 
@@ -130,7 +130,7 @@ uv run asterion verify \
   --output-root "$PWD/outputs/asterion-verification"
 ```
 
-执行顺序固定为 `preflight → basic → acceptance`。前一步失败就停止。全部通过时，外部请求严格是 3 次，不会启动完整数据集。
+执行顺序固定为 `preflight → basic → acceptance`。前一步失败就停止。全部通过时，provider-backed operations 固定为 3 次（两次有界 Pi 运行、一次 Judge 评测），不会启动完整数据集。
 
 ## 原始 DCI 功能与 Asterion 命令
 
@@ -154,7 +154,7 @@ uv run asterion verify \
 
 ```text
 Overall: PASS
-External requests: 0
+Provider-backed operations: 0
 Full dataset ran: no
 ```
 
@@ -162,7 +162,7 @@ Full dataset ran: no
 
 ```text
 Overall: PASS
-External requests: 3
+Provider-backed operations: 3
 Full dataset ran: no
 ```
 
@@ -170,12 +170,14 @@ Full dataset ran: no
 
 ## 费用和请求次数
 
-| 级别 | Pi 生成 | Judge | 完整数据集 | 适合什么时候用 |
-|---|---:|---:|---|---|
-| `preflight` | 0 | 0 | 否 | 首次配置或排错 |
-| `basic` | 2 | 1 | 否 | 验证两个基础功能 |
-| `acceptance` | 0 | 0 | 否 | 验证迁移代码和安装边界 |
-| `complete` | 2 | 1 | 否 | 最终整体验收 |
+| 级别 | Pi 运行操作 | 每个 Pi 案例轮数上限 | Judge 操作 | 完整数据集 |
+|---|---:|---:|---:|---|
+| `preflight` | 0 | 0 | 0 | 否 |
+| `basic` | 2 | 6 | 1 | 否 |
+| `acceptance` | 0 | 0 | 0 | 否 |
+| `complete` | 2 | 6 | 1 | 否 |
+
+实际 provider API 请求数取决于 Pi 在六轮限制内的工具调用和推理过程，不能把一次 Pi 运行误算成一次 API 请求。若只接受零费用验证，使用 `preflight` 或 `acceptance`。
 
 真正的 benchmark 全量运行必须由用户单独执行；这四个验证级别都不会偷偷启动它。
 
@@ -192,6 +194,8 @@ Full dataset ran: no
 `configuration` 失败：确认 `DCI_PROVIDER`、`DCI_MODEL` 以及对应 provider 密钥已设置。密钥名由 provider 决定。
 
 `judge` 失败：确认 `DCI_EVAL_JUDGE_MODEL`、`DCI_EVAL_JUDGE_API_KEY_ENV`，以及后者指向的密钥变量都存在。
+
+Judge 配置存在但请求仍失败：运行 `make check-judge-config`。如果显示 `judge_api_key_shadowed_by_environment: true`，说明当前 shell 中的密钥覆盖了 `.env`；确认该值正确，或用 `env -u 密钥变量名` 运行验证，让 `.env` 中的值生效。
 
 `pi` 失败：确认 `DCI_PI_DIR` 是 Pi checkout，且其中存在 `packages/coding-agent/package.json` 和 `.pi/agent/`。
 

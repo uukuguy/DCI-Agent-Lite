@@ -259,7 +259,9 @@ uv run python tools/verify_asterion_dci_product.py \
   --validate-only
 ```
 
-Pass: private acceptance is 7/7. Digests, modes, completed state, settled
+`--validate-only` 与 `--acceptance-root` 同时使用时只复核私有证据，不运行八组本地产品测试；目录不存在、证据不匹配或凭据扫描条件不满足都会以非零状态退出。
+
+Pass: output is `private-acceptance 7/7`. Digests, modes, completed state, settled
 events, finals, Judge fingerprints/verdicts/counts, reuse hashes and nanosecond
 mtimes validate, and credential matches remain zero.
 
