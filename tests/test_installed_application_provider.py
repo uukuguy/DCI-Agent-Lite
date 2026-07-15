@@ -12,6 +12,7 @@ from asterion.applications.provider import (
     InstalledApplicationProvider,
     validate_installed_provider,
 )
+from asterion.applications.product import InstalledCapabilityProduct
 from asterion.packages.catalog import PackageRef
 from asterion.packages.execution import PackageExecutionResult, PackageInvocation
 
@@ -91,6 +92,24 @@ def provider(root: Path) -> InstalledApplicationProvider:
 
 
 class InstalledApplicationProviderTests(unittest.TestCase):
+    def test_optional_capability_product_survives_provider_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            valid = provider(Path(temp_dir))
+            product = InstalledCapabilityProduct(
+                description=None,  # type: ignore[arg-type]
+                verifier=lambda request: None,
+            )
+            invalid = InstalledApplicationProvider(
+                protocol=valid.protocol,
+                provider_id=valid.provider_id,
+                resource_root=valid.resource_root,
+                applications=valid.applications,
+                product=product,
+            )
+
+            with self.assertRaises(ApplicationProviderError):
+                validate_installed_provider(invalid, selected_id="example-app")
+
     def test_valid_provider_is_deeply_immutable_and_exact(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             value = validate_installed_provider(

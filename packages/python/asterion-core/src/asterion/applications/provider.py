@@ -10,6 +10,10 @@ from pathlib import Path
 from asterion.assembly.protocol import validate_assembly_manifest
 from asterion.packages.catalog import PackageRef
 from asterion.packages.execution import PackageImplementation
+from asterion.applications.product import (
+    InstalledCapabilityProduct,
+    validate_capability_product,
+)
 
 
 APPLICATION_PROVIDER_PROTOCOL = "asterion.application-provider/v1"
@@ -39,6 +43,7 @@ class InstalledApplicationProvider:
     provider_id: str
     resource_root: Path
     applications: tuple[InstalledApplication, ...]
+    product: InstalledCapabilityProduct | None = None
 
 
 def validate_installed_provider(
@@ -70,11 +75,18 @@ def validate_installed_provider(
             raise ApplicationProviderError("installed application identity is invalid")
         identities.add(identity)
         applications.append(_validate_application(application, root=root))
+    product = None
+    if value.product is not None:
+        try:
+            product = validate_capability_product(value.product)
+        except ValueError:
+            raise ApplicationProviderError("installed capability product is invalid") from None
     return InstalledApplicationProvider(
         protocol=APPLICATION_PROVIDER_PROTOCOL,
         provider_id=selected_id,
         resource_root=root,
         applications=tuple(applications),
+        product=product,
     )
 
 
