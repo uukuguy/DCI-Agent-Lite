@@ -2,7 +2,7 @@
 
 > Canonical work-package ledger. An `active` lifecycle requires exactly one `in_progress` package; a `complete` lifecycle permits none and forbids autonomous dispatch.
 
-> Project lifecycle: complete
+> Project lifecycle: active
 
 ## AF-000 — Framework control plane
 
@@ -292,6 +292,16 @@
 - Design: `docs/superpowers/specs/2026-07-15-asterion-capability-discovery-verification-design.md`
 - Plan: `docs/superpowers/plans/2026-07-15-asterion-capability-discovery-verification.md`
 - Closure evidence: generic provider-selected `asterion describe` and `asterion verify` expose DCI functions, shared configuration, and four verification levels without loading adjacent providers. Trusted source discovery prevents installed-wheel/current-directory verifier execution; both basic Pi cases have six-turn limits; private retained evidence is actually revalidated with body-free failures; cost output distinguishes three provider-backed operations from underlying API requests. One real `complete` run passed both Pi cases, Judge, 8/8 product rows, 533/533 delegated selectors, 12/12 launcher pairs, 6/6 extras, and 7/7 bounded acceptance with no full dataset. Final closure passes 1297 Python, 11 TypeScript, and 19 Rust tests plus compile, Ruff, shell, scope, diff, fmt, and Clippy gates; final independent review reports no Critical or Important findings. The beginner guide is `docs/guides/asterion-capability-usage.md`.
+
+## AF-280 — Makefile capability verification entry points
+
+- Status: in_progress
+- Parent objective: Asterion capability-package product usability
+- Scope: expose the accepted DCI capability discovery and four verification levels through explicit Make targets with documented, overridable repository defaults.
+- Dependencies: AF-270
+- Acceptance: five explicit Make targets map exactly to `asterion describe` and the preflight/basic/acceptance/complete verification levels; provider-backed targets remain visibly explicit; defaults use the shared root `.env`, repository corpus, and Asterion verification output; README and beginner guide document the targets; dry-run and focused tests prove exact argv without running models.
+- Design: `docs/superpowers/specs/2026-07-16-asterion-make-entry-points-design.md`
+- Plan: pending written-spec approval
 
 ## AF-095 — Asterion framework identity and extraction
 

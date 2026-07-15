@@ -4,11 +4,11 @@
 
 - Project: Asterion framework under development in the DCI-Agent-Lite repository; DCI remains the first capability and reference application.
 - Current branch: `main`
-- Theme-level focus: completed Asterion framework and full DCI capability migration, including operator-facing discovery and verification.
+- Theme-level focus: add concise Makefile entry points for the accepted Asterion capability discovery and verification commands.
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: none; project lifecycle is complete.
+- Active work package: AF-280 — Makefile capability verification entry points.
 
 ## Current Architecture
 
@@ -55,7 +55,7 @@
 
 ## Open Problems (theme-level)
 
-- None in the accepted migration scope. Any future framework or capability work requires an explicitly approved successor package and lifecycle reopening.
+- AF-280 is the only active follow-up: Makefile convenience entry points and their documentation. It does not change DCI behavior or rerun a full dataset.
 
 ## Key Files
 

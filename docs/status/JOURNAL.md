@@ -712,3 +712,4 @@
 - 21:45 Full closure passes 1297 Python, 11 TypeScript, 19 Rust, all static/governance gates, and a 70-test post-review regression.
 - 21:45 Final independent review approves AF-270 with no remaining Critical or Important findings after body-free private-validation failure handling.
 - 21:46 Unified verification closure makes the complete migration and recovery boundary executable and durable. [00e60e4]
+- 2026-07-16 AF-280 reopens only Makefile usability scope with five explicit, cost-visible capability verification targets.
