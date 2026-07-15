@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -8,7 +9,12 @@ from unittest.mock import patch
 
 from asterion.applications.product import VerificationRequest
 from asterion.dci.run import DciRunResult
-from asterion.dci.verification import BASIC_CASES, DciProductVerifier, create_dci_product
+from asterion.dci.verification import (
+    BASIC_CASES,
+    DciProductVerifier,
+    _load_product_acceptance_runner,
+    create_dci_product,
+)
 from tools.verify_asterion_dci_product import ProductAcceptanceSummary
 
 
@@ -214,6 +220,28 @@ class DciBasicVerificationTests(unittest.TestCase):
 
 
 class DciAcceptanceVerificationTests(unittest.TestCase):
+    def test_source_acceptance_loader_does_not_depend_on_console_script_sys_path(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        previous = {
+            name: sys.modules.pop(name)
+            for name in tuple(sys.modules)
+            if name == "tools" or name.startswith("tools.")
+        }
+        isolated_path = [
+            value
+            for value in sys.path
+            if Path(value or ".").resolve() != root
+        ]
+        try:
+            with patch.object(sys, "path", isolated_path):
+                runner = _load_product_acceptance_runner(root)
+            self.assertTrue(callable(runner))
+        finally:
+            for name in tuple(sys.modules):
+                if name == "tools" or name.startswith("tools."):
+                    sys.modules.pop(name)
+            sys.modules.update(previous)
+
     def _runner(self, calls):
         def run(root, acceptance_root=None):
             calls.append(("acceptance", root, acceptance_root))

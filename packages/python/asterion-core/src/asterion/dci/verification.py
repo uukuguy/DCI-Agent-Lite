@@ -6,6 +6,8 @@ import os
 import re
 import secrets
 import subprocess
+import importlib.util
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Protocol
@@ -277,9 +279,31 @@ class LocalDciVerificationBackend:
 
 
 def _run_product_acceptance(root: Path, acceptance_root: Path | None = None) -> object:
-    from tools.verify_asterion_dci_product import verify_product_acceptance
+    runner = _load_product_acceptance_runner(root)
+    return runner(root, acceptance_root=acceptance_root)
 
-    return verify_product_acceptance(root, acceptance_root=acceptance_root)
+
+def _load_product_acceptance_runner(root: Path) -> Callable[..., object]:
+    """Load the exact source-checkout verifier without relying on ``sys.path``."""
+
+    path = Path(root).resolve() / "tools/verify_asterion_dci_product.py"
+    if not path.is_file() or path.is_symlink():
+        raise ImportError("product acceptance verifier is unavailable")
+    module_name = "_asterion_dci_product_acceptance"
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError("product acceptance verifier is unavailable")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    try:
+        spec.loader.exec_module(module)
+        runner = getattr(module, "verify_product_acceptance")
+    except Exception:
+        sys.modules.pop(module_name, None)
+        raise ImportError("product acceptance verifier is unavailable") from None
+    if not callable(runner):
+        raise ImportError("product acceptance verifier is unavailable")
+    return runner
 
 
 @dataclass(frozen=True)
