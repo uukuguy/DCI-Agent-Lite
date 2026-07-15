@@ -714,3 +714,4 @@
 - 21:46 Unified verification closure makes the complete migration and recovery boundary executable and durable. [00e60e4]
 - 2026-07-16 AF-280 reopens only Makefile usability scope with five explicit, cost-visible capability verification targets.
 - 2026-07-16 Explicit Make targets make accepted capability verification discoverable without hiding provider cost. [448ce3c]
+- 2026-07-16 AF-280 implementation plan defines exact TDD, documentation, provider-free smoke, and closure gates.

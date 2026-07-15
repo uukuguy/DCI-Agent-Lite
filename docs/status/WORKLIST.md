@@ -301,7 +301,7 @@
 - Dependencies: AF-270
 - Acceptance: five explicit Make targets map exactly to `asterion describe` and the preflight/basic/acceptance/complete verification levels; provider-backed targets remain visibly explicit; defaults use the shared root `.env`, repository corpus, and Asterion verification output; README and beginner guide document the targets; dry-run and focused tests prove exact argv without running models.
 - Design: `docs/superpowers/specs/2026-07-16-asterion-make-entry-points-design.md`
-- Plan: pending written-spec approval
+- Plan: `docs/superpowers/plans/2026-07-16-asterion-make-entry-points.md`
 
 ## AF-095 — Asterion framework identity and extraction
 
