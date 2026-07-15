@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+import secrets
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -20,9 +21,54 @@ from asterion.applications.product import (
     VerificationResult,
 )
 from asterion.dci.config import (
+    DciPaths,
+    DciRuntimeOptions,
     load_asterion_dci_env,
     resolve_dci_paths,
     resolve_dci_runtime_options,
+)
+from asterion.dci.evaluation import evaluate_run_directory
+from asterion.dci.judge import JudgeConfig
+from asterion.dci.run import DciRunRequest, DciRunResult, run_pi_research
+
+
+@dataclass(frozen=True)
+class BasicVerificationCase:
+    case_id: str
+    question: str
+    corpus_subdir: str
+    expected_answer: str | None
+    max_turns: int | None
+    thinking_level: str
+
+
+BASIC_CASES = (
+    BasicVerificationCase(
+        case_id="basic-corpus-research",
+        question=(
+            "Answer the following question using only wiki_dump.jsonl in the current "
+            "directory. Do not use web search. Use rg instead of grep for fast searching. "
+            "Question: In which street did the Great Fire of London originate?"
+        ),
+        corpus_subdir="wiki_corpus",
+        expected_answer=None,
+        max_turns=None,
+        thinking_level="high",
+    ),
+    BasicVerificationCase(
+        case_id="runtime-context-and-judge",
+        question=(
+            "Read the files in the current directory. Do not use web search. Use rg instead "
+            "of grep when searching. Question: In the Bonang Matheba interview where the "
+            "third-to-last question asks about the origin of the name given to her by radio "
+            "listeners, what is the interviewer's first name? Answer with just the first "
+            "name and one supporting file path."
+        ),
+        corpus_subdir="bc_plus_docs",
+        expected_answer="Adaku",
+        max_turns=6,
+        thinking_level="high",
+    ),
 )
 
 
@@ -178,6 +224,18 @@ DCI_PRODUCT_DESCRIPTION = CapabilityProductDescription(
 class DciVerificationBackend(Protocol):
     def node_major_version(self) -> int | None: ...
 
+    def run_research_case(
+        self, paths: DciPaths, request: DciRunRequest, *, output_dir: Path
+    ) -> DciRunResult: ...
+
+    def evaluate_case(
+        self,
+        output_dir: Path,
+        *,
+        expected_answer: str,
+        judge_config: JudgeConfig,
+    ) -> bool: ...
+
 
 class LocalDciVerificationBackend:
     """Read-only local prerequisite adapter."""
@@ -198,6 +256,25 @@ class LocalDciVerificationBackend:
         match = re.fullmatch(r"v([0-9]+)(?:\.[0-9]+){2}\s*", completed.stdout)
         return None if match is None else int(match.group(1))
 
+    def run_research_case(
+        self, paths: DciPaths, request: DciRunRequest, *, output_dir: Path
+    ) -> DciRunResult:
+        return run_pi_research(paths, request, output_dir=output_dir)
+
+    def evaluate_case(
+        self,
+        output_dir: Path,
+        *,
+        expected_answer: str,
+        judge_config: JudgeConfig,
+    ) -> bool:
+        result = evaluate_run_directory(
+            output_dir,
+            gold_answer=expected_answer,
+            judge_config=judge_config,
+        )
+        return result.get("is_correct") is True
+
 
 @dataclass(frozen=True)
 class DciProductVerifier:
@@ -209,6 +286,8 @@ class DciProductVerifier:
             return self.preflight(
                 env_file=request.env_file, corpus_root=request.corpus_root
             )
+        if request.level == "basic":
+            return self.basic(request)
         return VerificationResult(
             product_id=DCI_PRODUCT_DESCRIPTION.product_id,
             level=request.level,
@@ -221,6 +300,87 @@ class DciProductVerifier:
                 ),
             ),
             external_request_count=0,
+            full_dataset_ran=False,
+        )
+
+    def basic(self, request: VerificationRequest) -> VerificationResult:
+        """Run exactly the two accepted DCI examples and one Judge evaluation."""
+
+        preflight = self.preflight(
+            env_file=request.env_file, corpus_root=request.corpus_root
+        )
+        if preflight.status != "PASS":
+            return VerificationResult(
+                product_id=DCI_PRODUCT_DESCRIPTION.product_id,
+                level="basic",
+                status="FAIL",
+                checks=(
+                    VerificationCheckResult(
+                        check_id="preflight",
+                        summary="Prerequisites must pass before bounded verification",
+                        status="FAIL",
+                    ),
+                ),
+                external_request_count=0,
+                full_dataset_ran=False,
+            )
+        paths = resolve_dci_paths(self.repo_root)
+        options = resolve_dci_runtime_options()
+        corpus_root = _corpus_root(self.repo_root, request.corpus_root)
+        output_root = (
+            paths.output_root
+            if request.output_root is None
+            else request.output_root
+        )
+        private_root = output_root / f"verify-{secrets.token_hex(8)}"
+        judge_config = JudgeConfig.from_env()
+        checks: list[VerificationCheckResult] = []
+        external_requests = 0
+        for case in BASIC_CASES:
+            run_request = _basic_request(case, options, paths, corpus_root)
+            destination = private_root / case.case_id
+            try:
+                external_requests += 1
+                run_result = self.backend.run_research_case(
+                    paths, run_request, output_dir=destination
+                )
+                passed = run_result.status == "completed"
+                judge_requests = 0
+                if passed and case.expected_answer is not None:
+                    external_requests += 1
+                    judge_requests = 1
+                    passed = self.backend.evaluate_case(
+                        run_result.output_dir,
+                        expected_answer=case.expected_answer,
+                        judge_config=judge_config,
+                    )
+            except Exception:
+                passed = False
+                judge_requests = 0
+            counts = [("native-runs", 1)]
+            if judge_requests:
+                counts.insert(0, ("judge-requests", judge_requests))
+            checks.append(
+                VerificationCheckResult(
+                    check_id=case.case_id,
+                    summary=(
+                        "Bounded example completed"
+                        if passed
+                        else "Bounded example failed"
+                    ),
+                    status="PASS" if passed else "FAIL",
+                    artifact_refs=(f"{case.case_id}/run",),
+                    counts=tuple(counts),
+                )
+            )
+            if not passed:
+                break
+        return VerificationResult(
+            product_id=DCI_PRODUCT_DESCRIPTION.product_id,
+            level="basic",
+            status="PASS" if len(checks) == len(BASIC_CASES) and all(check.status == "PASS" for check in checks) else "FAIL",
+            checks=tuple(checks),
+            external_request_count=external_requests,
             full_dataset_ran=False,
         )
 
@@ -323,4 +483,30 @@ def _check(check_id: str, summary: str, passed: bool) -> VerificationCheckResult
         check_id=check_id,
         summary=summary,
         status="PASS" if passed else "FAIL",
+    )
+
+
+def _basic_request(
+    case: BasicVerificationCase,
+    options: DciRuntimeOptions,
+    paths: DciPaths,
+    corpus_root: Path,
+) -> DciRunRequest:
+    return DciRunRequest(
+        run_id=case.case_id,
+        question=case.question,
+        cwd=(corpus_root / case.corpus_subdir).resolve(),
+        provider=options.provider,
+        model=options.model,
+        tools=options.tools,
+        max_turns=case.max_turns,
+        timeout_seconds=options.timeout_seconds,
+        runtime_context_level=options.runtime_context_level,
+        thinking_level=case.thinking_level,
+        node_max_old_space_size_mb=options.node_max_old_space_size_mb,
+        keep_session=False,
+        extra_args=options.extra_args,
+        pi_package_dir=paths.pi.package_dir,
+        pi_agent_dir=paths.pi.agent_dir,
+        stream_text=False,
     )

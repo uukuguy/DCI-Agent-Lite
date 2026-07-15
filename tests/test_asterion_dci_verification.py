@@ -6,16 +6,41 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from asterion.dci.verification import DciProductVerifier, create_dci_product
+from asterion.applications.product import VerificationRequest
+from asterion.dci.run import DciRunResult
+from asterion.dci.verification import BASIC_CASES, DciProductVerifier, create_dci_product
 
 
 class FixtureBackend:
-    def __init__(self, node_major: int | None = 20) -> None:
+    def __init__(
+        self,
+        node_major: int | None = 20,
+        *,
+        fail_case: str | None = None,
+        verdict: bool = True,
+    ) -> None:
         self.node_major = node_major
+        self.fail_case = fail_case
+        self.verdict = verdict
         self.calls: list[object] = []
 
     def node_major_version(self) -> int | None:
         return self.node_major
+
+    def run_research_case(self, paths, request, *, output_dir):
+        self.calls.append(("run", request, output_dir))
+        if request.run_id == self.fail_case:
+            raise RuntimeError("SECRET-PROVIDER-BODY")
+        return DciRunResult(
+            output_dir=output_dir,
+            final_text="SECRET-ANSWER-BODY",
+            events=(),
+            status="completed",
+        )
+
+    def evaluate_case(self, output_dir, *, expected_answer, judge_config):
+        self.calls.append(("judge", output_dir, expected_answer, judge_config))
+        return self.verdict
 
 
 def prepare_root(root: Path) -> Path:
@@ -81,6 +106,69 @@ class DciDescriptionAndPreflightTests(unittest.TestCase):
         self.assertEqual(result.external_request_count, 0)
         self.assertFalse(result.full_dataset_ran)
         self.assertEqual(backend.calls, [])
+
+
+class DciBasicVerificationTests(unittest.TestCase):
+    def test_basic_runs_exactly_two_cases_and_one_judge_in_order(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir).resolve()
+            env_file = prepare_root(root)
+            backend = FixtureBackend()
+            verifier = DciProductVerifier(repo_root=root, backend=backend)
+            request = VerificationRequest(
+                level="basic",
+                env_file=env_file,
+                corpus_root=root / "corpus",
+                output_root=root / "verification-output",
+                acceptance_root=None,
+            )
+            with patch.dict(os.environ, {}, clear=True):
+                result = verifier(request)
+
+        self.assertEqual(result.status, "PASS")
+        self.assertEqual(result.external_request_count, 3)
+        self.assertFalse(result.full_dataset_ran)
+        self.assertEqual([call[0] for call in backend.calls], ["run", "run", "judge"])
+        first_request = backend.calls[0][1]
+        second_request = backend.calls[1][1]
+        self.assertEqual(
+            (first_request.run_id, second_request.run_id),
+            ("basic-corpus-research", "runtime-context-and-judge"),
+        )
+        self.assertEqual(
+            (first_request.cwd.name, second_request.cwd.name),
+            ("wiki_corpus", "bc_plus_docs"),
+        )
+        self.assertEqual((first_request.provider, first_request.model), ("openai", "fixture-model"))
+        self.assertEqual((second_request.max_turns, second_request.thinking_level), (6, "high"))
+        self.assertNotEqual(backend.calls[0][2], backend.calls[1][2])
+        self.assertEqual(backend.calls[2][2], "Adaku")
+        public = repr(result)
+        self.assertNotIn("SECRET-ANSWER-BODY", public)
+        self.assertNotIn("Adaku", public)
+        self.assertNotIn(BASIC_CASES[0].question, public)
+
+    def test_basic_stops_after_first_failed_provider_request(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir).resolve()
+            env_file = prepare_root(root)
+            backend = FixtureBackend(fail_case="basic-corpus-research")
+            verifier = DciProductVerifier(repo_root=root, backend=backend)
+            with patch.dict(os.environ, {}, clear=True):
+                result = verifier(
+                    VerificationRequest(
+                        level="basic",
+                        env_file=env_file,
+                        corpus_root=root / "corpus",
+                        output_root=root / "verification-output",
+                        acceptance_root=None,
+                    )
+                )
+
+        self.assertEqual(result.status, "FAIL")
+        self.assertEqual(result.external_request_count, 1)
+        self.assertEqual([call[0] for call in backend.calls], ["run"])
+        self.assertNotIn("SECRET-PROVIDER-BODY", repr(result))
         public = repr(result)
         self.assertNotIn("SECRET-PROVIDER-VALUE", public)
         self.assertNotIn("SECRET-JUDGE-VALUE", public)
