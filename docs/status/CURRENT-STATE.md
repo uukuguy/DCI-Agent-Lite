@@ -3,12 +3,12 @@
 ## Project Snapshot
 
 - Project: Asterion framework under development in the DCI-Agent-Lite repository; DCI remains the first capability and reference application.
-- Current branch: `af-220-shared-dci-config`
-- Theme-level focus: Asterion DCI migration milestone completed and independently verifiable against the source DCI product.
+- Current branch: `main`
+- Theme-level focus: make installed capability functions, configuration, and verification discoverable through one generic Asterion command surface.
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: none.
+- Active work package: AF-270 — capability discovery and unified verification.
 
 ## Current Architecture
 
@@ -54,7 +54,7 @@
 
 ## Open Problems (theme-level)
 
-- No open Asterion DCI migration gap remains. Future runtime additions or full-dataset performance studies are separate work and require explicit lifecycle reopening.
+- Complete DCI behavior is accepted, but installed users still need a generic self-describing command and simple configuration/verification workflow instead of source inspection or audit-heavy documentation.
 
 ## Key Files
 
@@ -103,4 +103,4 @@
 1. Read this file, then `docs/architecture/agent-framework.md` and `docs/status/WORKLIST.md`.
 2. Read `RESUME-NEXT-SESSION.md`, recent JOURNAL entries, and the relevant collaboration-memory entry.
 3. Run `git status --short`, `git log --oneline -5`, and `python3 tools/project_scope_check.py`.
-4. Do not dispatch implementation while lifecycle is complete. New work must first add an approved package, set lifecycle to `active`, and update the recovery marker atomically.
+4. Work only on the named active package; when lifecycle is complete, explicitly reopen governance before implementation.

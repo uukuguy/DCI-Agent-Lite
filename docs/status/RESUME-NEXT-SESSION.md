@@ -1,15 +1,15 @@
-# Terminal Migration Checkpoint
+# AF-270 Design Checkpoint
 
-> Updated: 2026-07-15 07:42 +0800. Asterion DCI migration and product acceptance are complete.
+> Updated: 2026-07-15 08:42 +0800. The completed DCI migration remains accepted; AF-270 is a product-usability successor.
 
-Active work package: none
+Active work package: AF-270
 
 ## TL;DR
 
-- AF-250 and every worklist package are completed; repository lifecycle is `complete`.
+- AF-250 migration remains completed and verified; repository lifecycle is reopened only for AF-270.
 - Asterion DCI independently implements the original Pi-based DCI product surface without importing or launching `src/dci`.
 - Acceptance covers eight model-free rows, 533 delegated selectors, twelve launcher pairs, six batch extras, an isolated installed wheel/application, and seven bounded real source/Asterion/application/Pi-plus-Judge/reuse cases.
-- The authoritative runnable procedure is `docs/verification/asterion-dci-validation-guide.md`.
+- The approved AF-270 design adds generic `asterion describe/verify` discovery and four DCI verification levels.
 - No full dataset ran; full-dataset performance is separate operator-authorized work, not a migration gap.
 
 ## Committed state
@@ -19,9 +19,10 @@ Active work package: none
 - Terminal lifecycle design and plan: `6d42ebf`, `3345aa2`.
 - Explicit lifecycle governance: `3717c63`.
 - Full functional verification guide: `673ac03`.
+- Terminal hardening and main integration: `2994db0`.
 
-The final terminal-state commit is the newest commit after these entries. The
-branch is `af-220-shared-dci-config`; inspect `git log --oneline -8` rather than
+The current branch is `main`. The newest commit after these entries is the
+AF-270 design/governance checkpoint; inspect `git log --oneline -8` rather than
 relying on chat history.
 
 ## Verified evidence
@@ -31,13 +32,10 @@ relying on chat history.
 - Final terminal closure: 1275 Python, 11 TypeScript, and 19 Rust tests plus compile, Ruff, shell, scope, explicit terminal-dispatch rejection, diff, wheel/application, and both verifier modes.
 - Independent closeout review is approved with no Critical or Important findings.
 
-## Reopening rule
+## Next action
 
-There is no implementation next action. Before any new autonomous work, add an
-approved work package to `docs/status/WORKLIST.md`, change its status to
-`in_progress`, change lifecycle to `active`, update this marker and CURRENT,
-and run `python3 tools/project_scope_check.py`. Do not reuse AF-250 as a generic
-maintenance anchor.
+After written-spec approval, create the AF-270 implementation plan and execute
+it with TDD. Do not change accepted AF-250 evidence or run a full dataset.
 
 ## Ruled-out paths
 
@@ -50,6 +48,7 @@ maintenance anchor.
 
 ```bash
 python3 tools/project_scope_check.py
+sed -n '1,260p' docs/superpowers/specs/2026-07-15-asterion-capability-discovery-verification-design.md
 uv run python tools/verify_asterion_dci_product.py
 uv run python tools/verify_asterion_dci_product.py \
   --acceptance-root "$AF250_ACCEPTANCE_ROOT" \

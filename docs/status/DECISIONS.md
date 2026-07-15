@@ -383,3 +383,13 @@
 - Terminal boundary: `asterion-dci terminal` is a direct TTY-only Pi invocation, returns the child status, and intentionally creates no RPC run artifacts.
 - Rationale: the previous production run path and richer recorder were disconnected, so actual runs lacked promised transcript/context/provenance evidence and could not safely recover from concurrent or interrupted writers.
 - Revalidation trigger: change the locking/staleness or native-evidence privacy model only with a versioned artifact migration and adversarial recovery tests.
+
+## D-041 — Make capability products self-describing and uniformly verifiable
+
+- Status: ✅ accepted design decision
+- Decided: 2026-07-15
+- Decision: the generic installed Asterion CLI exposes provider-selected `describe` and `verify` commands. Providers may declare immutable capability descriptions, configuration requirements, and structured verification profiles; DCI supplies provider-free preflight/acceptance, two-case bounded basic, and aggregate complete profiles.
+- Rationale: capability implementation is not product usability when users must inspect source code or decode audit documentation to learn functions, environment variables, and verification commands.
+- Security boundary: exact provider selection loads no adjacent provider; verification never evaluates shell strings; secret values and provider bodies never enter descriptors/results; provider-backed levels are bounded and explicitly selected; full datasets are excluded from complete verification.
+- Compatibility boundary: verification metadata is optional for existing providers, original `src/dci` and its scripts remain unchanged, and package-specific CLIs continue to work.
+- Revalidation trigger: any remote verifier, arbitrary command descriptor, secret-management feature, implicit provider request, or full-dataset profile requires a separate reviewed decision.

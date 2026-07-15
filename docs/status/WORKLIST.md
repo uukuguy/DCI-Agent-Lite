@@ -2,7 +2,7 @@
 
 > Canonical work-package ledger. An `active` lifecycle requires exactly one `in_progress` package; a `complete` lifecycle permits none and forbids autonomous dispatch.
 
-> Project lifecycle: complete
+> Project lifecycle: active
 
 ## AF-000 — Framework control plane
 
@@ -281,6 +281,16 @@
 - Closure evidence: all eight local/model-free rows pass; all 533 delegated batch selectors, twelve launcher pairs, six batch extras, and AF-250-H-001 through H-005 pass. Seven bounded real source/Asterion/application/Pi-plus-Judge/reuse cases completed successfully; the credential-clean body-free manifest is digest-bound into the product matrix, and the private-artifact verifier independently recomputes its modes/hashes plus completion, Judge, and exact-reuse invariants. Final terminal closure passes 1275 Python, 11 TypeScript, and 19 Rust tests plus compile, Ruff, shell, scope, terminal-dispatch rejection, diff, installed-wheel/application, and both acceptance-verifier modes; independent review has no Critical or Important findings. No full dataset ran. The complete procedure is `docs/verification/asterion-dci-validation-guide.md`.
 - Design: `docs/superpowers/specs/2026-07-13-asterion-dci-complete-product-parity-design.md`
 - Plan: `docs/superpowers/plans/2026-07-15-af-250-product-acceptance-matrix.md`
+
+## AF-270 — Capability discovery and unified verification
+
+- Status: in_progress
+- Parent objective: Asterion capability-package product usability
+- Scope: add generic provider-selected `asterion describe` and structured `asterion verify` commands, then prove them with DCI preflight, basic, acceptance, and complete profiles.
+- Dependencies: AF-130, AF-220, AF-250
+- Acceptance: users discover DCI functions and required configuration without reading code; one generic command runs two bounded basic cases or the complete no-full-dataset verification; outputs are redacted, installed-wheel safe, and reusable by future providers.
+- Design: `docs/superpowers/specs/2026-07-15-asterion-capability-discovery-verification-design.md`
+- Plan: `docs/superpowers/plans/2026-07-15-asterion-capability-discovery-verification.md`
 
 ## AF-095 — Asterion framework identity and extraction
 
