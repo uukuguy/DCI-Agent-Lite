@@ -1,58 +1,54 @@
-# AF-270 Design Checkpoint
+# AF-270 Completion Checkpoint
 
-> Updated: 2026-07-15 08:42 +0800. The completed DCI migration remains accepted; AF-270 is a product-usability successor.
+> Updated: 2026-07-15 21:42 +0800. Asterion DCI migration and unified operator verification are complete.
 
-Active work package: AF-270
+Active work package: none
 
 ## TL;DR
 
-- AF-250 migration remains completed and verified; repository lifecycle is reopened only for AF-270.
-- Asterion DCI independently implements the original Pi-based DCI product surface without importing or launching `src/dci`.
-- Acceptance covers eight model-free rows, 533 delegated selectors, twelve launcher pairs, six batch extras, an isolated installed wheel/application, and seven bounded real source/Asterion/application/Pi-plus-Judge/reuse cases.
-- The approved AF-270 design adds generic `asterion describe/verify` discovery and four DCI verification levels.
-- No full dataset ran; full-dataset performance is separate operator-authorized work, not a migration gap.
+- Asterion independently implements the original Pi-based DCI product surface without importing or launching `src/dci`.
+- `asterion describe --provider dci-agent-lite` lists the capability functions and shared `.env` configuration.
+- `asterion verify --provider dci-agent-lite --level preflight|basic|acceptance|complete` is the unified verification entry point.
+- A real `complete` run passed both six-turn Pi cases, Judge evaluation, and full model-free product acceptance; no full dataset ran.
+- Project lifecycle is `complete`; do not dispatch autonomous implementation until a successor package is explicitly approved.
 
 ## Committed state
 
-- Product implementation and acceptance: `327a070`.
-- Accepted recovery checkpoint: `41de2db`.
-- Terminal lifecycle design and plan: `6d42ebf`, `3345aa2`.
-- Explicit lifecycle governance: `3717c63`.
-- Full functional verification guide: `673ac03`.
-- Terminal hardening and main integration: `2994db0`.
+- Unified product contract and CLI: `4b7246c`, `e015649`.
+- DCI profiles and aggregation: `e7c5d6c`, `983b831`, `5a44dfa`.
+- Beginner guide and installed/source boundaries: `5aa2715`, `8f2c7af`.
+- Review hardening: `02108c4`.
 
-The current branch is `main`. The newest commit after these entries is the
-AF-270 design/governance checkpoint; inspect `git log --oneline -8` rather than
-relying on chat history.
+The branch is `main`. The user-owned untracked `.superpowers/sdd/task-0-review.md` is intentionally untouched and is not project state.
 
 ## Verified evidence
 
-- Public product verifier: 8/8 rows, 533/533 delegated selectors, 12/12 launcher pairs, 6/6 batch extras, bounded acceptance 7/7, zero provider execution during verification.
-- Retained native evidence: private acceptance 7/7 after digest, mode, lifecycle, Judge, exact-reuse, mtime, and credential-value checks.
-- Final terminal closure: 1275 Python, 11 TypeScript, and 19 Rust tests plus compile, Ruff, shell, scope, explicit terminal-dispatch rejection, diff, wheel/application, and both verifier modes.
-- Independent closeout review is approved with no Critical or Important findings.
+- Real `complete`: PASS; two bounded Pi operations, one Judge operation, product rows 8/8, delegated inventory 533/533, launcher pairs 12/12, extras 6/6, bounded acceptance 7/7, full dataset `no`.
+- Full repository: 1297/1297 Python, 11/11 TypeScript, and 19/19 Rust tests.
+- Compile, Ruff, shell syntax, Rust fmt/Clippy, scope, and diff gates pass.
+- Installed/source security: source acceptance is derived only from the verifier module's trusted checkout ancestor; arbitrary current-directory tools are never loaded.
+- The first Judge attempt earlier in AF-270 was rejected because a process environment key shadowed `.env`; the final passing command used `env -u DEEPSEEK_API_KEY` without exposing any credential value.
 
 ## Next action
 
-After written-spec approval, create the AF-270 implementation plan and execute
-it with TDD. Do not change accepted AF-250 evidence or run a full dataset.
+There is no migration work left. For normal use, start with the beginner guide. For future implementation, first approve a new work package, change lifecycle to `active`, and rerun the scope audit.
 
 ## Ruled-out paths
 
-- Do not infer completion from worklist status alone; use the verification guide and executable evidence.
+- Do not infer API-request cost from the three provider-backed operations; each Pi operation may use multiple turns.
+- Do not load source acceptance tools from the current working directory or make installed wheels depend on repository-only evidence.
 - Do not rerun a full dataset merely to reconfirm bounded migration acceptance.
-- Do not modify the external `pi/` checkout or persist credentials, provider bodies, corpora, or private evidence paths.
-- Do not make `src/dci` and Asterion import or launch one another.
+- Do not modify external `pi/`, persist credentials/provider bodies/private evidence paths, or couple Asterion production code to `src/dci`.
 
 ## Ready commands
 
 ```bash
+uv run asterion describe --provider dci-agent-lite
+uv run asterion verify --provider dci-agent-lite --level preflight --env-file .env --corpus-root "$PWD/corpus"
+uv run asterion verify --provider dci-agent-lite --level acceptance
+env -u DEEPSEEK_API_KEY uv run asterion verify --provider dci-agent-lite --level complete --env-file .env --corpus-root "$PWD/corpus" --output-root "$PWD/outputs/asterion-verification"
 python3 tools/project_scope_check.py
-sed -n '1,260p' docs/superpowers/specs/2026-07-15-asterion-capability-discovery-verification-design.md
-uv run python tools/verify_asterion_dci_product.py
-uv run python tools/verify_asterion_dci_product.py \
-  --acceptance-root "$AF250_ACCEPTANCE_ROOT" \
-  --validate-only
-uv run python -m unittest discover -v
 git status --short
 ```
+
+Usage guide: `docs/guides/asterion-capability-usage.md`. Advanced evidence guide: `docs/verification/asterion-dci-validation-guide.md`.

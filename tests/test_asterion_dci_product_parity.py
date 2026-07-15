@@ -854,20 +854,28 @@ class AsterionDciProductParityTests(unittest.TestCase):
         self.assertNotIn(env["AF250_PRIVATE_SENTINEL"], result.stdout + result.stderr)
 
     def test_validate_only_cli_does_not_ignore_an_acceptance_root(self) -> None:
+        private_root = "/tmp/af270-definitely-missing-private-evidence"
+        environment = os.environ.copy()
+        environment["DCI_EVAL_JUDGE_API_KEY_ENV"] = "DEEPSEEK_API_KEY"
+        environment["DEEPSEEK_API_KEY"] = "PRIVATE-PLACEHOLDER-CREDENTIAL"
         result = subprocess.run(
             [
                 "python3",
                 "tools/verify_asterion_dci_product.py",
                 "--validate-only",
                 "--acceptance-root",
-                "/tmp/af270-definitely-missing-private-evidence",
+                private_root,
             ],
             cwd=ROOT,
+            env=environment,
             text=True,
             capture_output=True,
         )
         self.assertNotEqual(result.returncode, 0)
         self.assertNotIn(" VALID", result.stdout)
+        self.assertNotIn(private_root, result.stdout + result.stderr)
+        self.assertNotIn("Traceback", result.stderr)
+        self.assertEqual(result.stderr, "private acceptance validation failed\n")
 
     # AF-250-H-001: source/Asterion runnable-surface completeness.
     def test_af250_h001_exact_product_row_surface(self) -> None:

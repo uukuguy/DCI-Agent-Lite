@@ -707,3 +707,7 @@
 - 10:39 Governance tests preserve AF-250 closure while permitting an explicitly scoped successor package. [ed52992]
 - 11:08 Independent AF-270 review found one critical working-directory code-execution boundary, a private-evidence validation bypass, and inaccurate request-cost terminology; closure was withheld.
 - 11:31 Trusted module-ancestor discovery prevents installed products from executing a current-directory verifier, both basic Pi cases now carry six-turn limits, private `--validate-only` evidence is actually revalidated, and public output counts provider-backed operations rather than provider API requests. Focused 36-test, compile, Ruff, source acceptance 8/8+533/533+12/12+6/6+7/7, scope, and diff checks pass.
+- 11:33 Trusted source acceptance and bounded operation accounting close review security and validation gaps. [02108c4]
+- 21:44 Real unified `complete` passes both six-turn Pi cases, Judge, 8/8+533/533+12/12+6/6+7/7 acceptance, three provider-backed operations, and no full dataset.
+- 21:45 Full closure passes 1297 Python, 11 TypeScript, 19 Rust, all static/governance gates, and a 70-test post-review regression.
+- 21:45 Final independent review approves AF-270 with no remaining Critical or Important findings after body-free private-validation failure handling.

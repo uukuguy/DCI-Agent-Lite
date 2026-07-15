@@ -2,7 +2,7 @@
 
 > Canonical work-package ledger. An `active` lifecycle requires exactly one `in_progress` package; a `complete` lifecycle permits none and forbids autonomous dispatch.
 
-> Project lifecycle: active
+> Project lifecycle: complete
 
 ## AF-000 — Framework control plane
 
@@ -284,13 +284,14 @@
 
 ## AF-270 — Capability discovery and unified verification
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Asterion capability-package product usability
 - Scope: add generic provider-selected `asterion describe` and structured `asterion verify` commands, then prove them with DCI preflight, basic, acceptance, and complete profiles.
 - Dependencies: AF-130, AF-220, AF-250
 - Acceptance: users discover DCI functions and required configuration without reading code; one generic command runs two bounded basic cases or the complete no-full-dataset verification; outputs are redacted, installed-wheel safe, and reusable by future providers.
 - Design: `docs/superpowers/specs/2026-07-15-asterion-capability-discovery-verification-design.md`
 - Plan: `docs/superpowers/plans/2026-07-15-asterion-capability-discovery-verification.md`
+- Closure evidence: generic provider-selected `asterion describe` and `asterion verify` expose DCI functions, shared configuration, and four verification levels without loading adjacent providers. Trusted source discovery prevents installed-wheel/current-directory verifier execution; both basic Pi cases have six-turn limits; private retained evidence is actually revalidated with body-free failures; cost output distinguishes three provider-backed operations from underlying API requests. One real `complete` run passed both Pi cases, Judge, 8/8 product rows, 533/533 delegated selectors, 12/12 launcher pairs, 6/6 extras, and 7/7 bounded acceptance with no full dataset. Final closure passes 1297 Python, 11 TypeScript, and 19 Rust tests plus compile, Ruff, shell, scope, diff, fmt, and Clippy gates; final independent review reports no Critical or Important findings. The beginner guide is `docs/guides/asterion-capability-usage.md`.
 
 ## AF-095 — Asterion framework identity and extraction
 

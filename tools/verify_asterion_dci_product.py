@@ -1262,7 +1262,13 @@ def main() -> int:
     rows = validate_product_matrix(root, load_product_matrix(root))
     if args.validate_only:
         if args.acceptance_root is not None:
-            actual, expected = validate_private_acceptance(root, args.acceptance_root)
+            try:
+                actual, expected = validate_private_acceptance(
+                    root, args.acceptance_root
+                )
+            except (OSError, ValueError):
+                print("private acceptance validation failed", file=sys.stderr)
+                return 1
             print(f"private-acceptance {actual}/{expected}")
             return 0 if actual == expected else 1
         for row in rows:
