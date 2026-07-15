@@ -9,6 +9,7 @@ from unittest.mock import patch
 from asterion.applications.product import VerificationRequest
 from asterion.dci.run import DciRunResult
 from asterion.dci.verification import BASIC_CASES, DciProductVerifier, create_dci_product
+from tools.verify_asterion_dci_product import ProductAcceptanceSummary
 
 
 class FixtureBackend:
@@ -191,6 +192,78 @@ class DciBasicVerificationTests(unittest.TestCase):
         self.assertIn("pi", failed)
         self.assertIn("corpora", failed)
         self.assertEqual(backend.calls, [])
+
+
+class DciAcceptanceVerificationTests(unittest.TestCase):
+    def _runner(self, calls):
+        def run(root, acceptance_root=None):
+            calls.append(("acceptance", root, acceptance_root))
+            return ProductAcceptanceSummary(
+                product_rows=(8, 8),
+                delegated_inventory=(533, 533),
+                launcher_pairs=(12, 12),
+                batch_extras=(6, 6),
+                bounded_acceptance=(7, 7),
+                provider_backed_executed=0,
+                private_acceptance=None,
+            )
+
+        return run
+
+    def test_acceptance_is_provider_free_and_maps_complete_inventory(self) -> None:
+        calls = []
+        backend = FixtureBackend()
+        verifier = DciProductVerifier(
+            repo_root=Path.cwd(),
+            backend=backend,
+            acceptance_runner=self._runner(calls),
+        )
+        result = verifier(
+            VerificationRequest(
+                level="acceptance",
+                env_file=None,
+                corpus_root=None,
+                output_root=None,
+                acceptance_root=None,
+            )
+        )
+
+        self.assertEqual(result.status, "PASS")
+        self.assertEqual(result.external_request_count, 0)
+        self.assertFalse(result.full_dataset_ran)
+        self.assertEqual(backend.calls, [])
+        self.assertEqual(len(calls), 1)
+        counts = {check.check_id: dict(check.counts) for check in result.checks}
+        self.assertEqual(counts["product-rows"], {"actual": 8, "expected": 8})
+        self.assertEqual(counts["delegated-inventory"], {"actual": 533, "expected": 533})
+
+    def test_complete_runs_preflight_basic_acceptance_and_keeps_three_request_bound(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir).resolve()
+            env_file = prepare_root(root)
+            backend = FixtureBackend()
+            calls = []
+            verifier = DciProductVerifier(
+                repo_root=root,
+                backend=backend,
+                acceptance_runner=self._runner(calls),
+            )
+            with patch.dict(os.environ, {}, clear=True):
+                result = verifier(
+                    VerificationRequest(
+                        level="complete",
+                        env_file=env_file,
+                        corpus_root=root / "corpus",
+                        output_root=root / "verification-output",
+                        acceptance_root=None,
+                    )
+                )
+
+        self.assertEqual(result.status, "PASS")
+        self.assertEqual(result.external_request_count, 3)
+        self.assertFalse(result.full_dataset_ran)
+        self.assertEqual([call[0] for call in backend.calls], ["run", "run", "judge"])
+        self.assertEqual(calls[0][0], "acceptance")
 
 
 if __name__ == "__main__":

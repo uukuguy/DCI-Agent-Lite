@@ -14,6 +14,7 @@ import re
 import subprocess
 import sys
 import tempfile
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from pathlib import PurePosixPath
@@ -203,6 +204,20 @@ BATCH_EXTRA_SELECTORS = (
 )
 EXPECTED_FAKE_ANSWER = "PRIVATE-FIXTURE-ANSWER"
 EXPECTED_FAKE_QUESTION = "PRIVATE-FIXTURE-QUESTION"
+
+
+@dataclass(frozen=True)
+class ProductAcceptanceSummary:
+    """Body-free aggregate returned to operator-facing verification commands."""
+
+    product_rows: tuple[int, int]
+    delegated_inventory: tuple[int, int]
+    launcher_pairs: tuple[int, int]
+    batch_extras: tuple[int, int]
+    bounded_acceptance: tuple[int, int]
+    provider_backed_executed: int
+    private_acceptance: tuple[int, int] | None
+    row_statuses: tuple[tuple[str, str, int], ...] = ()
 
 
 def load_product_matrix(root: Path) -> dict[str, object]:
@@ -939,6 +954,65 @@ def run_local_evidence(
     }
 
 
+def verify_product_acceptance(
+    root: Path, *, acceptance_root: Path | None = None
+) -> ProductAcceptanceSummary:
+    """Run the complete model-free product proof and return typed aggregate counts."""
+
+    canonical_root = Path(root).resolve()
+    matrix = load_product_matrix(canonical_root)
+    rows = validate_product_matrix(canonical_root, matrix)
+    private_acceptance = None
+    if acceptance_root is not None:
+        manifest = json.loads(
+            (canonical_root / ACCEPTANCE_PATH).read_text(encoding="utf-8")
+        )
+        unchecked_cases = validate_acceptance_document(manifest)
+        credential_values = _required_acceptance_credential_values(unchecked_cases)
+        cases = validate_acceptance_document(
+            manifest, credential_values=credential_values
+        )
+        verified = validate_acceptance_artifacts(
+            acceptance_root,
+            cases,
+            credential_values=credential_values,
+        )
+        private_acceptance = (verified, len(REQUIRED_PROVIDER_CASES))
+    result = run_local_evidence(canonical_root, rows)
+    row_statuses = tuple(
+        (
+            cast(str, row["id"]),
+            cast(str, row["status"]),
+            cast(int, row["exit_status"]),
+        )
+        for row in cast(list[dict[str, object]], result["rows"])
+    )
+    return ProductAcceptanceSummary(
+        product_rows=(
+            sum(status == "PASS" for _, status, _ in row_statuses),
+            len(rows),
+        ),
+        delegated_inventory=_fraction(cast(str, result["delegated_inventory"])),
+        launcher_pairs=_fraction(cast(str, result["launcher_pairs"])),
+        batch_extras=_fraction(cast(str, result["batch_extra_selectors"])),
+        bounded_acceptance=_fraction(cast(str, result["bounded_acceptance"])),
+        provider_backed_executed=cast(int, result["provider_backed_executed"]),
+        private_acceptance=private_acceptance,
+        row_statuses=row_statuses,
+    )
+
+
+def _fraction(value: str) -> tuple[int, int]:
+    try:
+        actual, expected = value.split("/", 1)
+        parsed = (int(actual), int(expected))
+    except (TypeError, ValueError):
+        raise ValueError("product acceptance count is invalid") from None
+    if min(parsed) < 0:
+        raise ValueError("product acceptance count is invalid")
+    return parsed
+
+
 _FAKE_NODE = r'''#!/usr/bin/env python3
 import json
 import sys
@@ -1175,32 +1249,21 @@ def main() -> int:
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     rows = validate_product_matrix(root, load_product_matrix(root))
-    if args.acceptance_root is not None:
-        manifest = json.loads((root / ACCEPTANCE_PATH).read_text(encoding="utf-8"))
-        unchecked_cases = validate_acceptance_document(manifest)
-        credential_values = _required_acceptance_credential_values(unchecked_cases)
-        cases = validate_acceptance_document(
-            manifest, credential_values=credential_values
-        )
-        verified = validate_acceptance_artifacts(
-            args.acceptance_root,
-            cases,
-            credential_values=credential_values,
-        )
-        print(f"private-acceptance {verified}/{len(REQUIRED_PROVIDER_CASES)}")
     if args.validate_only:
         for row in rows:
             print(f"{row['id']} VALID")
         return 0
-    result = run_local_evidence(root, rows)
-    for row in cast(list[dict[str, object]], result["rows"]):
-        print(f"{row['id']} {row['status']} exit={row['exit_status']}")
-    print(f"delegated-inventory {result['delegated_inventory']}")
-    print(f"launcher-pairs {result['launcher_pairs']}")
-    print(f"batch-extra-selectors {result['batch_extra_selectors']}")
-    print(f"provider-backed-executed {result['provider_backed_executed']}")
-    print(f"bounded-acceptance {result['bounded_acceptance']}")
-    return 0 if all(row["status"] == "PASS" for row in result["rows"]) else 1
+    summary = verify_product_acceptance(root, acceptance_root=args.acceptance_root)
+    if summary.private_acceptance is not None:
+        print(f"private-acceptance {summary.private_acceptance[0]}/{summary.private_acceptance[1]}")
+    for row_id, status, exit_status in summary.row_statuses:
+        print(f"{row_id} {status} exit={exit_status}")
+    print(f"delegated-inventory {summary.delegated_inventory[0]}/{summary.delegated_inventory[1]}")
+    print(f"launcher-pairs {summary.launcher_pairs[0]}/{summary.launcher_pairs[1]}")
+    print(f"batch-extra-selectors {summary.batch_extras[0]}/{summary.batch_extras[1]}")
+    print(f"provider-backed-executed {summary.provider_backed_executed}")
+    print(f"bounded-acceptance {summary.bounded_acceptance[0]}/{summary.bounded_acceptance[1]}")
+    return 0 if summary.product_rows[0] == summary.product_rows[1] else 1
 
 
 if __name__ == "__main__":

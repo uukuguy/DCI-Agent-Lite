@@ -8,7 +8,7 @@ import secrets
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import Callable, Protocol
 
 from asterion.applications.product import (
     CapabilityFunction,
@@ -276,10 +276,17 @@ class LocalDciVerificationBackend:
         return result.get("is_correct") is True
 
 
+def _run_product_acceptance(root: Path, acceptance_root: Path | None = None) -> object:
+    from tools.verify_asterion_dci_product import verify_product_acceptance
+
+    return verify_product_acceptance(root, acceptance_root=acceptance_root)
+
+
 @dataclass(frozen=True)
 class DciProductVerifier:
     repo_root: Path
     backend: DciVerificationBackend
+    acceptance_runner: Callable[[Path, Path | None], object] = _run_product_acceptance
 
     def __call__(self, request: VerificationRequest) -> VerificationResult:
         if request.level == "preflight":
@@ -288,6 +295,10 @@ class DciProductVerifier:
             )
         if request.level == "basic":
             return self.basic(request)
+        if request.level == "acceptance":
+            return self.acceptance(request.acceptance_root)
+        if request.level == "complete":
+            return self.complete(request)
         return VerificationResult(
             product_id=DCI_PRODUCT_DESCRIPTION.product_id,
             level=request.level,
@@ -301,6 +312,95 @@ class DciProductVerifier:
             ),
             external_request_count=0,
             full_dataset_ran=False,
+        )
+
+    def acceptance(self, acceptance_root: Path | None) -> VerificationResult:
+        """Run source-checkout product acceptance without provider requests."""
+
+        try:
+            summary = self.acceptance_runner(self.repo_root, acceptance_root)
+            values = (
+                ("batch-extras", summary.batch_extras),
+                ("bounded-acceptance", summary.bounded_acceptance),
+                ("delegated-inventory", summary.delegated_inventory),
+                ("launcher-pairs", summary.launcher_pairs),
+                ("product-rows", summary.product_rows),
+            )
+            checks = tuple(
+                VerificationCheckResult(
+                    check_id=check_id,
+                    summary=(
+                        "Accepted product evidence is complete"
+                        if actual == expected
+                        else "Accepted product evidence is incomplete"
+                    ),
+                    status="PASS" if actual == expected else "FAIL",
+                    counts=(("actual", actual), ("expected", expected)),
+                )
+                for check_id, (actual, expected) in values
+            ) + (
+                VerificationCheckResult(
+                    check_id="provider-requests",
+                    summary="Product acceptance made no provider requests",
+                    status=(
+                        "PASS"
+                        if summary.provider_backed_executed == 0
+                        else "FAIL"
+                    ),
+                    counts=(("actual", summary.provider_backed_executed),),
+                ),
+            )
+        except (AttributeError, ImportError, OSError, RuntimeError, TypeError, ValueError):
+            return VerificationResult(
+                product_id=DCI_PRODUCT_DESCRIPTION.product_id,
+                level="acceptance",
+                status="NOT RUN",
+                checks=(
+                    VerificationCheckResult(
+                        check_id="source-checkout",
+                        summary="Product acceptance requires the DCI source checkout",
+                        status="NOT RUN",
+                    ),
+                ),
+                external_request_count=0,
+                full_dataset_ran=False,
+            )
+        return VerificationResult(
+            product_id=DCI_PRODUCT_DESCRIPTION.product_id,
+            level="acceptance",
+            status="PASS" if all(check.status == "PASS" for check in checks) else "FAIL",
+            checks=checks,
+            external_request_count=0,
+            full_dataset_ran=False,
+        )
+
+    def complete(self, request: VerificationRequest) -> VerificationResult:
+        """Run preflight, bounded examples, and provider-free acceptance in order."""
+
+        preflight = self.preflight(
+            env_file=request.env_file, corpus_root=request.corpus_root
+        )
+        aggregate = [
+            VerificationCheckResult(
+                check_id="preflight",
+                summary="All local and configured prerequisites are ready",
+                status=preflight.status,
+            )
+        ]
+        if preflight.status != "PASS":
+            return _complete_result(aggregate, external_requests=0)
+        basic = self.basic(request)
+        aggregate.extend(basic.checks)
+        if basic.status != "PASS":
+            return _complete_result(
+                aggregate, external_requests=basic.external_request_count
+            )
+        acceptance = self.acceptance(request.acceptance_root)
+        aggregate.extend(acceptance.checks)
+        return _complete_result(
+            aggregate,
+            external_requests=basic.external_request_count,
+            forced_status=acceptance.status,
         )
 
     def basic(self, request: VerificationRequest) -> VerificationResult:
@@ -509,4 +609,27 @@ def _basic_request(
         pi_package_dir=paths.pi.package_dir,
         pi_agent_dir=paths.pi.agent_dir,
         stream_text=False,
+    )
+
+
+def _complete_result(
+    checks: list[VerificationCheckResult],
+    *,
+    external_requests: int,
+    forced_status: str | None = None,
+) -> VerificationResult:
+    ordered = tuple(sorted(checks, key=lambda check: check.check_id))
+    if forced_status is None:
+        status = "PASS" if all(check.status == "PASS" for check in ordered) else "FAIL"
+    else:
+        status = forced_status if forced_status != "PASS" else (
+            "PASS" if all(check.status == "PASS" for check in ordered) else "FAIL"
+        )
+    return VerificationResult(
+        product_id=DCI_PRODUCT_DESCRIPTION.product_id,
+        level="complete",
+        status=status,
+        checks=ordered,
+        external_request_count=external_requests,
+        full_dataset_ran=False,
     )

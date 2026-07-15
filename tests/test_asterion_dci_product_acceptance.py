@@ -14,11 +14,13 @@ from pathlib import PurePosixPath
 from unittest.mock import patch
 
 from tools.verify_asterion_dci_product import (
+    ProductAcceptanceSummary,
     _required_acceptance_credential_values,
     load_product_matrix,
     validate_acceptance_artifacts,
     validate_acceptance_document,
     validate_acceptance_reference,
+    verify_product_acceptance,
 )
 
 
@@ -145,6 +147,48 @@ def validate_manifest(document: object) -> None:
 
 
 class AsterionDciProductAcceptanceTests(unittest.TestCase):
+    def test_importable_product_acceptance_returns_typed_body_free_counts(self) -> None:
+        rows = tuple(
+            {"id": row_id}
+            for row_id in (
+                "configuration-and-pi-argv",
+                "interactive-run-and-terminal",
+                "native-artifacts-and-resume",
+                "judge-and-exact-cache",
+                "batch-ir-analysis-and-exports",
+                "source-and-asterion-examples",
+                "installed-wheel-boundary",
+                "installed-pi-application",
+            )
+        )
+        local = {
+            "rows": [{"id": row["id"], "status": "PASS", "exit_status": 0} for row in rows],
+            "provider_backed_executed": 0,
+            "bounded_acceptance": "7/7",
+            "delegated_inventory": "533/533",
+            "launcher_pairs": "12/12",
+            "batch_extra_selectors": "6/6",
+        }
+        with (
+            patch(
+                "tools.verify_asterion_dci_product.validate_product_matrix",
+                return_value=rows,
+            ),
+            patch(
+                "tools.verify_asterion_dci_product.run_local_evidence",
+                return_value=local,
+            ),
+        ):
+            summary = verify_product_acceptance(ROOT)
+
+        self.assertIsInstance(summary, ProductAcceptanceSummary)
+        self.assertEqual(summary.product_rows, (8, 8))
+        self.assertEqual(summary.delegated_inventory, (533, 533))
+        self.assertEqual(summary.launcher_pairs, (12, 12))
+        self.assertEqual(summary.batch_extras, (6, 6))
+        self.assertEqual(summary.bounded_acceptance, (7, 7))
+        self.assertEqual(summary.provider_backed_executed, 0)
+
     def test_private_acceptance_requires_manifest_referenced_credentials(
         self,
     ) -> None:
