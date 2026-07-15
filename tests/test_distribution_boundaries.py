@@ -49,6 +49,11 @@ class SourceDistributionBoundaryTests(unittest.TestCase):
         self.assertEqual(positions, sorted(positions))
         for required in (
             "asterion describe --provider dci-agent-lite",
+            "make asterion-describe",
+            "make asterion-verify-preflight",
+            "make asterion-verify-basic",
+            "make asterion-verify-acceptance",
+            "make asterion-verify-complete",
             "--level preflight",
             "--level basic",
             "--level acceptance",
@@ -74,6 +79,13 @@ class SourceDistributionBoundaryTests(unittest.TestCase):
         advanced = readme.find("docs/verification/asterion-dci-validation-guide.md")
         self.assertGreaterEqual(beginner, 0)
         self.assertGreater(advanced, beginner)
+        for required in (
+            "make asterion-describe",
+            "make asterion-verify-acceptance",
+            "preflight` 和 `acceptance` 不调用模型",
+            "basic` 和 `complete` 会运行两个有界 Pi 操作和一个 Judge 操作",
+        ):
+            self.assertIn(required, readme)
 
     def test_complete_dci_validation_guide_covers_both_products_and_all_tiers(
         self,

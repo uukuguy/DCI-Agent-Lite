@@ -30,6 +30,24 @@ uv run asterion verify \
 
 若只想确认迁移代码和安装边界完整、不想调用模型，将最后一条命令的 `complete` 改为 `acceptance`，并可省略 `.env`、语料和输出目录参数。
 
+在源码仓库中，也可以直接使用对应的 Make 入口：
+
+```bash
+make asterion-describe
+make asterion-verify-preflight
+make asterion-verify-basic
+make asterion-verify-acceptance
+make asterion-verify-complete
+```
+
+`preflight` 和 `acceptance` 不调用模型；`basic` 和 `complete` 会运行两个有界 Pi 操作和一个 Judge 操作。Make 缺省使用根目录 `.env`、`$PWD/corpus` 和 `$PWD/outputs/asterion-verification`。路径不同时可在命令后覆盖变量，例如：
+
+```bash
+make asterion-verify-preflight ASTERION_CORPUS_ROOT=/path/to/corpus
+```
+
+完整 `uv run asterion` 命令是安装后也可使用的标准入口；Make 目标只是源码仓库内的快捷入口。
+
 ## 最少需要哪些环境变量
 
 如果还没有 `.env`，先执行：

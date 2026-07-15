@@ -70,6 +70,18 @@ For a short, command-first introduction, start with the
 shows the shared `.env`, the DCI function list, and the unified
 `asterion describe/verify` commands without requiring source-code inspection.
 
+在源码仓库根目录可以使用更短的 Make 入口：
+
+```bash
+make asterion-describe
+make asterion-verify-preflight
+make asterion-verify-basic
+make asterion-verify-acceptance
+make asterion-verify-complete
+```
+
+其中 `preflight` 和 `acceptance` 不调用模型；`basic` 和 `complete` 会运行两个有界 Pi 操作和一个 Judge 操作。Make 只是完整 `uv run asterion` 命令的仓库内快捷方式，安装后的标准入口仍是 `asterion describe/verify`。
+
 The complete procedure—from both original DCI examples through Asterion,
 installed Pi, all launchers, bounded acceptance, and repository gates—is in the
 [Asterion DCI full functional verification guide](docs/verification/asterion-dci-validation-guide.md).
