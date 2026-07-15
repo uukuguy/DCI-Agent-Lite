@@ -4,11 +4,11 @@
 
 - Project: Asterion framework under development in the DCI-Agent-Lite repository; DCI remains the first capability and reference application.
 - Current branch: `main`
-- Theme-level focus: add concise Makefile entry points for the accepted Asterion capability discovery and verification commands.
+- Theme-level focus: completed Asterion framework, full DCI migration, unified verification, and repository Make entry points.
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: AF-280 — Makefile capability verification entry points.
+- Active work package: none; project lifecycle is complete.
 
 ## Current Architecture
 
@@ -24,6 +24,7 @@
 - AF-240 acceptance: all four Climb hypotheses are confirmed 4/4 and all 533 source inventory rows resolve to executable Asterion evidence. Asterion owns concurrent QA/IR orchestration, exact reuse, Judge cache identity, aggregates, detailed analysis/figures, exports, installed profiles, and 12 launchers. Closure passed 1204 Python, 11 TypeScript, and 19 Rust tests plus all static, shell, isolated-wheel, and governance gates. A bounded one-row Pi-plus-Judge batch produced one correct verdict and 28 credential-clean private artifacts; exact reuse preserved native/Judge hashes and mtimes without another protocol attempt or generation.
 - AF-250 acceptance: all eight local/model-free product rows, all 533 delegated batch selectors, twelve launcher pairs, six batch extras, and AF-250-H-001 through H-005 pass. The independent Asterion package has no production import or launch of `src/dci`. Seven bounded real source/Asterion/application/Pi-plus-Judge/reuse cases completed successfully after the isolated worktree was given the shared main-repository corpus path; their credential-clean, body-free structural record is digest-bound into the product matrix and revalidated against retained private native artifacts. Final terminal closure passes 1275 Python, 11 TypeScript, and 19 Rust tests plus compile, Ruff, shell, scope, terminal-dispatch rejection, diff, installed-wheel/application, public-record, and private-artifact verifier gates. Independent closeout review reports no Critical or Important findings. No full dataset ran.
 - AF-270 acceptance: generic provider-selected `asterion describe/verify` makes the complete DCI function map, shared `.env` configuration, and preflight/basic/acceptance/complete verification discoverable without source inspection. Source acceptance is loaded only from the trusted checkout containing the verifier module; an installed wheel never executes a current-directory lookalike. Both real Pi examples use six-turn limits, private retained evidence is genuinely revalidated, and public cost output counts two Pi run operations plus one Judge operation without misrepresenting multi-turn provider API calls. A real `complete` run passed with all product counts and no full dataset; closure passes 1297 Python, 11 TypeScript, and 19 Rust tests plus all static/governance gates.
+- AF-280 acceptance: the root Makefile exposes five explicit, phony, cost-visible shortcuts for capability description and all four DCI verification levels. Defaults use the shared root `.env`, repository corpus, and Asterion verification output while remaining overridable. Exact dry-run argv, documentation, live description, and provider-free acceptance checks pass without a provider request or full dataset.
 - Host contracts: Python and TypeScript expose the same schema-backed runtime manifest, request, event, and asynchronous client boundary without adapter-private types.
 - Controlled execution: `dci.executor/v1` has a runnable concurrent Rust JSONL sidecar with trusted startup policy, direct execution, bounded dual-stream draining, deadline/cancel kill-and-reap, duplicate-ID denial, out-of-order correlation, safe parse errors, EOF draining, operator documentation, and root verification targets.
 - Package composition: `dci.package/v1` and the deterministic Python composer resolve a portable policy → DCI research → evaluation → observability graph identically for Pi and Claude Code capability mappings. The TypeScript host exports the same manifest types and validates the canonical schema/fixtures without implementing a second composer.
@@ -55,7 +56,7 @@
 
 ## Open Problems (theme-level)
 
-- AF-280 is the only active follow-up: Makefile convenience entry points and their documentation. It does not change DCI behavior or rerun a full dataset.
+- None in the accepted migration and Make-entry scope. Future implementation requires an explicitly approved successor package and lifecycle reopening.
 
 ## Key Files
 

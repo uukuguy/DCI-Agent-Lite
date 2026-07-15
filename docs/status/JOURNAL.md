@@ -715,3 +715,8 @@
 - 2026-07-16 AF-280 reopens only Makefile usability scope with five explicit, cost-visible capability verification targets.
 - 2026-07-16 Explicit Make targets make accepted capability verification discoverable without hiding provider cost. [448ce3c]
 - 2026-07-16 AF-280 implementation plan defines exact TDD, documentation, provider-free smoke, and closure gates.
+- 2026-07-16 TDD plan makes exact Make argv and cost-visible documentation independently verifiable. [9458cae]
+- 2026-07-16 Five explicit Make targets forward exact discovery and verification argv with safe overridable defaults. [c913d64]
+- 2026-07-16 README and beginner guide expose cost-visible Make shortcuts beside canonical Asterion CLI commands. [7478db4]
+- 2026-07-16 Live Make description and provider-free acceptance pass with zero provider operations and no full dataset.
+- 2026-07-16 AF-280 closure passes 15 focused tests, compile, Ruff, scope, and diff gates.

@@ -2,7 +2,7 @@
 
 > Canonical work-package ledger. An `active` lifecycle requires exactly one `in_progress` package; a `complete` lifecycle permits none and forbids autonomous dispatch.
 
-> Project lifecycle: active
+> Project lifecycle: complete
 
 ## AF-000 — Framework control plane
 
@@ -295,13 +295,14 @@
 
 ## AF-280 — Makefile capability verification entry points
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Asterion capability-package product usability
 - Scope: expose the accepted DCI capability discovery and four verification levels through explicit Make targets with documented, overridable repository defaults.
 - Dependencies: AF-270
 - Acceptance: five explicit Make targets map exactly to `asterion describe` and the preflight/basic/acceptance/complete verification levels; provider-backed targets remain visibly explicit; defaults use the shared root `.env`, repository corpus, and Asterion verification output; README and beginner guide document the targets; dry-run and focused tests prove exact argv without running models.
 - Design: `docs/superpowers/specs/2026-07-16-asterion-make-entry-points-design.md`
 - Plan: `docs/superpowers/plans/2026-07-16-asterion-make-entry-points.md`
+- Closure evidence: five explicit phony targets map exactly to capability description and preflight/basic/acceptance/complete verification, with overridable provider, `.env`, corpus, and output defaults. No ambiguous verification alias exists. Exact dry-run argv tests pass; live `make asterion-describe` and provider-free `make asterion-verify-acceptance` pass with zero provider-backed operations and no full dataset. README and the beginner guide document cost-visible usage. Closure passes 15 focused tests, compile, Ruff, scope, and diff gates.
 
 ## AF-095 — Asterion framework identity and extraction
 
