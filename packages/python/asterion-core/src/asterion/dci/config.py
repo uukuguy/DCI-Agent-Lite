@@ -44,10 +44,18 @@ class DciRuntimeOptions:
     extra_args: tuple[str, ...] = ()
 
 
-def load_asterion_dci_env(repo_root: Path) -> Path:
+def load_asterion_dci_env(
+    repo_root: Path, *, env_file: Path | None = None
+) -> Path | None:
     """Load the product .env without overriding inherited process values."""
 
-    env_path = Path(repo_root).resolve() / ".env"
+    env_path = (
+        Path(repo_root).resolve() / ".env"
+        if env_file is None
+        else Path(env_file).expanduser().resolve()
+    )
+    if not env_path.is_file():
+        return None
     load_dotenv(env_path, override=False)
     return env_path
 

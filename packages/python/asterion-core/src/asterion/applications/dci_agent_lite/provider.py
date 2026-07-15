@@ -13,6 +13,7 @@ from asterion.applications.provider import (
 from asterion.capabilities.dci_research import DciLocalResearchImplementation
 from asterion.dci.application_executor import EnvironmentDciRunExecutor
 from asterion.dci.bridge import DciRunExecutor
+from asterion.dci.verification import create_dci_product
 from asterion.packages.catalog import PackageRef
 
 
@@ -48,4 +49,5 @@ def create_provider(
                 runtime_ids=("claude-code.reference", "pi.reference"),
             ),
         ),
+        product=create_dci_product(),
     )

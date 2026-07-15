@@ -114,6 +114,20 @@ class AsterionDciConfigTests(unittest.TestCase):
         self.assertEqual(returned, env_path)
         self.assertEqual(paths.output_root, root / "from-process")
 
+    def test_explicit_env_file_is_supported_and_missing_file_returns_none(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            explicit = root / "operator.env"
+            explicit.write_text("DCI_MODEL=from-explicit\n")
+            with patch.dict(os.environ, {}, clear=True):
+                loaded = load_asterion_dci_env(root, env_file=explicit)
+                model = resolve_dci_runtime_options().model
+                missing = load_asterion_dci_env(root, env_file=root / "missing.env")
+
+        self.assertEqual(loaded, explicit)
+        self.assertEqual(model, "from-explicit")
+        self.assertIsNone(missing)
+
 
 if __name__ == "__main__":
     unittest.main()

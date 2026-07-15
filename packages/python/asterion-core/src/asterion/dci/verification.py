@@ -1,0 +1,326 @@
+"""Self-description and bounded verification for the Asterion DCI product."""
+
+from __future__ import annotations
+
+import os
+import re
+import subprocess
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Protocol
+
+from asterion.applications.product import (
+    CapabilityFunction,
+    CapabilityProductDescription,
+    ConfigurationRequirement,
+    InstalledCapabilityProduct,
+    VerificationCheckResult,
+    VerificationProfile,
+    VerificationRequest,
+    VerificationResult,
+)
+from asterion.dci.config import (
+    load_asterion_dci_env,
+    resolve_dci_paths,
+    resolve_dci_runtime_options,
+)
+
+
+DCI_PRODUCT_DESCRIPTION = CapabilityProductDescription(
+    product_id="asterion-dci",
+    version="1.0.0",
+    summary="DCI local-corpus research, evaluation, and benchmark capability",
+    functions=(
+        CapabilityFunction(
+            "benchmark",
+            "Run bounded QA and IR benchmarks with metrics and analysis",
+            ("asterion-dci", "benchmark", "--help"),
+        ),
+        CapabilityFunction(
+            "evaluate",
+            "Evaluate one saved research run with the configured Judge",
+            ("asterion-dci", "evaluate", "--help"),
+        ),
+        CapabilityFunction(
+            "export",
+            "Export BC+, BRIGHT, or QA result formats",
+            ("asterion-dci", "export", "--help"),
+        ),
+        CapabilityFunction(
+            "installed-application",
+            "Run the installed DCI research capability through Asterion",
+            (
+                "asterion",
+                "run",
+                "--provider",
+                "dci-agent-lite",
+                "--application",
+                "dci.research-capability@1.0.0",
+                "--runtime",
+                "pi.reference",
+            ),
+        ),
+        CapabilityFunction(
+            "research",
+            "Research a question against a local corpus with Pi",
+            ("asterion-dci", "run", "--help"),
+        ),
+        CapabilityFunction(
+            "resume",
+            "Continue a saved Pi research session",
+            ("asterion-dci", "resume", "--help"),
+        ),
+        CapabilityFunction(
+            "terminal",
+            "Open the interactive DCI terminal workflow",
+            ("asterion-dci", "terminal", "--help"),
+        ),
+    ),
+    configuration=(
+        ConfigurationRequirement(
+            "ASTERION_DCI_CORPUS_ROOT",
+            "Parent directory containing wiki_corpus and bc_plus_docs",
+            ("basic", "complete", "preflight"),
+            False,
+            "./corpus",
+            "Usually pass --corpus-root instead of setting this value",
+        ),
+        ConfigurationRequirement(
+            "ASTERION_DCI_OUTPUT_ROOT",
+            "Directory for Asterion DCI run artifacts",
+            ("basic", "complete"),
+            False,
+            "./outputs/asterion-dci-runs",
+            "Usually pass --output-root when verifying",
+        ),
+        ConfigurationRequirement(
+            "DCI_EVAL_JUDGE_API_KEY_ENV",
+            "Name of the environment variable holding the Judge credential",
+            ("basic", "complete", "preflight"),
+            False,
+            "OPENAI_API_KEY",
+            "Set this name and then set the named secret variable in .env",
+        ),
+        ConfigurationRequirement(
+            "DCI_EVAL_JUDGE_MODEL",
+            "Judge model used for the evaluated basic case",
+            ("basic", "complete", "preflight"),
+            False,
+            "gpt-5.4-nano",
+            "Use the same Judge settings as original DCI",
+        ),
+        ConfigurationRequirement(
+            "DCI_MODEL",
+            "Pi model used for research",
+            ("basic", "complete", "preflight"),
+            False,
+            None,
+            "Set a model available from DCI_PROVIDER",
+        ),
+        ConfigurationRequirement(
+            "DCI_PI_DIR",
+            "External Pi checkout",
+            ("basic", "complete", "preflight"),
+            False,
+            "./pi",
+            "The checkout must contain packages/coding-agent and .pi/agent",
+        ),
+        ConfigurationRequirement(
+            "DCI_PROVIDER",
+            "Pi model provider",
+            ("basic", "complete", "preflight"),
+            False,
+            None,
+            "For example openai or anthropic",
+        ),
+        ConfigurationRequirement(
+            "PROVIDER_API_KEY",
+            "Credential selected from the provider name, such as OPENAI_API_KEY",
+            ("basic", "complete", "preflight"),
+            True,
+            None,
+            "Set the provider-specific key in .env; its value is never displayed",
+        ),
+    ),
+    profiles=(
+        VerificationProfile(
+            "acceptance",
+            "Check the complete local product inventory without model requests",
+            "provider-free",
+            0,
+            False,
+        ),
+        VerificationProfile(
+            "basic",
+            "Run the two original DCI-equivalent examples and one Judge check",
+            "bounded-provider-backed",
+            3,
+            False,
+        ),
+        VerificationProfile(
+            "complete",
+            "Run preflight, both basic examples, and local product acceptance",
+            "bounded-provider-backed",
+            3,
+            False,
+        ),
+        VerificationProfile(
+            "preflight",
+            "Check configuration, Pi, Node, corpora, and Judge without requests",
+            "provider-free",
+            0,
+            False,
+        ),
+    ),
+)
+
+
+class DciVerificationBackend(Protocol):
+    def node_major_version(self) -> int | None: ...
+
+
+class LocalDciVerificationBackend:
+    """Read-only local prerequisite adapter."""
+
+    def node_major_version(self) -> int | None:
+        try:
+            completed = subprocess.run(
+                ["node", "--version"],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return None
+        if completed.returncode != 0:
+            return None
+        match = re.fullmatch(r"v([0-9]+)(?:\.[0-9]+){2}\s*", completed.stdout)
+        return None if match is None else int(match.group(1))
+
+
+@dataclass(frozen=True)
+class DciProductVerifier:
+    repo_root: Path
+    backend: DciVerificationBackend
+
+    def __call__(self, request: VerificationRequest) -> VerificationResult:
+        if request.level == "preflight":
+            return self.preflight(
+                env_file=request.env_file, corpus_root=request.corpus_root
+            )
+        return VerificationResult(
+            product_id=DCI_PRODUCT_DESCRIPTION.product_id,
+            level=request.level,
+            status="NOT RUN",
+            checks=(
+                VerificationCheckResult(
+                    check_id="implementation",
+                    summary="This verification level is not available yet",
+                    status="NOT RUN",
+                ),
+            ),
+            external_request_count=0,
+            full_dataset_ran=False,
+        )
+
+    def preflight(
+        self, *, env_file: Path | None, corpus_root: Path | None
+    ) -> VerificationResult:
+        loaded = load_asterion_dci_env(self.repo_root, env_file=env_file)
+        paths = resolve_dci_paths(self.repo_root)
+        options = resolve_dci_runtime_options()
+        requested_env = self.repo_root / ".env" if env_file is None else env_file
+        environment_ready = loaded is not None and requested_env.is_file()
+        provider_key = _provider_key_name(options.provider)
+        configuration_ready = bool(
+            options.provider
+            and options.model
+            and provider_key
+            and os.environ.get(provider_key, "").strip()
+        )
+        judge_key_name = (
+            os.environ.get("DCI_EVAL_JUDGE_API_KEY_ENV", "").strip()
+            or os.environ.get("ASTERION_DCI_JUDGE_API_KEY_ENV", "").strip()
+            or "OPENAI_API_KEY"
+        )
+        judge_ready = bool(
+            os.environ.get("DCI_EVAL_JUDGE_MODEL", "").strip()
+            or os.environ.get("ASTERION_DCI_JUDGE_MODEL", "").strip()
+            or "gpt-5.4-nano"
+        ) and bool(
+            os.environ.get("DCI_EVAL_JUDGE_API_KEY", "").strip()
+            or os.environ.get("ASTERION_DCI_JUDGE_API_KEY", "").strip()
+            or os.environ.get(judge_key_name, "").strip()
+        )
+        node_major = self.backend.node_major_version()
+        pi_ready = (
+            paths.pi.repo_dir.is_dir()
+            and paths.pi.package_dir.is_dir()
+            and (paths.pi.package_dir / "package.json").is_file()
+            and paths.pi.agent_dir.is_dir()
+        )
+        resolved_corpus = _corpus_root(self.repo_root, corpus_root)
+        corpora_ready = all(
+            (resolved_corpus / name).is_dir()
+            for name in ("wiki_corpus", "bc_plus_docs")
+        )
+        checks = (
+            _check("configuration", "Provider and model configuration is present", configuration_ready),
+            _check("corpora", "Both example corpora are available", corpora_ready),
+            _check("environment", "The selected environment file is available", environment_ready),
+            _check("judge", "Judge configuration and credential are present", judge_ready),
+            _check("node", "Node.js major version is at least 20", node_major is not None and node_major >= 20),
+            _check("pi", "The external Pi checkout is ready", pi_ready),
+        )
+        return VerificationResult(
+            product_id=DCI_PRODUCT_DESCRIPTION.product_id,
+            level="preflight",
+            status="PASS" if all(check.status == "PASS" for check in checks) else "FAIL",
+            checks=checks,
+            external_request_count=0,
+            full_dataset_ran=False,
+        )
+
+
+def create_dci_product(
+    *,
+    repo_root: Path | None = None,
+    backend: DciVerificationBackend | None = None,
+) -> InstalledCapabilityProduct:
+    """Build the installed DCI product contract without performing verification."""
+
+    root = Path.cwd().resolve() if repo_root is None else Path(repo_root).resolve()
+    verifier = DciProductVerifier(
+        repo_root=root,
+        backend=LocalDciVerificationBackend() if backend is None else backend,
+    )
+    return InstalledCapabilityProduct(
+        description=DCI_PRODUCT_DESCRIPTION,
+        verifier=verifier,
+    )
+
+
+def _provider_key_name(provider: str | None) -> str | None:
+    if provider is None or re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", provider) is None:
+        return None
+    aliases = {"google": "GOOGLE_API_KEY", "gemini": "GOOGLE_API_KEY"}
+    return aliases.get(provider.lower(), f"{provider.upper().replace('-', '_')}_API_KEY")
+
+
+def _corpus_root(repo_root: Path, explicit: Path | None) -> Path:
+    if explicit is not None:
+        return explicit
+    configured = os.environ.get("ASTERION_DCI_CORPUS_ROOT", "").strip()
+    if configured:
+        path = Path(configured).expanduser()
+        return path.resolve() if path.is_absolute() else (repo_root / path).resolve()
+    return repo_root / "corpus"
+
+
+def _check(check_id: str, summary: str, passed: bool) -> VerificationCheckResult:
+    return VerificationCheckResult(
+        check_id=check_id,
+        summary=summary,
+        status="PASS" if passed else "FAIL",
+    )

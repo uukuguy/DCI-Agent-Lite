@@ -24,6 +24,8 @@ class BuiltinDciApplicationTests(unittest.TestCase):
 
         implementation = provider.applications[0].implementations[0][1]
         self.assertIs(implementation._native_executor, native_executor)
+        self.assertIsNotNone(provider.product)
+        self.assertEqual(provider.product.description.product_id, "asterion-dci")
 
     def test_distribution_registers_the_builtin_dci_provider(self) -> None:
         entries = tuple(metadata.entry_points(group="asterion.applications"))
