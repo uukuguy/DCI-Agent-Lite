@@ -108,6 +108,25 @@ class DciDescriptionAndPreflightTests(unittest.TestCase):
         self.assertFalse(result.full_dataset_ran)
         self.assertEqual(backend.calls, [])
 
+    def test_preflight_accepts_pi_managed_auth_for_openai_codex(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir).resolve()
+            prepare_root(root)
+            (root / "pi/.pi/agent/auth.json").write_text("{}")
+            env_file = root / ".env"
+            env_file.write_text(
+                "DCI_PROVIDER=openai-codex\n"
+                "DCI_MODEL=fixture-model\n"
+                "DCI_EVAL_JUDGE_MODEL=fixture-judge\n"
+                "DCI_EVAL_JUDGE_API_KEY_ENV=JUDGE_KEY\n"
+                "JUDGE_KEY=SECRET-JUDGE-VALUE\n"
+            )
+            verifier = DciProductVerifier(repo_root=root, backend=FixtureBackend())
+            with patch.dict(os.environ, {}, clear=True):
+                result = verifier.preflight(env_file=env_file, corpus_root=root / "corpus")
+
+        self.assertEqual(result.status, "PASS")
+
 
 class DciBasicVerificationTests(unittest.TestCase):
     def test_basic_runs_exactly_two_cases_and_one_judge_in_order(self) -> None:

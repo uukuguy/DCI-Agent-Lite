@@ -25,6 +25,56 @@ def python_source(root: Path) -> str:
 
 
 class SourceDistributionBoundaryTests(unittest.TestCase):
+    def test_asterion_capability_beginner_guide_is_complete(self) -> None:
+        guide_path = ROOT / "docs/guides/asterion-capability-usage.md"
+        self.assertTrue(guide_path.is_file())
+        text = guide_path.read_text()
+        ordered = (
+            "## 五分钟开始",
+            "## 最少需要哪些环境变量",
+            "## 查看能力：describe",
+            "## 只检查准备情况：--level preflight",
+            "## 验证两个基础示例：--level basic",
+            "## 不调用模型验证完整迁移：--level acceptance",
+            "## 一条命令全部验证：--level complete",
+            "## 原始 DCI 功能与 Asterion 命令",
+            "## 预期输出",
+            "## 费用和请求次数",
+            "## 产物在哪里",
+            "## 常见问题",
+            "../verification/asterion-dci-validation-guide.md",
+        )
+        positions = [text.find(value) for value in ordered]
+        self.assertTrue(all(position >= 0 for position in positions), positions)
+        self.assertEqual(positions, sorted(positions))
+        for required in (
+            "asterion describe --provider dci-agent-lite",
+            "--level preflight",
+            "--level basic",
+            "--level acceptance",
+            "--level complete",
+            "DCI_PROVIDER",
+            "DCI_MODEL",
+            "DCI_PI_DIR",
+            "ANTHROPIC_API_KEY=<YOUR_PROVIDER_API_KEY>",
+            "DCI_EVAL_JUDGE_API_KEY_ENV=OPENAI_API_KEY",
+            "OPENAI_API_KEY=<YOUR_JUDGE_API_KEY>",
+            "External requests: 3",
+            "Full dataset ran: no",
+        ):
+            self.assertIn(required, text)
+        self.assertNotRegex(
+            text,
+            re.compile(r"(?:API_KEY|TOKEN|PASSWORD)=(?!<YOUR_)[A-Za-z0-9_-]{12,}"),
+        )
+        self.assertNotRegex(text, re.compile(r"/(?:Users|home|private)/"))
+
+        readme = (ROOT / "README.md").read_text()
+        beginner = readme.find("docs/guides/asterion-capability-usage.md")
+        advanced = readme.find("docs/verification/asterion-dci-validation-guide.md")
+        self.assertGreaterEqual(beginner, 0)
+        self.assertGreater(advanced, beginner)
+
     def test_complete_dci_validation_guide_covers_both_products_and_all_tiers(
         self,
     ) -> None:

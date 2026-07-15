@@ -1,5 +1,9 @@
 # Asterion DCI Full Functional Verification Guide
 
+If you want to configure and run Asterion DCI without reading the audit
+details below, start with the
+[command-first Asterion capability usage guide](../guides/asterion-capability-usage.md).
+
 This is the authoritative operator guide for verifying that the independent
 Asterion DCI capability and its runnable `asterion-dci` application preserve
 the original Pi-based DCI behavior. Run commands from the repository root.

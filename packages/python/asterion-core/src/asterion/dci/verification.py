@@ -493,11 +493,15 @@ class DciProductVerifier:
         requested_env = self.repo_root / ".env" if env_file is None else env_file
         environment_ready = loaded is not None and requested_env.is_file()
         provider_key = _provider_key_name(options.provider)
+        pi_auth = paths.pi.agent_dir / "auth.json"
+        pi_managed_auth = pi_auth.is_file() and not pi_auth.is_symlink()
         configuration_ready = bool(
             options.provider
             and options.model
-            and provider_key
-            and os.environ.get(provider_key, "").strip()
+            and (
+                (provider_key and os.environ.get(provider_key, "").strip())
+                or pi_managed_auth
+            )
         )
         judge_key_name = (
             os.environ.get("DCI_EVAL_JUDGE_API_KEY_ENV", "").strip()

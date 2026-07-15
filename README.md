@@ -65,6 +65,11 @@ surface.
 
 ### AF-250 product-acceptance evidence
 
+For a short, command-first introduction, start with the
+[Asterion capability usage guide](docs/guides/asterion-capability-usage.md). It
+shows the shared `.env`, the DCI function list, and the unified
+`asterion describe/verify` commands without requiring source-code inspection.
+
 The complete procedure—from both original DCI examples through Asterion,
 installed Pi, all launchers, bounded acceptance, and repository gates—is in the
 [Asterion DCI full functional verification guide](docs/verification/asterion-dci-validation-guide.md).
