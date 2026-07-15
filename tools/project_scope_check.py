@@ -14,7 +14,14 @@ import yaml
 
 PACKAGE_HEADER = re.compile(r"^## (?P<id>[A-Z][A-Z0-9]*-\d+) — (?P<title>.+)$")
 FIELD_LINE = re.compile(r"^- (?P<field>[A-Za-z ]+): (?P<value>.*)$")
-RESUME_MARKER = re.compile(r"^Active work package: (?P<id>[A-Z][A-Z0-9]*-\d+)\s*$", re.MULTILINE)
+LIFECYCLE_MARKER = re.compile(
+    r"^> Project lifecycle: (?P<value>[a-z]+)$", re.MULTILINE
+)
+VALID_LIFECYCLES = {"active", "complete"}
+RESUME_MARKER = re.compile(
+    r"^Active work package: (?P<id>[A-Z][A-Z0-9]*-\d+|none)\s*$",
+    re.MULTILINE,
+)
 REQUIRED_FIELDS = ("Scope", "Dependencies", "Acceptance", "Design", "Plan")
 INACTIVE_CLIMB_PHASES = {"completed", "hard-pause", "retired"}
 
@@ -60,6 +67,19 @@ def parse_worklist(path: Path, errors: list[str]) -> list[dict[str, str]]:
     return packages
 
 
+def parse_lifecycle(path: Path, errors: list[str]) -> str | None:
+    text = read_text(path, errors, "worklist")
+    markers = LIFECYCLE_MARKER.findall(text)
+    if len(markers) != 1:
+        errors.append("worklist must contain exactly one project lifecycle marker")
+        return None
+    lifecycle = markers[0]
+    if lifecycle not in VALID_LIFECYCLES:
+        errors.append(f"unknown project lifecycle {lifecycle}")
+        return lifecycle
+    return lifecycle
+
+
 def validate_required_fields(active: list[dict[str, str]], errors: list[str]) -> None:
     for package in active:
         package_id = package["ID"]
@@ -69,7 +89,12 @@ def validate_required_fields(active: list[dict[str, str]], errors: list[str]) ->
                 errors.append(f"{package_id} missing required field {field}")
 
 
-def validate_markers(root: Path, active_id: str | None, errors: list[str]) -> None:
+def validate_markers(
+    root: Path,
+    lifecycle: str | None,
+    active_id: str | None,
+    errors: list[str],
+) -> None:
     architecture = root / "docs/architecture/agent-framework.md"
     if not architecture.is_file():
         errors.append("missing framework north-star architecture document")
@@ -89,6 +114,8 @@ def validate_markers(root: Path, active_id: str | None, errors: list[str]) -> No
         errors.append("RESUME missing active work package marker")
     elif active_id is not None and marker.group("id") != active_id:
         errors.append(f"resume names {marker.group('id')} but active package is {active_id}")
+    elif lifecycle == "complete" and marker.group("id") != "none":
+        errors.append("complete lifecycle requires RESUME active work package none")
 
 
 def load_hypotheses(root: Path, errors: list[str]) -> dict[str, dict[str, Any]]:
@@ -127,6 +154,7 @@ def validate_hypothesis(
 
 def validate_active_climb(
     root: Path,
+    lifecycle: str | None,
     active_id: str | None,
     requested_hypothesis: str | None,
     errors: list[str],
@@ -144,6 +172,8 @@ def validate_active_climb(
     hypotheses: dict[str, dict[str, Any]] | None = None
     phase = state.get("phase")
     if phase not in INACTIVE_CLIMB_PHASES:
+        if lifecycle == "complete":
+            errors.append("active climb session cannot run in complete lifecycle")
         work_package_id = state.get("work_package_id")
         if not isinstance(work_package_id, str):
             errors.append("active climb session lacks work_package_id")
@@ -166,16 +196,39 @@ def main() -> int:
     args = parse_args()
     root = args.root.resolve()
     errors: list[str] = []
-    packages = parse_worklist(root / "docs/status/WORKLIST.md", errors)
+    worklist_path = root / "docs/status/WORKLIST.md"
+    packages = parse_worklist(worklist_path, errors)
+    lifecycle = parse_lifecycle(worklist_path, errors)
     active = [item for item in packages if item.get("Status") == "in_progress"]
-    if len(active) != 1:
-        errors.append(f"expected exactly one in_progress package, found {len(active)}")
+    if lifecycle == "active" and len(active) != 1:
+        errors.append(
+            f"active lifecycle requires exactly one in_progress package, found {len(active)}"
+        )
+    elif lifecycle == "complete":
+        if active:
+            errors.append(
+                "complete lifecycle requires zero in_progress packages, "
+                f"found {len(active)}"
+            )
+        incomplete = [
+            f"{item['ID']}={item.get('Status', 'missing')}"
+            for item in packages
+            if item.get("Status") != "completed"
+        ]
+        if incomplete:
+            errors.append(
+                "complete lifecycle requires every package completed: "
+                + ", ".join(incomplete)
+            )
     validate_required_fields(active, errors)
     active_id = active[0]["ID"] if len(active) == 1 else None
-    validate_markers(root, active_id, errors)
-    validate_active_climb(root, active_id, args.climb_hypothesis, errors)
+    validate_markers(root, lifecycle, active_id, errors)
+    validate_active_climb(
+        root, lifecycle, active_id, args.climb_hypothesis, errors
+    )
     payload = {
         "ok": not errors,
+        "lifecycle": lifecycle,
         "active_package": active_id,
         "errors": errors,
     }

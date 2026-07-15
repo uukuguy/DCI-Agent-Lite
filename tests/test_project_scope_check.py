@@ -25,6 +25,8 @@ class ProjectScopeCheckTests(unittest.TestCase):
                 [
                     "# Framework Worklist",
                     "",
+                    "> Project lifecycle: active",
+                    "",
                     "## AF-000 — Framework control plane",
                     "",
                     "- Status: in_progress",
@@ -73,8 +75,154 @@ class ProjectScopeCheckTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         payload = json.loads(result.stdout)
         self.assertTrue(payload["ok"])
+        self.assertEqual(payload["lifecycle"], "active")
         self.assertEqual(payload["active_package"], "AF-000")
         self.assertEqual(payload["errors"], [])
+
+    def test_complete_lifecycle_accepts_zero_active_completed_packages(self) -> None:
+        self.write(
+            "docs/status/WORKLIST.md",
+            "\n".join(
+                [
+                    "# Framework Worklist",
+                    "",
+                    "> Project lifecycle: complete",
+                    "",
+                    "## AF-000 — Framework control plane",
+                    "",
+                    "- Status: completed",
+                    "",
+                ]
+            ),
+        )
+        self.write(
+            "docs/status/RESUME-NEXT-SESSION.md",
+            "Active work package: none\n",
+        )
+
+        result = self.run_check()
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["lifecycle"], "complete")
+        self.assertIsNone(payload["active_package"])
+        self.assertEqual(payload["errors"], [])
+
+    def test_complete_lifecycle_rejects_in_progress_package(self) -> None:
+        worklist = (self.root / "docs/status/WORKLIST.md").read_text()
+        self.write(
+            "docs/status/WORKLIST.md",
+            worklist.replace("Project lifecycle: active", "Project lifecycle: complete"),
+        )
+
+        result = self.run_check()
+
+        self.assertEqual(result.returncode, 1)
+        self.assertTrue(
+            any(
+                error.startswith("complete lifecycle requires zero in_progress packages")
+                for error in json.loads(result.stdout)["errors"]
+            )
+        )
+
+    def test_complete_lifecycle_rejects_non_completed_package(self) -> None:
+        self.write(
+            "docs/status/WORKLIST.md",
+            "\n".join(
+                [
+                    "# Framework Worklist",
+                    "",
+                    "> Project lifecycle: complete",
+                    "",
+                    "## AF-000 — Framework control plane",
+                    "",
+                    "- Status: blocked",
+                    "",
+                ]
+            ),
+        )
+        self.write("docs/status/RESUME-NEXT-SESSION.md", "Active work package: none\n")
+
+        result = self.run_check()
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(
+            "complete lifecycle requires every package completed: AF-000=blocked",
+            json.loads(result.stdout)["errors"],
+        )
+
+    def test_complete_lifecycle_rejects_active_climb_session(self) -> None:
+        self.write(
+            "docs/status/WORKLIST.md",
+            "\n".join(
+                [
+                    "# Framework Worklist",
+                    "",
+                    "> Project lifecycle: complete",
+                    "",
+                    "## AF-000 — Framework control plane",
+                    "",
+                    "- Status: completed",
+                    "",
+                ]
+            ),
+        )
+        self.write("docs/status/RESUME-NEXT-SESSION.md", "Active work package: none\n")
+        self.write(
+            "docs/status/climb/session-state.json",
+            json.dumps({"phase": "implementation", "work_package_id": "AF-000"}),
+        )
+
+        result = self.run_check()
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(
+            "active climb session cannot run in complete lifecycle",
+            json.loads(result.stdout)["errors"],
+        )
+
+    def test_missing_or_unknown_lifecycle_is_rejected(self) -> None:
+        worklist = (self.root / "docs/status/WORKLIST.md").read_text()
+        self.write(
+            "docs/status/WORKLIST.md",
+            worklist.replace("> Project lifecycle: active\n\n", ""),
+        )
+
+        missing = self.run_check()
+
+        self.assertEqual(missing.returncode, 1)
+        self.assertIn(
+            "worklist must contain exactly one project lifecycle marker",
+            json.loads(missing.stdout)["errors"],
+        )
+
+        self.write(
+            "docs/status/WORKLIST.md",
+            worklist.replace("Project lifecycle: active", "Project lifecycle: paused"),
+        )
+
+        unknown = self.run_check()
+
+        self.assertEqual(unknown.returncode, 1)
+        self.assertIn(
+            "unknown project lifecycle paused",
+            json.loads(unknown.stdout)["errors"],
+        )
+
+    def test_active_lifecycle_rejects_zero_active_packages(self) -> None:
+        worklist = (self.root / "docs/status/WORKLIST.md").read_text()
+        self.write(
+            "docs/status/WORKLIST.md",
+            worklist.replace("- Status: in_progress", "- Status: completed"),
+        )
+
+        result = self.run_check()
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(
+            "active lifecycle requires exactly one in_progress package, found 0",
+            json.loads(result.stdout)["errors"],
+        )
 
     def test_resume_package_mismatch_is_rejected(self) -> None:
         self.write("docs/status/RESUME-NEXT-SESSION.md", "Active work package: AF-999\n")
@@ -111,7 +259,7 @@ class ProjectScopeCheckTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 1)
         self.assertIn(
-            "expected exactly one in_progress package, found 2",
+            "active lifecycle requires exactly one in_progress package, found 2",
             json.loads(result.stdout)["errors"],
         )
 

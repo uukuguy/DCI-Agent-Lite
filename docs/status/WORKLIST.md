@@ -2,6 +2,8 @@
 
 > Canonical active work-package ledger. No action may begin without exactly one `in_progress` package or explicit user authorization recorded in its package.
 
+> Project lifecycle: active
+
 ## AF-000 — Framework control plane
 
 - Status: completed
