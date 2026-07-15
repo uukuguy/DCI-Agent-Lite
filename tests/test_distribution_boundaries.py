@@ -25,6 +25,53 @@ def python_source(root: Path) -> str:
 
 
 class SourceDistributionBoundaryTests(unittest.TestCase):
+    def test_complete_dci_validation_guide_covers_both_products_and_all_tiers(
+        self,
+    ) -> None:
+        guide_path = ROOT / "docs/verification/asterion-dci-validation-guide.md"
+        self.assertTrue(guide_path.is_file())
+        text = guide_path.read_text()
+        for required in (
+            "scripts/examples/dci_basic_example.sh",
+            "scripts/examples/dci_runtime_context_example.sh",
+            "scripts/examples/asterion_dci_basic_example.sh",
+            "scripts/examples/asterion_dci_runtime_context_example.sh",
+            "asterion-dci resume",
+            "asterion-dci terminal",
+            "asterion-dci evaluate",
+            "asterion-dci benchmark",
+            "verify_asterion_dci_product.py",
+            "--acceptance-root",
+            "533/533",
+            "7/7",
+            "provider-free",
+            "bounded provider-backed",
+            "full-dataset",
+        ):
+            self.assertIn(required, text)
+
+        for launcher in (
+            "scripts/asterion/bcplus_eval/run_L3.sh",
+            "scripts/asterion/bcplus_eval/run_bcplus_eval_openai.sh",
+            "scripts/asterion/bright/run_bio.sh",
+            "scripts/asterion/bright/run_earth_science.sh",
+            "scripts/asterion/bright/run_economics.sh",
+            "scripts/asterion/bright/run_robotics.sh",
+            "scripts/asterion/qa/run_2wikimultihopqa_dev_sample50.sh",
+            "scripts/asterion/qa/run_bamboogle_test_sample50.sh",
+            "scripts/asterion/qa/run_hotpotqa_dev_sample50.sh",
+            "scripts/asterion/qa/run_musique_dev_sample50.sh",
+            "scripts/asterion/qa/run_nq_test_sample50.sh",
+            "scripts/asterion/qa/run_triviaqa_test_sample50.sh",
+        ):
+            self.assertIn(launcher, text)
+
+        readme = (ROOT / "README.md").read_text()
+        self.assertIn(
+            "docs/verification/asterion-dci-validation-guide.md",
+            readme,
+        )
+
     def test_asterion_core_has_an_independent_project_and_source_root(self) -> None:
         self.assertTrue((ASTERION_PROJECT / "pyproject.toml").is_file())
         self.assertTrue((ASTERION_SOURCE / "__init__.py").is_file())

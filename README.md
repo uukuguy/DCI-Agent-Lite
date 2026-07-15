@@ -65,6 +65,10 @@ surface.
 
 ### AF-250 product-acceptance evidence
 
+The complete procedure—from both original DCI examples through Asterion,
+installed Pi, all launchers, bounded acceptance, and repository gates—is in the
+[Asterion DCI full functional verification guide](docs/verification/asterion-dci-validation-guide.md).
+
 Run the local, provider-free product matrix verifier to reproduce the complete
 checked-in acceptance boundary:
 
