@@ -711,3 +711,4 @@
 - 21:44 Real unified `complete` passes both six-turn Pi cases, Judge, 8/8+533/533+12/12+6/6+7/7 acceptance, three provider-backed operations, and no full dataset.
 - 21:45 Full closure passes 1297 Python, 11 TypeScript, 19 Rust, all static/governance gates, and a 70-test post-review regression.
 - 21:45 Final independent review approves AF-270 with no remaining Critical or Important findings after body-free private-validation failure handling.
+- 21:46 Unified verification closure makes the complete migration and recovery boundary executable and durable. [00e60e4]
