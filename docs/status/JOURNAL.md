@@ -720,3 +720,4 @@
 - 2026-07-16 README and beginner guide expose cost-visible Make shortcuts beside canonical Asterion CLI commands. [7478db4]
 - 2026-07-16 Live Make description and provider-free acceptance pass with zero provider operations and no full dataset.
 - 2026-07-16 AF-280 closure passes 15 focused tests, compile, Ruff, scope, and diff gates.
+- 2026-07-16 AF-280 closes with verified, documented Make entry points and terminal governance. [0d76e82]
