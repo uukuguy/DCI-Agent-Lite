@@ -758,3 +758,5 @@
 - 2026-07-16 AF-300 review remediation closes with terminal lifecycle and no active package. [c1625a5]
 - 2026-07-16 AF-300 final command remediation reopens because the standalone guide names an invalid `provider-free` verification level.
 - 2026-07-16 AF-300 command remediation governance reopens before documentation TDD. [69e7802]
+- 2026-07-16 Command RED proves standalone `provider-free` is outside the four legal verification levels; `acceptance` is the provider-free profile.
+- 2026-07-16 Command GREEN passes 44 focused docs/distribution/CLI tests, parser/profile dry probe, compile, Ruff, scope, and diff.

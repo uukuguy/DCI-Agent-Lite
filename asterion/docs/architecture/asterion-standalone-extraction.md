@@ -168,7 +168,7 @@ Python 迁移完成的定义是 isolated wheel 可用，而不是源目录内 `u
 ```bash
 uv build .
 asterion list
-asterion verify --provider dci-agent-lite --level provider-free
+asterion verify --provider dci-agent-lite --level acceptance
 make asterion-verify-basic
 ```
 

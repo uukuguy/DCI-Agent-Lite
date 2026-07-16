@@ -270,12 +270,26 @@ class AsterionDocumentationTests(unittest.TestCase):
         for command in (
             "uv build .",
             "asterion list",
-            "asterion verify --provider dci-agent-lite --level provider-free",
+            "asterion verify --provider dci-agent-lite --level acceptance",
             "make asterion-verify-basic",
             "npm test",
             "cargo test",
         ):
             self.assertIn(command, text)
+
+    def test_standalone_verification_command_uses_a_real_provider_free_level(
+        self,
+    ) -> None:
+        text = read("asterion/docs/architecture/asterion-standalone-extraction.md")
+        phase_six = text.split("## Phase 6：隔离安装与发布验证", 1)[1].split(
+            "## Phase 7：切换与清理", 1
+        )[0]
+        commands = re.findall(r"^asterion verify .+$", phase_six, re.MULTILINE)
+        self.assertEqual(len(commands), 1)
+        argv = commands[0].split()
+        level = argv[argv.index("--level") + 1]
+        self.assertIn(level, {"preflight", "basic", "acceptance", "complete"})
+        self.assertEqual(level, "acceptance")
 
     def test_standalone_extraction_promotes_project_contents_to_repo_root(
         self,
