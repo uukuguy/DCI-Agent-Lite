@@ -4,11 +4,11 @@
 
 - Project: Asterion framework under development in the DCI-Agent-Lite repository; DCI remains the first capability and reference application.
 - Current branch: `main`
-- Theme-level focus: document the complete Asterion DCI product, framework/capability integration model, and future standalone extraction boundary.
+- Theme-level focus: AF-290 documentation is complete; directory structure and any remaining DCI implementation questions await explicit discussion and a new package.
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: AF-290 — complete product, framework, and extraction documentation.
+- Active work package: none; project lifecycle is complete.
 
 ## Current Architecture
 
@@ -25,6 +25,7 @@
 - AF-250 acceptance: all eight local/model-free product rows, all 533 delegated batch selectors, twelve launcher pairs, six batch extras, and AF-250-H-001 through H-005 pass. The independent Asterion package has no production import or launch of `src/dci`. Seven bounded real source/Asterion/application/Pi-plus-Judge/reuse cases completed successfully after the isolated worktree was given the shared main-repository corpus path; their credential-clean, body-free structural record is digest-bound into the product matrix and revalidated against retained private native artifacts. Final terminal closure passes 1275 Python, 11 TypeScript, and 19 Rust tests plus compile, Ruff, shell, scope, terminal-dispatch rejection, diff, installed-wheel/application, public-record, and private-artifact verifier gates. Independent closeout review reports no Critical or Important findings. No full dataset ran.
 - AF-270 acceptance: generic provider-selected `asterion describe/verify` makes the complete DCI function map, shared `.env` configuration, and preflight/basic/acceptance/complete verification discoverable without source inspection. Source acceptance is loaded only from the trusted checkout containing the verifier module; an installed wheel never executes a current-directory lookalike. Both real Pi examples use six-turn limits, private retained evidence is genuinely revalidated, and public cost output counts two Pi run operations plus one Judge operation without misrepresenting multi-turn provider API calls. A real `complete` run passed with all product counts and no full dataset; closure passes 1297 Python, 11 TypeScript, and 19 Rust tests plus all static/governance gates.
 - AF-280 acceptance: the root Makefile exposes five explicit, phony, cost-visible shortcuts for capability description and all four DCI verification levels. Defaults use the shared root `.env`, repository corpus, and Asterion verification output while remaining overridable. Exact dry-run argv, documentation, live description, and provider-free acceptance checks pass without a provider request or full dataset.
+- AF-290 acceptance: the complete DCI reference, framework/capability integration guide, and standalone extraction guide are canonical and reachable from `docs/README.md`. They distinguish Implemented, Verified, External-limited, and Not rerun evidence; identify package-local `capabilities/` and `applications/` as authoritative; define complete third-party integration and seven reversible extraction phases; and correct stale claims that the current external Pi exposes typed context-management levels. Closure passes 16 focused tests plus compile, Ruff, CLI, scope, link, and diff gates without provider requests or a full dataset.
 - Host contracts: Python and TypeScript expose the same schema-backed runtime manifest, request, event, and asynchronous client boundary without adapter-private types.
 - Controlled execution: `dci.executor/v1` has a runnable concurrent Rust JSONL sidecar with trusted startup policy, direct execution, bounded dual-stream draining, deadline/cancel kill-and-reap, duplicate-ID denial, out-of-order correlation, safe parse errors, EOF draining, operator documentation, and root verification targets.
 - Package composition: `dci.package/v1` and the deterministic Python composer resolve a portable policy → DCI research → evaluation → observability graph identically for Pi and Claude Code capability mappings. The TypeScript host exports the same manifest types and validates the canonical schema/fixtures without implementing a second composer.
@@ -56,7 +57,7 @@
 
 ## Open Problems (theme-level)
 
-- AF-290 must reconcile the stale runtime context-level claims in `assets/docs/running.md` with the current external Pi capability boundary and distinguish complete benchmark implementation from unrerun full-dataset score reproduction.
+- No active implementation package. The next discussion may evaluate directory simplification and any DCI gaps against the three AF-290 documents; implementation requires reopening governance with a new scoped package.
 
 ## Key Files
 

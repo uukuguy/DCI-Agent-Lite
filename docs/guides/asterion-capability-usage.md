@@ -2,6 +2,8 @@
 
 这份指南只回答三个实际问题：Asterion 的 DCI 能做什么、需要配置什么、怎样用一条统一命令验证它。无需阅读 Python 源码，也无需手动寻找能力包里的脚本。
 
+需要逐项了解 Context Management、Judge、benchmark、指标、导出及其证据状态时，阅读 [Asterion DCI 完整产品参考](asterion-dci-complete-reference.md)。
+
 ## 五分钟开始
 
 以下命令都在仓库根目录执行。Asterion 与原始 DCI 共用根目录的 `.env`；如果现有 `.env` 已经能运行原始 DCI 两个示例，通常无需另建配置。

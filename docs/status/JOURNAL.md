@@ -727,3 +727,6 @@
 - 2026-07-16 Documentation TDD plan binds complete claims to source paths, commands, evidence labels, and contradiction checks. [12996c3]
 - 2026-07-16 Complete DCI reference separates product implementation, executable proof, Pi limits, and unrerun benchmark scores. [b487fe6]
 - 2026-07-16 Framework guide fixes directory authority and defines safe end-to-end capability integration. [5fe21f1]
+- 2026-07-16 Extraction guide defines a phased, reversible standalone boundary without vendoring external runtime data. [65cff9e]
+- 2026-07-16 AF-290 documentation closure passes 16 focused tests and static/CLI/governance gates without provider requests.
+- 2026-07-16 Product docs now expose Pi context limits and unrerun benchmark evidence without overstating completeness.

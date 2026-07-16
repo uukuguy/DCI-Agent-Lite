@@ -3,6 +3,8 @@
 If you want to configure and run Asterion DCI without reading the audit
 details below, start with the
 [command-first Asterion capability usage guide](../guides/asterion-capability-usage.md).
+For the function-by-function product boundary and evidence labels, use the
+[complete Asterion DCI product reference](../guides/asterion-dci-complete-reference.md).
 
 This is the authoritative operator guide for verifying that the independent
 Asterion DCI capability and its runnable `asterion-dci` application preserve

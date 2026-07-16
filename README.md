@@ -70,6 +70,12 @@ For a short, command-first introduction, start with the
 shows the shared `.env`, the DCI function list, and the unified
 `asterion describe/verify` commands without requiring source-code inspection.
 
+完整文档统一从 [Asterion 文档导航](docs/README.md)进入：
+
+- [Asterion DCI 完整产品参考](docs/guides/asterion-dci-complete-reference.md)
+- [Asterion 框架与能力包接入指南](docs/architecture/asterion-framework-capability-integration.md)
+- [Asterion 独立项目拆分指南](docs/architecture/asterion-standalone-extraction.md)
+
 在源码仓库根目录可以使用更短的 Make 入口：
 
 ```bash

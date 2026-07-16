@@ -218,6 +218,50 @@ class AsterionDocumentationTests(unittest.TestCase):
         ):
             self.assertIn(command, text)
 
+    def test_documentation_hub_navigation_and_context_truth(self) -> None:
+        hub = read("docs/README.md")
+        root_readme = read("README.md")
+        usage = read("docs/guides/asterion-capability-usage.md")
+        validation = read("docs/verification/asterion-dci-validation-guide.md")
+        running = read("assets/docs/running.md")
+
+        documents = (
+            "guides/asterion-dci-complete-reference.md",
+            "architecture/asterion-framework-capability-integration.md",
+            "architecture/asterion-standalone-extraction.md",
+        )
+        for relative in documents:
+            self.assertIn(relative, hub)
+            self.assertIn(f"docs/{relative}", root_readme)
+
+        complete_reference = "asterion-dci-complete-reference.md"
+        self.assertIn(complete_reference, usage)
+        self.assertIn(complete_reference, validation)
+
+        stale_claim = (
+            "The configured Pi checkout supports runtime context-management "
+            "profiles"
+        )
+        self.assertNotIn(stale_claim, running)
+        self.assertNotIn('--extra-arg="--context-management-level', running)
+        self.assertIn("does not expose a typed `--context-management-level`", running)
+        self.assertIn("External-limited", running)
+        self.assertIn("conversation artifact compaction", running)
+
+        local_docs = (
+            ROOT / "docs/README.md",
+            ROOT / "docs/guides/asterion-dci-complete-reference.md",
+            ROOT / "docs/architecture/asterion-framework-capability-integration.md",
+            ROOT / "docs/architecture/asterion-standalone-extraction.md",
+        )
+        for document in local_docs:
+            for target in re.findall(r"\[[^]]+\]\(([^)]+)\)", document.read_text()):
+                clean = target.strip("<>").split("#", 1)[0]
+                if not clean or "://" in clean or clean.startswith("mailto:"):
+                    continue
+                resolved = (document.parent / clean).resolve()
+                self.assertTrue(resolved.exists(), f"{document}: {target}")
+
 
 if __name__ == "__main__":
     unittest.main()

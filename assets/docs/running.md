@@ -98,87 +98,23 @@ PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
 
 ## Runtime Context-Management Levels
 
-The configured Pi checkout supports runtime context-management profiles that change what Pi sends back into the model during long tool-heavy runs. This is the layer that matters for model behavior and ablations.
+The currently configured external Pi CLI does not expose a typed `--context-management-level` option. Runtime profiles such as `level0` through `level5` therefore cannot be presented as executable Pi behavior or used as valid ablation commands in this checkout. This boundary is **External-limited**.
 
-Quick decision rule:
+Asterion accepts `--runtime-context-level` only as a requested diagnostic. It persists the requested value together with `runtime_context_control=unsupported` and deliberately does not invent or forward an unsupported Pi argument. Re-check Pi's own CLI help before changing that status.
 
-- Use runtime levels for **experiments, ablations, and model-behavior comparisons** (for artifact-only levels see [artifacts.md](artifacts.md#optimize-levels))
-- Use conversation artifact compaction (see [artifacts.md](artifacts.md#artifact-only-transcript-compaction)) only when you want smaller saved files
-
-### Through `dci-agent-lite`
-
-Use `--extra-arg` to forward the runtime profile into Pi:
+This is different from saved conversation artifact compaction. Asterion can deterministically produce a smaller `conversation.json` while retaining complete native evidence in `conversation_full.json`:
 
 ```bash
-# level0: current upstream runtime behavior
-PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
-  --provider anthropic \
-  --model claude-sonnet-4-20250514 \
-  --extra-arg="--context-management-level level0" \
-  "your question here"
-
-# level1: only truncate very large tool results
-PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
-  --provider anthropic \
-  --model claude-sonnet-4-20250514 \
-  --extra-arg="--context-management-level level1" \
-  "your question here"
-
-# level2: stricter truncation
-PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
-  --provider anthropic \
-  --model claude-sonnet-4-20250514 \
-  --extra-arg="--context-management-level level2" \
-  "your question here"
-
-# level3: truncation + micro-compaction
-PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
-  --provider anthropic \
-  --model claude-sonnet-4-20250514 \
-  --extra-arg="--context-management-level level3" \
-  "your question here"
-
-# legacy / level4: closest to the older pi runtime
-PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
-  --provider anthropic \
-  --model claude-sonnet-4-20250514 \
-  --extra-arg="--context-management-level legacy" \
-  "your question here"
-
-# level5: most aggressive runtime profile
-PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
-  --provider anthropic \
-  --model claude-sonnet-4-20250514 \
-  --extra-arg="--context-management-level level5" \
+asterion-dci run \
+  --conversation-clear-tool-results \
+  --conversation-clear-tool-results-keep-last 3 \
+  --conversation-externalize-tool-results \
+  --conversation-strip-thinking \
+  --conversation-strip-usage \
   "your question here"
 ```
 
-Runnable example for all levels: `scripts/examples/dci_runtime_context_example.sh`
-
-```bash
-bash scripts/examples/dci_runtime_context_example.sh level3
-```
-
-Recommended meanings:
-
-| Level | Behavior |
-|-------|----------|
-| `level0` | Current upstream baseline |
-| `level1` | Mild ablation, only clamp very large tool outputs |
-| `level2` | Stronger truncation-only baseline |
-| `level3` | Adds micro-compaction but avoids inline full compaction |
-| `legacy` / `level4` | Best match to old runtime behavior |
-| `level5` | Strongest runtime pressure relief |
-
-What to inspect after a run: `latest_model_context.json` (most recent context actually prepared for the next model call).
-
-### Directly with `pi` (Node)
-
-```bash
-node packages/coding-agent/dist/cli.js --context-management-level level0
-node packages/coding-agent/dist/cli.js --context-management-level legacy
-node packages/coding-agent/dist/cli.js --context-management-level level5
-```
+These controls change saved artifacts, not the context Pi sends to the model. See [artifacts.md](artifacts.md#artifact-only-transcript-compaction) and the [complete Asterion DCI reference](../../docs/guides/asterion-dci-complete-reference.md#context-management两个不同层次) for the two-layer distinction.
 
 ## Running Pi Directly From Node
 

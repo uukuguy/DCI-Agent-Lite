@@ -2,7 +2,7 @@
 
 > Canonical work-package ledger. An `active` lifecycle requires exactly one `in_progress` package; a `complete` lifecycle permits none and forbids autonomous dispatch.
 
-> Project lifecycle: active
+> Project lifecycle: complete
 
 ## AF-000 — Framework control plane
 
@@ -306,13 +306,14 @@
 
 ## AF-290 — Complete product, framework, and extraction documentation
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Asterion product comprehensibility and independent-project readiness
 - Scope: create a complete Asterion DCI product reference, framework/capability integration guide, and standalone extraction design; reconcile misleading context-management and benchmark claims without moving implementation directories.
 - Dependencies: AF-250, AF-270, AF-280
 - Acceptance: the documents distinguish implemented behavior, executable verification, external-Pi limitations, and unrerun full-dataset evidence; explain every canonical Asterion layer and the current top-level compatibility/reference directories; provide a complete capability-to-application integration path; enumerate the self-contained wheel and external dependencies; define a phased standalone repository extraction with gates and non-goals; README and documentation indexes link the set; stale contradictory context-management guidance is corrected.
 - Design: `docs/superpowers/specs/2026-07-16-asterion-documentation-set-design.md`
 - Plan: `docs/superpowers/plans/2026-07-16-asterion-complete-documentation.md`
+- Closure evidence: three canonical documents now cover the complete DCI product, all framework/capability/application integration layers, and a seven-phase standalone extraction. They label implementation, verification, current external-Pi runtime-context limits, and unrerun full-dataset results separately; the documentation hub and root README expose the set, and stale Pi context-level commands are removed. Closure passes 16 focused documentation/distribution tests, compile, Ruff, CLI help/description, local-link, scope, and diff gates without provider requests or a full dataset.
 
 ## AF-095 — Asterion framework identity and extraction
 
