@@ -4,11 +4,11 @@
 
 - Project: Asterion framework under development in the DCI-Agent-Lite repository; DCI remains the first capability and reference application.
 - Current branch: `main`
-- Theme-level focus: preserve the reviewed extraction-ready Asterion project subtree while the next framework-convergence package is selected.
+- Theme-level focus: implement exact paper-aligned DCI L0–L4 live context management in the converged Asterion subtree.
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `asterion/docs/architecture/agent-framework.md`
-- Active work package: none; project lifecycle is complete pending an explicitly scoped successor.
+- Active work package: AF-310; project lifecycle is active.
 
 ## Current Architecture
 
@@ -28,6 +28,7 @@
 - AF-280 acceptance: the root Makefile exposes five explicit, phony, cost-visible shortcuts for capability description and all four DCI verification levels. Defaults use the shared root `.env`, repository corpus, and Asterion verification output while remaining overridable. Exact dry-run argv, documentation, live description, and provider-free acceptance checks pass without a provider request or full dataset.
 - AF-290 acceptance: the complete DCI reference, framework/capability integration guide, and standalone extraction guide are canonical and reachable from `asterion/docs/README.md`. They distinguish Implemented, Verified, External-limited, and Not rerun evidence; identify package-local `capabilities/` and `applications/` as authoritative; define complete third-party integration and seven reversible extraction phases; and correct stale claims that the current external Pi exposes typed context-management levels. Closure passes 16 focused tests plus compile, Ruff, CLI, scope, link, and diff gates without provider requests or a full dataset.
 - AF-300 acceptance: all Asterion-owned source, packages, schemas, examples, scripts, product docs, and project tests converge beneath `asterion/`; obsolete product roots are absent while original DCI and migration evidence remain rooted. Provider-free parity passes 8/8 product rows, 533/533 delegated selectors, 12/12 launcher pairs, 6/6 extras, 7/7 retained bounded cases, and zero provider-backed operations. Isolated wheel installation and all CLIs/resources pass; final closure passes 90 project-local and 1235 root Python tests, 11 TypeScript tests, 19 Rust tests, and every static, shell, packaging, and governance gate. Final review remediation makes mixed-root configuration, dual Python discovery, promoted standalone commands, and the legal provider-free `acceptance` profile executable and records the full retained mixed-root boundary. Provider-backed artifacts and full-dataset status remain unchanged.
+- AF-310 active boundary: Asterion will own a dependency-free Pi extension and closed `dci.context-profile/v1` contract for exact L0–L4 live model-context behavior. The external `pi/` checkout stays read-only; full benchmark/metric parity belongs to AF-320, complete dual-runtime applications to AF-330, and budget-authorized paper reproduction to AF-340.
 - Host contracts: Python and TypeScript expose the same schema-backed runtime manifest, request, event, and asynchronous client boundary without adapter-private types.
 - Controlled execution: `dci.executor/v1` has a runnable concurrent Rust JSONL sidecar with trusted startup policy, direct execution, bounded dual-stream draining, deadline/cancel kill-and-reap, duplicate-ID denial, out-of-order correlation, safe parse errors, EOF draining, operator documentation, and root verification targets.
 - Package composition: `dci.package/v1` and the deterministic Python composer resolve a portable policy → DCI research → evaluation → observability graph identically for Pi and Claude Code capability mappings. The TypeScript host exports the same manifest types and validates the canonical schema/fixtures without implementing a second composer.
@@ -59,8 +60,8 @@
 
 ## Open Problems (theme-level)
 
-- No successor framework-convergence package is currently scoped or active.
-- Full-dataset validation and production release packaging remain deliberately deferred.
+- Exact DCI paper L0–L4 behavior is not implemented yet; AF-310-H-001 starts with the cross-language contract under TDD.
+- Full-dataset validation and score reproduction remain deliberately deferred to separately authorized AF-340.
 
 ## Key Files
 

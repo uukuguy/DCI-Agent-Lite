@@ -5,14 +5,19 @@
 
 ## In-flight / session state
 
-- Phase: completed
+- Phase: implementation
 - Last cycle: 85
-- Next hypothesis: None
+- Next hypothesis: AF-310-H-001
 - In flight: none
-- Next action: Migration milestone complete; reopen lifecycle governance before new work.
+- Next action: Write and run AF-310-H-001 profile-contract RED tests.
 
 ## Active hypotheses
 
+- **AF-310-H-001** (pending, rank 1.00): Define one closed schema-backed L0-L4 profile contract with exact Python and TypeScript fixture parity.
+- **AF-310-H-002** (pending, rank 0.90): Prove the Asterion Pi extension applies exact L0-L4 transformations to model-visible context and failure state.
+- **AF-310-H-003** (pending, rank 0.80): Prove packaged extension integrity, literal Pi transport, immutable resume identity, and isolated-wheel availability.
+- **AF-310-H-004** (pending, rank 0.70): Prove run, benchmark, resume, installed application, and wheel expose one content-free context-policy implementation.
+- **AF-310-H-005** (pending, rank 0.60): Force and retain credential-clean bounded real Pi evidence for L3 compaction and L4 summarization at the final extension digest.
 
 ## Run ladder
 
@@ -115,3 +120,7 @@
 - reuse the completed AF-180 session or its hypotheses under AF-190
 - reuse the completed AF-190 session or its hypotheses under AF-200
 - reuse the completed AF-200 session or its hypotheses under AF-210
+- treat post-run conversation artifacts as live model-context management
+- treat generic Pi compaction defaults as exact paper L0-L4 evidence
+- modify the external pi checkout instead of using Asterion's extension boundary
+- reuse the completed AF-250 session or its hypotheses under AF-310

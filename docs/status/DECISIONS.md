@@ -417,3 +417,14 @@
 - Compatibility boundary: installed distribution/import/CLI/provider/package/application/protocol identities and runtime behavior remain unchanged. Obsolete repository paths receive no forwarding projects, symlinks, or stubs.
 - Sequencing: full datasets, published-score reproduction, release automation/publication, remote repository switching, and separately versioned DCI plugins remain deferred until framework convergence is complete and separately authorized.
 - Revalidation trigger: alter the target root only for a concrete standalone build/release constraint that cannot be satisfied by promoting the subtree contents to repository root.
+
+## D-044 — Stage paper-aligned DCI and own live context policy in Asterion
+
+- Status: ✅ accepted design decision
+- Decided: 2026-07-17
+- Decision: close paper-aligned DCI through AF-310 runtime context management, AF-320 benchmark/metric parity, AF-330 complete application and dual-runtime exposure, then separately budget-authorized AF-340 experiment reproduction.
+- Runtime boundary: AF-310 ships one dependency-free Asterion TypeScript extension through Pi's documented explicit extension and compaction hooks. It does not patch, vendor, or write to the external `pi/` checkout and does not fabricate a Pi-native context-level flag.
+- Evidence boundary: claims remain separated into implemented, model-free verified, bounded provider verified, and full experiment reproduced. Earlier 8/8 source-product parity and 533/533 delegated selectors do not prove paper completeness.
+- Compatibility boundary: D-039 remains valid when no exact Asterion paper profile is selected. Explicit `level0` through `level4` now select the Asterion-owned implementation; legacy, level5, and unknown values fail closed.
+- Sequencing: AF-310 may not absorb BEIR/metrics, Claude semantic acceptance, full datasets, or score reproduction. Each successor requires its own governed plan and fresh Climb session.
+- Revalidation trigger: change extension ownership or the four-layer evidence model only if the selected runtime exposes an equally exact, versioned, integrity-bound native contract with executable semantic evidence.

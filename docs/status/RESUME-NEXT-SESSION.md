@@ -1,12 +1,12 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-16 23:53 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-17 05:32 +0800. **Session remains active — not a final handoff.**
 
-Active work package: none
+Active work package: AF-310
 
 ## TL;DR
 
-- AF-300 remains fully closed and the repository lifecycle remains `complete` with no active package.
+- AF-300 remains fully closed; AF-310 is now the sole active package.
 - Audit showed that current source-product parity is complete but paper-level DCI is not: exact L0–L4 live context policies, BEIR ArguAna/SciFact, paper coverage/localization and ablations, complete application exposure, bounded Claude semantics, and full experiment reproduction remain.
 - The user approved the four-package AF-310 → AF-340 architecture and continuous package-parented Climb execution. The formal design is committed at `docs/superpowers/specs/2026-07-16-paper-aligned-dci-complete-implementation-design.md` [926bbf6].
 - The reviewed AF-310 implementation plan is committed at `docs/superpowers/plans/2026-07-16-af-310-paper-aligned-runtime-context-management.md` [0454cca].
@@ -16,7 +16,7 @@ Active work package: none
 - Branch: `main`; design and checkpoint state are committed through the immediately following state-maintenance commits, remain unpushed, and leave a clean working tree.
 - Provider-free product verification still passes 8/8 rows, 533/533 selectors, 12/12 launcher pairs, 6/6 extras, and 7/7 bounded retained cases with zero provider operations.
 - Correct Context/artifact/CLI focused tests pass 101/101; an earlier nonzero command was only an invalid guessed test-module selector.
-- Governance is intentionally not reopened yet: the approved design and real plan now exist, so the next atomic action is Task 0 governance activation and a fresh AF-310 Climb pool.
+- Governance, D-044, and a fresh AF-310 Climb pool are active; AF-310-H-001 is the next hypothesis.
 - No implementation, full dataset, provider request, or Climb cycle has started.
 
 ## Approved package sequence
@@ -28,10 +28,10 @@ Active work package: none
 
 ## Next steps
 
-1. Choose the implementation mode required by `writing-plans`; the user's standing preference is continuous inline Climb execution.
-2. Activate AF-310 using plan Task 0; update WORKLIST, DECISIONS, CURRENT-STATE, RESUME, and fresh package-parented Climb state together.
-3. Run `python3 tools/project_scope_check.py` and commit the governed start.
-4. Execute Task 1 through continuous Climb hypothesis cycles until a defined hard pause or package acceptance.
+1. Run `python3 tools/project_scope_check.py`; it must name AF-310 and AF-310-H-001.
+2. Commit the Task 0 governed start and journal its hash.
+3. Write AF-310-H-001 failing profile-contract tests and observe the expected RED result.
+4. Implement only the minimum closed profile contract needed for GREEN, then record the Climb cycle and advance continuously.
 
 ## Don't go down these paths again
 
@@ -39,7 +39,7 @@ Active work package: none
 - Do not use generic Pi compaction as proof of the paper's exact L0–L4 thresholds.
 - Do not modify or commit external `pi/`; use the official explicit extension boundary.
 - Do not treat 533/533 current-source selectors as paper-experiment completeness.
-- Do not activate AF-310 with a missing or placeholder Plan link.
+- Do not reopen completed Climb hypotheses or reuse AF-250 session state.
 - Do not run full datasets before AF-340 receives explicit budget authorization.
 
 ## Ready commands
@@ -49,4 +49,5 @@ git status --short
 python3 tools/project_scope_check.py
 sed -n '1,460p' docs/superpowers/specs/2026-07-16-paper-aligned-dci-complete-implementation-design.md
 sed -n '1,220p' docs/superpowers/plans/2026-07-16-af-310-paper-aligned-runtime-context-management.md
+uv run --project asterion python -m unittest tests.test_asterion_dci_context_profiles -v
 ```

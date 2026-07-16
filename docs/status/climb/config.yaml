@@ -1,10 +1,10 @@
-score_name: asterion_dci_application_runtime_parity_acceptance
+score_name: asterion_dci_paper_context_management_acceptance
 score_direction: max
 subscores:
-  - native_executor
-  - pi_application_dispatch
-  - installed_projection
-  - local_closure
+  - profile_contract
+  - live_transformation
+  - packaging_resume
+  - bounded_runtime
 push_mode: manual-csv
 state_dir: docs/status/climb
 artifact_dir: runs/climb

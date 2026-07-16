@@ -1,13 +1,13 @@
 {
   "run_count": 84,
   "session": {
-    "session": "2026-07-15-af-250-product-acceptance-matrix",
-    "phase": "completed",
-    "work_package_id": "AF-250",
+    "session": "2026-07-17-af-310-paper-context-management",
+    "phase": "implementation",
+    "work_package_id": "AF-310",
     "last_cycle": 85,
-    "next_hypothesis": null,
+    "next_hypothesis": "AF-310-H-001",
     "in_flight": null,
-    "next_action": "Migration milestone complete; reopen lifecycle governance before new work.",
+    "next_action": "Write and run AF-310-H-001 profile-contract RED tests.",
     "falsified_routes": [
       "duplicate the authoritative Pi commit across setup.sh and .env.template",
       "convert the independent Pi checkout to vendored or submodule ownership",
@@ -18,10 +18,80 @@
       "reuse the AF-100 Climb session or its hypotheses under AF-180",
       "reuse the completed AF-180 session or its hypotheses under AF-190",
       "reuse the completed AF-190 session or its hypotheses under AF-200",
-      "reuse the completed AF-200 session or its hypotheses under AF-210"
+      "reuse the completed AF-200 session or its hypotheses under AF-210",
+      "treat post-run conversation artifacts as live model-context management",
+      "treat generic Pi compaction defaults as exact paper L0-L4 evidence",
+      "modify the external pi checkout instead of using Asterion's extension boundary",
+      "reuse the completed AF-250 session or its hypotheses under AF-310"
     ]
   },
-  "active": [],
+  "active": [
+    {
+      "id": "AF-310-H-001",
+      "work_package_id": "AF-310",
+      "description": "Define one closed schema-backed L0-L4 profile contract with exact Python and TypeScript fixture parity.",
+      "parent_paradigm": "dci-paper-context-contract",
+      "expected_lift": "+1 exact cross-language context-policy contract",
+      "cost_h": 0.8,
+      "ranking": 1.0,
+      "status": "pending",
+      "created_at": "2026-07-17T05:32:00+08:00",
+      "verification_command": "uv run --project asterion python -m unittest tests.test_asterion_dci_context_profiles tests.test_asterion_dci_config tests.test_asterion_dci_run -v",
+      "results": []
+    },
+    {
+      "id": "AF-310-H-002",
+      "work_package_id": "AF-310",
+      "description": "Prove the Asterion Pi extension applies exact L0-L4 transformations to model-visible context and failure state.",
+      "parent_paradigm": "dci-paper-live-context-transform",
+      "expected_lift": "+1 exact model-visible context behavior",
+      "cost_h": 1.8,
+      "ranking": 0.9,
+      "status": "pending",
+      "created_at": "2026-07-17T05:32:00+08:00",
+      "verification_command": "npm --prefix asterion/packages/typescript/dci-context-extension test",
+      "results": []
+    },
+    {
+      "id": "AF-310-H-003",
+      "work_package_id": "AF-310",
+      "description": "Prove packaged extension integrity, literal Pi transport, immutable resume identity, and isolated-wheel availability.",
+      "parent_paradigm": "dci-paper-extension-transport",
+      "expected_lift": "+1 integrity-bound runtime and resume path",
+      "cost_h": 1.6,
+      "ranking": 0.8,
+      "status": "pending",
+      "created_at": "2026-07-17T05:32:00+08:00",
+      "verification_command": "uv run --project asterion python -m unittest tests.test_asterion_dci_context_extension tests.test_asterion_dci_pi_rpc tests.test_asterion_dci_run tests.test_asterion_dci_artifacts -v",
+      "results": []
+    },
+    {
+      "id": "AF-310-H-004",
+      "work_package_id": "AF-310",
+      "description": "Prove run, benchmark, resume, installed application, and wheel expose one content-free context-policy implementation.",
+      "parent_paradigm": "dci-paper-context-product-surface",
+      "expected_lift": "+1 complete safe product exposure",
+      "cost_h": 1.2,
+      "ranking": 0.7,
+      "status": "pending",
+      "created_at": "2026-07-17T05:32:00+08:00",
+      "verification_command": "uv run --project asterion python -m unittest tests.test_asterion_dci_cli tests.test_asterion_dci_batch tests.test_asterion_dci_application_executor tests.test_distribution_boundaries -v",
+      "results": []
+    },
+    {
+      "id": "AF-310-H-005",
+      "work_package_id": "AF-310",
+      "description": "Force and retain credential-clean bounded real Pi evidence for L3 compaction and L4 summarization at the final extension digest.",
+      "parent_paradigm": "dci-paper-context-bounded-runtime",
+      "expected_lift": "+1 bounded semantic runtime proof",
+      "cost_h": 1.0,
+      "ranking": 0.6,
+      "status": "pending",
+      "created_at": "2026-07-17T05:32:00+08:00",
+      "verification_command": "uv run --project asterion python tools/verify_dci_context_acceptance.py --provider-backed --env-file ../.env --output-root ../outputs/asterion-dci-context-acceptance",
+      "results": []
+    }
+  ],
   "confirmed": [
     {
       "id": "H-001",

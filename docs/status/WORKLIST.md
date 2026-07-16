@@ -2,7 +2,7 @@
 
 > Canonical work-package ledger. An `active` lifecycle requires exactly one `in_progress` package; a `complete` lifecycle permits none and forbids autonomous dispatch.
 
-> Project lifecycle: complete
+> Project lifecycle: active
 
 ## AF-000 — Framework control plane
 
@@ -327,6 +327,17 @@
 - Closure evidence: Tasks 1–5 are committed through `6fd4a0b`; Task 6 rejects every obsolete product root, repairs trusted-source discovery to the converged subtree, and passes 90 project-local plus 1230 root Python tests, 11 TypeScript tests, 19 Rust tests, compile, Ruff, fmt, Clippy, shell, diff, and governance gates. Provider-free acceptance is 8/8 product rows, 533/533 delegated selectors, 12/12 launcher pairs, 6/6 extras, 7/7 retained bounded cases, and zero provider-backed operations. An isolated `asterion-0.1.0-py3-none-any.whl` installs both CLIs/providers, contains all four capability/application resource groups, and excludes original DCI, examples, tests, and repository paths. The immutable acceptance record, its seven-case count, private artifact hashes, and full-dataset status are unchanged; the Task 6 implementation hash is recorded by the immediately following append-only JOURNAL commit.
 - Review remediation: `d5b5cd6` corrects the three final-review documentation/CWD contracts and the mixed-root structural snapshot. Focused documentation/distribution/path tests, both CWD probes, CLI/config dry checks, compile, Ruff, scope, and diff pass without production behavior changes, provider/Judge execution, datasets, or release work.
 - Final command remediation: `147d1d7` replaces the standalone guide's invalid `provider-free` level with the real provider-free `acceptance` profile; exact argv, focused docs/distribution/CLI, parser/profile dry, compile, Ruff, scope, and diff checks pass.
+
+## AF-310 — Paper-aligned runtime context management
+
+- Status: in_progress
+- Parent objective: Paper-aligned complete DCI implementation in Asterion
+- Scope: implement and ship the exact DCI paper L0–L4 live context-management contract through an Asterion-owned Pi extension, then expose one immutable implementation through run, benchmark, resume, installed application, and isolated-wheel execution without modifying external Pi.
+- Dependencies: AF-300
+- Acceptance: Asterion owns and ships exact L0–L4 profiles; every public surface selects the same implementation; fixtures prove model-visible transformations and failure boundaries; bounded Pi runs force and observe L3 compaction and L4 summarization; external `pi/` remains unmodified; documentation distinguishes implemented, model-free verified, bounded provider verified, and experiment-reproduced evidence.
+- Design: `docs/superpowers/specs/2026-07-16-paper-aligned-dci-complete-implementation-design.md`
+- Plan: `docs/superpowers/plans/2026-07-16-af-310-paper-aligned-runtime-context-management.md`
+- Current hypothesis: AF-310-H-001 defines the closed cross-language profile contract before runtime implementation.
 
 ## AF-095 — Asterion framework identity and extraction
 
