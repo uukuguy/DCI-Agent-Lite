@@ -4,11 +4,11 @@
 
 - Project: Asterion framework under development in the DCI-Agent-Lite repository; DCI remains the first capability and reference application.
 - Current branch: `main`
-- Theme-level focus: AF-290 documentation is complete; directory structure and any remaining DCI implementation questions await explicit discussion and a new package.
+- Theme-level focus: converge repository-only Asterion examples into an explicit namespace before standalone extraction or release work.
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: none; project lifecycle is complete.
+- Active work package: AF-300 — repository directory convergence.
 
 ## Current Architecture
 
@@ -57,7 +57,8 @@
 
 ## Open Problems (theme-level)
 
-- No active implementation package. The next discussion may evaluate directory simplification and any DCI gaps against the three AF-290 documents; implementation requires reopening governance with a new scoped package.
+- AF-300 must remove the misleading top-level application tree without changing wheel contents, DCI behavior, or historical provider-backed acceptance.
+- Full-dataset validation and production release packaging are deliberately deferred until the broader Asterion framework converges.
 
 ## Key Files
 

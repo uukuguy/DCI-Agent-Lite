@@ -2,7 +2,7 @@
 
 > Canonical work-package ledger. An `active` lifecycle requires exactly one `in_progress` package; a `complete` lifecycle permits none and forbids autonomous dispatch.
 
-> Project lifecycle: complete
+> Project lifecycle: active
 
 ## AF-000 — Framework control plane
 
@@ -314,6 +314,16 @@
 - Design: `docs/superpowers/specs/2026-07-16-asterion-documentation-set-design.md`
 - Plan: `docs/superpowers/plans/2026-07-16-asterion-complete-documentation.md`
 - Closure evidence: three canonical documents now cover the complete DCI product, all framework/capability/application integration layers, and a seven-phase standalone extraction. They label implementation, verification, current external-Pi runtime-context limits, and unrerun full-dataset results separately; the documentation hub and root README expose the set, and stale Pi context-level commands are removed. Closure passes 16 focused documentation/distribution tests, compile, Ruff, CLI help/description, local-link, scope, and diff gates without provider requests or a full dataset.
+
+## AF-300 — Repository directory convergence
+
+- Status: in_progress
+- Parent objective: Asterion framework comprehensibility and standalone readiness
+- Scope: move the two repository-only application composition examples from the ambiguous top-level `applications/` tree into `examples/asterion/applications/`, update exact consumers and documentation, and preserve all package, DCI, and distribution behavior.
+- Dependencies: AF-290
+- Acceptance: no tracked top-level application/capability product tree remains; the two examples retain behavior under their explicit example namespace; product parity, 533 delegated selectors, distribution and isolated-wheel boundaries, documentation links, static checks, and governance pass without provider requests; full datasets and release packaging remain deferred.
+- Design: `docs/superpowers/specs/2026-07-16-asterion-repository-directory-convergence-design.md`
+- Plan: pending written-spec approval
 
 ## AF-095 — Asterion framework identity and extraction
 

@@ -731,3 +731,4 @@
 - 2026-07-16 AF-290 documentation closure passes 16 focused tests and static/CLI/governance gates without provider requests.
 - 2026-07-16 Product docs now expose Pi context limits and unrerun benchmark evidence without overstating completeness.
 - 2026-07-16 AF-290 closes with canonical product, integration, extraction, navigation, and corrected context guidance. [304acc1]
+- 2026-07-16 AF-300 opens repository-only example convergence; full datasets and release packaging remain deferred.

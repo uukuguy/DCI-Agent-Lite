@@ -394,3 +394,14 @@
 - Cost terminology: public results count provider-backed operations (two Pi run operations and one Judge operation for `basic`/`complete`), not provider API requests inside a multi-turn Pi run. Both Pi cases carry an explicit six-turn limit; the actual provider request count depends on their tool/turn behavior.
 - Compatibility boundary: verification metadata is optional for existing providers, original `src/dci` and its scripts remain unchanged, and package-specific CLIs continue to work.
 - Revalidation trigger: any remote verifier, arbitrary command descriptor, secret-management feature, implicit provider request, or full-dataset profile requires a separate reviewed decision.
+
+## D-042 — Converge repository-only hosts under an explicit example namespace
+
+- Status: ✅ accepted design decision
+- Decided: 2026-07-16
+- Decision: move both top-level repository-only application composition hosts into `examples/asterion/applications/`; keep package-local `asterion/applications/` and `asterion/capabilities/` as the only authoritative product implementations.
+- Rationale: top-level `applications/` resembles an installable product root even though it contains only two reference hosts, while the local top-level `capabilities/` directory has no tracked product content. An explicit example namespace makes ownership readable without sacrificing integration examples.
+- Compatibility boundary: preserve both example functions and behavior, but leave no old-path stubs. Update tests, parity metadata, and documentation because these are repository-internal paths rather than installed APIs.
+- Delivery boundary: AF-300 changes no wheel code, protocol, CLI, DCI semantics, external Pi checkout, provider-backed evidence, or package split.
+- Sequencing: full-dataset validation, published-score reproduction, standalone release packaging, and a separately versioned DCI plugin remain deferred until the broader Asterion framework converges and receives new scoped decisions.
+- Revalidation trigger: introduce a different example/package layout only when standalone extraction or a concrete third-party distribution supplies a tested build and versioning requirement.
