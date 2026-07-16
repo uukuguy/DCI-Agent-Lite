@@ -743,3 +743,4 @@
 - 2026-07-16 AF-300 Task 3 moves examples and launchers beneath the converged Asterion root. [fd4f58c]
 - 2026-07-16 AF-300 Task 4 colocates Asterion product documentation and north-star paths. [76775ab]
 - 2026-07-16 AF-300 Task 4 review fix makes verification cwd and design-history links executable. [3eb1979]
+- 2026-07-16 AF-300 Task 5 separates Asterion-local tests and canonical fixtures with independent discovery. [fad63a2]
