@@ -8,7 +8,7 @@
 
 以下内容应被视为 Asterion 独立项目的初始产品资产：
 
-- Python 发行物：`packages/python/asterion-core`，生成 `asterion` wheel，包含框架、adapter、runtime、能力、应用、DCI 产品和两个 CLI。
+- Python 发行物：`asterion`，生成 `asterion` wheel，包含框架、adapter、runtime、能力、应用、DCI 产品和两个 CLI。
 - Runtime Protocol schemas：`schemas/agent-runtime/v1`。
 - Package、assembly 与 executor schemas：`schemas/packages/v1`、`schemas/assembly/v1`、`schemas/executor/v1`。
 - TypeScript 包：`packages/typescript/asterion-runtime`，当前 npm 名为 `@dci/agent-runtime`；拆分前应单独决定是否改名。
@@ -47,10 +47,8 @@ asterion/
 ├── Makefile
 ├── pyproject.toml                 # uv workspace，仅含独立项目成员
 ├── .env.template
+├── src/asterion/
 ├── packages/
-│   ├── python/asterion-core/
-│   │   ├── pyproject.toml
-│   │   └── src/asterion/
 │   ├── typescript/asterion-runtime/
 │   └── rust/controlled-executor/
 ├── schemas/
@@ -77,7 +75,7 @@ asterion/
 
 | 当前路径 | 独立仓库路径 | 处理 | 验证重点 |
 |---|---|---|---|
-| `packages/python/asterion-core` | 同路径 | 原样迁移并修正仓库相对引用 | build、wheel 内容、isolated wheel |
+| `asterion` | 同路径 | 原样迁移并修正仓库相对引用 | build、wheel 内容、isolated wheel |
 | `schemas/*` | `schemas/*` | 原样迁移 | Python、TS、Rust 消费同一版本 |
 | `packages/typescript/asterion-runtime` | 同路径 | 排除 `node_modules/dist` | `npm test`、schema copy |
 | `packages/rust/controlled-executor` | 同路径 | 排除 `target` | `cargo test`、协议 fixture |
@@ -113,7 +111,7 @@ asterion/
 
 ## Phase 3：迁移 Python 发行物
 
-1. 复制 `packages/python/asterion-core`，保持 import 路径和 entry points 不变。
+1. 复制 `asterion`，保持 import 路径和 entry points 不变。
 2. 复制 Python 测试闭包与 fixtures，逐项去除指向原仓库的相对路径假设。
 3. 调整根 workspace 和 Make targets，使安装只依赖新仓库文件。
 4. 执行：
@@ -121,8 +119,8 @@ asterion/
    ```bash
    uv sync
    uv run python -m unittest discover -v
-   uv run ruff check packages/python/asterion-core/src tests
-   uv build packages/python/asterion-core
+   uv run ruff check asterion/src tests
+   uv build asterion
    ```
 
 5. 在临时目录创建 venv，只安装生成的 wheel；确保 `asterion list`、`asterion-dci --help` 和 provider-free 验证不依赖 source checkout。
@@ -164,7 +162,7 @@ Python 迁移完成的定义是 isolated wheel 可用，而不是源目录内 `u
 发布候选必须从构建产物验证：
 
 ```bash
-uv build packages/python/asterion-core
+uv build asterion
 asterion list
 asterion verify --provider dci-agent-lite --level provider-free
 make asterion-verify-basic

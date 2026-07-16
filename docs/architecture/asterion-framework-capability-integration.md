@@ -4,18 +4,18 @@
 
 相关源码入口：
 
-- [Runtime](../../packages/python/asterion-core/src/asterion/runtime/)
-- [Package](../../packages/python/asterion-core/src/asterion/packages/)
-- [Assembly](../../packages/python/asterion-core/src/asterion/assembly/)
-- [Runner](../../packages/python/asterion-core/src/asterion/runner/)
-- [Installed provider contract](../../packages/python/asterion-core/src/asterion/applications/provider.py)
+- [Runtime](../../asterion/src/asterion/runtime/)
+- [Package](../../asterion/src/asterion/packages/)
+- [Assembly](../../asterion/src/asterion/assembly/)
+- [Runner](../../asterion/src/asterion/runner/)
+- [Installed provider contract](../../asterion/src/asterion/applications/provider.py)
 
 ## 当前仓库与权威目录
 
-当前 Python 发行物是 `packages/python/asterion-core/pyproject.toml` 定义的 `asterion` wheel。wheel 打包 `src/asterion`，因此下面这些目录才是运行时权威实现：
+当前 Python 发行物是 `asterion/pyproject.toml` 定义的 `asterion` wheel。wheel 打包 `src/asterion`，因此下面这些目录才是运行时权威实现：
 
 ```text
-packages/python/asterion-core/
+asterion/
 ├── pyproject.toml
 └── src/asterion/
     ├── runtime/                 # 运行时中立协议、host client、factory
@@ -31,8 +31,8 @@ packages/python/asterion-core/
 
 其中两个最容易混淆的路径是：
 
-- `packages/python/asterion-core/src/asterion/capabilities/` 是能力实现与 manifest 的权威 Python 路径。
-- `packages/python/asterion-core/src/asterion/applications/` 是 installed provider 和 assembly 的权威 Python 路径。
+- `asterion/src/asterion/capabilities/` 是能力实现与 manifest 的权威 Python 路径。
+- `asterion/src/asterion/applications/` 是 installed provider 和 assembly 的权威 Python 路径。
 
 仓库顶层 `applications/` 是参考、兼容或跨语言宿主资料；顶层 `capabilities/` 当前不是 wheel 的打包根。顶层 `applications/` 和顶层 `capabilities/` 都不是可独立安装产品，不能据此推断存在两个额外 Python 包。以后若拆成独立 distribution，必须先建立各自的构建清单、版本和 entry point，不能只移动目录。
 
@@ -272,8 +272,8 @@ asterion-dci benchmark --help
 
 ```bash
 uv run python -m unittest discover -v
-uv run ruff check packages/python/asterion-core/src tests
-uv build packages/python/asterion-core
+uv run ruff check asterion/src tests
+uv build asterion
 # 然后在临时虚拟环境安装 dist/*.whl，执行 isolated wheel smoke。
 ```
 
