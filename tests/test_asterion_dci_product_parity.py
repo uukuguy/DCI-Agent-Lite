@@ -854,6 +854,32 @@ class AsterionDciProductParityTests(unittest.TestCase):
         )
         self.assertNotIn(env["AF250_PRIVATE_SENTINEL"], result.stdout + result.stderr)
 
+    def test_default_cli_prints_the_exact_product_row_aggregate(self) -> None:
+        summary = product_verifier.ProductAcceptanceSummary(
+            product_rows=(8, 8),
+            delegated_inventory=(533, 533),
+            launcher_pairs=(12, 12),
+            batch_extras=(6, 6),
+            bounded_acceptance=(7, 7),
+            provider_backed_executed=0,
+            private_acceptance=None,
+            row_statuses=(),
+        )
+        stdout = io.StringIO()
+        with (
+            mock.patch.object(product_verifier, "load_product_matrix", return_value={}),
+            mock.patch.object(product_verifier, "validate_product_matrix", return_value=()),
+            mock.patch.object(
+                product_verifier,
+                "verify_product_acceptance",
+                return_value=summary,
+            ),
+            mock.patch.object(sys, "argv", ["verify_asterion_dci_product.py"]),
+            contextlib.redirect_stdout(stdout),
+        ):
+            self.assertEqual(product_verifier.main(), 0)
+        self.assertIn("product-rows 8/8\n", stdout.getvalue())
+
     def test_validate_only_cli_does_not_ignore_an_acceptance_root(self) -> None:
         private_root = "/tmp/af270-definitely-missing-private-evidence"
         environment = os.environ.copy()

@@ -222,6 +222,10 @@ class DciBasicVerificationTests(unittest.TestCase):
 
 
 class DciAcceptanceVerificationTests(unittest.TestCase):
+    def test_source_checkout_discovery_uses_the_converged_asterion_root(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        self.assertEqual(verification_module._trusted_source_checkout_root(), root)
+
     def test_installed_product_never_loads_acceptance_from_current_directory(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir).resolve()

@@ -233,6 +233,43 @@ class BuiltDistributionBoundaryTests(unittest.TestCase):
             self.assertNotIn("Requires-Dist: dci", self.metadata(wheels[0]))
             with zipfile.ZipFile(wheels[0]) as archive:
                 names = archive.namelist()
+                for prefix in (
+                    "asterion/capabilities/dci_research/",
+                    "asterion/capabilities/controlled_code/",
+                    "asterion/applications/dci_agent_lite/",
+                    "asterion/applications/controlled_code/",
+                ):
+                    self.assertTrue(
+                        any(name.startswith(prefix) for name in names), prefix
+                    )
+                self.assertFalse(
+                    any(
+                        name.startswith(
+                            (
+                                "dci/",
+                                "examples/",
+                                "tests/",
+                                "asterion/examples/",
+                                "asterion/tests/",
+                                "src/",
+                            )
+                        )
+                        for name in names
+                    )
+                )
+                self.assertFalse(
+                    any(
+                        marker in name
+                        for name in names
+                        for marker in (
+                            "DCI-Agent-Lite",
+                            "assets/dci/",
+                            "docs/status/",
+                            "packages/python/",
+                            "scripts/examples/",
+                        )
+                    )
+                )
                 self.assertIn("asterion/dci/cli.py", names)
                 self.assertIn("asterion/dci/run.py", names)
                 self.assertIn("asterion/dci/application_executor.py", names)

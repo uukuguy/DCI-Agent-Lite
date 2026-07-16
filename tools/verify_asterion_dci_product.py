@@ -24,6 +24,9 @@ from urllib.parse import unquote, urlsplit
 
 MATRIX_PATH = Path("assets/dci/product-parity.json")
 ACCEPTANCE_PATH = Path("assets/dci/product-acceptance.json")
+ASTERION_ROOT = Path("asterion")
+ASTERION_SOURCE = ASTERION_ROOT / "src/asterion"
+ASTERION_SCRIPTS = ASTERION_ROOT / "scripts"
 SCHEMA = "asterion.dci.product-parity/v1"
 ACCEPTANCE_SCHEMA = "asterion.dci.product-acceptance/v1"
 REQUIRED_PRODUCT_ROWS = {
@@ -730,7 +733,7 @@ def validate_launcher_pairs(root: Path) -> tuple[tuple[str, str], ...]:
         f"scripts/{relative}" for relative in LAUNCHER_RELATIVES
     }
     expected_targets = {
-        f"asterion/scripts/{relative}" for relative in LAUNCHER_RELATIVES
+        (ASTERION_SCRIPTS / relative).as_posix() for relative in LAUNCHER_RELATIVES
     }
     actual = {
         path.relative_to(root).as_posix()
@@ -740,12 +743,12 @@ def validate_launcher_pairs(root: Path) -> tuple[tuple[str, str], ...]:
     actual_targets = {
         path.relative_to(root).as_posix()
         for family in ("bcplus_eval", "qa", "bright")
-        for path in (root / "asterion" / "scripts" / family).glob("run_*.sh")
+        for path in (root / ASTERION_SCRIPTS / family).glob("run_*.sh")
     }
     if actual != expected or actual_targets != expected_targets:
         raise ValueError("source/Asterion launcher pairs are not exact")
     return tuple(
-        (f"scripts/{relative}", f"asterion/scripts/{relative}")
+        (f"scripts/{relative}", (ASTERION_SCRIPTS / relative).as_posix())
         for relative in LAUNCHER_RELATIVES
     )
 
@@ -1158,6 +1161,11 @@ def validate_installed_application_artifacts(
 def run_installed_product_proof(root: Path) -> dict[str, object]:
     """Build, isolate, and execute the installed Pi-default DCI product model-free."""
 
+    if not (root / ASTERION_ROOT / "pyproject.toml").is_file() or not (
+        root / ASTERION_SOURCE
+    ).is_dir():
+        raise RuntimeError("installed product proof Asterion root is invalid")
+
     with tempfile.TemporaryDirectory() as temporary_directory:
         temporary_root = Path(temporary_directory).resolve()
         dist = temporary_root / "dist"
@@ -1279,6 +1287,7 @@ def main() -> int:
         print(f"private-acceptance {summary.private_acceptance[0]}/{summary.private_acceptance[1]}")
     for row_id, status, exit_status in summary.row_statuses:
         print(f"{row_id} {status} exit={exit_status}")
+    print(f"product-rows {summary.product_rows[0]}/{summary.product_rows[1]}")
     print(f"delegated-inventory {summary.delegated_inventory[0]}/{summary.delegated_inventory[1]}")
     print(f"launcher-pairs {summary.launcher_pairs[0]}/{summary.launcher_pairs[1]}")
     print(f"batch-extra-selectors {summary.batch_extras[0]}/{summary.batch_extras[1]}")

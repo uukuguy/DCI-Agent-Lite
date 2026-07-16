@@ -605,7 +605,7 @@ def _trusted_source_checkout_root() -> Path | None:
 
     module = Path(__file__).resolve()
     relative_module = Path(
-        "packages/python/asterion-core/src/asterion/dci/verification.py"
+        "asterion/src/asterion/dci/verification.py"
     )
     for candidate in module.parents:
         if (candidate / relative_module).resolve() != module:

@@ -67,6 +67,24 @@ class AsterionProjectRootTests(unittest.TestCase):
             (PROJECT / "tests/fixtures/agent_runtime/v1/valid-research.jsonl").is_file()
         )
 
+    def test_no_obsolete_asterion_product_roots_remain(self) -> None:
+        for relative in (
+            "packages/python/asterion-core",
+            "packages/typescript/asterion-runtime",
+            "packages/rust/controlled-executor",
+            "applications/dci-agent-lite",
+            "applications/controlled-code",
+            "scripts/asterion",
+            "schemas",
+        ):
+            self.assertFalse((ROOT / relative).exists(), relative)
+
+    def test_mixed_root_retains_baseline_and_migration_evidence(self) -> None:
+        self.assertTrue((ROOT / "src/dci/benchmark/pi_rpc_runner.py").is_file())
+        self.assertTrue((ROOT / "assets/dci/product-parity.json").is_file())
+        self.assertTrue((ROOT / "assets/dci/product-acceptance.json").is_file())
+        self.assertTrue((ROOT / "docs/status/WORKLIST.md").is_file())
+
     def test_root_dci_tests_bootstrap_source_for_direct_discovery(self) -> None:
         missing: list[str] = []
         for path in sorted((ROOT / "tests").glob("test_*.py")):

@@ -1,42 +1,40 @@
-# AF-300 Task 4 Checkpoint
+# Live Session Checkpoint
 
-> Updated: 2026-07-16 +0800. AF-300 execution is active; Tasks 1–3 are committed and Task 4 has reached its verified commit boundary.
+> Updated: 2026-07-16 21:41 +0800. **Session remains active — not a final handoff.**
 
-Active work package: AF-300
+Active work package: none
 
 ## TL;DR
 
-- Asterion Python, cross-language packages, schemas, examples, and launchers now live under the top-level `asterion/` project root.
-- Task 4 moves the product documentation hub, architecture north star, product guides, verification guide, and operator guide under `asterion/docs/`; focused, consumer, link, static, and scope gates pass.
-- Original DCI, cross-product parity/acceptance evidence, `docs/status/`, and `docs/superpowers/` remain mixed-repository dependencies at the root.
-- Installed identities, runtime behavior, provider-backed evidence, and full-dataset status remain unchanged.
+- AF-300 acceptance is complete: `asterion/` is the sole extraction-ready Asterion project subtree, while original DCI, parity/acceptance evidence, and governance remain at the mixed repository root.
+- Provider-free parity, isolated wheel installation, both Python discovery layers, TypeScript, Rust, static, shell, and governance gates pass without provider or Judge requests.
+- The project lifecycle is complete; future implementation requires an explicitly scoped successor package.
 
 ## Committed / unpushed state
 
-- AF-300 Tasks 1–3 and their JOURNAL entries are committed through `48158ef`.
-- Task 4 starts from `48158ef`; its implementation and append-only JOURNAL entry are separate commit boundaries.
-- The user-owned `.superpowers/sdd/task-0-review.md` remains intentionally untouched.
+- AF-300 Tasks 1–5 and review fixes are committed through `6fd4a0b`.
+- Task 6 implementation and terminal governance are ready for the atomic closure commit; its hash will be appended to JOURNAL in a separate state commit.
+- The Task 0 local-only review, external `pi/`, credentials, datasets, outputs, generated artifacts, and immutable provider-backed acceptance record remain untouched.
 
 ## Next concrete action
 
-Review the Task 4 report and implementation commit; after acceptance, execute Task 5's project-local test/fixture migration from the AF-300 plan.
+Review the completed framework/worklist state and choose whether to scope the next framework-convergence package; do not begin standalone release, full-dataset, or plugin work without that governance change.
 
 ## Open questions
 
-- None for Task 4. Full datasets, publication/release automation, and plugin splitting remain deferred.
+- Which framework-convergence objective should become the next explicitly designed work package?
 
 ## Ruled-out paths
 
-- Do not move `docs/status/`, `docs/superpowers/`, original DCI documentation, root parity assets, or the external `pi/` checkout into Asterion.
-- Do not leave forwarding stubs at obsolete product-documentation paths.
-- Do not reinterpret historical provider-backed acceptance or full-dataset evidence during this path-only convergence.
-- Do not begin the Task 5 test/fixture migration from this checkpoint.
+- Do not restore obsolete Asterion roots or add compatibility stubs/symlinks.
+- Do not reinterpret retained provider-backed evidence as a new run; Task 6 executed zero provider-backed operations.
+- Do not expand AF-300 into full datasets, published-score reproduction, release automation/publication, remote switching, or a separately versioned DCI plugin.
 
 ## Ready commands
 
 ```bash
 python3 tools/project_scope_check.py
-uv run python -m unittest tests.test_asterion_project_root tests.test_asterion_documentation tests.test_distribution_boundaries -v
-git diff --check
 git status --short
+git log --oneline -5
+uv run asterion describe --provider dci-agent-lite
 ```

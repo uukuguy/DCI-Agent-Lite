@@ -4,11 +4,11 @@
 
 - Project: Asterion framework under development in the DCI-Agent-Lite repository; DCI remains the first capability and reference application.
 - Current branch: `main`
-- Theme-level focus: converge all Asterion-owned assets beneath a complete top-level `asterion/` project root before standalone extraction or release work.
+- Theme-level focus: preserve the extraction-ready Asterion project subtree while the next framework-convergence package is selected.
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `asterion/docs/architecture/agent-framework.md`
-- Active work package: AF-300 — Asterion top-level project root convergence.
+- Active work package: none; project lifecycle is complete pending an explicitly scoped successor.
 
 ## Current Architecture
 
@@ -17,6 +17,7 @@
 - Capability direction: Asterion DCI becomes the first complete reusable capability-package reference product. It will own the full original DCI workflow internally and expose it through capability contracts/application assemblies; no embedding index is required.
 - Language roles: Python owns research/evaluation/orchestration, TypeScript owns Node/service integration, and Rust is reserved for controlled execution infrastructure.
 - Governance: `docs/status/WORKLIST.md` is the sole active package ledger. A scope audit must pass before manager dispatch or climb execution.
+- Project root: `asterion/` is the sole complete Asterion subtree and sole buildable Python project, containing `src/asterion`, auxiliary packages, schemas, examples, scripts, docs, and project-local tests. The mixed root retains original `src/dci`, parity/acceptance evidence, and governance only.
 - Maintenance history: Pi/Judge reliability H-001 through H-019 is completed and remains available as reference-maintenance evidence; it is not an active roadmap stream.
 - Complete DCI result: `src/dci` remains an independent source-only comparison baseline. AF-180 through AF-250 completed shared `.env` forwarding, complete operator controls, batch/export semantics, Asterion examples, installed Pi application, and bounded provider-backed acceptance. Asterion shares normal `DCI_*` configuration with the baseline while keeping Asterion-owned output paths; neither product imports or launches the other.
 - AF-220 acceptance: its four Climb hypotheses are confirmed 4/4. Using only process-local shared configuration and main-repository external resources, both model-free prerequisites, both real Pi examples, the project-entrypoint installed application, and the one-row Pi-plus-Judge benchmark passed. Native state/evaluation schemas and the application's single body-free JSON projection were verified; this closes AF-220 only.
@@ -26,6 +27,7 @@
 - AF-270 acceptance: generic provider-selected `asterion describe/verify` makes the complete DCI function map, shared `.env` configuration, and preflight/basic/acceptance/complete verification discoverable without source inspection. Source acceptance is loaded only from the trusted checkout containing the verifier module; an installed wheel never executes a current-directory lookalike. Both real Pi examples use six-turn limits, private retained evidence is genuinely revalidated, and public cost output counts two Pi run operations plus one Judge operation without misrepresenting multi-turn provider API calls. A real `complete` run passed with all product counts and no full dataset; closure passes 1297 Python, 11 TypeScript, and 19 Rust tests plus all static/governance gates.
 - AF-280 acceptance: the root Makefile exposes five explicit, phony, cost-visible shortcuts for capability description and all four DCI verification levels. Defaults use the shared root `.env`, repository corpus, and Asterion verification output while remaining overridable. Exact dry-run argv, documentation, live description, and provider-free acceptance checks pass without a provider request or full dataset.
 - AF-290 acceptance: the complete DCI reference, framework/capability integration guide, and standalone extraction guide are canonical and reachable from `asterion/docs/README.md`. They distinguish Implemented, Verified, External-limited, and Not rerun evidence; identify package-local `capabilities/` and `applications/` as authoritative; define complete third-party integration and seven reversible extraction phases; and correct stale claims that the current external Pi exposes typed context-management levels. Closure passes 16 focused tests plus compile, Ruff, CLI, scope, link, and diff gates without provider requests or a full dataset.
+- AF-300 acceptance: all Asterion-owned source, packages, schemas, examples, scripts, product docs, and project tests converge beneath `asterion/`; obsolete product roots are absent while original DCI and migration evidence remain rooted. Provider-free parity passes 8/8 product rows, 533/533 delegated selectors, 12/12 launcher pairs, 6/6 extras, 7/7 retained bounded cases, and zero provider-backed operations. Isolated wheel installation and all CLIs/resources pass; closure passes 90 project-local and 1230 root Python tests, 11 TypeScript tests, 19 Rust tests, and every static, shell, packaging, and governance gate. Provider-backed artifacts and full-dataset status remain unchanged.
 - Host contracts: Python and TypeScript expose the same schema-backed runtime manifest, request, event, and asynchronous client boundary without adapter-private types.
 - Controlled execution: `dci.executor/v1` has a runnable concurrent Rust JSONL sidecar with trusted startup policy, direct execution, bounded dual-stream draining, deadline/cancel kill-and-reap, duplicate-ID denial, out-of-order correlation, safe parse errors, EOF draining, operator documentation, and root verification targets.
 - Package composition: `dci.package/v1` and the deterministic Python composer resolve a portable policy → DCI research → evaluation → observability graph identically for Pi and Claude Code capability mappings. The TypeScript host exports the same manifest types and validates the canonical schema/fixtures without implementing a second composer.
@@ -57,8 +59,8 @@
 
 ## Open Problems (theme-level)
 
-- AF-300 must establish a complete `asterion/` project root without changing installed identities, DCI behavior, or historical provider-backed acceptance.
-- Full-dataset validation and production release packaging are deliberately deferred until the broader Asterion framework converges.
+- No successor framework-convergence package is currently scoped or active.
+- Full-dataset validation and production release packaging remain deliberately deferred.
 
 ## Key Files
 

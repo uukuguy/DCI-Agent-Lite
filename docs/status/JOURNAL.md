@@ -745,3 +745,6 @@
 - 2026-07-16 AF-300 Task 4 review fix makes verification cwd and design-history links executable. [3eb1979]
 - 2026-07-16 AF-300 Task 5 separates Asterion-local tests and canonical fixtures with independent discovery. [fad63a2]
 - 2026-07-16 AF-300 Task 5 review restores dual-root Python coverage across seven historical Climb closures. [910d3ea]
+- 2026-07-16 AF-300 provider-free parity passes 8/8, 533/533, 12/12, 6/6, with zero provider-backed operations.
+- 2026-07-16 Isolated Asterion wheel installs both CLIs/providers, includes four resource groups, and excludes repository-only content.
+- 2026-07-16 AF-300 closure passes 90 project, 1230 root, 11 TypeScript, and 19 Rust tests plus static gates.
