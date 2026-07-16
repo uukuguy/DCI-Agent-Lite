@@ -1,6 +1,7 @@
 # Paper-Aligned DCI Complete Implementation Design
 
-> Status: approved in conversation on 2026-07-16; written-spec review pending.
+> Status: approved in conversation and reviewed as a written specification on
+> 2026-07-16.
 > Proposed package sequence: AF-310 → AF-320 → AF-330 → AF-340.
 
 ## Purpose
