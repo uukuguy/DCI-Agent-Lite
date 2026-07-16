@@ -61,6 +61,10 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
                 self.assertEqual(profile["model"], "gpt-5.4-nano")
                 self.assertEqual(profile["tools"], "read,bash")
                 self.assertEqual(profile["node_max_old_space_size_mb"], 8192)
+                self.assertIn(
+                    profile["runtime_context_level"],
+                    {"level0", "level1", "level2", "level3", "level4"},
+                )
                 self.assertFalse(Path(profile["dataset"]).is_absolute())
                 self.assertFalse(Path(profile["output_root"]).is_absolute())
                 self.assertFalse(Path(profile["corpus"]).is_absolute())
@@ -162,10 +166,8 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
                 capture_output=True,
                 text=True,
             )
-            self.assertEqual(result.returncode, 0, result.stderr)
-            limit_args = limit_log.read_text(encoding="utf-8").splitlines()
-            self.assertNotIn("--thinking-level", limit_args)
-            self.assertEqual(limit_args[-2:], ["--limit", "9"])
+            self.assertEqual(result.returncode, 2)
+            self.assertFalse(limit_log.exists())
 
             explicit_log = root / "explicit.log"
             result = subprocess.run(
@@ -189,7 +191,12 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
                 ["--thinking-level", "high", "--limit", "7", "--no-figures"],
             )
 
-            for invalid_args in (("../../escape",), ("level3", "../../escape")):
+            for invalid_args in (
+                ("../../escape",),
+                ("Level3",),
+                ("legacy",),
+                ("level3", "../../escape"),
+            ):
                 with self.subTest(invalid_args=invalid_args):
                     invalid_log = root / "invalid.log"
                     result = subprocess.run(

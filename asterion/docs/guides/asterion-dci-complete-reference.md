@@ -122,7 +122,7 @@ run-directory/
 asterion-dci resume --output-dir path/to/run-directory
 ```
 
-恢复从 `state.json` 重建不可变请求，拒绝已完成、损坏或不兼容的运行，并创建新的 protocol attempt。它不是通过目录名冒充 Pi session identity。
+恢复从 `state.json` 重建不可变请求，拒绝已完成、损坏或不兼容的运行，并创建新的 protocol attempt。启用 profile 的首次运行若使用 `--keep-session`，恢复会校验并复用 original Pi session 的 file、ID 和 entry cursor；任一不匹配都会在 provider 请求前失败。
 
 ## Context Management：两个不同层次
 
@@ -130,21 +130,23 @@ asterion-dci resume --output-dir path/to/run-directory
 
 ### 1. Pi 模型输入前的运行时策略
 
-原 DCI 文档描述过 `level0`–`level5` 的 truncation、compaction 和 summarization profile。这些策略决定 Pi 每轮真正发送给模型的上下文，属于外部 Pi 运行时能力。
+Asterion 通过 Asterion-owned Pi extension 实现闭合的 `dci.context-profile/v1`，它在 provider 请求前改变 live model context：
 
-当前配置的 Pi CLI没有公开受支持的 typed `--context-management-level`。因此：
+| Profile | 精确行为 |
+|---|---|
+| `level0` | 不转换上下文。 |
+| `level1` | 每个 tool result 上限 50,000 字符。 |
+| `level2` | 每个 tool result 上限 20,000 字符。 |
+| `level3` | 使用 20,000 字符上限；累计 original tool characters 超过 240,000 后 compact，并保留最新 12 complete turns。 |
+| `level4` | 继承 level3，以 20,000 recent tokens 为 summarization 目标；3 consecutive summary failures 后停止继续 summary，但保留 level3 compaction。 |
 
-- `--runtime-context-level` 和 `DCI_RUNTIME_CONTEXT_LEVEL` 会进入请求与原生 state；
-- `runtime_context_control` 明确记录 `unsupported`；
-- Asterion 不会捏造一个 Pi argv flag；
-- `--thinking-level`、heap、session、tools 等当前 Pi 实际支持的控制仍正常生效；
-- 操作者可以显式使用 `--extra-arg` 做特定 Pi fork 的兼容实验，但“能转发任意 argv”不等于当前 Pi 支持该选项。
+`asterion-dci run`、benchmark、resume、安装应用和 wheel 都解析同一个 profile identity 与 extension digest。未知值、保留 transport flag、损坏 extension、profile/阈值/digest/session 不匹配都会在 provider 请求前失败。
 
-状态：配置/诊断边界为 **Implemented**、拒绝伪造行为为 **Verified**、`level0`–`level5` 实际模型输入语义为 **External-limited**。
+证据层严格分为 **Implemented**、**Model-free verified**、**Bounded provider verified** 和 **Experiment reproduced**。当前实现与模型外测试属于前两层；有界 L3/L4 证据由 `tools/verify_dci_context_acceptance.py --provider-backed` 单独生成；完整论文复现仍属于 AF-340，Full dataset ran: no。
 
 ### 2. 已保存 conversation artifact 的处理
 
-这一层不改变模型已经看到的历史，只控制 `conversation.json` 的保存视图；`conversation_full.json` 始终保留完整证据：
+这一层是 post-run conversation processing，不改变模型已经看到的历史，只控制 `conversation.json` 的保存视图；`conversation_full.json` 始终保留完整证据：
 
 | 参数 | 行为 |
 |---|---|
@@ -243,7 +245,7 @@ scripts/qa/run_nq_test_sample50.sh
 scripts/qa/run_triviaqa_test_sample50.sh
 ```
 
-Profile 中保留的 `runtime_context_level=level3` 目前是 **External-limited** 配置/诊断，不代表当前 Pi 执行了 level3。thinking、max turns、concurrency、dataset/corpus、mode 和 heap 等其余配置正常映射。
+Profile 中的 `runtime_context_level=level3` 解析为完整 threshold identity，并与已安装 extension digest 一同进入 batch/run/row fingerprint；profile 或扩展变化会阻止跨策略复用。thinking、max turns、concurrency、dataset/corpus、mode 和 heap 等其余配置正常映射。
 
 ## 指标、分析、图表与导出
 
@@ -306,7 +308,7 @@ make asterion-describe
 | 两个基础案例 | `make asterion-verify-basic` | 3 个调度操作 | 两个各 6 轮的 Pi 案例和一个 Judge | **Verified** |
 | 完整模型外产品面 | `make asterion-verify-acceptance` | 0 | 8/8、533/533、12/12、6/6、7/7、wheel/application | **Verified** |
 | 综合有界验证 | `make asterion-verify-complete` | 3 个调度操作 | preflight → basic → acceptance；不跑完整数据集 | **Verified** |
-| Pi runtime level0–level5 | 当前无有效 typed flag | 不适用 | 只记录 unsupported 诊断 | **External-limited** |
+| Pi runtime `level0`–`level4` | `--runtime-context-level` | 模型外或有界 | 同一 extension/profile identity 与 body-free counters | **Implemented / Model-free verified** |
 | 全量 benchmark 与历史分数 | 操作者显式 launcher | 很高 | 没有在迁移关闭或 AF-290 中重跑 | **Not rerun** |
 
 最重要的边界是：Asterion DCI 的产品功能实现和模型外完整性已经验收，但外部 Pi 未公开的 runtime context profile 不能由 Asterion伪造；昂贵的全量 benchmark 结果也不能由本地测试替代。

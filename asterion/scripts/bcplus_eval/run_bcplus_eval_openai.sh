@@ -12,7 +12,7 @@ if (($# > 0)); then shift; fi
 thinking_level=""
 if (($# > 0)) && [[ "$1" != --* ]]; then thinking_level=$1; shift; fi
 case "$level" in
-  level0|level1|level2|level3|level4|level5|legacy) ;;
+  level0|level1|level2|level3|level4) ;;
   *) echo "Asterion DCI context level is invalid" >&2; exit 2 ;;
 esac
 case "$thinking_level" in

@@ -787,3 +787,5 @@
 - 06:26 AF-310-H-004 confirmed 4/4; package acceptance recorded.
 - 06:28 H004 closes public-surface equivalence: closed CLI choices, digest-bound batch identity, canonical application mapping, body-free versioned projection, and an isolated-wheel all-surface probe pass without provider operations or datasets. [pending H004 commit]
 - 06:30 H004 ships canonical, digest-bound policy identity across CLI, batch, application, and wheel surfaces. [7b8dcdc]
+- 06:31 Recovery checkpoint advances AF-310 from H004 closure to H005 bounded evidence preparation. [a439c5f]
+- 06:37 H005 docs now define exact live profiles, evidence tiers, bounded commands, and reject legacy launcher levels. [pending docs commit]

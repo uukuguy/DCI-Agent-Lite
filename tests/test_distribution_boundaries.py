@@ -25,6 +25,49 @@ def python_source(root: Path) -> str:
 
 
 class SourceDistributionBoundaryTests(unittest.TestCase):
+    def test_paper_context_documentation_names_exact_live_contract_and_evidence(self) -> None:
+        paths = (
+            ROOT / ".env.template",
+            ROOT / "README.md",
+            ASTERION_PROJECT / "docs/guides/asterion-dci-complete-reference.md",
+            ASTERION_PROJECT / "docs/verification/asterion-dci-validation-guide.md",
+        )
+        combined = "\n".join(path.read_text(encoding="utf-8") for path in paths)
+        for required in (
+            "dci.context-profile/v1",
+            "level0",
+            "level1",
+            "level2",
+            "level3",
+            "level4",
+            "50,000",
+            "20,000",
+            "240,000",
+            "12 complete turns",
+            "20,000 recent tokens",
+            "3 consecutive summary failures",
+            "live model context",
+            "post-run conversation processing",
+            "Asterion-owned Pi extension",
+            "original Pi session",
+            "Implemented",
+            "Model-free verified",
+            "Bounded provider verified",
+            "Experiment reproduced",
+            "AF-340",
+            "tools/verify_dci_context_acceptance.py",
+            "--provider-backed",
+            "Provider operations: 0",
+            "Full dataset ran: no",
+        ):
+            self.assertIn(required, combined)
+        for stale in (
+            "unsupported diagnostic",
+            "never converted into a Pi CLI flag",
+            "current Pi CLI does not expose a runtime context-management level",
+        ):
+            self.assertNotIn(stale.lower(), combined.lower())
+
     def test_asterion_capability_beginner_guide_is_complete(self) -> None:
         guide_path = ASTERION_PROJECT / "docs/guides/asterion-capability-usage.md"
         self.assertTrue(guide_path.is_file())

@@ -206,10 +206,9 @@ asterion-dci resume --output-dir path/to/asterion-dci-run
 
 The command reconstructs the request from `state.json`, rejects completed or
 invalid runs before starting Pi, and retains previous evidence while creating a
-new protocol attempt. This is durable artifact continuation; it is not a claim
-of Pi session continuity when the original run did not enable `--keep-session`.
-`--runtime-context-level` is persisted as an unsupported diagnostic until Pi
-advertises a typed control; Asterion does not invent a Pi flag for it. Native
+new protocol attempt. Profile-backed continuation resumes the original Pi session
+file and ID only when the first run enabled `--keep-session`; missing or changed
+session identity fails before a provider request. Native
 run directories are private and atomic, but are not described as read-only:
 when bash is enabled, the agent can still modify files allowed by its working
 directory and host permissions. The generic `asterion` CLI remains
@@ -373,8 +372,8 @@ Common variables:
   this includes `DCI_PI_DIR`, `DCI_PI_PACKAGE_DIR`, `DCI_PI_AGENT_DIR`,
   `DCI_TOOLS`, `DCI_RPC_TIMEOUT_SECONDS`, `DCI_PI_THINKING_LEVEL`,
   `DCI_NODE_MAX_OLD_SPACE_SIZE_MB`, and `DCI_EVAL_JUDGE_*`; explicit CLI
-  options take precedence. `DCI_RUNTIME_CONTEXT_LEVEL` is retained only as a
-  recorded compatibility request: current Pi has no matching runtime control.
+  options take precedence. `DCI_RUNTIME_CONTEXT_LEVEL` selects one exact
+  Asterion-owned live profile: `level0` through `level4`.
 - `DCI_EVAL_JUDGE_BASE_URL`, `DCI_EVAL_JUDGE_API`, `DCI_EVAL_JUDGE_MODEL`, and
   `DCI_EVAL_JUDGE_API_KEY_ENV` select the eval judge backend. See `.env.template` for DeepSeek,
   OpenAI, and local-compatible examples. The base URL must be an absolute HTTP(S) origin without
@@ -442,7 +441,7 @@ More runnable examples for OpenAI, Anthropic and vLLM are available in [`scripts
 
 ## 🚀 Context Management Strategies
 
-DCI-Agent-Lite includes a lightweight runtime context-management layer for long-horizon deep research runs.
+DCI-Agent-Lite includes a lightweight runtime context-management layer for long-horizon deep research runs. Asterion ships the closed `dci.context-profile/v1` contract through an Asterion-owned Pi extension loaded by its native runner.
 
 It uses three simple strategies:
 
@@ -459,11 +458,38 @@ It uses three simple strategies:
 
 </details>
 
-The current Pi CLI does not expose a runtime context-management level. The
-source and Asterion runtime-context examples therefore use Pi's supported
-thinking control; Asterion records a legacy `DCI_RUNTIME_CONTEXT_LEVEL` or
-`--runtime-context-level` request in native state as `unsupported` and never
-fabricates a Pi argv flag.
+The live profiles are exact and closed:
+
+| Profile | Model-visible behavior |
+|---|---|
+| `level0` | No context transformation. |
+| `level1` | Truncate each tool result to 50,000 characters. |
+| `level2` | Truncate each tool result to 20,000 characters. |
+| `level3` | Apply the 20,000-character cap; after more than 240,000 accumulated original tool characters, compact older history and retain the latest 12 complete turns. |
+| `level4` | Apply level3, target 20,000 recent tokens for summarization, and after 3 consecutive summary failures suppress further summaries while retaining level3 compaction. |
+
+These transformations run before each provider request and therefore change the
+live model context. They are separate from post-run conversation processing,
+which only changes saved views after the model has already responded. The runner
+records the full profile identity, extension version/digest, body-free counters,
+and—when `--keep-session` is enabled—the original Pi session identity used by
+resume.
+
+Evidence labels are intentionally narrow:
+
+- **Implemented**: extension, transport, artifacts, CLI, benchmark, resume, and installed application are present.
+- **Model-free verified**: deterministic hook, failure, privacy, wheel, and surface tests pass with Provider operations: 0 and Full dataset ran: no.
+- **Bounded provider verified**: reserved for retained L3/L4 runs from `tools/verify_dci_context_acceptance.py --provider-backed`; it is not a full benchmark claim.
+- **Experiment reproduced**: not yet claimed; full paper runs require separate AF-340 budget authorization.
+
+Model-free setup verification is:
+
+```bash
+uv run --project asterion python tools/verify_dci_context_acceptance.py
+```
+
+The bounded provider-backed verifier is cost-bearing and must use a private
+output root; it performs only its declared L3 and L4 cases, never a full dataset.
 
 Set Pi thinking explicitly:
 

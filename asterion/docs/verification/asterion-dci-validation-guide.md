@@ -36,6 +36,46 @@ worktree corpus cannot silently select the wrong path. Use
 `$ASTERION_DCI_OUTPUT_ROOT` for Asterion artifacts. Supply retained private
 evidence only through `$AF250_ACCEPTANCE_ROOT`.
 
+### Paper context-profile evidence
+
+The Asterion-owned Pi extension implements the exact closed
+`dci.context-profile/v1` set: `level0` has no transformation; `level1` caps tool
+results at 50,000 characters; `level2` caps them at 20,000; `level3` also
+compacts after more than 240,000 original tool characters and retains the latest
+12 complete turns; `level4` targets 20,000 recent tokens and suppresses summaries
+after 3 consecutive summary failures while retaining level3 compaction. This is
+live model context behavior, not post-run conversation processing.
+
+Run the model-free contract first:
+
+```bash
+uv run --project asterion python tools/verify_dci_context_acceptance.py
+```
+
+Expected safe output includes `Provider operations: 0` and
+`Full dataset ran: no`. Tests and private artifacts prove the **Implemented** and
+**Model-free verified** layers. The command validates extension identity,
+profile thresholds, public surfaces, artifact schemas, and original Pi session
+resume without making a provider request.
+
+The following command is explicitly cost-bearing. It performs exactly one L3
+compaction case and one L4 successful-summary case and retains body-free public
+evidence under the caller-owned output root:
+
+```bash
+uv run --project asterion python tools/verify_dci_context_acceptance.py \
+  --provider-backed \
+  --env-file .env \
+  --output-root outputs/asterion-dci-context-acceptance
+```
+
+Only a successful retained run earns **Bounded provider verified**. It does not
+earn **Experiment reproduced**: complete paper datasets, score tables, and
+ablations remain AF-340 work and require separate time/cost authorization. Never
+commit the output root, credentials, prompts, answers, or tool bodies. Profile
+runs intended for resume must preserve the original Pi session with
+`--keep-session`.
+
 Command class: **provider-free**
 
 ```bash
