@@ -35,4 +35,4 @@ The mixed-repository dependency [`docs/status/WORKLIST.md`](../../../docs/status
 
 ## Design baseline
 
-- `docs/superpowers/specs/2026-07-12-agent-framework-governance-design.md`
+- Mixed-repository dependency: [framework governance design](../../../docs/superpowers/specs/2026-07-12-agent-framework-governance-design.md).

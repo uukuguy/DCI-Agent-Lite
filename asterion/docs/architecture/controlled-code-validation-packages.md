@@ -120,8 +120,10 @@ not automatic service discovery or a sandbox claim.
 
 ## Verification
 
+Run these checks from the parent mixed-repository root:
+
 ```bash
 uv run python -m unittest tests.test_package_composition -v
-npm --prefix packages/typescript/asterion-runtime test
+npm --prefix asterion/packages/typescript/asterion-runtime test
 python3 tools/project_scope_check.py
 ```

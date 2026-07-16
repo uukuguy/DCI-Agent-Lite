@@ -66,9 +66,11 @@ silent aliases.
 
 ## Verification
 
+Run these checks from the parent mixed-repository root:
+
 ```bash
 uv run python -m unittest tests.test_asterion_structure -v
 uv run python -m unittest discover -v
-npm --prefix packages/typescript/asterion-runtime test
+npm --prefix asterion/packages/typescript/asterion-runtime test
 make test-rust-executor check-rust-executor
 ```

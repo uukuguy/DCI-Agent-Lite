@@ -81,7 +81,7 @@ still requires the applicable runtime and executor policy checks.
 
 ## Verification
 
-Run the package and language-host checks from the repository root:
+Run these checks from the parent mixed-repository root:
 
 ```bash
 uv run python -m unittest tests.test_package_composition -v

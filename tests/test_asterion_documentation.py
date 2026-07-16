@@ -15,6 +15,49 @@ def read(relative: str) -> str:
 
 
 class AsterionDocumentationTests(unittest.TestCase):
+    def test_architecture_verification_blocks_use_one_mixed_repository_root(
+        self,
+    ) -> None:
+        architecture = PROJECT / "docs/architecture"
+        documents = (
+            "composable-packages.md",
+            "controlled-code-validation-packages.md",
+            "local-package-catalog.md",
+            "static-application-assembly.md",
+            "asterion-framework-layout.md",
+        )
+        npm_documents = set(documents) - {"composable-packages.md"}
+
+        for name in documents:
+            text = (architecture / name).read_text(encoding="utf-8")
+            verification = text.rsplit("## Verification", 1)[1]
+            self.assertIn(
+                "Run these checks from the parent mixed-repository root",
+                verification,
+                name,
+            )
+            self.assertNotIn("npm --prefix packages/", verification, name)
+            self.assertNotIn("--climb-hypothesis", verification, name)
+            if name in npm_documents:
+                self.assertIn(
+                    "npm --prefix asterion/packages/typescript/asterion-runtime test",
+                    verification,
+                    name,
+                )
+
+    def test_framework_design_baseline_is_a_resolving_mixed_repository_link(
+        self,
+    ) -> None:
+        path = PROJECT / "docs/architecture/agent-framework.md"
+        text = path.read_text(encoding="utf-8")
+        target = (
+            "../../../docs/superpowers/specs/"
+            "2026-07-12-agent-framework-governance-design.md"
+        )
+        self.assertIn("mixed-repository dependency", text)
+        self.assertIn(f"]({target})", text)
+        self.assertTrue((path.parent / target).resolve().is_file())
+
     def test_all_project_markdown_links_resolve_locally(self) -> None:
         docs_root = PROJECT / "docs"
         documents = sorted(docs_root.rglob("*.md"))
