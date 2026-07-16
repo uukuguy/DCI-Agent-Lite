@@ -13,7 +13,7 @@ Active work package: AF-310
 
 ## Where things stand
 
-- Branch: `main`; AF-310-H-003 is committed through `ddcd7b7` with its final journal at `868d544`. H004 public-surface equivalence and its 4/4 Climb cycle are verified but not yet committed.
+- Branch: `main`; AF-310-H-004 public-surface equivalence and its 4/4 Climb cycle are committed at `7b8dcdc`; H005 documentation/verifier work is next.
 - Provider-free product verification still passes 8/8 rows, 533/533 selectors, 12/12 launcher pairs, 6/6 extras, and 7/7 bounded retained cases with zero provider operations.
 - Correct Context/artifact/CLI focused tests pass 101/101; an earlier nonzero command was only an invalid guessed test-module selector.
 - Governance, D-044, and the AF-310 Climb pool are active; AF-310-H-001 through AF-310-H-004 are confirmed 4/4, and AF-310-H-005 is next.
@@ -28,10 +28,9 @@ Active work package: AF-310
 
 ## Next steps
 
-1. Commit the confirmed AF-310-H-004 public-surface implementation, tests, Climb adapter, and cycle state; journal its hash.
-2. Run `python3 tools/project_scope_check.py --climb-hypothesis AF-310-H-005`.
-3. Implement Task 7's truthful launchers/examples/documentation before bounded provider execution, including the exact L0–L4 table and evidence-layer distinctions.
-4. Implement the model-free acceptance verifier, then use the explicit H005 provider authorization only for its two bounded L3/L4 cases; never run a full dataset.
+1. Run `python3 tools/project_scope_check.py --climb-hypothesis AF-310-H-005`.
+2. Implement Task 7's truthful launchers/examples/documentation before bounded provider execution, including the exact L0–L4 table and evidence-layer distinctions.
+3. Implement the model-free acceptance verifier, then use the explicit H005 provider authorization only for its two bounded L3/L4 cases; never run a full dataset.
 
 ## Don't go down these paths again
 
