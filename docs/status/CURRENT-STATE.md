@@ -4,11 +4,11 @@
 
 - Project: Asterion framework under development in the DCI-Agent-Lite repository; DCI remains the first capability and reference application.
 - Current branch: `main`
-- Theme-level focus: preserve the extraction-ready Asterion project subtree while the next framework-convergence package is selected.
+- Theme-level focus: remediate AF-300 final-review documentation and root-boundary contracts.
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `asterion/docs/architecture/agent-framework.md`
-- Active work package: none; project lifecycle is complete pending an explicitly scoped successor.
+- Active work package: AF-300 review remediation in_progress.
 
 ## Current Architecture
 

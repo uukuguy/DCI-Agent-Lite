@@ -1,28 +1,30 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-16 21:47 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-16 22:04 +0800. **Session remains active — not a final handoff.**
 
-Active work package: none
+Active work package: AF-300
+
+Live state: AF-300 review remediation in_progress
 
 ## TL;DR
 
-- AF-300 acceptance is complete: `asterion/` is the sole extraction-ready Asterion project subtree, while original DCI, parity/acceptance evidence, and governance remain at the mixed repository root.
-- Provider-free parity, isolated wheel installation, both Python discovery layers, TypeScript, Rust, static, shell, and governance gates pass without provider or Judge requests.
-- The project lifecycle is complete; future implementation requires an explicitly scoped successor package.
+- AF-300 is explicitly reopened only to remediate three final-review documentation/CWD contracts and one structural-snapshot wording issue.
+- The accepted relocation, provider-free parity, isolated wheel, and immutable provider-backed evidence remain unchanged.
+- No production behavior, provider/Judge operation, full dataset, release, or plugin work is authorized.
 
 ## Committed / unpushed state
 
 - AF-300 Tasks 1–5 and review fixes are committed through `6fd4a0b`; Task 6 implementation and terminal governance are committed at `08eff1c`.
-- This separate state-only commit records the closure hash and refreshes the recovery checkpoint. After it lands, `main` is 280 commits ahead of `origin/main` with no intended tracked work remaining.
+- The next commit is a governance-only AF-300 review-remediation reopen; documentation/tests follow only after scope preflight passes.
 - The Task 0 local-only review, external `pi/`, credentials, datasets, outputs, generated artifacts, and immutable provider-backed acceptance record remain untouched.
 
 ## Next concrete action
 
-Review the completed framework/worklist state and choose whether to scope the next framework-convergence package; do not begin standalone release, full-dataset, or plugin work without that governance change.
+Run `python3 tools/project_scope_check.py`, then add minimal RED documentation contracts for the three final-review command/root defects and the retained-root wording.
 
 ## Open questions
 
-- Which framework-convergence objective should become the next explicitly designed work package?
+- None for this bounded remediation.
 
 ## Ruled-out paths
 

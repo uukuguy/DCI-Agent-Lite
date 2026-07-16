@@ -2,7 +2,7 @@
 
 > Canonical work-package ledger. An `active` lifecycle requires exactly one `in_progress` package; a `complete` lifecycle permits none and forbids autonomous dispatch.
 
-> Project lifecycle: complete
+> Project lifecycle: active
 
 ## AF-000 — Framework control plane
 
@@ -317,7 +317,7 @@
 
 ## AF-300 — Asterion top-level project root convergence
 
-- Status: completed
+- Status: in_progress
 - Parent objective: Asterion framework comprehensibility and standalone readiness
 - Scope: converge the Python product, TypeScript/Rust packages, schemas, examples, Asterion scripts, product documentation, and Asterion-owned tests beneath a complete top-level `asterion/` project root while retaining original DCI and cross-product evidence at the repository root.
 - Dependencies: AF-290
@@ -325,6 +325,7 @@
 - Design: `docs/superpowers/specs/2026-07-16-asterion-repository-directory-convergence-design.md`
 - Plan: `docs/superpowers/plans/2026-07-16-af-300-asterion-project-root-convergence.md`
 - Closure evidence: Tasks 1–5 are committed through `6fd4a0b`; Task 6 rejects every obsolete product root, repairs trusted-source discovery to the converged subtree, and passes 90 project-local plus 1230 root Python tests, 11 TypeScript tests, 19 Rust tests, compile, Ruff, fmt, Clippy, shell, diff, and governance gates. Provider-free acceptance is 8/8 product rows, 533/533 delegated selectors, 12/12 launcher pairs, 6/6 extras, 7/7 retained bounded cases, and zero provider-backed operations. An isolated `asterion-0.1.0-py3-none-any.whl` installs both CLIs/providers, contains all four capability/application resource groups, and excludes original DCI, examples, tests, and repository paths. The immutable acceptance record, its seven-case count, private artifact hashes, and full-dataset status are unchanged; the Task 6 implementation hash is recorded by the immediately following append-only JOURNAL commit.
+- Review remediation: AF-300 is explicitly reopened to correct three final-review documentation/CWD contracts and the mixed-root structural snapshot; no production behavior, provider/Judge execution, dataset, or release scope is authorized.
 
 ## AF-095 — Asterion framework identity and extraction
 
