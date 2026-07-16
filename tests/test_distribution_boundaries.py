@@ -94,10 +94,10 @@ class SourceDistributionBoundaryTests(unittest.TestCase):
         self.assertTrue(guide_path.is_file())
         text = guide_path.read_text()
         for required in (
-            "../scripts/examples/dci_basic_example.sh",
-            "../scripts/examples/dci_runtime_context_example.sh",
-            "../scripts/examples/asterion_dci_basic_example.sh",
-            "../scripts/examples/asterion_dci_runtime_context_example.sh",
+            "scripts/examples/dci_basic_example.sh",
+            "scripts/examples/dci_runtime_context_example.sh",
+            "scripts/examples/asterion_dci_basic_example.sh",
+            "scripts/examples/asterion_dci_runtime_context_example.sh",
             "asterion-dci resume",
             "asterion-dci terminal",
             "asterion-dci evaluate",
@@ -143,6 +143,44 @@ class SourceDistributionBoundaryTests(unittest.TestCase):
             "asterion/docs/verification/asterion-dci-validation-guide.md",
             readme,
         )
+
+    def test_validation_guide_preserves_mixed_root_configuration_resolution(
+        self,
+    ) -> None:
+        text = (
+            ASTERION_PROJECT / "docs/verification/asterion-dci-validation-guide.md"
+        ).read_text()
+        self.assertIn(
+            "run mixed-repository verification commands from the parent "
+            "mixed-repository root",
+            text,
+        )
+        self.assertIn("uv run --project asterion asterion-dci --help", text)
+        self.assertIn(
+            "uv run --project asterion asterion list --provider dci-agent-lite",
+            text,
+        )
+        self.assertIn('DCI_ENV_FILE="${DCI_ENV_FILE:-.env}"', text)
+        self.assertIn("launchers resolve the mixed-repository root", text)
+
+    def test_validation_guide_runs_both_python_discovery_roots(self) -> None:
+        text = (
+            ASTERION_PROJECT / "docs/verification/asterion-dci-validation-guide.md"
+        ).read_text()
+        tier_five = text.split(
+            "## 10. Tier 5 — full repository closure gates", 1
+        )[1].split("## 11.", 1)[0]
+        self.assertIn(
+            "(cd asterion && uv run python -m unittest discover -s tests -v)",
+            tier_five,
+        )
+        self.assertIn(
+            "uv run --project asterion python -m unittest discover -s tests -v",
+            tier_five,
+        )
+        self.assertIn("90 project-local", tier_five)
+        self.assertIn("1230 root", tier_five)
+        self.assertNotIn("discover -s ../tests", tier_five)
 
     def test_asterion_core_has_an_independent_project_and_source_root(self) -> None:
         self.assertTrue((ASTERION_PROJECT / "pyproject.toml").is_file())

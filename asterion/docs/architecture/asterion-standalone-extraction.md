@@ -2,6 +2,11 @@
 
 本文给出把 Asterion 从当前 DCI-Agent-Lite 工作区独立成新项目的实施蓝图。目标不是立即搬目录，而是先固定可复制的产品边界、依赖边界和发布门禁，使拆分过程始终可验证、可回退。
 
+本文严格区分两种命令上下文：**current mixed-repository root** 是当前
+DCI-Agent-Lite 仓库根；**standalone repository root after promotion** 是把当前
+`asterion/` 子树内容提升后的新仓库根。拆分时要 **promote the contents of `asterion/`**，
+而不是把整个目录再嵌套成 `asterion/asterion/`。
+
 当前结论是：Asterion 的核心框架、两个能力应用、DCI 产品实现、协议 schema、TypeScript runtime 包和 Rust controlled executor 都已有明确源码；但运行 DCI 仍需要外部 Pi、语料、数据集和模型凭据。因此“项目源码自包含”不等于“所有外部运行资源内嵌”。
 
 ## 当前自包含清单
@@ -41,7 +46,7 @@
 第一版独立仓库建议保持当前 monorepo 的语言分区，避免拆分同时重写构建系统：
 
 ```text
-asterion/
+standalone-repository-root/
 ├── README.md
 ├── LICENSE
 ├── Makefile
@@ -74,14 +79,14 @@ asterion/
 
 | 当前路径 | 独立仓库路径 | 处理 | 验证重点 |
 |---|---|---|---|
-| `asterion` | 同路径 | 原样迁移并修正仓库相对引用 | build、wheel 内容、isolated wheel |
-| `schemas/*` | `schemas/*` | 原样迁移 | Python、TS、Rust 消费同一版本 |
-| `packages/typescript/asterion-runtime` | 同路径 | 排除 `node_modules/dist` | `npm test`、schema copy |
-| `packages/rust/controlled-executor` | 同路径 | 排除 `target` | `cargo test`、协议 fixture |
-| `tests/fixtures` | 同路径 | 复制实际使用闭包 | 跨语言正反例一致 |
-| `tests/test_asterion_*` | `tests/` | 复制并消除原仓库隐式依赖 | provider-free 全通过 |
-| `scripts` | 同路径 | 随 DCI 产品迁移 | 12 launcher selector |
-| Asterion docs | `docs/` | 复制并重写相对链接 | 本地链接检查 |
+| `asterion/` 的内容 | 新仓库根 `./` | 提升内容，不保留外层目录 | build、wheel 内容、isolated wheel |
+| `asterion/schemas/*` | `schemas/*` | 原样迁移 | Python、TS、Rust 消费同一版本 |
+| `asterion/packages/typescript/asterion-runtime` | `packages/typescript/asterion-runtime` | 排除 `node_modules/dist` | `npm test`、schema copy |
+| `asterion/packages/rust/controlled-executor` | `packages/rust/controlled-executor` | 排除 `target` | `cargo test`、协议 fixture |
+| `asterion/tests/fixtures` | `tests/fixtures` | 复制实际使用闭包 | 跨语言正反例一致 |
+| `asterion/tests/` | `tests/` | 原样提升项目测试 | provider-free 全通过 |
+| `asterion/scripts` | `scripts` | 随 DCI 产品迁移 | 12 launcher selector |
+| `asterion/docs` | `docs/` | 原样提升并重写 mixed-root 链接 | 本地链接检查 |
 | 根 `Makefile` | 根 `Makefile` | 只保留 Asterion targets | 命令与帮助一致 |
 | `.env.template` | `.env.template` | 只保留说明和值为空的配置 | 不含 secret |
 | 顶层 `applications/` | 初期不复制 | wheel 已有权威 provider/assembly | 无运行引用后删除歧义 |
@@ -110,7 +115,7 @@ asterion/
 
 ## Phase 3：迁移 Python 发行物
 
-1. 复制 `asterion`，保持 import 路径和 entry points 不变。
+1. 把当前 `asterion/` 的内容提升为新仓库根，保持 import 路径和 entry points 不变；后续本 phase 命令都从该 standalone 根运行。
 2. 复制 Python 测试闭包与 fixtures，逐项去除指向原仓库的相对路径假设。
 3. 调整根 workspace 和 Make targets，使安装只依赖新仓库文件。
 4. 执行：
@@ -118,8 +123,8 @@ asterion/
    ```bash
    uv sync
    uv run python -m unittest discover -v
-   uv run ruff check asterion/src tests
-   uv build asterion
+   uv run ruff check src tests
+   uv build .
    ```
 
 5. 在临时目录创建 venv，只安装生成的 wheel；确保 `asterion list`、`asterion-dci --help` 和 provider-free 验证不依赖 source checkout。
@@ -161,7 +166,7 @@ Python 迁移完成的定义是 isolated wheel 可用，而不是源目录内 `u
 发布候选必须从构建产物验证：
 
 ```bash
-uv build asterion
+uv build .
 asterion list
 asterion verify --provider dci-agent-lite --level provider-free
 make asterion-verify-basic

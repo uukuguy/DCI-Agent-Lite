@@ -751,3 +751,5 @@
 - 2026-07-16 AF-300 closes with extraction-ready root, provider-free parity, isolated wheel, and terminal governance. [08eff1c]
 - 2026-07-16 AF-300 review remediation reopens to correct three final-review documentation/CWD contracts and one structural-snapshot boundary; production/provider/dataset scope remains closed.
 - 2026-07-16 AF-300 review remediation governance reopens before documentation TDD. [6ce0db5]
+- 2026-07-16 AF-300 review RED reproduces mixed-root config drift, missing dual discovery, nested standalone paths, and narrowed retained-root state.
+- 2026-07-16 AF-300 review GREEN passes 31 focused docs/distribution/path tests, both CWD probes, CLI/config dry checks, compile, Ruff, scope, and diff.

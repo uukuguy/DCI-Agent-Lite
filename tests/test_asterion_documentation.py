@@ -268,7 +268,7 @@ class AsterionDocumentationTests(unittest.TestCase):
             self.assertIn(excluded, text)
 
         for command in (
-            "uv build asterion",
+            "uv build .",
             "asterion list",
             "asterion verify --provider dci-agent-lite --level provider-free",
             "make asterion-verify-basic",
@@ -276,6 +276,34 @@ class AsterionDocumentationTests(unittest.TestCase):
             "cargo test",
         ):
             self.assertIn(command, text)
+
+    def test_standalone_extraction_promotes_project_contents_to_repo_root(
+        self,
+    ) -> None:
+        text = read("asterion/docs/architecture/asterion-standalone-extraction.md")
+        self.assertIn("current mixed-repository root", text)
+        self.assertIn("standalone repository root after promotion", text)
+        self.assertIn("promote the contents of `asterion/`", text)
+        post_promotion = text.split("## Phase 3：迁移 Python 发行物", 1)[1]
+        self.assertIn("uv run ruff check src tests", post_promotion)
+        self.assertIn("uv build .", post_promotion)
+        self.assertNotIn("uv run ruff check asterion/src", post_promotion)
+        self.assertNotIn("uv build asterion", post_promotion)
+
+    def test_current_state_names_the_complete_mixed_root_boundary(self) -> None:
+        text = read("docs/status/CURRENT-STATE.md")
+        project_root = next(
+            line for line in text.splitlines() if line.startswith("- Project root:")
+        )
+        self.assertNotIn("governance only", project_root)
+        for retained in (
+            "original/cross-product examples and tests",
+            "parity/acceptance evidence",
+            "shared workspace configuration/tooling",
+            "governance",
+            "no second Asterion product tree",
+        ):
+            self.assertIn(retained, project_root)
 
     def test_documentation_hub_navigation_and_context_truth(self) -> None:
         hub = read("asterion/docs/README.md")
