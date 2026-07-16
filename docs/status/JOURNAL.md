@@ -737,3 +737,4 @@
 - 2026-07-16 Revised AF-300 makes Asterion a complete promotable subtree while preserving the mixed-repository baseline. [5a1527c]
 - 2026-07-16 AF-300 plan stages Python, languages, examples, docs, tests, and closure behind independent verification gates.
 - 2026-07-16 Detailed AF-300 plan makes all six relocation phases independently testable and reversible. [a535387]
+- 2026-07-16 AF-300 Task 1 moves the primary Python project to the converged Asterion root. [b5acee9]
