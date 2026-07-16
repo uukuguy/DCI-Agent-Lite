@@ -740,3 +740,4 @@
 - 2026-07-16 AF-300 Task 1 moves the primary Python project to the converged Asterion root. [b5acee9]
 - 2026-07-16 AF-300 Task 1 review fix updates current product docs to the converged source root. [a6ecac1]
 - 2026-07-16 AF-300 Task 2 colocates schemas and auxiliary packages beneath the converged Asterion root. [376eb26]
+- 2026-07-16 AF-300 Task 3 moves examples and launchers beneath the converged Asterion root. [fd4f58c]
