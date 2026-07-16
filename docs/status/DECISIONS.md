@@ -397,7 +397,7 @@
 
 ## D-042 — Converge repository-only hosts under an explicit example namespace
 
-- Status: ✅ accepted design decision
+- Status: 🔴 superseded before implementation by D-043
 - Decided: 2026-07-16
 - Decision: move both top-level repository-only application composition hosts into `examples/asterion/applications/`; keep package-local `asterion/applications/` and `asterion/capabilities/` as the only authoritative product implementations.
 - Rationale: top-level `applications/` resembles an installable product root even though it contains only two reference hosts, while the local top-level `capabilities/` directory has no tracked product content. An explicit example namespace makes ownership readable without sacrificing integration examples.
@@ -405,3 +405,14 @@
 - Delivery boundary: AF-300 changes no wheel code, protocol, CLI, DCI semantics, external Pi checkout, provider-backed evidence, or package split.
 - Sequencing: full-dataset validation, published-score reproduction, standalone release packaging, and a separately versioned DCI plugin remain deferred until the broader Asterion framework converges and receives new scoped decisions.
 - Revalidation trigger: introduce a different example/package layout only when standalone extraction or a concrete third-party distribution supplies a tested build and versioning requirement.
+
+## D-043 — Establish Asterion as a complete top-level project subtree
+
+- Status: ✅ accepted design decision
+- Decided: 2026-07-16
+- Decision: converge all Asterion-owned Python, TypeScript, Rust, schemas, examples, scripts, product documentation, and project tests beneath a top-level `asterion/` project root. The primary Python project becomes `asterion/pyproject.toml` with `asterion/src/asterion`; auxiliary language packages remain under `asterion/packages/`.
+- Rationale: `packages/python/asterion-core` is a valid monorepo path but misrepresents Asterion as an incidental core package even though it owns the framework, bundled products, CLIs, and multi-language contracts. A complete subtree makes ownership visible and allows future standalone promotion without a second source re-layout.
+- Mixed-repository boundary: original `src/dci`, cross-product parity/acceptance evidence, and repository governance remain at the DCI-Agent-Lite root. Asterion project-only tests must pass without importing or locating the baseline.
+- Compatibility boundary: installed distribution/import/CLI/provider/package/application/protocol identities and runtime behavior remain unchanged. Obsolete repository paths receive no forwarding projects, symlinks, or stubs.
+- Sequencing: full datasets, published-score reproduction, release automation/publication, remote repository switching, and separately versioned DCI plugins remain deferred until framework convergence is complete and separately authorized.
+- Revalidation trigger: alter the target root only for a concrete standalone build/release constraint that cannot be satisfied by promoting the subtree contents to repository root.

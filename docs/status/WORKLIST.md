@@ -315,13 +315,13 @@
 - Plan: `docs/superpowers/plans/2026-07-16-asterion-complete-documentation.md`
 - Closure evidence: three canonical documents now cover the complete DCI product, all framework/capability/application integration layers, and a seven-phase standalone extraction. They label implementation, verification, current external-Pi runtime-context limits, and unrerun full-dataset results separately; the documentation hub and root README expose the set, and stale Pi context-level commands are removed. Closure passes 16 focused documentation/distribution tests, compile, Ruff, CLI help/description, local-link, scope, and diff gates without provider requests or a full dataset.
 
-## AF-300 — Repository directory convergence
+## AF-300 — Asterion top-level project root convergence
 
 - Status: in_progress
 - Parent objective: Asterion framework comprehensibility and standalone readiness
-- Scope: move the two repository-only application composition examples from the ambiguous top-level `applications/` tree into `examples/asterion/applications/`, update exact consumers and documentation, and preserve all package, DCI, and distribution behavior.
+- Scope: converge the Python product, TypeScript/Rust packages, schemas, examples, Asterion scripts, product documentation, and Asterion-owned tests beneath a complete top-level `asterion/` project root while retaining original DCI and cross-product evidence at the repository root.
 - Dependencies: AF-290
-- Acceptance: no tracked top-level application/capability product tree remains; the two examples retain behavior under their explicit example namespace; product parity, 533 delegated selectors, distribution and isolated-wheel boundaries, documentation links, static checks, and governance pass without provider requests; full datasets and release packaging remain deferred.
+- Acceptance: `asterion/` is the sole complete Asterion project root and independently buildable/testable without `src/dci`; obsolete product roots disappear; root parity still validates original DCI against Asterion; Python, TypeScript, Rust, schemas, examples, scripts, docs, 533 selectors, 12 launchers, distribution/isolated-wheel, static, and governance gates pass without provider requests; full datasets and release packaging remain deferred.
 - Design: `docs/superpowers/specs/2026-07-16-asterion-repository-directory-convergence-design.md`
 - Plan: pending written-spec approval
 

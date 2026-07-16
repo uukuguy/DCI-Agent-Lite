@@ -6,9 +6,9 @@ Active work package: AF-300
 
 ## TL;DR
 
-- Move the two top-level repository-only application hosts into `examples/asterion/applications/`.
-- Preserve function behavior, package-local authoritative paths, wheel contents, DCI behavior, and provider-free parity.
-- Do not leave compatibility stubs under top-level `applications/`; no tracked top-level `capabilities/` product exists.
+- Converge Python, TypeScript, Rust, schemas, examples, scripts, product docs, and Asterion tests under a complete top-level `asterion/` project root.
+- Keep original DCI, cross-product parity/acceptance evidence, and repository governance at the mixed repository root.
+- Preserve installed identities, behavior, wheel contents, DCI independence, and provider-free parity; leave no obsolete path stubs.
 - Defer full datasets, published-score reproduction, standalone release packaging, and plugin splitting until broader framework convergence.
 
 ## Committed / unpushed state
@@ -23,7 +23,7 @@ Obtain written-spec approval, then create the AF-300 implementation plan. Do not
 
 ## Open questions
 
-- None for AF-300; target paths, preservation boundaries, and deferred work are decided.
+- Written-spec review remains the only AF-300 design gate; target paths, ownership classification, preservation boundaries, and deferred work are otherwise decided.
 
 ## Ruled-out paths
 

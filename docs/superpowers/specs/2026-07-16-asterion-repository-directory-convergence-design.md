@@ -1,134 +1,268 @@
-# Asterion Repository Directory Convergence Design
+# Asterion Top-Level Project Root Convergence Design
 
 ## Status
 
-Approved direction on 2026-07-16. This design covers repository presentation only; it does not change Asterion runtime behavior, packaging, DCI semantics, or the external Pi checkout.
+Revised direction approved on 2026-07-16; written-spec review is pending. This revision supersedes the earlier example-only AF-300 design before any implementation began.
 
-## Problem
+## Goal
 
-The repository currently presents three different ownership classes beside one another:
+Make Asterion a visibly complete, independently buildable project beneath one top-level `asterion/` directory in the current DCI-Agent-Lite repository. The resulting subtree must be promotable to the root of a future standalone Asterion repository without another conceptual directory redesign.
 
-1. `packages/python/asterion-core/src/asterion/` is the only installable Asterion Python product.
-2. `src/dci/` is the independent, source-only original DCI comparison baseline.
-3. top-level `applications/*/python` contains two small composition-root examples that are neither installed applications nor separate distributions.
+This package converges structure and path ownership. It does not publish a release, split DCI into a plugin, run full datasets, reproduce the published 62.9% result, or change framework/DCI behavior.
 
-The top-level name `applications/` visually competes with the authoritative package-local `asterion/applications/`. A local empty `capabilities/` directory creates the same impression even though Git tracks no files beneath it. Users therefore cannot determine ownership from the tree without reading packaging tests or source code.
+## Why the Current Layout Is Insufficient
 
-## Decision
+The current `packages/python/asterion-core/` path is technically valid for a multilingual monorepo, but it no longer describes the product:
 
-Move the two repository-only host examples into an explicit example namespace:
+- Asterion is the primary framework, not one incidental workspace package.
+- the `asterion-core` directory contains the framework, bundled DCI product, controlled-code application, resources, and both `asterion` and `asterion-dci` CLIs; it is not merely a core library;
+- TypeScript, Rust, schemas, examples, scripts, tests, and documentation are scattered across the repository root;
+- top-level `applications/` looks like another product root even though it contains only two repository examples;
+- future standalone extraction would require a second large path rewrite.
 
-```text
-examples/
-└── asterion/
-    ├── README.md
-    └── applications/
-        ├── controlled_code.py
-        └── dci_research.py
-```
+The root workspace also contains the independent original DCI baseline. Flattening Asterion directly into the current root `src/` would put the two products back under one source root and weaken their already verified independence.
 
-The files remain executable Python composition examples with their existing public functions and behavior. They do not become wheel resources, installed providers, command entry points, or production application implementations.
-
-After the move, the repository has no tracked top-level `applications/` or `capabilities/` product tree. The canonical application and capability implementations remain:
+## Chosen Structure in the Current Repository
 
 ```text
-packages/python/asterion-core/src/asterion/applications/
-packages/python/asterion-core/src/asterion/capabilities/
+DCI-Agent-Lite/
+├── pyproject.toml                  # non-buildable development workspace
+├── Makefile                        # workspace compatibility/developer entry points
+├── .env                            # shared local configuration; never committed
+├── .env.template
+├── asterion/                       # complete Asterion project root
+│   ├── pyproject.toml              # buildable Python project: distribution `asterion`
+│   ├── src/
+│   │   └── asterion/               # framework and bundled products
+│   ├── packages/
+│   │   ├── typescript/
+│   │   │   └── asterion-runtime/
+│   │   └── rust/
+│   │       └── controlled-executor/
+│   ├── schemas/
+│   │   ├── agent-runtime/v1/
+│   │   ├── assembly/v1/
+│   │   ├── executor/v1/
+│   │   └── packages/v1/
+│   ├── examples/
+│   │   └── applications/
+│   │       ├── controlled_code.py
+│   │       └── dci_research.py
+│   ├── scripts/                    # Asterion DCI launchers and product helpers
+│   ├── docs/                       # product, architecture, verification, operator docs
+│   └── tests/                      # Asterion-owned framework/product tests and fixtures
+├── src/
+│   └── dci/                        # original DCI source-only comparison baseline
+├── scripts/examples/               # original DCI and cross-product runnable examples
+├── assets/dci/                     # migration/parity/acceptance evidence
+├── tests/                           # original-DCI and cross-product parity tests
+└── docs/status/                     # current repository governance and migration history
 ```
 
-## Considered Alternatives
+The top-level directory and Python import package intentionally share the name `asterion` at different levels: `asterion/` is a project root; `asterion/src/asterion/` is the standard src-layout import package.
 
-### Package-local examples
+## Future Standalone Promotion
 
-`packages/python/asterion-core/examples/` would colocate examples with the wheel project, but it would blur whether they are packaged resources and add a deeper path for repository users. It is rejected for this convergence step.
+When standalone extraction is authorized, the contents of the current `asterion/` directory become the new repository root:
 
-### Test-only fixtures
+```text
+asterion-standalone/
+├── pyproject.toml
+├── src/asterion/
+├── packages/typescript/asterion-runtime/
+├── packages/rust/controlled-executor/
+├── schemas/
+├── examples/
+├── scripts/
+├── docs/
+└── tests/
+```
 
-Inlining the composition roots into tests would minimize tracked directories, but would remove readable integration examples that demonstrate explicit assembly, implementation binding, runtime, and host-service injection. It is rejected because Asterion needs reusable third-party integration examples.
+Promotion may add repository-level CI, release configuration, license, changelog, and root README. It must not require moving product source a second time.
 
-### Compatibility stubs at old paths
+## Ownership Classification
 
-Leaving forwarding files beneath top-level `applications/` would preserve obsolete filesystem paths but retain the exact ambiguity this work removes. The old paths are repository-internal and have no installed or public CLI contract, so no compatibility stubs will remain.
+### Moves into `asterion/`
 
-## Ownership Boundaries
+- `packages/python/asterion-core/pyproject.toml` and its complete `src/asterion/` tree;
+- `packages/typescript/asterion-runtime/`, excluding generated `node_modules/` and `dist/`;
+- `packages/rust/controlled-executor/`, excluding generated `target/`;
+- all four Asterion-owned schema families under `schemas/`;
+- the two repository application composition examples currently under top-level `applications/`;
+- `scripts/asterion/` launchers and Asterion-only product scripts;
+- Asterion product, framework, verification, and operator documentation;
+- Asterion-only tests plus the protocol/application fixtures they own.
 
-| Path | Ownership after convergence | Installable |
-|---|---|---|
-| `packages/python/asterion-core/src/asterion/` | Asterion framework and bundled first-party products | yes, one `asterion` wheel |
-| `examples/asterion/` | repository-readable integration examples | no |
-| `src/dci/` | independent original DCI comparison baseline | no |
-| `scripts/examples/` | runnable source/Asterion DCI shell examples | no |
-| `scripts/asterion/` | Asterion DCI benchmark launchers | no; they invoke installed/source CLI |
-| external `pi/` | independent Pi checkout | no; never modified by this package |
+### Remains at the current repository root
 
-The repository example modules may import Asterion public Python APIs. Production Asterion must never import `examples/`, and neither the wheel nor the original DCI baseline may depend on them.
+- `src/dci/` and original DCI-only configuration/benchmark code;
+- original DCI shell examples and any cross-product comparison entry point;
+- `assets/dci/product-parity.json`, `batch-parity.json`, and the immutable provider-backed acceptance record;
+- cross-product parity tests that intentionally read both `src/dci` and `asterion/`;
+- `docs/status/`, worklist, decisions, journal, climb state, and migration design history;
+- repository-root `.env` and `.env.template` while both products share one development workspace;
+- external `pi/`, corpora, datasets, outputs, caches, credentials, and local worktrees.
 
-## File Mapping
+### Classified during implementation
 
-| Current path | Target path |
+Every root test, document, script, fixture, and Make target must be classified by dependency, not filename alone:
+
+- imports or validates only Asterion → move into `asterion/`;
+- imports or validates only original DCI → remain at root;
+- compares both products or validates migration evidence → remain at root and update its Asterion path;
+- generic repository governance → remain at root.
+
+No asset may be copied into both locations merely to avoid classification.
+
+## Path Mapping
+
+| Current path | Converged path |
 |---|---|
-| `applications/dci-agent-lite/python/dci_research_host.py` | `examples/asterion/applications/dci_research.py` |
-| `applications/controlled-code/python/controlled_code_host.py` | `examples/asterion/applications/controlled_code.py` |
+| `packages/python/asterion-core/pyproject.toml` | `asterion/pyproject.toml` |
+| `packages/python/asterion-core/src/asterion/` | `asterion/src/asterion/` |
+| `packages/typescript/asterion-runtime/` | `asterion/packages/typescript/asterion-runtime/` |
+| `packages/rust/controlled-executor/` | `asterion/packages/rust/controlled-executor/` |
+| `schemas/` | `asterion/schemas/` |
+| `applications/dci-agent-lite/python/dci_research_host.py` | `asterion/examples/applications/dci_research.py` |
+| `applications/controlled-code/python/controlled_code_host.py` | `asterion/examples/applications/controlled_code.py` |
+| `scripts/asterion/` | `asterion/scripts/` |
+| Asterion-owned `docs/*` | `asterion/docs/*` |
+| Asterion-owned `tests/*` and fixtures | `asterion/tests/*` |
 
-The function `run_dci_research_application` remains unchanged. The function `run_controlled_code_application` remains unchanged. Renaming only the modules removes distribution-like directory names while retaining semantic example names.
+After convergence, no tracked product or example tree remains under root `packages/`, `applications/`, `capabilities/`, or `schemas/`. A root directory may remain only if it contains explicitly classified non-Asterion material; otherwise it disappears with the last tracked move.
 
-## Required Reference Updates
+## Workspace and Build Behavior
 
-The implementation must update every checked-in consumer of the old paths:
+The repository-root `pyproject.toml` remains non-buildable and changes its uv member from `packages/python/asterion-core` to `asterion`. Its `asterion` source override points to that member. Existing root development commands remain usable through the workspace.
 
-- `tests/test_composed_application_runner.py` loads the new DCI example location.
-- `assets/dci/product-parity.json` records the new DCI example source entry point without changing acceptance evidence or provider-backed artifacts.
-- `docs/architecture/controlled-code-validation-packages.md` links the new controlled-code example.
-- `docs/architecture/asterion-framework-capability-integration.md` describes `examples/asterion/` and no longer describes a top-level application product tree.
-- `docs/architecture/asterion-standalone-extraction.md` maps the explicit example namespace rather than excluding an ambiguous application tree.
-- documentation contract tests reject claims that top-level `applications/` or `capabilities/` are installable products and verify the new paths.
+`asterion/pyproject.toml` remains the sole buildable Python project and continues to define:
 
-`examples/asterion/README.md` must explain what each example demonstrates, how it differs from an installed provider, and which normal CLI users should use instead.
+- distribution name `asterion`;
+- import root `asterion`;
+- console scripts `asterion` and `asterion-dci`;
+- installed providers `controlled-code` and `dci-agent-lite`;
+- wheel package `src/asterion`.
 
-## Behavior and Packaging Invariants
+No additional Python distribution is introduced. The old path `packages/python/asterion-core` receives no compatibility project, symlink, or forwarding build file.
 
-- The `asterion` wheel file set and entry points remain unchanged.
-- `asterion list`, `describe`, `verify`, and `run` behavior remains unchanged.
-- `asterion-dci` commands, configuration, artifacts, benchmark profiles, metrics, export formats, and launcher behavior remain unchanged.
-- `src/dci` remains source-only, runnable, and independent.
-- No Python import from `asterion` or `src/dci` points into `examples/`.
-- No provider request, Judge request, full dataset, or external Pi modification is needed.
-- The user-owned `.superpowers/sdd/task-0-review.md` remains untouched.
+The TypeScript package and Rust crate retain their current package names, versions, lock files, and publish/private settings. Relative schema paths and workspace commands change only as required by the move.
 
-## Verification Strategy
+## Configuration and Runtime Behavior
 
-The move is accepted only if all of the following pass:
+During the nested-project stage, normal development still starts from the DCI-Agent-Lite repository root. The shared root `.env` remains the normal configuration surface for original DCI and Asterion. Path resolution must be explicit and tested; it must not depend on accidentally finding an ancestor checkout.
 
-1. A red/green path test proves old tracked application paths are gone and both new example modules exist.
-2. Composed application runner tests load and execute the moved DCI example.
-3. Controlled-code application and provider tests remain green.
-4. Product parity validation resolves the updated example path and all 533 delegated selectors without provider requests.
-5. Distribution tests prove one buildable wheel, no baseline/capability distribution, and unchanged bundled resources.
-6. A built isolated wheel lists both providers and contains neither `examples` nor `dci` as a top-level import package.
-7. Documentation contract and local-link checks pass.
-8. Touched Python compiles and passes Ruff; `git diff --check` and the project scope audit pass.
+The move preserves:
 
-The implementation may compare wheel archive member names before and after the move. A byte-identical wheel is not required because build metadata can vary; the authoritative invariant is an identical functional file set and entry-point/resource boundary.
+- `DCI_PI_DIR` preference for external `./pi`, with legacy `./pi-mono` fallback;
+- shared provider/model/Judge configuration;
+- Asterion-specific output roots;
+- corpus and dataset overrides;
+- installed-wheel behavior outside the source checkout.
 
-## Sequencing Decision
+Standalone release design will later decide whether `.env.template`, Pi checkout conventions, and default data paths change when `asterion/` becomes the repository root.
 
-This convergence package finishes before either of these future efforts:
+## Documentation and Test Split
 
-- full-dataset benchmark validation or reproduction of the published 62.9% result;
-- production release packaging, repository extraction, or splitting DCI into a separately versioned plugin.
+`asterion/docs/README.md` becomes the Asterion documentation hub. Product and architecture links must resolve entirely within the subtree except for clearly labelled links to original-DCI comparison evidence.
 
-Those efforts begin only after the broader Asterion framework has converged and each receives its own scope, authorization, cost disclosure, design, and acceptance criteria. Provider-free structural validation remains sufficient for this directory-only change.
+The current repository keeps only migration/governance documentation at root. Historical design files may stay under root `docs/superpowers/` because they describe how this mixed repository evolved; standalone product documentation cannot depend on them.
+
+Test execution has two explicit layers:
+
+1. Asterion project tests run from or against `asterion/` and require no import from `src/dci`.
+2. Root parity tests intentionally combine original DCI, Asterion, and checked-in migration evidence.
+
+The Asterion isolated-project gate runs with the original DCI source path unavailable. The root parity gate then proves that relocation did not change the established source/Asterion comparison.
+
+## Implementation Phases
+
+### Phase 1 — Inventory and path contracts
+
+- classify every affected test, document, script, fixture, Make target, and asset;
+- add failing tests for the target root and forbidden obsolete paths;
+- record current wheel member set, entry points, provider list, TypeScript/Rust tests, schema fixtures, and provider-free DCI parity counts.
+
+### Phase 2 — Primary Python project
+
+- create `asterion/` by moving the Python project metadata and `src/asterion` tree;
+- update the root uv workspace and all Python/test/build paths;
+- prove both source-workspace CLIs and the isolated wheel before proceeding.
+
+### Phase 3 — Schemas and cross-language packages
+
+- move schemas, TypeScript runtime, and Rust executor beneath `asterion/`;
+- update schema-copy, fixture, Make, documentation, and test paths;
+- run clean TypeScript and Rust gates without moving generated directories.
+
+### Phase 4 — Examples and scripts
+
+- move both composition hosts into `asterion/examples/applications/` with an explanatory README;
+- move Asterion launchers/helpers into `asterion/scripts/`;
+- preserve root Make shortcuts and shared `.env` behavior through explicit paths.
+
+### Phase 5 — Product documentation and tests
+
+- move Asterion-owned docs, tests, and fixtures into the subtree;
+- leave original-DCI and cross-product parity assets at root;
+- update all links, inventory paths, selector names only where ownership requires it, and local discovery commands.
+
+### Phase 6 — Closure and extraction-readiness proof
+
+- reject obsolete tracked product roots;
+- run Asterion project-only tests with `src/dci` unavailable;
+- run root cross-product parity and all 533 delegated selectors without provider requests;
+- build/install the wheel in isolation and verify provider/CLI/resource boundaries;
+- verify TypeScript, Rust, shell, documentation, scope, and clean-diff gates;
+- document the exact remaining external dependencies and future promotion command sequence.
+
+Each phase must end green and in a cohesive commit. A later phase may not hide a failed earlier boundary.
+
+## Compatibility and Non-Goals
+
+Paths inside this repository are updated atomically; obsolete source paths do not receive stubs or symlinks. Installed Python imports, distribution metadata, protocol literals, application/package IDs, CLI argv, environment variables, artifact formats, and provider behavior are compatibility boundaries and do not change.
+
+AF-300 explicitly does not:
+
+- modify original DCI implementation behavior;
+- modify or vendor external Pi;
+- introduce a second Python wheel or split DCI into a plugin;
+- rename TypeScript/npm or Rust/crate identities;
+- redesign schemas or protocol versions;
+- run full benchmark datasets or claim published-score reproduction;
+- publish packages, create release automation, or switch the remote repository;
+- copy corpora, datasets, credentials, outputs, caches, `.worktrees`, `node_modules`, or Rust `target` into Asterion.
+
+## Verification Gates
+
+Acceptance requires fresh evidence for:
+
+- target/forbidden path contract tests;
+- complete Asterion project-only Python suite and compile/Ruff checks;
+- root original-DCI and cross-product parity suite;
+- 533/533 delegated product selectors and 12/12 launcher mappings;
+- TypeScript clean build/tests against relocated schemas;
+- Rust fmt, Clippy, unit/integration tests against relocated schemas/fixtures;
+- shell syntax and exact Make argv;
+- source-workspace `asterion` and `asterion-dci` help/describe/verify behavior;
+- isolated wheel member set, both entry points, both providers, resources, and absence of `dci`/repository examples;
+- Asterion-local and root migration documentation links;
+- project scope and `git diff --check`.
+
+All AF-300 gates are provider-free. Full datasets and release-package publication remain separate future packages after framework convergence.
 
 ## Rollback
 
-The move is one cohesive Git rename plus reference updates. If any packaging, parity, or example behavior changes unexpectedly, restore both original paths and references together. Do not retain one old compatibility stub or a half-migrated path set.
+The six phases are rollback boundaries. A failure is repaired inside the current phase or that phase's cohesive path/reference commit is reverted. Do not partially restore old roots, preserve symlinks, or mix old and new canonical paths.
+
+Provider-backed acceptance artifacts remain immutable. Updating repository path metadata in `product-parity.json` does not rewrite `product-acceptance.json` or claim new provider evidence.
 
 ## Acceptance
 
 AF-300 is complete when:
 
-- the two example hosts live only beneath `examples/asterion/applications/`;
-- no tracked top-level `applications/` or `capabilities/` product tree remains;
-- authoritative package-local application/capability paths are unchanged;
-- all path, behavior, parity, distribution, isolated-wheel, documentation, static, and governance gates above pass without external provider operations;
-- documentation records that full datasets and release packaging remain deliberately deferred.
+- `asterion/` is the complete, sole Asterion project root and can be promoted to a standalone repository root without another product-source re-layout;
+- the mixed repository root clearly contains the original DCI baseline, cross-product evidence, and governance rather than a second Asterion product tree;
+- only `asterion/pyproject.toml` builds the `asterion` wheel;
+- Asterion project tests pass without original DCI, and root parity tests still validate both products;
+- all language, packaging, CLI, provider-free parity, documentation, static, and governance gates pass;
+- full-dataset validation and release implementation remain explicitly deferred.
