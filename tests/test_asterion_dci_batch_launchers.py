@@ -18,7 +18,7 @@ SOURCE_LAUNCHER_ROOT = ROOT / "scripts"
 ASTERION_LAUNCHER_ROOT = SOURCE_LAUNCHER_ROOT / "asterion"
 PROFILE_RESOURCE = (
     ROOT
-    / "packages/python/asterion-core/src/asterion/dci/resources/batch-profiles.json"
+    / "asterion/src/asterion/dci/resources/batch-profiles.json"
 )
 
 SOURCE_LAUNCHERS = {

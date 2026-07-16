@@ -71,7 +71,7 @@ class AsterionDocumentationTests(unittest.TestCase):
 
         profiles = json.loads(
             read(
-                "packages/python/asterion-core/src/asterion/dci/resources/"
+                "asterion/src/asterion/dci/resources/"
                 "batch-profiles.json"
             )
         )["profiles"]
@@ -84,12 +84,12 @@ class AsterionDocumentationTests(unittest.TestCase):
             self.assertIn(launcher.relative_to(ROOT).as_posix(), text)
 
         for source in (
-            "../../packages/python/asterion-core/src/asterion/dci/run.py",
-            "../../packages/python/asterion-core/src/asterion/dci/artifacts.py",
-            "../../packages/python/asterion-core/src/asterion/dci/evaluation.py",
-            "../../packages/python/asterion-core/src/asterion/dci/benchmark.py",
-            "../../packages/python/asterion-core/src/asterion/dci/analysis.py",
-            "../../packages/python/asterion-core/src/asterion/dci/export.py",
+            "../../asterion/src/asterion/dci/run.py",
+            "../../asterion/src/asterion/dci/artifacts.py",
+            "../../asterion/src/asterion/dci/evaluation.py",
+            "../../asterion/src/asterion/dci/benchmark.py",
+            "../../asterion/src/asterion/dci/analysis.py",
+            "../../asterion/src/asterion/dci/export.py",
         ):
             self.assertIn(source, text)
             self.assertTrue((path.parent / source).resolve().is_file())
@@ -119,8 +119,8 @@ class AsterionDocumentationTests(unittest.TestCase):
             "## 通用 CLI 与产品 CLI",
             "## 完整接入示例：example.research",
             "## 安全失败与测试清单",
-            "packages/python/asterion-core/src/asterion/capabilities/",
-            "packages/python/asterion-core/src/asterion/applications/",
+            "asterion/src/asterion/capabilities/",
+            "asterion/src/asterion/applications/",
             "example.policy",
             "example.research",
             "example.observability",
@@ -153,11 +153,11 @@ class AsterionDocumentationTests(unittest.TestCase):
         self.assertIn("不是可独立安装产品", text)
 
         for source in (
-            "../../packages/python/asterion-core/src/asterion/runtime/",
-            "../../packages/python/asterion-core/src/asterion/packages/",
-            "../../packages/python/asterion-core/src/asterion/assembly/",
-            "../../packages/python/asterion-core/src/asterion/runner/",
-            "../../packages/python/asterion-core/src/asterion/applications/provider.py",
+            "../../asterion/src/asterion/runtime/",
+            "../../asterion/src/asterion/packages/",
+            "../../asterion/src/asterion/assembly/",
+            "../../asterion/src/asterion/runner/",
+            "../../asterion/src/asterion/applications/provider.py",
         ):
             self.assertIn(source, text)
             self.assertTrue((path.parent / source).resolve().exists())
@@ -185,7 +185,7 @@ class AsterionDocumentationTests(unittest.TestCase):
             "## 发布门禁",
             "## 回滚方案",
             "## 风险与非目标",
-            "packages/python/asterion-core",
+            "asterion",
             "packages/typescript/asterion-runtime",
             "packages/rust/controlled-executor",
             "schemas/agent-runtime/v1",
@@ -209,7 +209,7 @@ class AsterionDocumentationTests(unittest.TestCase):
             self.assertIn(excluded, text)
 
         for command in (
-            "uv build packages/python/asterion-core",
+            "uv build asterion",
             "asterion list",
             "asterion verify --provider dci-agent-lite --level provider-free",
             "make asterion-verify-basic",

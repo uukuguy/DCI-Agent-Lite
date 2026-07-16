@@ -20,11 +20,11 @@ from asterion.services.controlled_executor import (
 ROOT = Path(__file__).resolve().parents[1]
 MANIFESTS = (
     ROOT
-    / "packages/python/asterion-core/src/asterion/capabilities/controlled_code/manifests"
+    / "asterion/src/asterion/capabilities/controlled_code/manifests"
 )
 ASSEMBLY = (
     ROOT
-    / "packages/python/asterion-core/src/asterion/applications/controlled_code/assemblies/controlled-code-validation.json"
+    / "asterion/src/asterion/applications/controlled_code/assemblies/controlled-code-validation.json"
 )
 
 

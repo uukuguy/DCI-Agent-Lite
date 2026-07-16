@@ -78,14 +78,14 @@ class AsterionStructureTests(unittest.TestCase):
         )
 
     def test_asterion_never_imports_dci(self) -> None:
-        source_root = ROOT / "packages/python/asterion-core/src/asterion"
+        source_root = ROOT / "asterion/src/asterion"
         self.assertTrue(source_root.is_dir())
         source = "\n".join(path.read_text() for path in source_root.rglob("*.py"))
         self.assertNotRegex(source, r"(?:from|import)\s+dci(?:\.|\s|$)")
 
     def test_only_asterion_has_a_wheel_root(self) -> None:
         workspace = (ROOT / "pyproject.toml").read_text()
-        core = (ROOT / "packages/python/asterion-core/pyproject.toml").read_text()
+        core = (ROOT / "asterion/pyproject.toml").read_text()
         self.assertIn("package = false", workspace)
         self.assertNotIn("[build-system]", workspace)
         self.assertNotIn('packages = ["src/dci"]', workspace)
@@ -129,7 +129,7 @@ class AsterionStructureTests(unittest.TestCase):
 
     def test_declarative_assets_have_product_level_owners(self) -> None:
         capabilities = ROOT / "capabilities"
-        bundled = ROOT / "packages/python/asterion-core/src/asterion"
+        bundled = ROOT / "asterion/src/asterion"
         if capabilities.exists():
             self.assertEqual({path.name for path in capabilities.iterdir()}, set())
         self.assertEqual(

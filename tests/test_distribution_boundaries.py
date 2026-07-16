@@ -11,7 +11,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ASTERION_PROJECT = ROOT / "packages/python/asterion-core"
+ASTERION_PROJECT = ROOT / "asterion"
 ASTERION_SOURCE = ASTERION_PROJECT / "src/asterion"
 BASELINE_SOURCE = ROOT / "src/dci"
 
@@ -163,7 +163,7 @@ class SourceDistributionBoundaryTests(unittest.TestCase):
         self.assertTrue(pyproject["tool"]["uv"]["package"] is False)
         self.assertEqual(
             pyproject["tool"]["uv"]["workspace"]["members"],
-            ["packages/python/asterion-core"],
+            ["asterion"],
         )
         self.assertNotIn("scripts", pyproject["project"])
 

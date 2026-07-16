@@ -16,10 +16,10 @@ from asterion.runtime.host import RunEvent, RunRequest, RuntimeManifest
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MANIFEST_ROOT = ROOT / "packages/python/asterion-core/src/asterion/capabilities/dci_research/manifests"
-ASSEMBLY = ROOT / "packages/python/asterion-core/src/asterion/applications/dci_agent_lite/assemblies/dci-local-research.json"
+MANIFEST_ROOT = ROOT / "asterion/src/asterion/capabilities/dci_research/manifests"
+ASSEMBLY = ROOT / "asterion/src/asterion/applications/dci_agent_lite/assemblies/dci-local-research.json"
 EXECUTABLE_ASSEMBLY = (
-    ROOT / "packages/python/asterion-core/src/asterion/applications/dci_agent_lite/assemblies/dci-research-capability.json"
+    ROOT / "asterion/src/asterion/applications/dci_agent_lite/assemblies/dci-research-capability.json"
 )
 HOST_MODULE = ROOT / "applications/dci-agent-lite/python/dci_research_host.py"
 GUIDE = ROOT / "docs/architecture/capability-execution.md"

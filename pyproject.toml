@@ -27,4 +27,4 @@ package = false
 asterion = { workspace = true }
 
 [tool.uv.workspace]
-members = ["packages/python/asterion-core"]
+members = ["asterion"]

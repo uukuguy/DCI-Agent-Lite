@@ -13,7 +13,7 @@ from asterion.packages.catalog import PackageRef
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ASTERION = ROOT / "packages/python/asterion-core/src/asterion"
+ASTERION = ROOT / "asterion/src/asterion"
 
 
 class BuiltinDciApplicationTests(unittest.TestCase):

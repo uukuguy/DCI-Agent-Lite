@@ -21,8 +21,8 @@
         "src/dci/benchmark/pi_rpc_runner.py"
       ],
       "asterion_entry_points": [
-        "packages/python/asterion-core/src/asterion/dci/config.py",
-        "packages/python/asterion-core/src/asterion/dci/pi_rpc.py"
+        "asterion/src/asterion/dci/config.py",
+        "asterion/src/asterion/dci/pi_rpc.py"
       ],
       "stable_semantics": [
         "Shared DCI configuration resolves with explicit overrides taking precedence",
@@ -64,8 +64,8 @@
         "src/dci/benchmark/pi_rpc_runner.py"
       ],
       "asterion_entry_points": [
-        "packages/python/asterion-core/src/asterion/dci/cli.py",
-        "packages/python/asterion-core/src/asterion/dci/run.py"
+        "asterion/src/asterion/dci/cli.py",
+        "asterion/src/asterion/dci/run.py"
       ],
       "stable_semantics": [
         "Interactive execution preserves lifecycle and final-answer semantics",
@@ -104,8 +104,8 @@
         "src/dci/benchmark/pi_rpc_runner.py"
       ],
       "asterion_entry_points": [
-        "packages/python/asterion-core/src/asterion/dci/artifacts.py",
-        "packages/python/asterion-core/src/asterion/dci/run.py"
+        "asterion/src/asterion/dci/artifacts.py",
+        "asterion/src/asterion/dci/run.py"
       ],
       "stable_semantics": [
         "Completed and failed runs publish parseable native lifecycle evidence",
@@ -148,8 +148,8 @@
         "src/dci/benchmark/judge.py"
       ],
       "asterion_entry_points": [
-        "packages/python/asterion-core/src/asterion/dci/judge.py",
-        "packages/python/asterion-core/src/asterion/dci/evaluation.py"
+        "asterion/src/asterion/dci/judge.py",
+        "asterion/src/asterion/dci/evaluation.py"
       ],
       "stable_semantics": [
         "Judge requests produce boolean verdicts through credential-safe transport",
@@ -191,9 +191,9 @@
         "scripts/bcplus_eval/run_bcplus_eval.py"
       ],
       "asterion_entry_points": [
-        "packages/python/asterion-core/src/asterion/dci/benchmark.py",
-        "packages/python/asterion-core/src/asterion/dci/analysis.py",
-        "packages/python/asterion-core/src/asterion/dci/export.py"
+        "asterion/src/asterion/dci/benchmark.py",
+        "asterion/src/asterion/dci/analysis.py",
+        "asterion/src/asterion/dci/export.py"
       ],
       "stable_semantics": [
         "The digest-bound 533-row inventory delegates complete fine-grained batch coverage",
@@ -1345,7 +1345,7 @@
       ],
       "asterion_entry_points": [
         "tests/test_distribution_boundaries.py",
-        "packages/python/asterion-core/src/asterion/applications/dci_agent_lite/provider.py"
+        "asterion/src/asterion/applications/dci_agent_lite/provider.py"
       ],
       "stable_semantics": [
         "The installed wheel contains Asterion DCI without packaging the source DCI module",
@@ -1380,8 +1380,8 @@
         "applications/dci-agent-lite/python/dci_research_host.py"
       ],
       "asterion_entry_points": [
-        "packages/python/asterion-core/src/asterion/applications/dci_agent_lite/assemblies/dci-research-capability.json",
-        "packages/python/asterion-core/src/asterion/dci/application_executor.py"
+        "asterion/src/asterion/applications/dci_agent_lite/assemblies/dci-research-capability.json",
+        "asterion/src/asterion/dci/application_executor.py"
       ],
       "stable_semantics": [
         "The installed Pi-default application selects its bundled assembly independently",

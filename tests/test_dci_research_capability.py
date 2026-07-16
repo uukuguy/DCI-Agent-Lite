@@ -15,7 +15,7 @@ from asterion.dci.run import DciRunRequest, DciRunResult
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = (
     ROOT
-    / "packages/python/asterion-core/src/asterion/capabilities/dci_research/manifests/dci-research.json"
+    / "asterion/src/asterion/capabilities/dci_research/manifests/dci-research.json"
 )
 
 
@@ -205,8 +205,8 @@ class DciResearchCapabilityTests(unittest.IsolatedAsyncioTestCase):
 class DciResearchCapabilityBoundaryTests(unittest.TestCase):
     def test_application_and_capability_sources_do_not_import_dci_benchmark(self) -> None:
         roots = (
-            ROOT / "packages/python/asterion-core/src/asterion/applications",
-            ROOT / "packages/python/asterion-core/src/asterion/capabilities",
+            ROOT / "asterion/src/asterion/applications",
+            ROOT / "asterion/src/asterion/capabilities",
         )
         source = "\n".join(
             path.read_text()

@@ -795,7 +795,7 @@ class AsterionDciExportTests(unittest.TestCase):
         self.assertEqual(out.getvalue(), "")
         self.assertEqual(err.getvalue(), "DCI export failed\n")
         source = (
-            ROOT / "packages/python/asterion-core/src/asterion/dci/export.py"
+            ROOT / "asterion/src/asterion/dci/export.py"
         ).read_text()
         self.assertNotIn("src.dci", source)
         self.assertNotIn("import pandas", source)

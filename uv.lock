@@ -213,7 +213,7 @@ wheels = [
 [[package]]
 name = "asterion"
 version = "0.1.0"
-source = { editable = "packages/python/asterion-core" }
+source = { editable = "asterion" }
 dependencies = [
     { name = "matplotlib" },
     { name = "pyarrow" },
@@ -250,7 +250,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "anthropic", specifier = ">=0.91.0" },
-    { name = "asterion", editable = "packages/python/asterion-core" },
+    { name = "asterion", editable = "asterion" },
     { name = "datasets" },
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "huggingface-hub" },

@@ -17,12 +17,12 @@ from asterion.runtime.host import RunEvent, RunRequest, RuntimeManifest
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_ROOTS = (
-    ROOT / "packages/python/asterion-core/src/asterion/capabilities/dci_research/manifests",
-    ROOT / "packages/python/asterion-core/src/asterion/capabilities/controlled_code/manifests",
+    ROOT / "asterion/src/asterion/capabilities/dci_research/manifests",
+    ROOT / "asterion/src/asterion/capabilities/controlled_code/manifests",
 )
-ASSEMBLY = ROOT / "packages/python/asterion-core/src/asterion/applications/dci_agent_lite/assemblies/dci-local-research.json"
+ASSEMBLY = ROOT / "asterion/src/asterion/applications/dci_agent_lite/assemblies/dci-local-research.json"
 CONTROLLED_ASSEMBLY = (
-    ROOT / "packages/python/asterion-core/src/asterion/applications/controlled_code/assemblies/controlled-code-validation.json"
+    ROOT / "asterion/src/asterion/applications/controlled_code/assemblies/controlled-code-validation.json"
 )
 GUIDE = ROOT / "docs/architecture/application-runner.md"
 
@@ -258,7 +258,7 @@ class ApplicationRunnerTests(unittest.IsolatedAsyncioTestCase):
     def test_runner_has_no_adapter_or_process_imports(self) -> None:
         source = (
             ROOT
-            / "packages/python/asterion-core/src/asterion/runner/application.py"
+            / "asterion/src/asterion/runner/application.py"
         ).read_text()
 
         self.assertNotIn("asterion.adapters", source)
@@ -383,7 +383,7 @@ class ApplicationRunnerDocumentationTests(unittest.TestCase):
     def test_runner_boundary_excludes_control_plane_and_process_ownership(self) -> None:
         source = (
             ROOT
-            / "packages/python/asterion-core/src/asterion/runner/application.py"
+            / "asterion/src/asterion/runner/application.py"
         ).read_text()
         typescript_sources = "\n".join(
             path.read_text()
@@ -399,7 +399,7 @@ class ApplicationRunnerDocumentationTests(unittest.TestCase):
         self.assertTrue(
             (
                 ROOT
-                / "packages/python/asterion-core/src/asterion/runner/application.py"
+                / "asterion/src/asterion/runner/application.py"
             ).is_file()
         )
         self.assertFalse((ROOT / "src/dci/framework/runner.py").exists())

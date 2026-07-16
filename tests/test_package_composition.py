@@ -13,8 +13,8 @@ from dci.framework.adapters.pi import map_pi_capabilities
 REPO_ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_DIR = REPO_ROOT / "tests/fixtures/packages/v1"
 MANIFEST_DIRS = (
-    REPO_ROOT / "packages/python/asterion-core/src/asterion/capabilities/dci_research/manifests",
-    REPO_ROOT / "packages/python/asterion-core/src/asterion/capabilities/controlled_code/manifests",
+    REPO_ROOT / "asterion/src/asterion/capabilities/dci_research/manifests",
+    REPO_ROOT / "asterion/src/asterion/capabilities/controlled_code/manifests",
 )
 
 
