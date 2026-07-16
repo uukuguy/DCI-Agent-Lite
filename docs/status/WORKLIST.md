@@ -312,7 +312,7 @@
 - Dependencies: AF-250, AF-270, AF-280
 - Acceptance: the documents distinguish implemented behavior, executable verification, external-Pi limitations, and unrerun full-dataset evidence; explain every canonical Asterion layer and the current top-level compatibility/reference directories; provide a complete capability-to-application integration path; enumerate the self-contained wheel and external dependencies; define a phased standalone repository extraction with gates and non-goals; README and documentation indexes link the set; stale contradictory context-management guidance is corrected.
 - Design: `docs/superpowers/specs/2026-07-16-asterion-documentation-set-design.md`
-- Plan: pending written-spec approval
+- Plan: `docs/superpowers/plans/2026-07-16-asterion-complete-documentation.md`
 
 ## AF-095 — Asterion framework identity and extraction
 

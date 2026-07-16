@@ -723,3 +723,4 @@
 - 2026-07-16 AF-280 closes with verified, documented Make entry points and terminal governance. [0d76e82]
 - 2026-07-16 AF-290 opens a documentation-only audit of DCI completeness, framework integration, and standalone extraction boundaries.
 - 2026-07-16 Evidence labels prevent framework and DCI documentation from overstating Pi or benchmark proof. [4e15891]
+- 2026-07-16 AF-290 plan makes product, integration, extraction, and truth reconciliation independently testable.
