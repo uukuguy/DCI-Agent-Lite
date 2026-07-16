@@ -20,7 +20,7 @@ MANIFEST_DIRS = (
     REPO_ROOT / "asterion/src/asterion/capabilities/dci_research/manifests",
     REPO_ROOT / "asterion/src/asterion/capabilities/controlled_code/manifests",
 )
-CATALOG_GUIDE = REPO_ROOT / "docs/architecture/local-package-catalog.md"
+CATALOG_GUIDE = REPO_ROOT / "asterion/docs/architecture/local-package-catalog.md"
 
 
 class PackageDiscoveryTests(unittest.TestCase):

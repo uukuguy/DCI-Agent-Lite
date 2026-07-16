@@ -24,7 +24,7 @@
 
 **DCI-Agent-Lite** is the **minimal open implementation** of this paradigm, built on [Pi](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) with **bash tools** and **lightweight context management** for **long-horizon deep research**. With `GPT-5.4-nano`, it achieves an impressive **62.9%** accuracy on BrowseComp-Plus, **surpassing** agentic search agents powered by `GPT-5.2`, `Claude-Sonnet-4.6`, `Qwen3.5-122B`, and `GLM-4.7`.
 
-The repository also develops **Asterion**, the independent agent-application framework beneath DCI. Its minimal application runner consumes a resolved plan and an explicit runtime client without adding a scheduler, registry, or automatic service startup; see [`docs/architecture/application-runner.md`](docs/architecture/application-runner.md).
+The repository also develops **Asterion**, the independent agent-application framework beneath DCI. Its minimal application runner consumes a resolved plan and an explicit runtime client without adding a scheduler, registry, or automatic service startup; see [`asterion/docs/architecture/application-runner.md`](asterion/docs/architecture/application-runner.md).
 
 Asterion is the repository's only buildable Python distribution. After
 installation, discover its providers and applications without locating internal
@@ -66,15 +66,15 @@ surface.
 ### AF-250 product-acceptance evidence
 
 For a short, command-first introduction, start with the
-[Asterion capability usage guide](docs/guides/asterion-capability-usage.md). It
+[Asterion capability usage guide](asterion/docs/guides/asterion-capability-usage.md). It
 shows the shared `.env`, the DCI function list, and the unified
 `asterion describe/verify` commands without requiring source-code inspection.
 
-完整文档统一从 [Asterion 文档导航](docs/README.md)进入：
+完整文档统一从 [Asterion 文档导航](asterion/docs/README.md)进入：
 
-- [Asterion DCI 完整产品参考](docs/guides/asterion-dci-complete-reference.md)
-- [Asterion 框架与能力包接入指南](docs/architecture/asterion-framework-capability-integration.md)
-- [Asterion 独立项目拆分指南](docs/architecture/asterion-standalone-extraction.md)
+- [Asterion DCI 完整产品参考](asterion/docs/guides/asterion-dci-complete-reference.md)
+- [Asterion 框架与能力包接入指南](asterion/docs/architecture/asterion-framework-capability-integration.md)
+- [Asterion 独立项目拆分指南](asterion/docs/architecture/asterion-standalone-extraction.md)
 
 在源码仓库根目录可以使用更短的 Make 入口：
 
@@ -90,7 +90,7 @@ make asterion-verify-complete
 
 The complete procedure—from both original DCI examples through Asterion,
 installed Pi, all launchers, bounded acceptance, and repository gates—is in the
-[Asterion DCI full functional verification guide](docs/verification/asterion-dci-validation-guide.md).
+[Asterion DCI full functional verification guide](asterion/docs/verification/asterion-dci-validation-guide.md).
 
 Run the local, provider-free product matrix verifier to reproduce the complete
 checked-in acceptance boundary:
@@ -231,15 +231,15 @@ limit, concurrency, prompt, Judge, reuse, analysis, and figure options override
 the profile. Use `--limit 1` for a bounded check. Omitting `--limit` is a
 deliberate full-dataset run and can incur substantial Pi and Judge usage.
 
-The one-to-one Pi-default wrappers under `scripts/asterion/{bcplus_eval,qa,bright}`
+The one-to-one Pi-default wrappers under `asterion/scripts/{bcplus_eval,qa,bright}`
 load the shared repository `.env`, preflight their dataset and corpus, and call
 only `asterion-dci benchmark`. For example:
 
 ```bash
-bash scripts/asterion/qa/run_hotpotqa_dev_sample50.sh --limit 1
-bash scripts/asterion/bcplus_eval/run_bcplus_eval_openai.sh level3 high --limit 1
+bash asterion/scripts/qa/run_hotpotqa_dev_sample50.sh --limit 1
+bash asterion/scripts/bcplus_eval/run_bcplus_eval_openai.sh level3 high --limit 1
 # deliberate full profile run (no limit)
-bash scripts/asterion/bright/run_bio.sh
+bash asterion/scripts/bright/run_bio.sh
 ```
 
 `--resume-policy compatible` resumes compatible incomplete native rows and

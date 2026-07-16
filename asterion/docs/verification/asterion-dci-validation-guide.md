@@ -8,7 +8,8 @@ For the function-by-function product boundary and evidence labels, use the
 
 This is the authoritative operator guide for verifying that the independent
 Asterion DCI capability and its runnable `asterion-dci` application preserve
-the original Pi-based DCI behavior. Run commands from the repository root.
+the original Pi-based DCI behavior. Unless a section explicitly names a
+mixed-repository dependency, run Asterion commands from the `asterion/` project root.
 
 ## 1. Scope and definition of “complete”
 
@@ -49,7 +50,7 @@ application is listed. These commands send no provider request.
 Command class: **provider-free**
 
 ```bash
-PYTHONPATH="$PWD/src" uv run python -m dci.benchmark.pi_rpc_runner --help
+PYTHONPATH="../src" uv run python -m dci.benchmark.pi_rpc_runner --help
 uv run asterion-dci run --help
 uv run asterion-dci terminal --help
 uv run asterion-dci resume --help
@@ -57,11 +58,11 @@ uv run asterion-dci system-prompt --help
 uv run asterion-dci evaluate --help
 uv run asterion-dci benchmark --help
 uv run asterion-dci export --help
-bash -n scripts/examples/dci_basic_example.sh \
-  scripts/examples/dci_runtime_context_example.sh \
-  scripts/examples/asterion_dci_basic_example.sh \
-  scripts/examples/asterion_dci_runtime_context_example.sh
-uv run python tools/verify_asterion_dci_product.py
+bash -n ../scripts/examples/dci_basic_example.sh \
+  ../scripts/examples/dci_runtime_context_example.sh \
+  ../scripts/examples/asterion_dci_basic_example.sh \
+  ../scripts/examples/asterion_dci_runtime_context_example.sh
+uv run python ../tools/verify_asterion_dci_product.py
 ```
 
 Pass: every command exits zero. The verifier reports 8/8 checked-in product
@@ -76,8 +77,8 @@ uses the configured Judge.
 Command class: **bounded provider-backed**
 
 ```bash
-bash scripts/examples/dci_basic_example.sh
-bash scripts/examples/dci_runtime_context_example.sh high
+bash ../scripts/examples/dci_basic_example.sh
+bash ../scripts/examples/dci_runtime_context_example.sh high
 ```
 
 Pass: both exit zero, have completed state and a nonempty `final.txt`, and the
@@ -95,8 +96,8 @@ Command class: **bounded provider-backed**
 test "${ASTERION_DCI_CORPUS_ROOT#/}" != "$ASTERION_DCI_CORPUS_ROOT"
 test -d "$ASTERION_DCI_CORPUS_ROOT"
 export ASTERION_DCI_OUTPUT_ROOT="${ASTERION_DCI_OUTPUT_ROOT:-$PWD/outputs/asterion-dci-runs}"
-bash scripts/examples/asterion_dci_basic_example.sh
-bash scripts/examples/asterion_dci_runtime_context_example.sh high
+bash ../scripts/examples/asterion_dci_basic_example.sh
+bash ../scripts/examples/asterion_dci_runtime_context_example.sh high
 ```
 
 Pass: both exit zero; private run directories contain completed `state.json`,
@@ -192,26 +193,26 @@ uv run asterion-dci export bcplus-qa --help
 The twelve Pi-default Asterion launchers, paired one-to-one with the original
 launchers, are:
 
-- `scripts/asterion/bcplus_eval/run_L3.sh`
-- `scripts/asterion/bcplus_eval/run_bcplus_eval_openai.sh`
-- `scripts/asterion/bright/run_bio.sh`
-- `scripts/asterion/bright/run_earth_science.sh`
-- `scripts/asterion/bright/run_economics.sh`
-- `scripts/asterion/bright/run_robotics.sh`
-- `scripts/asterion/qa/run_2wikimultihopqa_dev_sample50.sh`
-- `scripts/asterion/qa/run_bamboogle_test_sample50.sh`
-- `scripts/asterion/qa/run_hotpotqa_dev_sample50.sh`
-- `scripts/asterion/qa/run_musique_dev_sample50.sh`
-- `scripts/asterion/qa/run_nq_test_sample50.sh`
-- `scripts/asterion/qa/run_triviaqa_test_sample50.sh`
+- `scripts/bcplus_eval/run_L3.sh`
+- `scripts/bcplus_eval/run_bcplus_eval_openai.sh`
+- `scripts/bright/run_bio.sh`
+- `scripts/bright/run_earth_science.sh`
+- `scripts/bright/run_economics.sh`
+- `scripts/bright/run_robotics.sh`
+- `scripts/qa/run_2wikimultihopqa_dev_sample50.sh`
+- `scripts/qa/run_bamboogle_test_sample50.sh`
+- `scripts/qa/run_hotpotqa_dev_sample50.sh`
+- `scripts/qa/run_musique_dev_sample50.sh`
+- `scripts/qa/run_nq_test_sample50.sh`
+- `scripts/qa/run_triviaqa_test_sample50.sh`
 
 Use `--limit 1` or `ASTERION_DCI_BATCH_LIMIT=1` for bounded verification.
 
 Command class: **bounded provider-backed**
 
 ```bash
-bash scripts/asterion/qa/run_hotpotqa_dev_sample50.sh --limit 1
-bash scripts/asterion/bcplus_eval/run_bcplus_eval_openai.sh level3 high --limit 1
+bash scripts/qa/run_hotpotqa_dev_sample50.sh --limit 1
+bash scripts/bcplus_eval/run_bcplus_eval_openai.sh level3 high --limit 1
 ```
 
 Pass: each row has completed native and Judge artifacts, one settled protocol
@@ -223,7 +224,7 @@ This next command is deliberately excluded from routine verification.
 Command class: **full-dataset**
 
 ```bash
-bash scripts/asterion/bright/run_bio.sh
+bash scripts/bright/run_bio.sh
 ```
 
 Omitting `--limit` can issue many Pi/Judge requests and requires explicit
@@ -234,7 +235,7 @@ operator authorization, full data, time, and budget.
 Command class: **provider-free**
 
 ```bash
-uv run python tools/verify_asterion_dci_product.py
+uv run python ../tools/verify_asterion_dci_product.py
 ```
 
 Pass: 8/8 rows, 533/533 selectors, 12/12 launcher pairs, 6/6 extras, bounded
@@ -256,7 +257,7 @@ set -a
 source "$DCI_ENV_FILE"
 set +a
 : "${AF250_ACCEPTANCE_ROOT:?Set the caller-owned retained evidence root}"
-uv run python tools/verify_asterion_dci_product.py \
+uv run python ../tools/verify_asterion_dci_product.py \
   --acceptance-root "$AF250_ACCEPTANCE_ROOT" \
   --validate-only
 ```
@@ -272,15 +273,15 @@ mtimes validate, and credential matches remain zero.
 Command class: **provider-free**
 
 ```bash
-uv run python -m unittest discover -v
-uv run python -m compileall -q src tests tools packages/python/asterion-core/src
-uv run ruff check src tests tools packages/python/asterion-core/src
+uv run python -m unittest discover -s ../tests -v
+uv run python -m compileall -q src/asterion ../tests ../tools
+uv run ruff check src/asterion ../tests ../tools
 npm --prefix packages/typescript/asterion-runtime test
 cargo test --manifest-path packages/rust/controlled-executor/Cargo.toml
 cargo fmt --manifest-path packages/rust/controlled-executor/Cargo.toml --check
 cargo clippy --manifest-path packages/rust/controlled-executor/Cargo.toml --all-targets -- -D warnings
-bash -n tools/climb/train.sh tools/climb/eval-local.sh tools/climb/cycle.sh
-python3 tools/project_scope_check.py
+bash -n ../tools/climb/train.sh ../tools/climb/eval-local.sh ../tools/climb/cycle.sh
+python3 ../tools/project_scope_check.py
 git diff --check
 ```
 

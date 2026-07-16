@@ -3,30 +3,31 @@
 ## Ownership
 
 **Asterion owns framework contracts.** Its authoritative Python implementation
-lives under `packages/python/asterion-core/src/asterion/`: runtime protocol and hosts, normalized adapters,
+lives under `src/asterion/`: runtime protocol and hosts, normalized adapters,
 package catalogs and composition, static assembly, and host-service contracts.
 
 **Asterion must not import the DCI baseline.** Its first-party DCI capability and
-application are modular Asterion namespaces. `src/dci` is a frozen, source-only
+application are modular Asterion namespaces. The mixed-repository dependency
+[`src/dci`](../../../src/dci/) is a frozen, source-only
 comparison baseline with its own framework implementation.
 
 ```text
-packages/python/asterion-core/src/asterion/  sole product distribution
-src/dci/                              unpackaged benchmark baseline and configuration
-packages/python/asterion-core/src/asterion/capabilities/dci_research/  bundled DCI capability and manifests
-packages/python/asterion-core/src/asterion/applications/dci_agent_lite/ bundled provider and assemblies
-capabilities/controlled-code/         controlled-code declarative packages
+src/asterion/                         sole product distribution
+../src/dci/                           mixed-repository, unpackaged benchmark baseline
+src/asterion/capabilities/dci_research/  bundled DCI capability and manifests
+src/asterion/applications/dci_agent_lite/ bundled provider and assemblies
+src/asterion/capabilities/controlled_code/ controlled-code declarative packages
 packages/typescript/asterion-runtime/ TypeScript validation and host types
 packages/rust/controlled-executor/    explicit controlled-execution service
 ```
 
 ## Stable DCI product entry
 
-The verified source-baseline
-`scripts/examples/dci_basic_example.sh` and
-`scripts/examples/dci_runtime_context_example.sh` continue loading repository
+The verified mixed-repository source-baseline
+`../scripts/examples/dci_basic_example.sh` and
+`../scripts/examples/dci_runtime_context_example.sh` continue loading repository
 `.env` configuration and invoke `dci.benchmark.pi_rpc_runner` through
-`PYTHONPATH=src`. The baseline is not installed by the Asterion wheel.
+`PYTHONPATH=../src`. The baseline is not installed by the Asterion wheel.
 
 The installed product uses exact application identity:
 

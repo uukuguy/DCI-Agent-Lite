@@ -30,10 +30,13 @@ The executor clears the child environment, closes stdin, invokes the canonical e
 
 ## Verification
 
+Run the Cargo command from the Asterion project root. The Make and scope gates
+are explicit mixed-repository dependencies in the parent checkout.
+
 ```bash
-make test-rust-executor
-make check-rust-executor
-python3 tools/project_scope_check.py
+cargo test --manifest-path packages/rust/controlled-executor/Cargo.toml
+make -C .. test-rust-executor check-rust-executor
+python3 ../tools/project_scope_check.py
 ```
 
 Stronger containment belongs in a replaceable container, remote-worker, or platform isolation backend behind the same `dci.executor/v1` contract.

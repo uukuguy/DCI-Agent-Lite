@@ -25,7 +25,7 @@ ASSEMBLIES = ROOT / "asterion/src/asterion/applications/dci_agent_lite/assemblie
 CONTROLLED_ASSEMBLIES = (
     ROOT / "asterion/src/asterion/applications/controlled_code/assemblies"
 )
-GUIDE = Path(__file__).resolve().parents[1] / "docs/architecture/static-application-assembly.md"
+GUIDE = Path(__file__).resolve().parents[1] / "asterion/docs/architecture/static-application-assembly.md"
 
 
 class AssemblyManifestTests(unittest.TestCase):

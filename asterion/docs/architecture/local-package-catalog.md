@@ -32,8 +32,8 @@ from dci.framework.packages import compose_packages
 
 catalog = discover_packages(
     [
-        Path("packages/python/asterion-core/src/asterion/capabilities/dci_research/manifests"),
-        Path("packages/python/asterion-core/src/asterion/capabilities/controlled_code/manifests"),
+        Path("src/asterion/capabilities/dci_research/manifests"),
+        Path("src/asterion/capabilities/controlled_code/manifests"),
     ]
 )
 refs = (

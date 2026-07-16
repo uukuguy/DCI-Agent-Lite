@@ -36,7 +36,7 @@ in sorted, duplicate-free order. For example, a research capability can declare:
 The canonical definition is
 `schemas/packages/v1/package-manifest.schema.json`; shared positive and negative
 fixtures live in `tests/fixtures/packages/v1/`. The reference manifests under
-`packages/python/asterion-core/src/asterion/capabilities/dci_research/manifests/` form the policy → research → evaluation → observability
+`src/asterion/capabilities/dci_research/manifests/` form the policy → research → evaluation → observability
 DCI graph.
 
 ## Resolving a graph

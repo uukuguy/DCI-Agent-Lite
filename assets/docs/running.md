@@ -114,7 +114,7 @@ asterion-dci run \
   "your question here"
 ```
 
-These controls change saved artifacts, not the context Pi sends to the model. See [artifacts.md](artifacts.md#artifact-only-transcript-compaction) and the [complete Asterion DCI reference](../../docs/guides/asterion-dci-complete-reference.md#context-management两个不同层次) for the two-layer distinction.
+These controls change saved artifacts, not the context Pi sends to the model. See [artifacts.md](artifacts.md#artifact-only-transcript-compaction) and the [complete Asterion DCI reference](../../asterion/docs/guides/asterion-dci-complete-reference.md#context-management两个不同层次) for the two-layer distinction.
 
 ## Running Pi Directly From Node
 

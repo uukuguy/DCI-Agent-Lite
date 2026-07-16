@@ -20,9 +20,9 @@ MANIFEST_DIRS = (
 
 def manifest_path(name: str) -> Path:
     return next(path / name for path in MANIFEST_DIRS if (path / name).is_file())
-PACKAGE_GUIDE = REPO_ROOT / "docs/architecture/composable-packages.md"
+PACKAGE_GUIDE = REPO_ROOT / "asterion/docs/architecture/composable-packages.md"
 CONTROLLED_CODE_GUIDE = (
-    REPO_ROOT / "docs/architecture/controlled-code-validation-packages.md"
+    REPO_ROOT / "asterion/docs/architecture/controlled-code-validation-packages.md"
 )
 
 

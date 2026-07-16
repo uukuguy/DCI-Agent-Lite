@@ -7,7 +7,7 @@
 - Theme-level focus: converge all Asterion-owned assets beneath a complete top-level `asterion/` project root before standalone extraction or release work.
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
-- Framework north star: `docs/architecture/agent-framework.md`
+- Framework north star: `asterion/docs/architecture/agent-framework.md`
 - Active work package: AF-300 — Asterion top-level project root convergence.
 
 ## Current Architecture
@@ -25,7 +25,7 @@
 - AF-250 acceptance: all eight local/model-free product rows, all 533 delegated batch selectors, twelve launcher pairs, six batch extras, and AF-250-H-001 through H-005 pass. The independent Asterion package has no production import or launch of `src/dci`. Seven bounded real source/Asterion/application/Pi-plus-Judge/reuse cases completed successfully after the isolated worktree was given the shared main-repository corpus path; their credential-clean, body-free structural record is digest-bound into the product matrix and revalidated against retained private native artifacts. Final terminal closure passes 1275 Python, 11 TypeScript, and 19 Rust tests plus compile, Ruff, shell, scope, terminal-dispatch rejection, diff, installed-wheel/application, public-record, and private-artifact verifier gates. Independent closeout review reports no Critical or Important findings. No full dataset ran.
 - AF-270 acceptance: generic provider-selected `asterion describe/verify` makes the complete DCI function map, shared `.env` configuration, and preflight/basic/acceptance/complete verification discoverable without source inspection. Source acceptance is loaded only from the trusted checkout containing the verifier module; an installed wheel never executes a current-directory lookalike. Both real Pi examples use six-turn limits, private retained evidence is genuinely revalidated, and public cost output counts two Pi run operations plus one Judge operation without misrepresenting multi-turn provider API calls. A real `complete` run passed with all product counts and no full dataset; closure passes 1297 Python, 11 TypeScript, and 19 Rust tests plus all static/governance gates.
 - AF-280 acceptance: the root Makefile exposes five explicit, phony, cost-visible shortcuts for capability description and all four DCI verification levels. Defaults use the shared root `.env`, repository corpus, and Asterion verification output while remaining overridable. Exact dry-run argv, documentation, live description, and provider-free acceptance checks pass without a provider request or full dataset.
-- AF-290 acceptance: the complete DCI reference, framework/capability integration guide, and standalone extraction guide are canonical and reachable from `docs/README.md`. They distinguish Implemented, Verified, External-limited, and Not rerun evidence; identify package-local `capabilities/` and `applications/` as authoritative; define complete third-party integration and seven reversible extraction phases; and correct stale claims that the current external Pi exposes typed context-management levels. Closure passes 16 focused tests plus compile, Ruff, CLI, scope, link, and diff gates without provider requests or a full dataset.
+- AF-290 acceptance: the complete DCI reference, framework/capability integration guide, and standalone extraction guide are canonical and reachable from `asterion/docs/README.md`. They distinguish Implemented, Verified, External-limited, and Not rerun evidence; identify package-local `capabilities/` and `applications/` as authoritative; define complete third-party integration and seven reversible extraction phases; and correct stale claims that the current external Pi exposes typed context-management levels. Closure passes 16 focused tests plus compile, Ruff, CLI, scope, link, and diff gates without provider requests or a full dataset.
 - Host contracts: Python and TypeScript expose the same schema-backed runtime manifest, request, event, and asynchronous client boundary without adapter-private types.
 - Controlled execution: `dci.executor/v1` has a runnable concurrent Rust JSONL sidecar with trusted startup policy, direct execution, bounded dual-stream draining, deadline/cancel kill-and-reap, duplicate-ID denial, out-of-order correlation, safe parse errors, EOF draining, operator documentation, and root verification targets.
 - Package composition: `dci.package/v1` and the deterministic Python composer resolve a portable policy → DCI research → evaluation → observability graph identically for Pi and Claude Code capability mappings. The TypeScript host exports the same manifest types and validates the canonical schema/fixtures without implementing a second composer.
@@ -65,7 +65,7 @@
 ### Loaded every session
 
 - `AGENTS.md` — shared repository operating rules and framework scope control.
-- `docs/architecture/agent-framework.md` — framework north star.
+- `asterion/docs/architecture/agent-framework.md` — framework north star.
 - `docs/status/WORKLIST.md` — active package ledger.
 - `~/.claude/projects/-Users-sujiangwen-sandbox-agentic-2026-DCI-Agent-Lite/memory/MEMORY.md` — concise collaboration-memory index.
 
@@ -83,17 +83,17 @@
 - `src/dci/benchmark/pi_system_prompt.py` — Pi-owned system-prompt bridge.
 - `src/dci/framework/host.py` — public Python Agent Runtime Protocol host contract.
 - `src/dci/framework/package_catalog.py` — explicit-root deterministic local package discovery and catalog types.
-- `packages/typescript/asterion-runtime/` — public TypeScript host package and shared-fixture validator.
+- `asterion/packages/typescript/asterion-runtime/` — public TypeScript host package and shared-fixture validator.
 - `src/dci/framework/executor_protocol.py` — Python reference validator for `dci.executor/v1`.
-- `packages/rust/controlled-executor/` — runnable Rust controlled-executor sidecar and library with complete AF-050 policy/process/resource/service acceptance.
+- `asterion/packages/rust/controlled-executor/` — runnable Rust controlled-executor sidecar and library with complete AF-050 policy/process/resource/service acceptance.
 - `docs/superpowers/specs/2026-07-12-composable-framework-packages-design.md` — active AF-060 package contract and non-goals.
 - `docs/superpowers/specs/2026-07-12-controlled-code-validation-packages-design.md` — active AF-070 second-graph contract and non-goals.
 - `docs/superpowers/specs/2026-07-13-local-package-catalog-design.md` — active AF-080 discovery, exact-selection, and trust-boundary contract.
-- `docs/architecture/composable-packages.md` — package authoring, static composition, extension, and security boundary guide.
-- `docs/architecture/controlled-code-validation-packages.md` — second-graph, shared host-service, non-execution, and non-sandbox guide.
-- `docs/architecture/local-package-catalog.md` — explicit-root discovery, exact selection, filesystem trust, and non-execution guide.
-- `docs/architecture/static-application-assembly.md` — exact runtime/catalog/service binding, language ownership, safe failure, and non-execution guide.
-- `docs/architecture/application-runner.md` — explicit runtime/service execution boundary, cancellation, immutable results, and non-goals.
+- `asterion/docs/architecture/composable-packages.md` — package authoring, static composition, extension, and security boundary guide.
+- `asterion/docs/architecture/controlled-code-validation-packages.md` — second-graph, shared host-service, non-execution, and non-sandbox guide.
+- `asterion/docs/architecture/local-package-catalog.md` — explicit-root discovery, exact selection, filesystem trust, and non-execution guide.
+- `asterion/docs/architecture/static-application-assembly.md` — exact runtime/catalog/service binding, language ownership, safe failure, and non-execution guide.
+- `asterion/docs/architecture/application-runner.md` — explicit runtime/service execution boundary, cancellation, immutable results, and non-goals.
 - `docs/superpowers/specs/2026-07-13-application-runner-vertical-slice-design.md` — approved AF-100 scope and execution/security boundaries.
 - `docs/superpowers/plans/2026-07-13-application-runner-vertical-slice.md` — AF-100 implementation and verification slices.
 - `docs/superpowers/specs/2026-07-13-asterion-framework-extraction-design.md` — Asterion naming, directory ownership, compatibility, and migration boundaries.
@@ -104,7 +104,7 @@
 
 ## Resume Instructions
 
-1. Read this file, then `docs/architecture/agent-framework.md` and `docs/status/WORKLIST.md`.
+1. Read this file, then `asterion/docs/architecture/agent-framework.md` and `docs/status/WORKLIST.md`.
 2. Read `RESUME-NEXT-SESSION.md`, recent JOURNAL entries, and the relevant collaboration-memory entry.
 3. Run `git status --short`, `git log --oneline -5`, and `python3 tools/project_scope_check.py`.
 4. Work only on the named active package; when lifecycle is complete, explicitly reopen governance before implementation.

@@ -15,8 +15,8 @@
 - Rust 包：`packages/rust/controlled-executor`，当前 crate 名为 `dci-controlled-executor`；拆分前同样单独决定发布名。
 - 跨语言协议 fixtures：`tests/fixtures`。
 - Python 单元、集成、distribution 与文档契约测试：`tests/test_asterion_*` 以及它们实际导入的公共 fixtures/helpers。
-- Asterion benchmark launchers：`scripts/asterion`；它们是 DCI 产品资源的仓库入口，不是框架核心。
-- 架构、使用、验证和 operator 文档：`docs/architecture`、`docs/guides`、`docs/verification`、`docs/operator` 中与 Asterion 相关的文件。
+- Asterion benchmark launchers：`scripts`；它们是 DCI 产品资源的项目入口，不是框架核心。
+- Asterion 产品文档：当前 `docs` 下的 architecture、guides、verification 和 operator 子目录。
 - 构建和常用入口：根 `Makefile` 中的 `asterion-*` targets，以及 `.env.template` 中 Asterion/DCI 需要的非秘密配置说明。
 
 迁出时不能笼统复制整个 `tests/`、`docs/` 或 `scripts/`。先用 import、链接和命令引用确定闭包，再复制闭包；这样既不会漏 fixture，也不会把原 DCI 的历史状态系统当作产品内容带走。
@@ -30,9 +30,9 @@
 - credentials 与 `.env`：只迁移无秘密的 `.env.template`，绝不复制本地 `.env` 或打印 key。
 - 运行输出与评测 artifacts：`outputs/`、接受测试临时目录、Judge cache 和用户研究产物不进入源码发行。
 - `.worktrees/`：这是临时工作树，不是文档、源码或发布资产。
-- 旧 `src/dci`：它是原始 DCI 参考实现；Asterion 的权威实现已经位于 wheel 内的 `asterion/dci`，不能同时复制两套实现。
+- mixed-repository dependency [`src/dci`](../../../src/dci/)：它是原始 DCI 参考实现；Asterion 的权威实现已经位于 wheel 内的 `asterion/dci`，不能同时复制两套实现。
 - Python/Node/Rust 构建缓存：`.venv`、`node_modules`、`target`、`dist`、`__pycache__`。
-- `docs/status`、协作 memory 和本仓库 worklist：这些描述当前迁移项目，不是新 Asterion 产品的历史；新仓库初始化自己的状态文件。
+- mixed-repository dependency [status/worklist](../../../docs/status/) 与协作 memory：这些描述当前迁移项目，不是新 Asterion 产品的历史；新仓库初始化自己的状态文件。
 
 新项目需要在 README 明确这些外部依赖及失败方式。没有 Pi 或凭据时，框架 discovery、文档、schema、unit、provider-free acceptance 仍应运行；需要模型调用的命令必须 preflight 后清晰停止。
 
@@ -60,7 +60,6 @@ asterion/
 │   ├── fixtures/
 │   └── test_asterion_*.py
 ├── scripts/
-│   └── asterion/
 └── docs/
     ├── README.md
     ├── architecture/
@@ -81,13 +80,13 @@ asterion/
 | `packages/rust/controlled-executor` | 同路径 | 排除 `target` | `cargo test`、协议 fixture |
 | `tests/fixtures` | 同路径 | 复制实际使用闭包 | 跨语言正反例一致 |
 | `tests/test_asterion_*` | `tests/` | 复制并消除原仓库隐式依赖 | provider-free 全通过 |
-| `scripts/asterion` | 同路径 | 随 DCI 产品迁移 | 12 launcher selector |
+| `scripts` | 同路径 | 随 DCI 产品迁移 | 12 launcher selector |
 | Asterion docs | `docs/` | 复制并重写相对链接 | 本地链接检查 |
 | 根 `Makefile` | 根 `Makefile` | 只保留 Asterion targets | 命令与帮助一致 |
 | `.env.template` | `.env.template` | 只保留说明和值为空的配置 | 不含 secret |
 | 顶层 `applications/` | 初期不复制 | wheel 已有权威 provider/assembly | 无运行引用后删除歧义 |
 | 顶层 `capabilities/` | 初期不复制 | wheel 已有权威 capability | 不制造空产品目录 |
-| 原 DCI `src/dci` | 不复制 | 保留在原仓库作为迁移基线 | Asterion 禁止 import |
+| mixed-repository 原 DCI `../src/dci` | 不复制 | 保留在混合仓库作为迁移基线 | Asterion 禁止 import |
 
 ## Phase 1：冻结边界与基线
 
@@ -105,7 +104,7 @@ asterion/
 2. 建立上面的目标目录，但不创建无构建清单的“独立能力包”目录。
 3. 初始化独立 CI：Python 版本矩阵、Node 20+、Rust stable，缓存仅用于依赖。
 4. 建立 secret scanning、wheel/sdist 内容检查和本地 Markdown link check。
-5. 写新项目自己的状态与贡献规则，不能携带本迁移项目的 `docs/status` 历史冒充产品文档。
+5. 写新项目自己的状态与贡献规则，不能携带 mixed-repository status 历史冒充产品文档。
 
 骨架提交应能在没有 Pi、数据集和 API key 的干净环境完成配置检查。
 
@@ -145,7 +144,7 @@ Python 迁移完成的定义是 isolated wheel 可用，而不是源目录内 `u
 
 ## Phase 5：迁移 DCI 产品与应用
 
-初始策略是 **keep DCI bundled initially**：保留 `asterion/dci`、`dci_research` capability、`dci_agent_lite` provider、`asterion-dci` entry point、资源 profile 和 `scripts/asterion`。原因是当前完整产品验证、resource packaging 和应用绑定都在同一个 wheel 中有证据；在拆仓同时拆 distribution 会让问题来源不可区分。
+初始策略是 **keep DCI bundled initially**：保留 `asterion/dci`、`dci_research` capability、`dci_agent_lite` provider、`asterion-dci` entry point、资源 profile 和 `scripts`。原因是当前完整产品验证、resource packaging 和应用绑定都在同一个 wheel 中有证据；在拆仓同时拆 distribution 会让问题来源不可区分。
 
 迁移步骤：
 

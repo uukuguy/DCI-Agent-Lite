@@ -27,11 +27,11 @@ Build Asterion as a multi-runtime, multi-language agent-application framework. D
 - Do not rewrite the Pi integration before protocol conformance requires it.
 - Do not make Pi/Judge maintenance the roadmap without a parent work package.
 - Do not build every listed adapter or a production multi-tenant control plane in the first framework release.
-- Do not make the old `src/dci` product an Asterion runtime dependency or compatibility layer.
+- Do not make the mixed-repository original DCI baseline [`src/dci`](../../../src/dci/) an Asterion runtime dependency or compatibility layer.
 
 ## Governance
 
-`docs/status/WORKLIST.md` is the sole active work-package ledger. Work may begin only under its active package; `tools/project_scope_check.py` will enforce the repository markers before manager or climb dispatch.
+The mixed-repository dependency [`docs/status/WORKLIST.md`](../../../docs/status/WORKLIST.md) is the sole active work-package ledger. Work may begin only under its active package; the mixed-root `tools/project_scope_check.py` enforces the repository markers before manager or climb dispatch.
 
 ## Design baseline
 

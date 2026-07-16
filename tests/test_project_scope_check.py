@@ -16,7 +16,7 @@ class ProjectScopeCheckTests(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.root = Path(self.temp_dir.name)
         self.write(
-            "docs/architecture/agent-framework.md",
+            "asterion/docs/architecture/agent-framework.md",
             "# Agent Application Framework\n",
         )
         self.write(
@@ -42,7 +42,7 @@ class ProjectScopeCheckTests(unittest.TestCase):
         )
         self.write(
             "docs/status/CURRENT-STATE.md",
-            "- Framework north star: `docs/architecture/agent-framework.md`\n",
+            "- Framework north star: `asterion/docs/architecture/agent-framework.md`\n",
         )
         self.write(
             "docs/status/RESUME-NEXT-SESSION.md",

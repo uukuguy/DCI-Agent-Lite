@@ -108,7 +108,7 @@ input—owns the program, arguments, workspace, deadline, and output limits.
 The JSONL client connects only to caller-owned streams for an already running
 Rust sidecar. It never starts a process and discards stdout/stderr bodies after
 deriving bounded metadata. The focused host composition lives at
-`applications/controlled-code/python/controlled_code_host.py`.
+`examples/applications/controlled_code.py`.
 
 For the installed CLI, AF-150 makes lifecycle ownership explicit. A
 `controlled-code` run requires the complete `--executor-binary`,

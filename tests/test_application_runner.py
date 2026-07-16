@@ -24,7 +24,7 @@ ASSEMBLY = ROOT / "asterion/src/asterion/applications/dci_agent_lite/assemblies/
 CONTROLLED_ASSEMBLY = (
     ROOT / "asterion/src/asterion/applications/controlled_code/assemblies/controlled-code-validation.json"
 )
-GUIDE = ROOT / "docs/architecture/application-runner.md"
+GUIDE = ROOT / "asterion/docs/architecture/application-runner.md"
 
 
 class FixtureRuntimeClient:

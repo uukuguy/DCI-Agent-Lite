@@ -48,6 +48,18 @@ class AsterionProjectRootTests(unittest.TestCase):
         self.assertFalse((ROOT / "applications").exists())
         self.assertFalse((ROOT / "scripts/asterion").exists())
 
+    def test_product_documentation_is_project_owned(self) -> None:
+        required = (
+            "docs/README.md",
+            "docs/architecture/agent-framework.md",
+            "docs/architecture/asterion-framework-capability-integration.md",
+            "docs/architecture/asterion-standalone-extraction.md",
+            "docs/guides/asterion-dci-complete-reference.md",
+            "docs/verification/asterion-dci-validation-guide.md",
+        )
+        for relative in required:
+            self.assertTrue((PROJECT / relative).is_file(), relative)
+
 
 if __name__ == "__main__":
     unittest.main()

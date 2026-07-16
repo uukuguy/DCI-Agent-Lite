@@ -2,7 +2,7 @@
 
 本文描述 Asterion 自己实现并随 `asterion` wheel 发布的 DCI 产品。它面向两类读者：需要运行研究和 benchmark 的使用者，以及需要判断迁移完整性的维护者。入门只需阅读[能力包使用指南](asterion-capability-usage.md)；逐项验收见[完整功能验证指南](../verification/asterion-dci-validation-guide.md)。
 
-Asterion DCI 与源码基线 `src/dci` 共用根目录 `.env` 和外部 Pi，但生产代码不导入、启动或打包 `src/dci`。权威领域实现位于 [`asterion/dci`](../../asterion/src/asterion/dci/)。
+Asterion DCI 与 mixed-repository dependency [`src/dci`](../../../src/dci/) 共用混合仓库根目录 `.env` 和外部 Pi，但生产代码不导入、启动或打包该原始 DCI 基线。权威领域实现位于 [`asterion/dci`](../../src/asterion/dci/)。
 
 ## 证据状态说明
 
@@ -45,7 +45,7 @@ OPENAI_API_KEY=<SECRET>
 
 认证值不会进入产品描述、公开错误或 body-free 应用结果。通过 Pi 保存到 `.pi/agent/auth.json` 的受管认证也可被 preflight 识别。
 
-配置解析见 [`config.py`](../../asterion/src/asterion/dci/config.py)，Pi 进程/RPC 边界见 [`pi_rpc.py`](../../asterion/src/asterion/dci/pi_rpc.py)。
+配置解析见 [`config.py`](../../src/asterion/dci/config.py)，Pi 进程/RPC 边界见 [`pi_rpc.py`](../../src/asterion/dci/pi_rpc.py)。
 
 ## 单次研究、终端与系统提示词
 
@@ -64,7 +64,7 @@ asterion-dci run \
 
 问题也可以来自 `--question-file`。`--system-prompt-file` 替换系统提示词，`--append-system-prompt-file` 追加内容；`--show-tools` 输出安全工具进度；`--keep-session` 保留 Pi session；`--node-max-old-space-size-mb` 控制 Node heap；重复的 `--extra-arg` 原样作为 argv 交给 Pi，不经过 shell 解释。
 
-运行请求校验、Pi 调用和恢复逻辑见 [`run.py`](../../asterion/src/asterion/dci/run.py)。
+运行请求校验、Pi 调用和恢复逻辑见 [`run.py`](../../src/asterion/dci/run.py)。
 
 ### `terminal`：直接 TTY
 
@@ -114,7 +114,7 @@ run-directory/
 - 运行目录使用 descriptor-relative 原子写入、私有权限和单写者锁；路径重绑定、symlink 和并发 writer 会失败关闭。
 - provenance 只保存安全的 Pi revision/origin 事实，不保存 URL credential、Git diff、环境值或任意额外参数内容。
 
-产物实现和验证位于 [`artifacts.py`](../../asterion/src/asterion/dci/artifacts.py) 与 `provenance.py`。
+产物实现和验证位于 [`artifacts.py`](../../src/asterion/dci/artifacts.py) 与 `provenance.py`。
 
 恢复失败或未完成运行：
 
@@ -177,7 +177,7 @@ asterion-dci evaluate \
 
 Judge transport支持 Responses 或 Chat Completions、超时、JSON mode、strict schema、thinking 控制、`store` 控制和成本字段。公开异常不回显 endpoint response body、密钥或答案正文。
 
-精确缓存 identity 绑定最终回答证据与所有影响请求的 Judge 配置；model、API 类型、schema/store/thinking、token limit 或其他 request-shaping 字段变化都会失效缓存。实现见 [`evaluation.py`](../../asterion/src/asterion/dci/evaluation.py) 和 `judge.py`。
+精确缓存 identity 绑定最终回答证据与所有影响请求的 Judge 配置；model、API 类型、schema/store/thinking、token limit 或其他 request-shaping 字段变化都会失效缓存。实现见 [`evaluation.py`](../../src/asterion/dci/evaluation.py) 和 `judge.py`。
 
 状态：Judge shaping、boolean verdict、安全 transport 和精确缓存为 **Implemented**；模型外 mutation tests 与有界 Judge 运行均为 **Verified**。
 
@@ -191,7 +191,7 @@ asterion-dci benchmark \
   --limit 1
 ```
 
-[`benchmark.py`](../../asterion/src/asterion/dci/benchmark.py) 提供：
+[`benchmark.py`](../../src/asterion/dci/benchmark.py) 提供：
 
 - QA 与 IR 两种模式；
 - JSONL dataset 加载和确定性选择；
@@ -229,25 +229,25 @@ Bundled profile 定义在 `asterion/dci/resources/batch-profiles.json`：
 12 个 Asterion launcher：
 
 ```text
-scripts/asterion/bcplus_eval/run_L3.sh
-scripts/asterion/bcplus_eval/run_bcplus_eval_openai.sh
-scripts/asterion/bright/run_bio.sh
-scripts/asterion/bright/run_earth_science.sh
-scripts/asterion/bright/run_economics.sh
-scripts/asterion/bright/run_robotics.sh
-scripts/asterion/qa/run_2wikimultihopqa_dev_sample50.sh
-scripts/asterion/qa/run_bamboogle_test_sample50.sh
-scripts/asterion/qa/run_hotpotqa_dev_sample50.sh
-scripts/asterion/qa/run_musique_dev_sample50.sh
-scripts/asterion/qa/run_nq_test_sample50.sh
-scripts/asterion/qa/run_triviaqa_test_sample50.sh
+scripts/bcplus_eval/run_L3.sh
+scripts/bcplus_eval/run_bcplus_eval_openai.sh
+scripts/bright/run_bio.sh
+scripts/bright/run_earth_science.sh
+scripts/bright/run_economics.sh
+scripts/bright/run_robotics.sh
+scripts/qa/run_2wikimultihopqa_dev_sample50.sh
+scripts/qa/run_bamboogle_test_sample50.sh
+scripts/qa/run_hotpotqa_dev_sample50.sh
+scripts/qa/run_musique_dev_sample50.sh
+scripts/qa/run_nq_test_sample50.sh
+scripts/qa/run_triviaqa_test_sample50.sh
 ```
 
 Profile 中保留的 `runtime_context_level=level3` 目前是 **External-limited** 配置/诊断，不代表当前 Pi 执行了 level3。thinking、max turns、concurrency、dataset/corpus、mode 和 heap 等其余配置正常映射。
 
 ## 指标、分析、图表与导出
 
-[`analysis.py`](../../asterion/src/asterion/dci/analysis.py) 与 `metrics.py` 生成：
+[`analysis.py`](../../src/asterion/dci/analysis.py) 与 `metrics.py` 生成：
 
 - QA accuracy、correct/incorrect/failed counts；
 - IR NDCG 与 ranking 统计；
@@ -265,7 +265,7 @@ asterion-dci export bright --dataset DATASET --output-dir OUTPUT
 asterion-dci export bcplus-qa --source-file SOURCE --output-file OUTPUT
 ```
 
-[`export.py`](../../asterion/src/asterion/dci/export.py) 实现 BC+ 文档导出、BRIGHT corpus subset 导出和 BC+ QA 提取/解密；临时文件不会被当成成功输出，失败保持原目标不变。
+[`export.py`](../../src/asterion/dci/export.py) 实现 BC+ 文档导出、BRIGHT corpus subset 导出和 BC+ QA 提取/解密；临时文件不会被当成成功输出，失败保持原目标不变。
 
 状态：指标、分析、图表和三类导出为 **Implemented**，golden/mutation/integration tests 为 **Verified**；完整数据集最终图表和历史论文数值为 **Not rerun**。
 

@@ -41,7 +41,7 @@ When adding a new file to `docs/status/`, **also add its row here** — otherwis
 | Path | Purpose |
 |---|---|
 | `AGENTS.md` / `CLAUDE.md` | Local cross-agent operating rules, including the fast `handoff` protocol. |
-| `docs/architecture/agent-framework.md` | Framework north star, runtime strategy, language roles, and non-goals. |
+| `asterion/docs/architecture/agent-framework.md` | Framework north star, runtime strategy, language roles, and non-goals. |
 | `~/.claude/projects/-Users-sujiangwen-sandbox-agentic-2026-DCI-Agent-Lite/memory/MEMORY.md` | Collaboration-memory index; linked detail files carry confidence and supersession metadata. |
 
 ## Don't add new files unless they fit one of the categories above

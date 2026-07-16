@@ -26,7 +26,7 @@ def python_source(root: Path) -> str:
 
 class SourceDistributionBoundaryTests(unittest.TestCase):
     def test_asterion_capability_beginner_guide_is_complete(self) -> None:
-        guide_path = ROOT / "docs/guides/asterion-capability-usage.md"
+        guide_path = ASTERION_PROJECT / "docs/guides/asterion-capability-usage.md"
         self.assertTrue(guide_path.is_file())
         text = guide_path.read_text()
         ordered = (
@@ -75,8 +75,8 @@ class SourceDistributionBoundaryTests(unittest.TestCase):
         self.assertNotRegex(text, re.compile(r"/(?:Users|home|private)/"))
 
         readme = (ROOT / "README.md").read_text()
-        beginner = readme.find("docs/guides/asterion-capability-usage.md")
-        advanced = readme.find("docs/verification/asterion-dci-validation-guide.md")
+        beginner = readme.find("asterion/docs/guides/asterion-capability-usage.md")
+        advanced = readme.find("asterion/docs/verification/asterion-dci-validation-guide.md")
         self.assertGreaterEqual(beginner, 0)
         self.assertGreater(advanced, beginner)
         for required in (
@@ -90,14 +90,14 @@ class SourceDistributionBoundaryTests(unittest.TestCase):
     def test_complete_dci_validation_guide_covers_both_products_and_all_tiers(
         self,
     ) -> None:
-        guide_path = ROOT / "docs/verification/asterion-dci-validation-guide.md"
+        guide_path = ASTERION_PROJECT / "docs/verification/asterion-dci-validation-guide.md"
         self.assertTrue(guide_path.is_file())
         text = guide_path.read_text()
         for required in (
-            "scripts/examples/dci_basic_example.sh",
-            "scripts/examples/dci_runtime_context_example.sh",
-            "scripts/examples/asterion_dci_basic_example.sh",
-            "scripts/examples/asterion_dci_runtime_context_example.sh",
+            "../scripts/examples/dci_basic_example.sh",
+            "../scripts/examples/dci_runtime_context_example.sh",
+            "../scripts/examples/asterion_dci_basic_example.sh",
+            "../scripts/examples/asterion_dci_runtime_context_example.sh",
             "asterion-dci resume",
             "asterion-dci terminal",
             "asterion-dci evaluate",
@@ -123,24 +123,24 @@ class SourceDistributionBoundaryTests(unittest.TestCase):
         self.assertNotIn("wheel-installed generic application", text)
 
         for launcher in (
-            "scripts/asterion/bcplus_eval/run_L3.sh",
-            "scripts/asterion/bcplus_eval/run_bcplus_eval_openai.sh",
-            "scripts/asterion/bright/run_bio.sh",
-            "scripts/asterion/bright/run_earth_science.sh",
-            "scripts/asterion/bright/run_economics.sh",
-            "scripts/asterion/bright/run_robotics.sh",
-            "scripts/asterion/qa/run_2wikimultihopqa_dev_sample50.sh",
-            "scripts/asterion/qa/run_bamboogle_test_sample50.sh",
-            "scripts/asterion/qa/run_hotpotqa_dev_sample50.sh",
-            "scripts/asterion/qa/run_musique_dev_sample50.sh",
-            "scripts/asterion/qa/run_nq_test_sample50.sh",
-            "scripts/asterion/qa/run_triviaqa_test_sample50.sh",
+            "scripts/bcplus_eval/run_L3.sh",
+            "scripts/bcplus_eval/run_bcplus_eval_openai.sh",
+            "scripts/bright/run_bio.sh",
+            "scripts/bright/run_earth_science.sh",
+            "scripts/bright/run_economics.sh",
+            "scripts/bright/run_robotics.sh",
+            "scripts/qa/run_2wikimultihopqa_dev_sample50.sh",
+            "scripts/qa/run_bamboogle_test_sample50.sh",
+            "scripts/qa/run_hotpotqa_dev_sample50.sh",
+            "scripts/qa/run_musique_dev_sample50.sh",
+            "scripts/qa/run_nq_test_sample50.sh",
+            "scripts/qa/run_triviaqa_test_sample50.sh",
         ):
             self.assertIn(launcher, text)
 
         readme = (ROOT / "README.md").read_text()
         self.assertIn(
-            "docs/verification/asterion-dci-validation-guide.md",
+            "asterion/docs/verification/asterion-dci-validation-guide.md",
             readme,
         )
 
@@ -175,7 +175,7 @@ class SourceDistributionBoundaryTests(unittest.TestCase):
     def test_asterion_dci_operator_documentation_is_independent_and_scoped(self) -> None:
         environment = (ROOT / ".env.template").read_text()
         readme = (ROOT / "README.md").read_text()
-        execution = (ROOT / "docs/architecture/capability-execution.md").read_text()
+        execution = (ASTERION_PROJECT / "docs/architecture/capability-execution.md").read_text()
         for variable in (
             "ASTERION_DCI_PI_DIR",
             "ASTERION_DCI_PI_PACKAGE_DIR",
@@ -192,7 +192,7 @@ class SourceDistributionBoundaryTests(unittest.TestCase):
 
     def test_durable_dci_documentation_names_resume_and_protected_artifacts(self) -> None:
         readme = (ROOT / "README.md").read_text()
-        execution = (ROOT / "docs/architecture/capability-execution.md").read_text()
+        execution = (ASTERION_PROJECT / "docs/architecture/capability-execution.md").read_text()
 
         self.assertIn("asterion-dci resume", readme)
         self.assertIn("conversation_full.json", readme)

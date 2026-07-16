@@ -1,42 +1,42 @@
-# AF-300 Design Checkpoint
+# AF-300 Task 4 Checkpoint
 
-> Updated: 2026-07-16 +0800. AF-300 is design-only until written-spec approval.
+> Updated: 2026-07-16 +0800. AF-300 execution is active; Tasks 1–3 are committed and Task 4 has reached its verified commit boundary.
 
 Active work package: AF-300
 
 ## TL;DR
 
-- Converge Python, TypeScript, Rust, schemas, examples, scripts, product docs, and Asterion tests under a complete top-level `asterion/` project root.
-- Keep original DCI, cross-product parity/acceptance evidence, and repository governance at the mixed repository root.
-- Preserve installed identities, behavior, wheel contents, DCI independence, and provider-free parity; leave no obsolete path stubs.
-- Defer full datasets, published-score reproduction, standalone release packaging, and plugin splitting until broader framework convergence.
+- Asterion Python, cross-language packages, schemas, examples, and launchers now live under the top-level `asterion/` project root.
+- Task 4 moves the product documentation hub, architecture north star, product guides, verification guide, and operator guide under `asterion/docs/`; focused, consumer, link, static, and scope gates pass.
+- Original DCI, cross-product parity/acceptance evidence, `docs/status/`, and `docs/superpowers/` remain mixed-repository dependencies at the root.
+- Installed identities, runtime behavior, provider-backed evidence, and full-dataset status remain unchanged.
 
 ## Committed / unpushed state
 
-- Documentation design, plan, complete DCI reference, integration guide, and extraction guide are committed on local `main`.
-- Final navigation/truth reconciliation is committed, followed only by the AF-290 state checkpoint.
-- The user-owned untracked `.superpowers/sdd/task-0-review.md` remains intentionally untouched.
+- AF-300 Tasks 1–3 and their JOURNAL entries are committed through `48158ef`.
+- Task 4 starts from `48158ef`; its implementation and append-only JOURNAL entry are separate commit boundaries.
+- The user-owned `.superpowers/sdd/task-0-review.md` remains intentionally untouched.
 
 ## Next concrete action
 
-Select the execution mode, then execute Task 1 of the AF-300 plan: establish `asterion/pyproject.toml` and `asterion/src/asterion/` through the required red/green boundary test.
+Review the Task 4 report and implementation commit; after acceptance, execute Task 5's project-local test/fixture migration from the AF-300 plan.
 
 ## Open questions
 
-- Execution mode remains to be selected; the written design is approved and the six-task implementation plan is ready.
+- None for Task 4. Full datasets, publication/release automation, and plugin splitting remain deferred.
 
 ## Ruled-out paths
 
-- Do not treat unsupported Pi context levels as effective merely because arbitrary extra args can be forwarded.
-- Do not equate 533 model-free selectors with full-dataset score reproduction.
-- Do not begin the approved moves until the written spec and implementation plan gates pass.
-- Do not modify or vendor the external `pi/` checkout.
+- Do not move `docs/status/`, `docs/superpowers/`, original DCI documentation, root parity assets, or the external `pi/` checkout into Asterion.
+- Do not leave forwarding stubs at obsolete product-documentation paths.
+- Do not reinterpret historical provider-backed acceptance or full-dataset evidence during this path-only convergence.
+- Do not begin the Task 5 test/fixture migration from this checkpoint.
 
 ## Ready commands
 
 ```bash
 python3 tools/project_scope_check.py
-sed -n '1,300p' docs/superpowers/specs/2026-07-16-asterion-repository-directory-convergence-design.md
-sed -n '1,360p' docs/superpowers/plans/2026-07-16-af-300-asterion-project-root-convergence.md
+uv run python -m unittest tests.test_asterion_project_root tests.test_asterion_documentation tests.test_distribution_boundaries -v
+git diff --check
 git status --short
 ```

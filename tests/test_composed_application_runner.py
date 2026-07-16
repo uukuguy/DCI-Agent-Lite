@@ -22,7 +22,7 @@ EXECUTABLE_ASSEMBLY = (
     ROOT / "asterion/src/asterion/applications/dci_agent_lite/assemblies/dci-research-capability.json"
 )
 HOST_MODULE = ROOT / "asterion/examples/applications/dci_research.py"
-GUIDE = ROOT / "docs/architecture/capability-execution.md"
+GUIDE = ROOT / "asterion/docs/architecture/capability-execution.md"
 
 
 class FixtureRuntime:

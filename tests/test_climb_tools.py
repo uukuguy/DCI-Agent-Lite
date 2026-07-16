@@ -1739,7 +1739,7 @@ class ClimbToolTests(unittest.TestCase):
 
     def test_af050_operator_docs_and_root_verification_targets_exist(self) -> None:
         makefile = (REPO_ROOT / "Makefile").read_text()
-        guide = (REPO_ROOT / "docs/operator/rust-executor.md").read_text()
+        guide = (REPO_ROOT / "asterion/docs/operator/rust-executor.md").read_text()
 
         self.assertIn("test-rust-executor:", makefile)
         self.assertIn("check-rust-executor:", makefile)

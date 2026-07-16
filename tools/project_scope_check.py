@@ -95,14 +95,14 @@ def validate_markers(
     active_id: str | None,
     errors: list[str],
 ) -> None:
-    architecture = root / "docs/architecture/agent-framework.md"
+    architecture = root / "asterion/docs/architecture/agent-framework.md"
     if not architecture.is_file():
         errors.append("missing framework north-star architecture document")
 
     current = read_text(
         root / "docs/status/CURRENT-STATE.md", errors, "CURRENT-STATE"
     )
-    required_marker = "Framework north star: `docs/architecture/agent-framework.md`"
+    required_marker = "Framework north star: `asterion/docs/architecture/agent-framework.md`"
     if required_marker not in current:
         errors.append("CURRENT-STATE missing framework north-star marker")
 

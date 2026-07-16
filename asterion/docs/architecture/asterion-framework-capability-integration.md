@@ -4,11 +4,11 @@
 
 相关源码入口：
 
-- [Runtime](../../asterion/src/asterion/runtime/)
-- [Package](../../asterion/src/asterion/packages/)
-- [Assembly](../../asterion/src/asterion/assembly/)
-- [Runner](../../asterion/src/asterion/runner/)
-- [Installed provider contract](../../asterion/src/asterion/applications/provider.py)
+- [Runtime](../../src/asterion/runtime/)
+- [Package](../../src/asterion/packages/)
+- [Assembly](../../src/asterion/assembly/)
+- [Runner](../../src/asterion/runner/)
+- [Installed provider contract](../../src/asterion/applications/provider.py)
 
 ## 当前仓库与权威目录
 
@@ -31,10 +31,10 @@ asterion/
 
 其中两个最容易混淆的路径是：
 
-- `asterion/src/asterion/capabilities/` 是能力实现与 manifest 的权威 Python 路径。
-- `asterion/src/asterion/applications/` 是 installed provider 和 assembly 的权威 Python 路径。
+- `src/asterion/capabilities/` 是能力实现与 manifest 的权威 Python 路径。
+- `src/asterion/applications/` 是 installed provider 和 assembly 的权威 Python 路径。
 
-仓库顶层 `applications/` 是参考、兼容或跨语言宿主资料；顶层 `capabilities/` 当前不是 wheel 的打包根。顶层 `applications/` 和顶层 `capabilities/` 都不是可独立安装产品，不能据此推断存在两个额外 Python 包。以后若拆成独立 distribution，必须先建立各自的构建清单、版本和 entry point，不能只移动目录。
+混合仓库根已不再保留旧的 `applications/` 或 `capabilities/` 产品目录；Asterion 项目内的 `src/asterion/applications/` 与 `src/asterion/capabilities/` 是唯一权威实现。mixed-repository dependency [`src/dci`](../../../src/dci/) 仅是原始 DCI 对照基线，不是可独立安装的 Asterion 产品。
 
 ## 依赖方向
 

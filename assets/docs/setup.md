@@ -264,7 +264,7 @@ Use a profile directly or its one-to-one wrapper:
 
 ```bash
 asterion-dci benchmark --profile qa.nq --limit 1
-bash scripts/asterion/qa/run_nq_test_sample50.sh --limit 1
+bash asterion/scripts/qa/run_nq_test_sample50.sh --limit 1
 ```
 
 All wrappers verify the declared dataset file and corpus directory before
