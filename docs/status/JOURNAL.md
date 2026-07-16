@@ -724,3 +724,5 @@
 - 2026-07-16 AF-290 opens a documentation-only audit of DCI completeness, framework integration, and standalone extraction boundaries.
 - 2026-07-16 Evidence labels prevent framework and DCI documentation from overstating Pi or benchmark proof. [4e15891]
 - 2026-07-16 AF-290 plan makes product, integration, extraction, and truth reconciliation independently testable.
+- 2026-07-16 Documentation TDD plan binds complete claims to source paths, commands, evidence labels, and contradiction checks. [12996c3]
+- 2026-07-16 Complete DCI reference separates product implementation, executable proof, Pi limits, and unrerun benchmark scores. [b487fe6]
