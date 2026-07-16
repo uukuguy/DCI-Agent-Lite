@@ -32,6 +32,8 @@ from asterion.dci.benchmark import (
 )
 from asterion.dci.artifacts import DciConversationFeatures
 from asterion.dci.config import DciRuntimeOptions, resolve_dci_paths
+from asterion.dci.context_extension import resolve_context_extension
+from asterion.dci.context_profiles import resolve_context_profile
 from asterion.dci.judge import JudgeConfig
 from asterion.dci.evaluation import evaluate_run_directory_async as _real_evaluate
 from asterion.dci.pi_rpc import _pi_child_environment, expand_extra_args
@@ -1307,6 +1309,38 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
 
 
 class AsterionDciBatchValidationTests(unittest.TestCase):
+    def test_runtime_fingerprint_records_complete_context_policy_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            base = _request(root)
+            for name in ("level0", "level1", "level2", "level3", "level4"):
+                with self.subTest(profile=name):
+                    request = replace(
+                        base,
+                        output_root=root / name,
+                        runtime_options=replace(
+                            base.runtime_options,
+                            runtime_context_level=name,
+                        ),
+                    )
+                    _rows, _output, config, items, _snapshots = _prepare(request)
+                    identity = config["runtime"]["context_policy_identity"]
+                    self.assertEqual(
+                        identity["profile"],
+                        resolve_context_profile(name).identity_payload(),
+                    )
+                    self.assertEqual(
+                        identity["schema"], "dci.context-policy-identity/v1"
+                    )
+                    self.assertEqual(identity["status"], "effective")
+                    with resolve_context_extension() as extension:
+                        self.assertEqual(identity["extension_version"], extension.version)
+                        self.assertEqual(identity["extension_sha256"], extension.sha256)
+                    self.assertEqual(
+                        items[0]["identity"]["runtime"]["context_policy_identity"],
+                        identity,
+                    )
+
     def test_descriptor_relative_name_apis_require_one_safe_component(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory).resolve()

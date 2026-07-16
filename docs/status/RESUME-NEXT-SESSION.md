@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-17 06:17 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-17 06:28 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-310
 
@@ -13,11 +13,11 @@ Active work package: AF-310
 
 ## Where things stand
 
-- Branch: `main`; AF-310-H-002 is committed through `0b1dc44`, H003 packaging through `bbb3eb8`, and typed Pi transport through `186bf6b`. H003 artifact/session-resume closure and final cycle state are verified but not yet committed.
+- Branch: `main`; AF-310-H-003 is committed through `ddcd7b7` with its final journal at `868d544`. H004 public-surface equivalence and its 4/4 Climb cycle are verified but not yet committed.
 - Provider-free product verification still passes 8/8 rows, 533/533 selectors, 12/12 launcher pairs, 6/6 extras, and 7/7 bounded retained cases with zero provider operations.
 - Correct Context/artifact/CLI focused tests pass 101/101; an earlier nonzero command was only an invalid guessed test-module selector.
-- Governance, D-044, and the AF-310 Climb pool are active; AF-310-H-001 through AF-310-H-003 are confirmed 4/4, and AF-310-H-004 is next.
-- The final H003 implementation passes 11 Node tests, 98 focused Python tests, 4 bridge tests, real Pi-loader model-free coverage, isolated-wheel resolution, compile, Ruff, shell, scope, and diff checks. No external `pi/` modification, full dataset, or provider request occurred.
+- Governance, D-044, and the AF-310 Climb pool are active; AF-310-H-001 through AF-310-H-004 are confirmed 4/4, and AF-310-H-005 is next.
+- H004 passes 134 CLI/batch/application tests, 6 capability tests, 4 bridge tests, the isolated-wheel all-surface probe, compile, Ruff, shell, scope, and diff checks. No external `pi/` modification, full dataset, or provider request occurred.
 
 ## Approved package sequence
 
@@ -28,10 +28,10 @@ Active work package: AF-310
 
 ## Next steps
 
-1. Commit the confirmed AF-310-H-003 immutable evidence/session-resume implementation, Climb adapter, and final cycle state; journal its hash.
-2. Run `python3 tools/project_scope_check.py --climb-hypothesis AF-310-H-004`.
-3. Write AF-310-H-004 RED equivalence tests across CLI run, benchmark, resume, application/capability projection, batch fingerprints, and isolated wheel.
-4. Route every public surface through the same canonical profile identity and extension digest, then run its Climb cycle.
+1. Commit the confirmed AF-310-H-004 public-surface implementation, tests, Climb adapter, and cycle state; journal its hash.
+2. Run `python3 tools/project_scope_check.py --climb-hypothesis AF-310-H-005`.
+3. Implement Task 7's truthful launchers/examples/documentation before bounded provider execution, including the exact L0–L4 table and evidence-layer distinctions.
+4. Implement the model-free acceptance verifier, then use the explicit H005 provider authorization only for its two bounded L3/L4 cases; never run a full dataset.
 
 ## Don't go down these paths again
 
@@ -50,4 +50,5 @@ python3 tools/project_scope_check.py
 sed -n '1,460p' docs/superpowers/specs/2026-07-16-paper-aligned-dci-complete-implementation-design.md
 sed -n '1,220p' docs/superpowers/plans/2026-07-16-af-310-paper-aligned-runtime-context-management.md
 npm --prefix asterion/packages/typescript/dci-context-extension test
+python3 tools/project_scope_check.py --climb-hypothesis AF-310-H-005
 ```

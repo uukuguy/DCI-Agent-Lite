@@ -84,11 +84,22 @@ class AsterionDciBridgeTests(unittest.TestCase):
             output_dir = Path(temporary_directory) / "run"
             output_dir.mkdir()
             policy_path = output_dir / "context-policy.json"
-            policy_path.write_text("{}\n")
+            policy_path.write_text(
+                json.dumps(
+                    {
+                        "prompt": "SECRET-PROMPT",
+                        "answer": "SECRET-ANSWER",
+                        "tool": "SECRET-TOOL-BODY",
+                        "credential": "SECRET-CREDENTIAL",
+                    }
+                )
+            )
             policy_path.chmod(0o600)
             summary = {
                 "schema": "dci.context-policy-evidence/v1",
                 "profile": "level3",
+                "contract_version": "dci.context-profile/v1",
+                "extension_version": "0.1.0",
                 "extension_sha256": "b" * 64,
                 "truncated_results": 2,
                 "compactions": 1,
@@ -112,8 +123,13 @@ class AsterionDciBridgeTests(unittest.TestCase):
         value = dict(projection.artifacts[0]["value"])
         self.assertEqual(value["context_policy_artifact_uri"], "context-policy.json")
         self.assertEqual(value["context_policy"]["profile"], "level3")
+        self.assertEqual(
+            value["context_policy"]["contract_version"],
+            "dci.context-profile/v1",
+        )
+        self.assertEqual(value["context_policy"]["extension_version"], "0.1.0")
         self.assertEqual(value["context_policy"]["compactions"], 1)
-        self.assertNotIn("SECRET", repr(value["context_policy"]))
+        self.assertNotIn("SECRET", repr(value))
 
 
 if __name__ == "__main__":

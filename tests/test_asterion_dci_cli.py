@@ -10,7 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from asterion.cli import _parser
-from asterion.dci.cli import main
+from asterion.dci.cli import _parser as _dci_parser, main
 from asterion.dci.artifacts import DciConversationFeatures
 from asterion.dci.evaluation import DciEvaluationError
 from asterion.dci.run import DciRunError, DciRunRequest, DciRunResult
@@ -33,6 +33,26 @@ def fixture_result(output_dir: Path) -> DciRunResult:
 
 
 class AsterionDciCliTests(unittest.TestCase):
+    def test_runtime_context_level_is_a_closed_profile_choice_on_public_commands(
+        self,
+    ) -> None:
+        expected = ("level0", "level1", "level2", "level3", "level4")
+        parser = _dci_parser()
+        for command in ("run", "benchmark"):
+            with self.subTest(command=command, case="accepted"):
+                arguments = parser.parse_args(
+                    [command, "--runtime-context-level", "level4"]
+                )
+                self.assertEqual(arguments.runtime_context_level, "level4")
+            with self.subTest(command=command, case="rejected"):
+                with self.assertRaises(SystemExit):
+                    parser.parse_args(
+                        [command, "--runtime-context-level", "Level4"]
+                    )
+
+        help_text = parser._subparsers._group_actions[0].choices["run"].format_help()
+        self.assertIn("{" + ",".join(expected) + "}", help_text)
+
     def test_terminal_maps_operator_controls_without_artifacts(self) -> None:
         class TtyStream(io.StringIO):
             def isatty(self) -> bool:

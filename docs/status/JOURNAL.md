@@ -784,3 +784,5 @@
 - 06:16 AF-310-H-003 confirmed 4/4; package acceptance recorded.
 - 06:18 H-003 binds policy evidence, Pi session resume, and final acceptance before public-surface work. [ddcd7b7]
 - 06:16 AF-310-H-003 confirmed 4/4; package acceptance recorded.
+- 06:26 AF-310-H-004 confirmed 4/4; package acceptance recorded.
+- 06:28 H004 closes public-surface equivalence: closed CLI choices, digest-bound batch identity, canonical application mapping, body-free versioned projection, and an isolated-wheel all-surface probe pass without provider operations or datasets. [pending H004 commit]

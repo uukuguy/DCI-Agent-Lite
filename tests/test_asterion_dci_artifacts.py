@@ -67,6 +67,8 @@ class AsterionDciArtifactTests(unittest.TestCase):
             {
                 "schema": "dci.context-policy-evidence/v1",
                 "profile": "level4",
+                "contract_version": "dci.context-profile/v1",
+                "extension_version": "0.1.0",
                 "extension_sha256": "a" * 64,
                 "truncated_results": 2,
                 "compactions": 1,

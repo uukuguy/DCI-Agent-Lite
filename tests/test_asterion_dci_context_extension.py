@@ -100,44 +100,72 @@ class AsterionDciContextExtensionTests(unittest.TestCase):
             python = environment / "bin/python"
             wheel = next(wheel_dir.glob("*.whl"))
             subprocess.run(
-                ["uv", "pip", "install", "--python", str(python), "--no-deps", str(wheel)],
+                ["uv", "pip", "install", "--python", str(python), str(wheel)],
                 cwd=root,
                 text=True,
                 capture_output=True,
                 check=True,
+            )
+            probe_script = "\n".join(
+                (
+                    "import hashlib, json, os, sys, types",
+                    "from pathlib import Path",
+                    "dotenv = types.ModuleType('dotenv')",
+                    "dotenv.load_dotenv = lambda *args, **kwargs: False",
+                    "sys.modules['dotenv'] = dotenv",
+                    "from asterion.applications.dci_agent_lite.provider import create_provider",
+                    "from asterion.dci.application_executor import EnvironmentDciRunExecutor",
+                    "from asterion.dci.benchmark import _runtime_document",
+                    "from asterion.dci.cli import _parser",
+                    "from asterion.dci.config import resolve_dci_runtime_options",
+                    "from asterion.dci.context_extension import resolve_context_extension",
+                    "from asterion.dci.context_profiles import context_profile_names",
+                    "from asterion.dci.run import DciRunRequest",
+                    "cm = resolve_context_extension()",
+                    "extension = cm.__enter__()",
+                    "names = context_profile_names()",
+                    "parsed = [_parser().parse_args(['run', '--runtime-context-level', name, 'q']).runtime_context_level for name in names]",
+                    "documents = [_runtime_document(resolve_dci_runtime_options({'runtime_context_level': name})) for name in names]",
+                    "mapped = []",
+                    "executor = EnvironmentDciRunExecutor(repo_root=Path.cwd(), run_native=lambda _paths, request: mapped.append(request.runtime_context_level))",
+                    "[(os.environ.__setitem__('DCI_RUNTIME_CONTEXT_LEVEL', name), executor.run(DciRunRequest(run_id=name, question='q', cwd=Path.cwd()))) for name in names]",
+                    "provider = create_provider(native_executor=executor)",
+                    "print(json.dumps({'sha256': extension.sha256, 'bytes': hashlib.sha256(extension.path.read_bytes()).hexdigest(), 'version': extension.version, 'contract': extension.contract_version, 'parsed': parsed, 'mapped': mapped, 'documents': documents, 'provider': provider.provider_id}))",
+                    "cm.__exit__(None, None, None)",
+                )
             )
             probe = subprocess.run(
                 [
                     str(python),
                     "-c",
-                    (
-                        "import hashlib,json,sys,types; "
-                        "dotenv=types.ModuleType('dotenv'); "
-                        "dotenv.load_dotenv=lambda *args,**kwargs: False; "
-                        "sys.modules['dotenv']=dotenv; "
-                        "from asterion.dci.context_extension import resolve_context_extension; "
-                        "cm=resolve_context_extension(); value=cm.__enter__(); "
-                        "print(json.dumps({'sha256': value.sha256, "
-                        "'bytes': hashlib.sha256(value.path.read_bytes()).hexdigest(), "
-                        "'version': value.version, 'contract': value.contract_version})); "
-                        "cm.__exit__(None,None,None)"
-                    ),
+                    probe_script,
                 ],
                 cwd=root,
                 text=True,
                 capture_output=True,
-                check=True,
+                check=False,
             )
+            self.assertEqual(probe.returncode, 0, probe.stderr)
             identity = json.loads(probe.stdout)
             expected_digest = hashlib.sha256(SOURCE.read_bytes()).hexdigest()
+            names = ["level0", "level1", "level2", "level3", "level4"]
+            self.assertEqual(identity["sha256"], expected_digest)
+            self.assertEqual(identity["bytes"], expected_digest)
+            self.assertEqual(identity["version"], "0.1.0")
+            self.assertEqual(identity["contract"], "dci.context-profile/v1")
+            self.assertEqual(identity["parsed"], names)
+            self.assertEqual(identity["mapped"], names)
+            self.assertEqual(identity["provider"], "dci-agent-lite")
             self.assertEqual(
-                identity,
-                {
-                    "sha256": expected_digest,
-                    "bytes": expected_digest,
-                    "version": "0.1.0",
-                    "contract": "dci.context-profile/v1",
-                },
+                [document["context_policy_identity"]["profile"]["profile"] for document in identity["documents"]],
+                names,
+            )
+            self.assertTrue(
+                all(
+                    document["context_policy_identity"]["extension_sha256"]
+                    == expected_digest
+                    for document in identity["documents"]
+                )
             )
 
     def test_resolver_rejects_unsafe_resource_shapes_and_permissions(self) -> None:

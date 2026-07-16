@@ -22,6 +22,7 @@ from asterion.dci.config import (
     resolve_dci_paths,
     resolve_dci_runtime_options,
 )
+from asterion.dci.context_profiles import context_profile_names
 from asterion.dci.benchmark import BenchmarkRequest, DciBenchmarkError, run_benchmark
 from asterion.dci.artifacts import DciConversationFeatures
 from asterion.dci.evaluation import DciEvaluationError, evaluate_run_directory
@@ -144,7 +145,7 @@ def _add_runtime_option_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--model")
     parser.add_argument("--tools")
     parser.add_argument("--rpc-timeout-seconds", type=float)
-    parser.add_argument("--runtime-context-level")
+    parser.add_argument("--runtime-context-level", choices=context_profile_names())
     parser.add_argument("--thinking-level", "--pi-thinking-level", dest="thinking_level")
     parser.add_argument("--node-max-old-space-size-mb", type=int)
     parser.add_argument("--keep-session", action="store_true", default=None)

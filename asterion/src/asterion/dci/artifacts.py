@@ -142,6 +142,8 @@ class DciContextPolicyEvidence:
         return {
             "schema": "dci.context-policy-evidence/v1",
             "profile": self.profile.name,
+            "contract_version": self.profile.contract_version,
+            "extension_version": self.extension_version,
             "extension_sha256": self.extension_sha256,
             "truncated_results": latest["truncatedResults"],
             "compactions": latest["compactionCount"],
@@ -1691,18 +1693,12 @@ def _context_policy_identity(
                 return _context_policy_identity(request, resolved)
         except ContextExtensionError as error:
             raise DciArtifactError("DCI context policy identity is invalid") from error
-    if (
-        extension.contract_version != profile.contract_version
-        or re.fullmatch(r"[0-9a-f]{64}", extension.sha256) is None
-    ):
+    from asterion.dci.context_profiles import context_policy_identity
+
+    try:
+        return context_policy_identity(profile, extension)
+    except ValueError:
         raise DciArtifactError("DCI context policy identity is invalid")
-    return {
-        "schema": "dci.context-policy-identity/v1",
-        "status": "effective",
-        "profile": profile.identity_payload(),
-        "extension_version": extension.version,
-        "extension_sha256": extension.sha256,
-    }
 
 
 def _validate_recorder_resume_state(

@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass
 from functools import lru_cache
 from importlib import resources
 from types import MappingProxyType
-from typing import Literal, Mapping
+from typing import TYPE_CHECKING, Literal, Mapping
+
+if TYPE_CHECKING:
+    from asterion.dci.context_extension import ResolvedContextExtension
 
 
 CONTEXT_PROFILE_CONTRACT_VERSION = "dci.context-profile/v1"
@@ -83,6 +87,27 @@ def resolve_context_profile(value: object) -> DciContextProfile | None:
     if not isinstance(value, str) or value not in _PROFILE_NAMES:
         raise ValueError("DCI context profile is invalid")
     return _profiles()[value]
+
+
+def context_policy_identity(
+    profile: DciContextProfile,
+    extension: ResolvedContextExtension,
+) -> dict[str, object]:
+    """Bind one canonical profile to the exact shipped extension implementation."""
+
+    if (
+        extension.contract_version != profile.contract_version
+        or not extension.version
+        or re.fullmatch(r"[0-9a-f]{64}", extension.sha256) is None
+    ):
+        raise ValueError("DCI context policy identity is invalid")
+    return {
+        "schema": "dci.context-policy-identity/v1",
+        "status": "effective",
+        "profile": profile.identity_payload(),
+        "extension_version": extension.version,
+        "extension_sha256": extension.sha256,
+    }
 
 
 @lru_cache(maxsize=1)

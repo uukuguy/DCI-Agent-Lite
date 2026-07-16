@@ -2038,12 +2038,24 @@ hypotheses:
   expected_lift: +1 complete safe product exposure
   cost_h: 1.2
   ranking: 0.7
-  status: pending
+  status: confirmed
   created_at: '2026-07-17T05:32:00+08:00'
   verification_command: uv run --project asterion python -m unittest tests.test_asterion_dci_cli
     tests.test_asterion_dci_batch tests.test_asterion_dci_application_executor tests.test_distribution_boundaries
     -v
-  results: []
+  results:
+  - session: 2026-07-17-af-310-paper-context-management
+    cycle: 90
+    run: 20260717-062553-dci-climb-af310h004
+    local: 4
+    local_per_task:
+      closed_cli: 1
+      batch_identity: 1
+      application_mapping: 1
+      body_free_projection: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-310-H-005
   work_package_id: AF-310
   description: Force and retain credential-clean bounded real Pi evidence for L3 compaction

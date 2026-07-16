@@ -25,6 +25,14 @@ from asterion.dci.artifacts import (
     validate_resumable_run_evidence,
 )
 from asterion.dci.config import DciPaths, DciRuntimeOptions
+from asterion.dci.context_extension import (
+    ContextExtensionError,
+    resolve_context_extension,
+)
+from asterion.dci.context_profiles import (
+    context_policy_identity,
+    resolve_context_profile,
+)
 from asterion.dci.datasets import (
     BenchmarkRow,
     DatasetError,
@@ -743,12 +751,22 @@ def _read_public_json(path: Path) -> dict[str, Any]:
 
 
 def _runtime_document(options: DciRuntimeOptions) -> dict[str, object]:
+    try:
+        profile = resolve_context_profile(options.runtime_context_level)
+        if profile is None:
+            policy_identity = None
+        else:
+            with resolve_context_extension() as extension:
+                policy_identity = context_policy_identity(profile, extension)
+    except (ContextExtensionError, ValueError) as error:
+        raise DciBenchmarkError("DCI benchmark context policy is invalid") from error
     return {
         "provider": options.provider,
         "model": options.model,
         "tools": options.tools,
         "timeout_seconds": options.timeout_seconds,
         "runtime_context_level": options.runtime_context_level,
+        "context_policy_identity": policy_identity,
         "thinking_level": options.thinking_level,
         "node_max_old_space_size_mb": options.node_max_old_space_size_mb,
         "keep_session": options.keep_session,

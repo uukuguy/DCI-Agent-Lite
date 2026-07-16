@@ -8,6 +8,7 @@ from unittest.mock import patch
 
 from asterion.dci.application_executor import EnvironmentDciRunExecutor
 from asterion.dci.artifacts import DciConversationFeatures
+from asterion.dci.context_profiles import resolve_context_profile
 from asterion.dci.run import DciRunRequest
 
 
@@ -90,6 +91,34 @@ class AsterionDciApplicationExecutorTests(unittest.TestCase):
             ("level3", "high"),
         )
         self.assertFalse(mapped.stream_text)
+
+    def test_application_executor_maps_every_profile_to_the_canonical_identity(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            for name in ("level0", "level1", "level2", "level3", "level4"):
+                calls: list[DciRunRequest] = []
+                executor = EnvironmentDciRunExecutor(
+                    repo_root=root,
+                    run_native=lambda _paths, request: calls.append(request),
+                )
+                with self.subTest(profile=name), patch.dict(
+                    os.environ,
+                    {"DCI_RUNTIME_CONTEXT_LEVEL": name},
+                    clear=True,
+                ):
+                    executor.run(
+                        DciRunRequest(
+                            run_id=f"application-{name}",
+                            question="SECRET-QUESTION",
+                            cwd=Path("ignored"),
+                        )
+                    )
+                    self.assertEqual(
+                        calls[0].context_profile.identity_payload(),
+                        resolve_context_profile(name).identity_payload(),
+                    )
 
     def test_maps_runtime_cwd_and_native_paths_to_one_pi_run(self) -> None:
         calls: list[tuple[object, DciRunRequest]] = []

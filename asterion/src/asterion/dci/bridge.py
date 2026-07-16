@@ -105,6 +105,8 @@ def _context_policy_projection(output_dir: Path) -> dict[str, object] | None:
     expected = {
         "schema",
         "profile",
+        "contract_version",
+        "extension_version",
         "extension_sha256",
         "truncated_results",
         "compactions",
@@ -118,6 +120,9 @@ def _context_policy_projection(output_dir: Path) -> dict[str, object] | None:
         or summary.get("schema") != "dci.context-policy-evidence/v1"
         or summary.get("profile")
         not in {"level0", "level1", "level2", "level3", "level4"}
+        or summary.get("contract_version") != "dci.context-profile/v1"
+        or not isinstance(summary.get("extension_version"), str)
+        or not summary["extension_version"]
         or re.fullmatch(r"[0-9a-f]{64}", str(summary.get("extension_sha256")))
         is None
         or any(
