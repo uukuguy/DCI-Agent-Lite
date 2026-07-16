@@ -1887,7 +1887,7 @@ class ClimbToolTests(unittest.TestCase):
         train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
 
         self.assertIn("AF-060-H-004", train_script)
-        self.assertIn("npm --prefix packages/typescript/asterion-runtime test", train_script)
+        self.assertIn("npm --prefix asterion/packages/typescript/asterion-runtime test", train_script)
 
     def test_af060_h004_eval_reports_four_typescript_parity_dimensions(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -2026,7 +2026,7 @@ class ClimbToolTests(unittest.TestCase):
         train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
 
         self.assertIn("AF-070-H-003", train_script)
-        self.assertIn("npm --prefix packages/typescript/asterion-runtime test", train_script)
+        self.assertIn("npm --prefix asterion/packages/typescript/asterion-runtime test", train_script)
 
     def test_af070_h003_eval_reports_four_typescript_dimensions(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -2061,7 +2061,7 @@ class ClimbToolTests(unittest.TestCase):
 
         self.assertIn("AF-070-H-004", train_script)
         self.assertIn("python -m unittest discover -v", train_script)
-        self.assertIn("npm --prefix packages/typescript/asterion-runtime ci", train_script)
+        self.assertIn("npm --prefix asterion/packages/typescript/asterion-runtime ci", train_script)
         self.assertIn("make test-rust-executor", train_script)
         self.assertIn("make check-rust-executor", train_script)
 
@@ -2200,7 +2200,7 @@ class ClimbToolTests(unittest.TestCase):
 
         self.assertIn("AF-080-H-004", train_script)
         self.assertIn("python -m unittest discover -v", train_script)
-        self.assertIn("npm --prefix packages/typescript/asterion-runtime ci", train_script)
+        self.assertIn("npm --prefix asterion/packages/typescript/asterion-runtime ci", train_script)
         self.assertIn("make test-rust-executor", train_script)
         self.assertIn("make check-rust-executor", train_script)
 
@@ -2317,7 +2317,7 @@ class ClimbToolTests(unittest.TestCase):
         train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
         self.assertIn("AF-090-H-004", train_script)
         self.assertIn("python -m unittest discover -v", train_script)
-        self.assertIn("npm --prefix packages/typescript/asterion-runtime ci", train_script)
+        self.assertIn("npm --prefix asterion/packages/typescript/asterion-runtime ci", train_script)
         self.assertIn("make test-rust-executor", train_script)
         self.assertIn("make check-rust-executor", train_script)
 
@@ -2401,8 +2401,8 @@ class ClimbToolTests(unittest.TestCase):
         train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
         self.assertIn("AF-095-H-003", train_script)
         self.assertIn("test_declarative_assets_have_product_level_owners", train_script)
-        self.assertIn("packages/typescript/asterion-runtime", train_script)
-        self.assertIn("packages/rust/controlled-executor", train_script)
+        self.assertIn("asterion/packages/typescript/asterion-runtime", train_script)
+        self.assertIn("asterion/packages/rust/controlled-executor", train_script)
 
     def test_af095_h003_eval_reports_four_directory_dimensions(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -2428,7 +2428,7 @@ class ClimbToolTests(unittest.TestCase):
         train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
         self.assertIn("AF-095-H-004", train_script)
         self.assertIn("python -m unittest discover -v", train_script)
-        self.assertIn("packages/typescript/asterion-runtime ci", train_script)
+        self.assertIn("asterion/packages/typescript/asterion-runtime ci", train_script)
         self.assertIn("make test-rust-executor", train_script)
         self.assertIn("make check-rust-executor", train_script)
 
@@ -2549,7 +2549,7 @@ class ClimbToolTests(unittest.TestCase):
         train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
         self.assertIn("AF-100-H-004", train_script)
         self.assertIn("python -m unittest discover -v", train_script)
-        self.assertIn("packages/typescript/asterion-runtime ci", train_script)
+        self.assertIn("asterion/packages/typescript/asterion-runtime ci", train_script)
         self.assertIn("make test-rust-executor", train_script)
         self.assertIn("project_scope_check.py --climb-hypothesis AF-100-H-004", train_script)
 

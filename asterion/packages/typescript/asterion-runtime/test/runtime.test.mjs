@@ -11,27 +11,28 @@ import {
   validateRuntimeManifest,
 } from "../dist/src/index.js";
 
-const fixtures = new URL("../../../../tests/fixtures/agent_runtime/v1/", import.meta.url);
+const fixtures = new URL("../../../../../tests/fixtures/agent_runtime/v1/", import.meta.url);
 const packageFixtures = new URL(
-  "../../../../tests/fixtures/packages/v1/",
+  "../../../../../tests/fixtures/packages/v1/",
   import.meta.url,
 );
 const referenceManifestRoots = [
-  new URL("../../../../packages/python/asterion-core/src/asterion/capabilities/dci_research/manifests/", import.meta.url),
-  new URL("../../../../packages/python/asterion-core/src/asterion/capabilities/controlled_code/manifests/", import.meta.url),
+  new URL("../../../../src/asterion/capabilities/dci_research/manifests/", import.meta.url),
+  new URL("../../../../src/asterion/capabilities/controlled_code/manifests/", import.meta.url),
 ];
 const sourceDirectory = new URL("../src/", import.meta.url);
+const schemaCopyScript = new URL("../scripts/copy-schemas.mjs", import.meta.url);
 const assemblyFixtures = new URL(
-  "../../../../tests/fixtures/assembly/v1/",
+  "../../../../../tests/fixtures/assembly/v1/",
   import.meta.url,
 );
 const referenceAssemblyRoots = [
   new URL(
-    "../../../../packages/python/asterion-core/src/asterion/applications/dci_agent_lite/assemblies/",
+    "../../../../src/asterion/applications/dci_agent_lite/assemblies/",
     import.meta.url,
   ),
   new URL(
-    "../../../../packages/python/asterion-core/src/asterion/applications/controlled_code/assemblies/",
+    "../../../../src/asterion/applications/controlled_code/assemblies/",
     import.meta.url,
   ),
 ];
@@ -52,6 +53,15 @@ async function readJsonl(name) {
 }
 
 test("validates the shared runtime manifest fixtures", async () => {
+  const copyScript = await readFile(schemaCopyScript, "utf8");
+  for (const source of [
+    "../../../../schemas/agent-runtime/v1",
+    "../../../../schemas/packages/v1/package-manifest.schema.json",
+    "../../../../schemas/assembly/v1/assembly.schema.json",
+  ]) {
+    assert.ok(copyScript.includes(source), source);
+  }
+
   const valid = await readJson("valid-runtime-manifest.json");
   const invalid = await readJson("invalid-runtime-manifest.json");
 

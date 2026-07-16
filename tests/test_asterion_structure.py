@@ -168,8 +168,8 @@ class AsterionStructureTests(unittest.TestCase):
         )
 
     def test_cross_language_working_directories_are_asterion_owned(self) -> None:
-        self.assertTrue((ROOT / "packages/typescript/asterion-runtime").is_dir())
-        self.assertTrue((ROOT / "packages/rust/controlled-executor").is_dir())
+        self.assertTrue((ROOT / "asterion/packages/typescript/asterion-runtime").is_dir())
+        self.assertTrue((ROOT / "asterion/packages/rust/controlled-executor").is_dir())
         self.assertFalse((ROOT / "packages/typescript/agent-runtime").exists())
         self.assertFalse((ROOT / "packages/rust/executor").exists())
 

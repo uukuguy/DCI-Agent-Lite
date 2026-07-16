@@ -33,7 +33,7 @@ run_rust_dimension() {
     name="$1"
     test_name="$2"
     if cargo test \
-        --manifest-path packages/rust/controlled-executor/Cargo.toml \
+        --manifest-path asterion/packages/rust/controlled-executor/Cargo.toml \
         --test "$rust_suite" \
         "$test_name" -- --exact >"$RUN_DIR/$name.log" 2>&1; then
         printf '1'
@@ -47,7 +47,7 @@ run_closure_dimension() {
     check="$2"
     case "$check" in
         operator_binary)
-            command=(cargo test --manifest-path packages/rust/controlled-executor/Cargo.toml --test operator)
+            command=(cargo test --manifest-path asterion/packages/rust/controlled-executor/Cargo.toml --test operator)
             ;;
         operator_docs)
             command=(uv run python -m unittest tests.test_climb_tools.ClimbToolTests.test_af050_operator_docs_and_root_verification_targets_exist -v)
@@ -59,13 +59,13 @@ run_closure_dimension() {
             command=(make check-rust-executor)
             ;;
         assembly_typescript)
-            command=(npm --prefix packages/typescript/asterion-runtime test)
+            command=(npm --prefix asterion/packages/typescript/asterion-runtime test)
             ;;
         assembly_docs)
             command=(uv run python -m unittest tests.test_application_assembly.AssemblyDocumentationTests -v)
             ;;
         assembly_non_execution)
-            command=(node --test --test-name-pattern "keeps assembly resolution outside" packages/typescript/asterion-runtime/test/runtime.test.mjs)
+            command=(node --test --test-name-pattern "keeps assembly resolution outside" asterion/packages/typescript/asterion-runtime/test/runtime.test.mjs)
             ;;
         assembly_closure)
             command=(uv run python -m unittest tests.test_climb_tools.ClimbToolTests.test_af090_h004_train_runs_full_framework_closure_gate -v)
@@ -101,7 +101,7 @@ run_closure_dimension() {
             command=(bash -c 'uv run python -m compileall -q src tests tools && uv run ruff check src tests tools && bash -n tools/climb/train.sh tools/climb/eval-local.sh tools/climb/cycle.sh')
             ;;
         application_typescript)
-            command=(npm --prefix packages/typescript/asterion-runtime test)
+            command=(npm --prefix asterion/packages/typescript/asterion-runtime test)
             ;;
         application_system)
             command=(bash -c 'make test-rust-executor && make check-rust-executor && python3 tools/project_scope_check.py && git diff --check')
@@ -122,14 +122,14 @@ run_typescript_dimension() {
     name="$1"
     test_name="$2"
     if [ "$test_name" = "public_type_contract" ]; then
-        command=(npm --prefix packages/typescript/asterion-runtime run build)
+        command=(npm --prefix asterion/packages/typescript/asterion-runtime run build)
     else
         command=(
             node --test --test-name-pattern "$test_name"
-            packages/typescript/asterion-runtime/test/runtime.test.mjs
+            asterion/packages/typescript/asterion-runtime/test/runtime.test.mjs
         )
     fi
-    if npm --prefix packages/typescript/asterion-runtime run build >"$RUN_DIR/$name.log" 2>&1 \
+    if npm --prefix asterion/packages/typescript/asterion-runtime run build >"$RUN_DIR/$name.log" 2>&1 \
         && "${command[@]}" >>"$RUN_DIR/$name.log" 2>&1; then
         printf '1'
     else

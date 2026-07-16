@@ -206,22 +206,22 @@ cat >"$run_dir/manifest.json" <<EOF
 EOF
 
 if [ "$1" = "AF-050-H-001" ]; then
-    if ! cargo test --manifest-path packages/rust/controlled-executor/Cargo.toml --test authorization >"$run_dir/train.log" 2>&1; then
+    if ! cargo test --manifest-path asterion/packages/rust/controlled-executor/Cargo.toml --test authorization >"$run_dir/train.log" 2>&1; then
         echo "ERROR: AF-050-H-001 request authorization failed; see $run_dir/train.log" >&2
         exit 1
     fi
 elif [ "$1" = "AF-050-H-002" ]; then
-    if ! cargo test --manifest-path packages/rust/controlled-executor/Cargo.toml --test process >"$run_dir/train.log" 2>&1; then
+    if ! cargo test --manifest-path asterion/packages/rust/controlled-executor/Cargo.toml --test process >"$run_dir/train.log" 2>&1; then
         echo "ERROR: AF-050-H-002 direct process boundary failed; see $run_dir/train.log" >&2
         exit 1
     fi
 elif [ "$1" = "AF-050-H-003" ]; then
-    if ! cargo test --manifest-path packages/rust/controlled-executor/Cargo.toml --test process >"$run_dir/train.log" 2>&1; then
+    if ! cargo test --manifest-path asterion/packages/rust/controlled-executor/Cargo.toml --test process >"$run_dir/train.log" 2>&1; then
         echo "ERROR: AF-050-H-003 bounded process resources failed; see $run_dir/train.log" >&2
         exit 1
     fi
 elif [ "$1" = "AF-050-H-004" ]; then
-    if ! cargo test --manifest-path packages/rust/controlled-executor/Cargo.toml --test service >"$run_dir/train.log" 2>&1; then
+    if ! cargo test --manifest-path asterion/packages/rust/controlled-executor/Cargo.toml --test service >"$run_dir/train.log" 2>&1; then
         echo "ERROR: AF-050-H-004 concurrent JSONL service failed; see $run_dir/train.log" >&2
         exit 1
     fi
@@ -250,7 +250,7 @@ elif [ "$1" = "AF-060-H-003" ]; then
         exit 1
     fi
 elif [ "$1" = "AF-060-H-004" ]; then
-    if ! npm --prefix packages/typescript/asterion-runtime test >"$run_dir/train.log" 2>&1; then
+    if ! npm --prefix asterion/packages/typescript/asterion-runtime test >"$run_dir/train.log" 2>&1; then
         echo "ERROR: AF-060-H-004 TypeScript package parity failed; see $run_dir/train.log" >&2
         exit 1
     fi
@@ -285,7 +285,7 @@ elif [ "$1" = "AF-070-H-002" ]; then
         exit 1
     fi
 elif [ "$1" = "AF-070-H-003" ]; then
-    if ! npm --prefix packages/typescript/asterion-runtime test >"$run_dir/train.log" 2>&1; then
+    if ! npm --prefix asterion/packages/typescript/asterion-runtime test >"$run_dir/train.log" 2>&1; then
         echo "ERROR: AF-070-H-003 TypeScript reference manifest parity failed; see $run_dir/train.log" >&2
         exit 1
     fi
@@ -294,8 +294,8 @@ elif [ "$1" = "AF-070-H-004" ]; then
         uv run python -m unittest discover -v
         uv run python -m compileall -q src tests tools
         uv run ruff check src tests tools
-        npm --prefix packages/typescript/asterion-runtime ci
-        npm --prefix packages/typescript/asterion-runtime test
+        npm --prefix asterion/packages/typescript/asterion-runtime ci
+        npm --prefix asterion/packages/typescript/asterion-runtime test
         make test-rust-executor
         make check-rust-executor
         bash -n tools/climb/train.sh tools/climb/eval-local.sh tools/climb/cycle.sh
@@ -325,8 +325,8 @@ elif [ "$1" = "AF-080-H-004" ]; then
         uv run python -m unittest discover -v
         uv run python -m compileall -q src tests tools
         uv run ruff check src tests tools
-        npm --prefix packages/typescript/asterion-runtime ci
-        npm --prefix packages/typescript/asterion-runtime test
+        npm --prefix asterion/packages/typescript/asterion-runtime ci
+        npm --prefix asterion/packages/typescript/asterion-runtime test
         make test-rust-executor
         make check-rust-executor
         bash -n tools/climb/train.sh tools/climb/eval-local.sh tools/climb/cycle.sh
@@ -356,8 +356,8 @@ elif [ "$1" = "AF-090-H-004" ]; then
         uv run python -m unittest discover -v
         uv run python -m compileall -q src tests tools
         uv run ruff check src tests tools
-        npm --prefix packages/typescript/asterion-runtime ci
-        npm --prefix packages/typescript/asterion-runtime test
+        npm --prefix asterion/packages/typescript/asterion-runtime ci
+        npm --prefix asterion/packages/typescript/asterion-runtime test
         make test-rust-executor
         make check-rust-executor
         bash -n tools/climb/train.sh tools/climb/eval-local.sh tools/climb/cycle.sh
@@ -388,8 +388,8 @@ elif [ "$1" = "AF-095-H-003" ]; then
             tests.test_asterion_structure.AsterionStructureTests.test_declarative_assets_have_product_level_owners \
             tests.test_asterion_structure.AsterionStructureTests.test_cross_language_working_directories_are_asterion_owned \
             tests.test_package_composition tests.test_package_catalog tests.test_application_assembly -v
-        npm --prefix packages/typescript/asterion-runtime test
-        cargo test --manifest-path packages/rust/controlled-executor/Cargo.toml
+        npm --prefix asterion/packages/typescript/asterion-runtime test
+        cargo test --manifest-path asterion/packages/rust/controlled-executor/Cargo.toml
     } >"$run_dir/train.log" 2>&1; then
         echo "ERROR: AF-095-H-003 product directory separation failed; see $run_dir/train.log" >&2
         exit 1
@@ -399,8 +399,8 @@ elif [ "$1" = "AF-095-H-004" ]; then
         uv run python -m unittest discover -v
         uv run python -m compileall -q src tests tools
         uv run ruff check src tests tools
-        npm --prefix packages/typescript/asterion-runtime ci
-        npm --prefix packages/typescript/asterion-runtime test
+        npm --prefix asterion/packages/typescript/asterion-runtime ci
+        npm --prefix asterion/packages/typescript/asterion-runtime test
         make test-rust-executor
         make check-rust-executor
         bash -n scripts/examples/dci_basic_example.sh scripts/examples/dci_runtime_context_example.sh tools/climb/train.sh tools/climb/eval-local.sh tools/climb/cycle.sh
@@ -440,8 +440,8 @@ elif [ "$1" = "AF-100-H-004" ]; then
         uv run python -m unittest discover -v
         uv run python -m compileall -q src tests tools
         uv run ruff check src tests tools
-        npm --prefix packages/typescript/asterion-runtime ci
-        npm --prefix packages/typescript/asterion-runtime test
+        npm --prefix asterion/packages/typescript/asterion-runtime ci
+        npm --prefix asterion/packages/typescript/asterion-runtime test
         make test-rust-executor
         make check-rust-executor
         bash -n scripts/examples/dci_basic_example.sh scripts/examples/dci_runtime_context_example.sh tools/climb/train.sh tools/climb/eval-local.sh tools/climb/cycle.sh
@@ -531,8 +531,8 @@ elif [ "$1" = "AF-210-H-004" ]; then
         uv run python -m unittest discover -v
         uv run python -m compileall -q src tests tools
         uv run ruff check src tests tools
-        npm --prefix packages/typescript/asterion-runtime ci
-        npm --prefix packages/typescript/asterion-runtime test
+        npm --prefix asterion/packages/typescript/asterion-runtime ci
+        npm --prefix asterion/packages/typescript/asterion-runtime test
         make test-rust-executor
         make check-rust-executor
         bash -n tools/climb/train.sh tools/climb/eval-local.sh tools/climb/cycle.sh

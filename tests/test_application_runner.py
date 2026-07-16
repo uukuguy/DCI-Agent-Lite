@@ -387,7 +387,7 @@ class ApplicationRunnerDocumentationTests(unittest.TestCase):
         ).read_text()
         typescript_sources = "\n".join(
             path.read_text()
-            for path in (ROOT / "packages/typescript/asterion-runtime/src").glob("*.ts")
+            for path in (ROOT / "asterion/packages/typescript/asterion-runtime/src").glob("*.ts")
         )
 
         self.assertNotIn("subprocess", source)
@@ -405,7 +405,7 @@ class ApplicationRunnerDocumentationTests(unittest.TestCase):
         self.assertFalse((ROOT / "src/dci/framework/runner.py").exists())
         typescript_sources = "\n".join(
             path.read_text()
-            for path in (ROOT / "packages/typescript/asterion-runtime/src").glob("*.ts")
+            for path in (ROOT / "asterion/packages/typescript/asterion-runtime/src").glob("*.ts")
         )
         self.assertNotIn("runApplication", typescript_sources)
 
