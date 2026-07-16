@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-17 05:44 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-17 05:51 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-310
 
@@ -13,11 +13,11 @@ Active work package: AF-310
 
 ## Where things stand
 
-- Branch: `main`; design and checkpoint state are committed through the immediately following state-maintenance commits, remain unpushed, and leave a clean working tree.
+- Branch: `main`; AF-310-H-001 is committed through `583eb3c` plus its journal commit. AF-310-H-002 implementation and cycle state are verified but not yet committed.
 - Provider-free product verification still passes 8/8 rows, 533/533 selectors, 12/12 launcher pairs, 6/6 extras, and 7/7 bounded retained cases with zero provider operations.
 - Correct Context/artifact/CLI focused tests pass 101/101; an earlier nonzero command was only an invalid guessed test-module selector.
-- Governance, D-044, and a fresh AF-310 Climb pool are active; AF-310-H-001 is confirmed 4/4 and AF-310-H-002 is next.
-- No implementation, full dataset, provider request, or Climb cycle has started.
+- Governance, D-044, and the AF-310 Climb pool are active; AF-310-H-001 and AF-310-H-002 are confirmed 4/4, and AF-310-H-003 is next.
+- The Asterion-owned dependency-free TypeScript extension now passes 11 policy/fake-Pi tests plus the four-dimensional H002 acceptance cycle. No external `pi/` modification, full dataset, or provider request occurred.
 
 ## Approved package sequence
 
@@ -28,10 +28,10 @@ Active work package: AF-310
 
 ## Next steps
 
-1. Commit the confirmed AF-310-H-001 contract, Climb adapter, and cycle state; journal its hash.
-2. Run `python3 tools/project_scope_check.py --climb-hypothesis AF-310-H-002`.
-3. Write the AF-310-H-002 TypeScript fake-Pi and policy-boundary tests and observe RED.
-4. Implement only the minimum dependency-free policy engine needed for GREEN, then run its Climb cycle.
+1. Commit the confirmed AF-310-H-002 extension, tests, Climb adapter, and cycle state; journal its hash.
+2. Run `python3 tools/project_scope_check.py --climb-hypothesis AF-310-H-003`.
+3. Write AF-310-H-003 RED tests for packaged resource path/digest, literal Pi argv transport, immutable resume identity, and isolated-wheel availability.
+4. Implement the packaging and Python execution boundary, then run its Climb cycle.
 
 ## Don't go down these paths again
 

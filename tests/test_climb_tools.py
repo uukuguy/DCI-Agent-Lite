@@ -3052,6 +3052,40 @@ class ClimbToolTests(unittest.TestCase):
                 },
             )
 
+    def test_af310_train_registers_live_context_hypothesis(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+
+        self.assertIn("AF-310-H-002", train_script)
+        self.assertIn("dci-context-extension", train_script)
+
+    def test_af310_h002_eval_reports_four_live_context_dimensions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            env = os.environ.copy()
+            env["DCI_CLIMB_HYPOTHESIS_ID"] = "AF-310-H-002"
+
+            result = subprocess.run(
+                ["bash", "tools/climb/eval-local.sh", str(run_dir)],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            evaluation = json.loads((run_dir / "local-eval.json").read_text())
+            self.assertEqual(evaluation["hypothesis_id"], "AF-310-H-002")
+            self.assertEqual(evaluation["total"], 4)
+            self.assertEqual(
+                set(evaluation["per_task"]),
+                {
+                    "canonical_profiles",
+                    "exact_truncation",
+                    "live_retention",
+                    "summary_failure_semantics",
+                },
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

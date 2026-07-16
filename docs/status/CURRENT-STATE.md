@@ -60,7 +60,8 @@
 
 ## Open Problems (theme-level)
 
-- AF-310-H-001 is confirmed 4/4: the closed schema-backed L0–L4 profile names, exact thresholds, stable identity, and configuration/request validation pass. Live Pi behavior is not implemented yet; AF-310-H-002 owns the TypeScript policy engine.
+- AF-310-H-001 is confirmed 4/4: the closed schema-backed L0–L4 profile names, exact thresholds, stable identity, and configuration/request validation pass.
+- AF-310-H-002 is confirmed 4/4: the dependency-free Asterion Pi extension implements exact tool-result caps, L3 live-turn retention/compaction, L4 recent-context targeting, and three-failure summary suppression that falls back to L3 compaction. Fake-Pi tests prove model-visible hooks and body-free durable state; AF-310-H-003 owns packaging, digest-bound transport, resume identity, and isolated-wheel availability.
 - Full-dataset validation and score reproduction remain deliberately deferred to separately authorized AF-340.
 
 ## Key Files

@@ -337,7 +337,7 @@
 - Acceptance: Asterion owns and ships exact L0–L4 profiles; every public surface selects the same implementation; fixtures prove model-visible transformations and failure boundaries; bounded Pi runs force and observe L3 compaction and L4 summarization; external `pi/` remains unmodified; documentation distinguishes implemented, model-free verified, bounded provider verified, and experiment-reproduced evidence.
 - Design: `docs/superpowers/specs/2026-07-16-paper-aligned-dci-complete-implementation-design.md`
 - Plan: `docs/superpowers/plans/2026-07-16-af-310-paper-aligned-runtime-context-management.md`
-- Current hypothesis: AF-310-H-002 implements and proves the model-visible TypeScript policy engine after AF-310-H-001 confirmed the canonical profile contract 4/4.
+- Current hypothesis: AF-310-H-003 packages the confirmed policy extension, binds its digest to literal Pi transport and durable resume identity, and proves isolated-wheel availability. AF-310-H-001 and AF-310-H-002 are confirmed 4/4.
 
 ## AF-095 — Asterion framework identity and extraction
 

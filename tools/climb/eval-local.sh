@@ -146,6 +146,21 @@ run_typescript_dimension() {
     fi
 }
 
+run_dci_context_dimension() {
+    name="$1"
+    test_name="$2"
+    command=(
+        node --test --test-name-pattern "$test_name"
+        asterion/packages/typescript/dci-context-extension/test/policy.test.mjs
+        asterion/packages/typescript/dci-context-extension/test/extension.test.mjs
+    )
+    if "${command[@]}" >"$RUN_DIR/$name.log" 2>&1; then
+        printf '1'
+    else
+        printf '0'
+    fi
+}
+
 dimension_runner="run_dimension"
 rust_suite="authorization"
 case "$HYPOTHESIS_ID" in
@@ -992,6 +1007,17 @@ case "$HYPOTHESIS_ID" in
         repeat_test="tests.test_asterion_dci_context_profiles.AsterionDciContextProfileTests.test_identity_payload_is_complete_and_stable"
         dirty_test="tests.test_asterion_dci_context_profiles.AsterionDciContextProfileTests.test_none_is_unselected_and_invalid_aliases_fail_closed"
         override_test="tests.test_asterion_dci_config.AsterionDciConfigTests.test_runtime_options_reject_unknown_context_profile"
+        ;;
+    AF-310-H-002)
+        dimension_runner="run_dci_context_dimension"
+        first_dimension="canonical_profiles"
+        second_dimension="exact_truncation"
+        third_dimension="live_retention"
+        fourth_dimension="summary_failure_semantics"
+        immutable_test="profile definitions match the canonical Python resource"
+        repeat_test="tool text truncation includes the marker inside the exact cap"
+        dirty_test="L3 pressure retains system context and the latest twelve complete turns"
+        override_test="suppressed L4 keeps L3 compaction without another summary attempt"
         ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2

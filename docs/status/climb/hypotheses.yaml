@@ -1975,11 +1975,23 @@ hypotheses:
   expected_lift: +1 exact model-visible context behavior
   cost_h: 1.8
   ranking: 0.9
-  status: pending
+  status: confirmed
   created_at: '2026-07-17T05:32:00+08:00'
   verification_command: npm --prefix asterion/packages/typescript/dci-context-extension
     test
-  results: []
+  results:
+  - session: 2026-07-17-af-310-paper-context-management
+    cycle: 87
+    run: 20260717-055113-dci-climb-af310h002
+    local: 4
+    local_per_task:
+      canonical_profiles: 1
+      exact_truncation: 1
+      live_retention: 1
+      summary_failure_semantics: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-310-H-003
   work_package_id: AF-310
   description: Prove packaged extension integrity, literal Pi transport, immutable
