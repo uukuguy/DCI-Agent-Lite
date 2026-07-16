@@ -4,11 +4,13 @@ import json
 import unittest
 from pathlib import Path
 
+from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
 from dci.framework.adapters.claude_code import ClaudeCodeProtocolAdapter
 from dci.framework.protocol import validate_event_stream
 
 
-FIXTURES = Path(__file__).resolve().parent / "fixtures/claude_code"
+ROOT = Path(__file__).resolve().parents[1]
+FIXTURES = ROOT / "asterion/tests/fixtures/claude_code"
 
 
 def load_fixture(name: str) -> list[dict[str, object]]:

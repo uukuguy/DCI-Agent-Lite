@@ -17,14 +17,12 @@ from asterion.services.controlled_executor import (
 )
 
 
-ROOT = Path(__file__).resolve().parents[1]
-MANIFESTS = (
-    ROOT
-    / "asterion/src/asterion/capabilities/controlled_code/manifests"
-)
+PROJECT = Path(__file__).resolve().parents[1]
+SOURCE = PROJECT / "src/asterion"
+MANIFESTS = SOURCE / "capabilities/controlled_code/manifests"
 ASSEMBLY = (
-    ROOT
-    / "asterion/src/asterion/applications/controlled_code/assemblies/controlled-code-validation.json"
+    SOURCE
+    / "applications/controlled_code/assemblies/controlled-code-validation.json"
 )
 
 

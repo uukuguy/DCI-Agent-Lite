@@ -4,6 +4,7 @@ import json
 import unittest
 from pathlib import Path
 
+from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
 from dci.framework.protocol import (
     PROTOCOL_VERSION,
     ProtocolError,
@@ -14,7 +15,7 @@ from dci.framework.protocol import (
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-FIXTURE_DIR = REPO_ROOT / "tests/fixtures/agent_runtime/v1"
+FIXTURE_DIR = REPO_ROOT / "asterion/tests/fixtures/agent_runtime/v1"
 
 
 def load_jsonl(name: str) -> list[dict[str, object]]:

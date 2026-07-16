@@ -11,9 +11,9 @@ import {
   validateRuntimeManifest,
 } from "../dist/src/index.js";
 
-const fixtures = new URL("../../../../../tests/fixtures/agent_runtime/v1/", import.meta.url);
+const fixtures = new URL("../../../../tests/fixtures/agent_runtime/v1/", import.meta.url);
 const packageFixtures = new URL(
-  "../../../../../tests/fixtures/packages/v1/",
+  "../../../../tests/fixtures/packages/v1/",
   import.meta.url,
 );
 const referenceManifestRoots = [
@@ -23,7 +23,7 @@ const referenceManifestRoots = [
 const sourceDirectory = new URL("../src/", import.meta.url);
 const schemaCopyScript = new URL("../scripts/copy-schemas.mjs", import.meta.url);
 const assemblyFixtures = new URL(
-  "../../../../../tests/fixtures/assembly/v1/",
+  "../../../../tests/fixtures/assembly/v1/",
   import.meta.url,
 );
 const referenceAssemblyRoots = [

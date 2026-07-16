@@ -18,9 +18,13 @@ from asterion.packages.execution import (
 from asterion.runtime.host import RunEvent, RunRequest, RuntimeManifest
 
 
-ROOT = Path(__file__).resolve().parents[1]
-MANIFEST_ROOT = ROOT / "asterion/src/asterion/capabilities/dci_research/manifests"
-ASSEMBLY = ROOT / "asterion/src/asterion/applications/dci_agent_lite/assemblies/dci-local-research.json"
+PROJECT = Path(__file__).resolve().parents[1]
+SOURCE = PROJECT / "src/asterion"
+MANIFEST_ROOT = SOURCE / "capabilities/dci_research/manifests"
+ASSEMBLY = (
+    SOURCE
+    / "applications/dci_agent_lite/assemblies/dci-local-research.json"
+)
 
 
 class FixtureRuntime:

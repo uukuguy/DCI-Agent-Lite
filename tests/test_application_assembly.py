@@ -6,6 +6,7 @@ from dataclasses import FrozenInstanceError
 from pathlib import Path
 from types import MappingProxyType
 
+from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
 from dci.framework.assembly import (
     AssemblyError,
     AssemblyPlan,
@@ -15,8 +16,8 @@ from dci.framework.assembly import (
 from dci.framework.package_catalog import PackageRef, discover_packages
 
 
-FIXTURES = Path(__file__).parent / "fixtures/assembly/v1"
 ROOT = Path(__file__).resolve().parents[1]
+FIXTURES = ROOT / "asterion/tests/fixtures/assembly/v1"
 MANIFESTS = (
     ROOT / "asterion/src/asterion/capabilities/dci_research/manifests",
     ROOT / "asterion/src/asterion/capabilities/controlled_code/manifests",

@@ -11,8 +11,8 @@ from asterion.applications.discovery import (
 from asterion.packages.catalog import PackageRef
 
 
-ROOT = Path(__file__).resolve().parents[1]
-ASTERION = ROOT / "asterion/src/asterion"
+PROJECT = Path(__file__).resolve().parents[1]
+SOURCE = PROJECT / "src/asterion"
 
 
 class BuiltinControlledCodeApplicationTests(unittest.TestCase):
@@ -26,7 +26,7 @@ class BuiltinControlledCodeApplicationTests(unittest.TestCase):
 
     def test_controlled_code_provider_binds_exact_application_and_packages(self) -> None:
         provider = load_application_provider("controlled-code")
-        self.assertEqual(provider.resource_root, ASTERION.resolve())
+        self.assertEqual(provider.resource_root, SOURCE.resolve())
         self.assertEqual(len(provider.applications), 1)
         application = provider.applications[0]
         self.assertEqual((application.application_id, application.version), ("code.quality", "1.0.0"))

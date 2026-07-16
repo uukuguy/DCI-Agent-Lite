@@ -9,6 +9,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch
 
+from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
 import dci.benchmark.pi_rpc_runner as rpc_runner
 from dci.benchmark.pi_rpc_runner import PiRpcClient, parse_args
 from dci.framework.protocol import validate_event_stream, validate_run_request

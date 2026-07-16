@@ -7,11 +7,13 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock
 
+from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
 from dci.framework.protocol import validate_event_stream, validate_run_request
 from dci.framework.runtimes.claude_code import build_claude_command, run_claude_code
 
 
-FIXTURE = Path(__file__).resolve().parent / "fixtures/claude_code/valid-success.jsonl"
+ROOT = Path(__file__).resolve().parents[1]
+FIXTURE = ROOT / "asterion/tests/fixtures/claude_code/valid-success.jsonl"
 
 
 class ClaudeCodeRuntimeTests(unittest.TestCase):

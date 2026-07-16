@@ -5,6 +5,7 @@ import unittest
 from collections.abc import AsyncIterator
 from pathlib import Path
 
+from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
 from dci.framework.host import (
     AgentRuntimeClient,
     RunEvent,
@@ -15,7 +16,7 @@ from dci.framework.host import (
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-FIXTURE_DIR = REPO_ROOT / "tests/fixtures/agent_runtime/v1"
+FIXTURE_DIR = REPO_ROOT / "asterion/tests/fixtures/agent_runtime/v1"
 
 
 class FixtureClient:

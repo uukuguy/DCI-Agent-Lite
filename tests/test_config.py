@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
 from dci.config import resolve_pi_paths
 
 

@@ -4,6 +4,7 @@ import json
 import unittest
 from pathlib import Path
 
+from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
 from dci.framework.package_protocol import PackageProtocolError, validate_package_manifest
 from dci.framework.packages import PackageCompositionError, compose_packages
 from dci.framework.adapters.claude_code import map_claude_capabilities
@@ -11,7 +12,7 @@ from dci.framework.adapters.pi import map_pi_capabilities
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-FIXTURE_DIR = REPO_ROOT / "tests/fixtures/packages/v1"
+FIXTURE_DIR = REPO_ROOT / "asterion/tests/fixtures/packages/v1"
 MANIFEST_DIRS = (
     REPO_ROOT / "asterion/src/asterion/capabilities/dci_research/manifests",
     REPO_ROOT / "asterion/src/asterion/capabilities/controlled_code/manifests",

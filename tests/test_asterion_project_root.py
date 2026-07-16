@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import tomllib
 import unittest
 from pathlib import Path
@@ -59,6 +60,46 @@ class AsterionProjectRootTests(unittest.TestCase):
         )
         for relative in required:
             self.assertTrue((PROJECT / relative).is_file(), relative)
+
+    def test_project_local_tests_and_fixtures_exist(self) -> None:
+        self.assertTrue((PROJECT / "tests/test_project_boundary.py").is_file())
+        self.assertTrue(
+            (PROJECT / "tests/fixtures/agent_runtime/v1/valid-research.jsonl").is_file()
+        )
+
+    def test_root_dci_tests_bootstrap_source_for_direct_discovery(self) -> None:
+        missing: list[str] = []
+        for path in sorted((ROOT / "tests").glob("test_*.py")):
+            tree = ast.parse(path.read_text(), filename=str(path))
+            imports_dci = any(
+                (
+                    isinstance(node, ast.Import)
+                    and any(
+                        alias.name == "dci" or alias.name.startswith("dci.")
+                        for alias in node.names
+                    )
+                )
+                or (
+                    isinstance(node, ast.ImportFrom)
+                    and node.module is not None
+                    and (node.module == "dci" or node.module.startswith("dci."))
+                )
+                for node in tree.body
+            )
+            if not imports_dci:
+                continue
+            imports_bootstrap = any(
+                isinstance(node, ast.ImportFrom)
+                and node.module == "tests"
+                and any(
+                    alias.name == "SOURCE_ROOT" and alias.asname == "_SOURCE_ROOT"
+                    for alias in node.names
+                )
+                for node in tree.body
+            )
+            if not imports_bootstrap:
+                missing.append(path.name)
+        self.assertEqual(missing, [])
 
 
 if __name__ == "__main__":

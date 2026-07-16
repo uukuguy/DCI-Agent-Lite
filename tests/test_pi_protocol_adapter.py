@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 
+from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
 from dci.framework.adapters.pi import PiProtocolAdapter, map_pi_capabilities
 from dci.framework.protocol import ProtocolError, validate_event_stream
 

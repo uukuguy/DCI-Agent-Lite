@@ -22,7 +22,16 @@ run_python() {
 run_dimension() {
     name="$1"
     test_name="$2"
-    if run_python -m unittest "$test_name" -v >"$RUN_DIR/$name.log" 2>&1; then
+    module_name="${test_name#tests.}"
+    module_name="${module_name%%.*}"
+    if [ ! -f "tests/$module_name.py" ] && [ -f "asterion/tests/$module_name.py" ]; then
+        command=(run_python -m unittest "$test_name" -v)
+        test_cwd="asterion"
+    else
+        command=(run_python -m unittest "$test_name" -v)
+        test_cwd="."
+    fi
+    if (cd "$test_cwd" && "${command[@]}") >"$RUN_DIR/$name.log" 2>&1; then
         printf '1'
     else
         printf '0'
@@ -95,10 +104,10 @@ run_closure_dimension() {
             command=(uv run python -m unittest tests.test_climb_tools.ClimbToolTests.test_af100_h004_train_runs_full_framework_closure_gate -v)
             ;;
         application_python)
-            command=(bash -c 'modules=(); for path in tests/test_*.py; do [ "${path##*/}" = "test_climb_tools.py" ] && continue; modules+=("${path%.py}"); done; uv run python -m unittest "${modules[@]//\//.}" -v && uv run python -m unittest tests.test_climb_tools.ClimbToolTests.test_af210_train_registers_every_application_parity_hypothesis -v')
+            command=(bash -c 'modules=(); for path in tests/test_*.py; do [ "${path##*/}" = "test_climb_tools.py" ] && continue; modules+=("${path%.py}"); done; uv run python -m unittest "${modules[@]//\//.}" -v && (cd asterion && uv run python -m unittest discover -s tests -v) && uv run python -m unittest tests.test_climb_tools.ClimbToolTests.test_af210_train_registers_every_application_parity_hypothesis -v')
             ;;
         application_quality)
-            command=(bash -c 'uv run python -m compileall -q src tests tools && uv run ruff check src tests tools && bash -n tools/climb/train.sh tools/climb/eval-local.sh tools/climb/cycle.sh')
+            command=(bash -c 'uv run python -m compileall -q src asterion/src/asterion asterion/tests tests tools && uv run ruff check src asterion/src/asterion asterion/tests tests tools && bash -n tools/climb/train.sh tools/climb/eval-local.sh tools/climb/cycle.sh')
             ;;
         application_typescript)
             command=(npm --prefix asterion/packages/typescript/asterion-runtime test)

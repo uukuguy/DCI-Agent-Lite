@@ -462,12 +462,12 @@ elif [ "$1" = "AF-180-H-002" ]; then
         exit 1
     fi
 elif [ "$1" = "AF-180-H-003" ]; then
-    if ! uv run python -m unittest tests.test_asterion_dci_cli tests.test_asterion_cli -v >"$run_dir/train.log" 2>&1; then
+    if ! { uv run python -m unittest tests.test_asterion_dci_cli -v && (cd asterion && uv run python -m unittest tests.test_asterion_cli -v); } >"$run_dir/train.log" 2>&1; then
         echo "ERROR: AF-180-H-003 DCI operator surface failed; see $run_dir/train.log" >&2
         exit 1
     fi
 elif [ "$1" = "AF-180-H-004" ]; then
-    if ! uv run python -m unittest tests.test_asterion_dci_bridge tests.test_dci_research_capability -v >"$run_dir/train.log" 2>&1; then
+    if ! (cd asterion && uv run python -m unittest tests.test_asterion_dci_bridge tests.test_dci_research_capability -v) >"$run_dir/train.log" 2>&1; then
         echo "ERROR: AF-180-H-004 DCI capability projection failed; see $run_dir/train.log" >&2
         exit 1
     fi
@@ -487,7 +487,7 @@ elif [ "$1" = "AF-190-H-003" ]; then
         exit 1
     fi
 elif [ "$1" = "AF-190-H-004" ]; then
-    if ! uv run python -m unittest tests.test_asterion_dci_bridge -v >"$run_dir/train.log" 2>&1; then
+    if ! (cd asterion && uv run python -m unittest tests.test_asterion_dci_bridge -v) >"$run_dir/train.log" 2>&1; then
         echo "ERROR: AF-190-H-004 durable projection failed; see $run_dir/train.log" >&2
         exit 1
     fi
@@ -502,12 +502,12 @@ elif [ "$1" = "AF-200-H-002" ]; then
         exit 1
     fi
 elif [ "$1" = "AF-200-H-003" ]; then
-    if ! uv run python -m unittest tests.test_asterion_dci_benchmark -v >"$run_dir/train.log" 2>&1; then
+    if ! (cd asterion && uv run python -m unittest tests.test_asterion_dci_benchmark -v) >"$run_dir/train.log" 2>&1; then
         echo "ERROR: AF-200-H-003 benchmark orchestration failed; see $run_dir/train.log" >&2
         exit 1
     fi
 elif [ "$1" = "AF-200-H-004" ]; then
-    if ! uv run python -m unittest tests.test_asterion_dci_cli tests.test_asterion_dci_bridge -v >"$run_dir/train.log" 2>&1; then
+    if ! { uv run python -m unittest tests.test_asterion_dci_cli -v && (cd asterion && uv run python -m unittest tests.test_asterion_dci_bridge -v); } >"$run_dir/train.log" 2>&1; then
         echo "ERROR: AF-200-H-004 evaluation operator surface failed; see $run_dir/train.log" >&2
         exit 1
     fi
@@ -517,12 +517,12 @@ elif [ "$1" = "AF-210-H-001" ]; then
         exit 1
     fi
 elif [ "$1" = "AF-210-H-002" ]; then
-    if ! uv run python -m unittest tests.test_dci_research_capability tests.test_asterion_dci_bridge -v >"$run_dir/train.log" 2>&1; then
+    if ! (cd asterion && uv run python -m unittest tests.test_dci_research_capability tests.test_asterion_dci_bridge -v) >"$run_dir/train.log" 2>&1; then
         echo "ERROR: AF-210-H-002 Pi application dispatch failed; see $run_dir/train.log" >&2
         exit 1
     fi
 elif [ "$1" = "AF-210-H-003" ]; then
-    if ! uv run python -m unittest tests.test_builtin_dci_application tests.test_asterion_cli tests.test_distribution_boundaries -v >"$run_dir/train.log" 2>&1; then
+    if ! { uv run python -m unittest tests.test_builtin_dci_application tests.test_distribution_boundaries -v && (cd asterion && uv run python -m unittest tests.test_asterion_cli -v); } >"$run_dir/train.log" 2>&1; then
         echo "ERROR: AF-210-H-003 installed application projection failed; see $run_dir/train.log" >&2
         exit 1
     fi
@@ -553,7 +553,7 @@ elif [ "$1" = "AF-220-H-002" ]; then
         exit 1
     fi
 elif [ "$1" = "AF-220-H-003" ]; then
-    if ! uv run python -m unittest tests.test_asterion_dci_cli tests.test_asterion_dci_benchmark -v >"$run_dir/train.log" 2>&1; then
+    if ! { uv run python -m unittest tests.test_asterion_dci_cli -v && (cd asterion && uv run python -m unittest tests.test_asterion_dci_benchmark -v); } >"$run_dir/train.log" 2>&1; then
         echo "ERROR: AF-220-H-003 package and batch propagation failed; see $run_dir/train.log" >&2
         exit 1
     fi

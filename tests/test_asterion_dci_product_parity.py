@@ -15,6 +15,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
 import pyarrow as pa
 import pyarrow.parquet as pq
 import dci.benchmark.pi_rpc_runner as source_runner

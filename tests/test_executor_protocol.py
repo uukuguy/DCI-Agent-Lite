@@ -4,10 +4,12 @@ import json
 import unittest
 from pathlib import Path
 
+from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
 from dci.framework.executor_protocol import ExecutorProtocolError, validate_message
 
 
-FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures/executor/v1"
+ROOT = Path(__file__).resolve().parents[1]
+FIXTURE_DIR = ROOT / "asterion/tests/fixtures/executor/v1"
 
 
 class ExecutorProtocolTests(unittest.TestCase):

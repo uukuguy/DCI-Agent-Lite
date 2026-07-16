@@ -11,6 +11,7 @@ from pathlib import Path
 from types import ModuleType
 from unittest.mock import patch
 
+from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
 from dci.benchmark.judge import JudgeConfig
 
 

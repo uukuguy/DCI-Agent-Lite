@@ -9,6 +9,7 @@ import urllib.error
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
 import dci.benchmark.judge as judge_module
 from dci.benchmark.judge import (
     JudgeConfig,
