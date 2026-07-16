@@ -28,6 +28,8 @@ from asterion.runtime.protocol import MAX_DEADLINE_MS, validate_event_stream
 
 
 class FixturePiClient:
+    last_kwargs: dict[str, object] = {}
+    get_entries_calls = 0
     events = [
         {"type": "response", "id": "py-1", "success": True},
         {
@@ -37,8 +39,10 @@ class FixturePiClient:
         {"type": "agent_end"},
     ]
 
-    def __init__(self, **_: object) -> None:
+    def __init__(self, **kwargs: object) -> None:
         self.stderr_chunks = ["private stderr"]
+        type(self).last_kwargs = dict(kwargs)
+        type(self).get_entries_calls = 0
 
     def start(self) -> None:
         return None
@@ -53,6 +57,51 @@ class FixturePiClient:
         for event in self.events:
             on_event(event)
         return "answer"
+
+    def get_entries(self) -> tuple[dict[str, object], ...]:
+        type(self).get_entries_calls += 1
+        profile = self.last_kwargs.get("context_profile")
+        contract = self.last_kwargs.get("context_contract")
+        state = {
+            "accumulatedOriginalToolCharacters": 0,
+            "truncatedResults": 0,
+            "compactionCount": 0,
+            "compactionPending": False,
+            "summaryAttempts": 0,
+            "summarySuccesses": 0,
+            "consecutiveSummaryFailures": 0,
+            "summarySuppressed": False,
+        }
+        return (
+            {
+                "id": "entry-1",
+                "parentId": None,
+                "timestamp": "2026-07-17T00:00:00.000Z",
+                "type": "custom",
+                "customType": "dci-context-telemetry",
+                "data": {
+                    "schema": "dci.context-telemetry/v1",
+                    "event": "startup",
+                    "profile": profile,
+                    "contractVersion": contract,
+                    "extensionVersion": "0.1.0",
+                    **state,
+                },
+            },
+            {
+                "id": "entry-2",
+                "parentId": "entry-1",
+                "timestamp": "2026-07-17T00:00:00.001Z",
+                "type": "custom",
+                "customType": "dci-context-state",
+                "data": {
+                    "schema": "dci.context-state/v1",
+                    "profile": profile,
+                    "contractVersion": contract,
+                    "state": state,
+                },
+            },
+        )
 
 
 class FailingPiClient(FixturePiClient):
@@ -1070,7 +1119,7 @@ class AsterionDciRunTests(unittest.TestCase):
             )
             self.assertIsNone(full["pending_message"])
 
-    def test_runtime_context_request_is_recorded_without_fabricating_a_pi_flag(
+    def test_runtime_context_request_reserves_extension_transport_flags(
         self,
     ) -> None:
         request = DciRunRequest(
@@ -1082,6 +1131,15 @@ class AsterionDciRunTests(unittest.TestCase):
         )
 
         self.assertEqual(_pi_extra_args(request), ("--thinking", "high"))
+        for value in (
+            "--extension /tmp/foreign.ts",
+            "--dci-context-profile level0",
+            "--dci-context-contract=fake",
+        ):
+            with self.subTest(value=value), self.assertRaisesRegex(
+                ValueError, "reserved context extension argument"
+            ):
+                validate_dci_run_request(replace(request, extra_args=(value,)))
 
     def test_runtime_context_request_resolves_the_canonical_profile(self) -> None:
         request = DciRunRequest(
@@ -1093,6 +1151,29 @@ class AsterionDciRunTests(unittest.TestCase):
 
         self.assertTrue(hasattr(request, "context_profile"))
         self.assertEqual(request.context_profile.name, "level3")
+
+    def test_runtime_context_request_loads_packaged_extension_and_reads_entries(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            paths = resolve_dci_paths(root)
+            request = DciRunRequest(
+                run_id="run-1",
+                question="question",
+                cwd=root,
+                runtime_context_level="level3",
+            )
+            with patch("asterion.dci.run.PiRpcClient", FixturePiClient):
+                run_pi_research(paths, request)
+
+        kwargs = FixturePiClient.last_kwargs
+        self.assertEqual(kwargs["context_profile"], "level3")
+        self.assertEqual(kwargs["context_contract"], "dci.context-profile/v1")
+        extension_path = kwargs["extension_path"]
+        self.assertIsInstance(extension_path, Path)
+        self.assertEqual(extension_path.name, "dci-context-extension.ts")
+        self.assertEqual(FixturePiClient.get_entries_calls, 1)
 
     def test_runtime_context_request_rejects_unknown_profile(self) -> None:
         request = DciRunRequest(

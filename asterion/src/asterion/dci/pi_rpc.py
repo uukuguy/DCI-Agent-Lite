@@ -20,6 +20,27 @@ _STDOUT_EOF = object()
 
 
 _NODE_FAILURE = "compatible Node runtime is unavailable (Node >=20 required)"
+_DCI_ENTRY_KEYS = {"id", "parentId", "timestamp", "type", "customType", "data"}
+_DCI_STATE_KEYS = {
+    "accumulatedOriginalToolCharacters",
+    "truncatedResults",
+    "compactionCount",
+    "compactionPending",
+    "summaryAttempts",
+    "summarySuccesses",
+    "consecutiveSummaryFailures",
+    "summarySuppressed",
+}
+_DCI_NUMERIC_STATE_KEYS = _DCI_STATE_KEYS - {
+    "compactionPending",
+    "summarySuppressed",
+}
+_DCI_CUMULATIVE_KEYS = {
+    "truncatedResults",
+    "compactionCount",
+    "summaryAttempts",
+    "summarySuccesses",
+}
 
 
 def _node_major(version: str) -> int | None:
@@ -262,6 +283,99 @@ def run_pi_terminal(
     return result.returncode
 
 
+def _validated_policy_state(value: object) -> dict[str, Any]:
+    if not isinstance(value, dict) or set(value) != _DCI_STATE_KEYS:
+        raise RuntimeError("Pi RPC get_entries shape is invalid")
+    for key in _DCI_NUMERIC_STATE_KEYS:
+        item = value.get(key)
+        if isinstance(item, bool) or not isinstance(item, int) or item < 0:
+            raise RuntimeError("Pi RPC get_entries shape is invalid")
+    if not all(
+        isinstance(value.get(key), bool)
+        for key in ("compactionPending", "summarySuppressed")
+    ):
+        raise RuntimeError("Pi RPC get_entries shape is invalid")
+    return dict(value)
+
+
+def _validated_dci_entries(values: list[object]) -> tuple[dict[str, Any], ...]:
+    validated: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    latest_counters: dict[str, int] = {}
+    for value in values:
+        if not isinstance(value, dict):
+            continue
+        custom_type = value.get("customType")
+        if custom_type not in {"dci-context-telemetry", "dci-context-state"}:
+            continue
+        if set(value) != _DCI_ENTRY_KEYS or value.get("type") != "custom":
+            raise RuntimeError("Pi RPC get_entries shape is invalid")
+        entry_id = value.get("id")
+        if (
+            not isinstance(entry_id, str)
+            or not entry_id
+            or entry_id in seen_ids
+            or not isinstance(value.get("timestamp"), str)
+            or not value["timestamp"]
+            or not (
+                value.get("parentId") is None
+                or isinstance(value.get("parentId"), str)
+            )
+        ):
+            raise RuntimeError("Pi RPC get_entries shape is invalid")
+        data = value.get("data")
+        if not isinstance(data, dict):
+            raise RuntimeError("Pi RPC get_entries shape is invalid")
+        if custom_type == "dci-context-state":
+            if set(data) != {"schema", "profile", "contractVersion", "state"}:
+                raise RuntimeError("Pi RPC get_entries shape is invalid")
+            if data.get("schema") != "dci.context-state/v1":
+                raise RuntimeError("Pi RPC get_entries shape is invalid")
+            state = _validated_policy_state(data.get("state"))
+        else:
+            expected = _DCI_STATE_KEYS | {
+                "schema",
+                "event",
+                "profile",
+                "contractVersion",
+                "extensionVersion",
+            }
+            if set(data) != expected or data.get("schema") != "dci.context-telemetry/v1":
+                raise RuntimeError("Pi RPC get_entries shape is invalid")
+            state = _validated_policy_state(
+                {key: data[key] for key in _DCI_STATE_KEYS}
+            )
+            for key in _DCI_CUMULATIVE_KEYS:
+                current = state[key]
+                prior = latest_counters.get(key, 0)
+                if not isinstance(current, int) or current < prior:
+                    raise RuntimeError("Pi RPC get_entries shape is invalid")
+                latest_counters[key] = current
+        if (
+            data.get("profile") not in {
+                "level0",
+                "level1",
+                "level2",
+                "level3",
+                "level4",
+            }
+            or data.get("contractVersion") != "dci.context-profile/v1"
+            or (
+                custom_type == "dci-context-telemetry"
+                and (
+                    not isinstance(data.get("event"), str)
+                    or not data["event"]
+                    or not isinstance(data.get("extensionVersion"), str)
+                    or not data["extensionVersion"]
+                )
+            )
+        ):
+            raise RuntimeError("Pi RPC get_entries shape is invalid")
+        seen_ids.add(entry_id)
+        validated.append(dict(value))
+    return tuple(validated)
+
+
 class PiRpcClient:
     """Synchronous Pi JSONL-RPC lifecycle copied into the Asterion product boundary."""
 
@@ -283,7 +397,24 @@ class PiRpcClient:
         node_max_old_space_size_mb: int | None,
         stream_text: bool = True,
         inherited_fds: tuple[int, ...] = (),
+        extension_path: Path | None = None,
+        context_profile: str | None = None,
+        context_contract: str | None = None,
     ) -> None:
+        context_identity = (extension_path, context_profile, context_contract)
+        if any(value is not None for value in context_identity) and not all(
+            value is not None for value in context_identity
+        ):
+            raise ValueError("Pi context extension identity is invalid")
+        if extension_path is not None and (
+            not isinstance(extension_path, Path) or not extension_path.is_absolute()
+        ):
+            raise ValueError("Pi context extension identity is invalid")
+        if any(
+            value is not None and (not isinstance(value, str) or not value)
+            for value in (context_profile, context_contract)
+        ):
+            raise ValueError("Pi context extension identity is invalid")
         self.package_dir = Path(package_dir)
         self.cwd = Path(cwd)
         self.agent_dir = Path(agent_dir)
@@ -299,6 +430,9 @@ class PiRpcClient:
         self.node_max_old_space_size_mb = node_max_old_space_size_mb
         self.stream_text = stream_text
         self.inherited_fds = tuple(inherited_fds)
+        self.extension_path = extension_path
+        self.context_profile = context_profile
+        self.context_contract = context_contract
         self.proc: subprocess.Popen[bytes] | None = None
         self.command: list[str] | None = None
         self.stderr_chunks: list[str] = []
@@ -308,6 +442,19 @@ class PiRpcClient:
         self._request_id = 0
 
     def _build_command(self, *, node_bin: str | None = None) -> list[str]:
+        context_args: list[str] = []
+        if self.extension_path is not None:
+            assert self.context_profile is not None and self.context_contract is not None
+            context_args.extend(
+                [
+                    "--extension",
+                    str(self.extension_path),
+                    "--dci-context-profile",
+                    self.context_profile,
+                    "--dci-context-contract",
+                    self.context_contract,
+                ]
+            )
         return build_pi_command(
             package_dir=self.package_dir,
             mode="rpc",
@@ -317,7 +464,11 @@ class PiRpcClient:
             no_session=not self.keep_session,
             system_prompt_file=self.system_prompt_file,
             append_system_prompt_file=self.append_system_prompt_file,
-            extra_args=[*expand_extra_args(self.extra_args), *self.literal_extra_args],
+            extra_args=[
+                *expand_extra_args(self.extra_args),
+                *self.literal_extra_args,
+                *context_args,
+            ],
             node_bin=node_bin,
         )
 
@@ -447,6 +598,37 @@ class PiRpcClient:
                 ):
                     raise RuntimeError("Pi RPC get_state shape is invalid")
             return state
+
+    def get_entries(
+        self, *, timeout_seconds: float = 10.0
+    ) -> tuple[dict[str, Any], ...]:
+        """Return only closed, body-free DCI extension entries from Pi."""
+
+        request_id = self._next_id()
+        self._send({"id": request_id, "type": "get_entries"})
+        deadline = time.monotonic() + timeout_seconds
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise RuntimeError("Pi RPC get_entries timed out")
+            response = self._read_json_line(timeout_seconds=remaining)
+            if response.get("type") != "response" or response.get("id") != request_id:
+                continue
+            if (
+                response.get("command") != "get_entries"
+                or response.get("success") is not True
+            ):
+                raise RuntimeError("Pi RPC get_entries failed")
+            data = response.get("data")
+            if not isinstance(data, dict) or set(data) != {"entries", "leafId"}:
+                raise RuntimeError("Pi RPC get_entries shape is invalid")
+            entries = data.get("entries")
+            leaf_id = data.get("leafId")
+            if not isinstance(entries, list) or not (
+                leaf_id is None or isinstance(leaf_id, str)
+            ):
+                raise RuntimeError("Pi RPC get_entries shape is invalid")
+            return _validated_dci_entries(entries)
 
     def prompt_and_wait(
         self,

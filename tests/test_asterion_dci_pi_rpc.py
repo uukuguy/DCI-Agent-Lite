@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import json
 import os
 import subprocess
 import tempfile
@@ -17,6 +18,7 @@ from asterion.dci.pi_rpc import (
     run_pi_terminal,
 )
 from asterion.dci.config import DciPaths, DciPiPaths
+from asterion.dci.context_extension import resolve_context_extension
 from asterion.dci.system_prompt import render_pi_system_prompt
 
 
@@ -27,6 +29,9 @@ def make_client(
     node_max_old_space_size_mb: int | None = None,
     extra_args: tuple[str, ...] = ("--thinking high",),
     literal_extra_args: tuple[str, ...] = (),
+    extension_path: Path | None = None,
+    context_profile: str | None = None,
+    context_contract: str | None = None,
 ) -> PiRpcClient:
     return PiRpcClient(
         package_dir=Path("pi/packages/coding-agent"),
@@ -42,10 +47,65 @@ def make_client(
         literal_extra_args=literal_extra_args,
         keep_session=keep_session,
         node_max_old_space_size_mb=node_max_old_space_size_mb,
+        extension_path=extension_path,
+        context_profile=context_profile,
+        context_contract=context_contract,
     )
 
 
 class PiRpcCommandTests(unittest.TestCase):
+    def test_real_pi_loader_runs_packaged_context_hooks_without_checkout_writes(
+        self,
+    ) -> None:
+        root = Path(__file__).resolve().parents[1]
+        pi = root / "pi"
+        loader = pi / "packages/coding-agent/dist/core/extensions/loader.js"
+        harness = root / "tests/fixtures/pi-context-extension-harness.mjs"
+        before = subprocess.run(
+            ["git", "status", "--porcelain=v1", "--untracked-files=all"],
+            cwd=pi,
+            text=True,
+            capture_output=True,
+            check=True,
+        ).stdout
+        with resolve_context_extension() as extension:
+            completed = subprocess.run(
+                ["node", str(harness), str(loader), str(extension.path), str(root)],
+                cwd=root,
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+        after = subprocess.run(
+            ["git", "status", "--porcelain=v1", "--untracked-files=all"],
+            cwd=pi,
+            text=True,
+            capture_output=True,
+            check=True,
+        ).stdout
+
+        self.assertEqual(after, before)
+        result = json.loads(completed.stdout)
+        self.assertEqual(
+            {
+                profile: (value["toolCharacters"], value["retainedUsers"])
+                for profile, value in result.items()
+            },
+            {
+                "level0": (240_010, 13),
+                "level1": (50_000, 13),
+                "level2": (20_000, 13),
+                "level3": (20_000, 12),
+                "level4": (20_000, 12),
+            },
+        )
+        for value in result.values():
+            self.assertEqual(
+                value["customTypes"],
+                ["dci-context-state", "dci-context-telemetry"],
+            )
+        self.assertNotIn("SENTINEL", completed.stdout)
+
     def test_node_resolution_accepts_path_node_20_before_nvm(self) -> None:
         with (
             patch("asterion.dci.pi_rpc.shutil.which", return_value="/path/node"),
@@ -410,8 +470,167 @@ class PiRpcCommandTests(unittest.TestCase):
         self.assertEqual(command.count("--model"), 1)
         self.assertEqual(command.count("--tools"), 1)
 
+    def test_context_extension_argv_is_literal_closed_and_optional(self) -> None:
+        extension = Path("/policy dir/extension; echo forbidden.ts")
+        client = make_client(
+            extension_path=extension,
+            context_profile="level3",
+            context_contract="dci.context-profile/v1",
+        )
+        with patch("asterion.dci.pi_rpc.ensure_built_pi_cli") as built:
+            built.return_value = Path("/pi/dist/cli.js")
+            command = client._build_command(node_bin="/node")
+
+        self.assertEqual(
+            command[-6:],
+            [
+                "--extension",
+                str(extension),
+                "--dci-context-profile",
+                "level3",
+                "--dci-context-contract",
+                "dci.context-profile/v1",
+            ],
+        )
+        self.assertEqual(command.count("--extension"), 1)
+
+        plain = make_client()
+        with patch("asterion.dci.pi_rpc.ensure_built_pi_cli") as built:
+            built.return_value = Path("/pi/dist/cli.js")
+            plain_command = plain._build_command(node_bin="/node")
+        self.assertNotIn("--extension", plain_command)
+        self.assertNotIn("--dci-context-profile", plain_command)
+
+    def test_context_extension_constructor_rejects_partial_identity(self) -> None:
+        for values in (
+            {"extension_path": Path("/extension.ts")},
+            {"context_profile": "level3"},
+            {"context_contract": "dci.context-profile/v1"},
+        ):
+            with self.subTest(values=values), self.assertRaisesRegex(
+                ValueError, "context extension identity"
+            ):
+                make_client(**values)
+
 
 class PiRpcLifecycleTests(unittest.TestCase):
+    def test_get_entries_returns_only_valid_body_free_dci_entries(self) -> None:
+        client = make_client()
+        state = {
+            "accumulatedOriginalToolCharacters": 20,
+            "truncatedResults": 1,
+            "compactionCount": 0,
+            "compactionPending": False,
+            "summaryAttempts": 0,
+            "summarySuccesses": 0,
+            "consecutiveSummaryFailures": 0,
+            "summarySuppressed": False,
+        }
+        wrapper = {
+            "id": "entry-1",
+            "parentId": None,
+            "timestamp": "2026-07-17T00:00:00.000Z",
+            "type": "custom",
+            "customType": "dci-context-telemetry",
+            "data": {
+                "schema": "dci.context-telemetry/v1",
+                "event": "startup",
+                "profile": "level3",
+                "contractVersion": "dci.context-profile/v1",
+                "extensionVersion": "0.1.0",
+                **state,
+            },
+        }
+        state_wrapper = {
+            **wrapper,
+            "id": "entry-2",
+            "parentId": "entry-1",
+            "customType": "dci-context-state",
+            "data": {
+                "schema": "dci.context-state/v1",
+                "profile": "level3",
+                "contractVersion": "dci.context-profile/v1",
+                "state": state,
+            },
+        }
+        events = [
+            {"type": "turn_end"},
+            {
+                "id": "py-1",
+                "type": "response",
+                "command": "get_entries",
+                "success": True,
+                "data": {
+                    "entries": [
+                        {"type": "message", "message": {"content": "PRIVATE"}},
+                        wrapper,
+                        state_wrapper,
+                    ],
+                    "leafId": "entry-2",
+                },
+            },
+        ]
+        with (
+            patch.object(client, "_send") as send,
+            patch.object(client, "_read_json_line", side_effect=events),
+        ):
+            entries = client.get_entries()
+
+        send.assert_called_once_with({"id": "py-1", "type": "get_entries"})
+        self.assertEqual(entries, (wrapper, state_wrapper))
+        self.assertNotIn("PRIVATE", str(entries))
+
+    def test_get_entries_rejects_unknown_content_or_duplicate_ids_safely(self) -> None:
+        invalid_entries = (
+            [
+                {
+                    "id": "entry-1",
+                    "parentId": None,
+                    "timestamp": "now",
+                    "type": "custom",
+                    "customType": "dci-context-telemetry",
+                    "data": {"schema": "unknown", "secret": "PRIVATE-BODY"},
+                }
+            ],
+            [
+                {
+                    "id": "entry-1",
+                    "parentId": None,
+                    "timestamp": "now",
+                    "type": "custom",
+                    "customType": "dci-context-state",
+                    "data": {},
+                },
+                {
+                    "id": "entry-1",
+                    "parentId": None,
+                    "timestamp": "now",
+                    "type": "custom",
+                    "customType": "dci-context-state",
+                    "data": {},
+                },
+            ],
+        )
+        for entries in invalid_entries:
+            client = make_client()
+            response = {
+                "id": "py-1",
+                "type": "response",
+                "command": "get_entries",
+                "success": True,
+                "data": {"entries": entries, "leafId": None},
+            }
+            with (
+                self.subTest(entries=entries),
+                patch.object(client, "_send"),
+                patch.object(client, "_read_json_line", return_value=response),
+                self.assertRaisesRegex(
+                    RuntimeError, "get_entries shape is invalid"
+                ) as caught,
+            ):
+                client.get_entries()
+            self.assertNotIn("PRIVATE-BODY", str(caught.exception))
+
     def test_prompt_cancellation_sends_abort_before_returning(self) -> None:
         client = make_client()
         cancelled = threading.Event()

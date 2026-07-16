@@ -5,12 +5,13 @@ from __future__ import annotations
 import math
 import sys
 import threading
+from contextlib import ExitStack
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from asterion.dci.config import DciPaths
-from asterion.dci.pi_rpc import PiRpcClient
+from asterion.dci.pi_rpc import PiRpcClient, expand_extra_args
 from asterion.dci.provenance import format_pi_revision_warning
 from asterion.runtime.host import RunEvent
 
@@ -128,6 +129,22 @@ def validate_dci_run_request(
         not isinstance(value, str) or not value for value in request.extra_args
     ):
         raise ValueError("DCI run request is invalid")
+    if request.context_profile is not None:
+        reserved = (
+            "--extension",
+            "--dci-context-profile",
+            "--dci-context-contract",
+        )
+        try:
+            expanded_extra_args = expand_extra_args(request.extra_args)
+        except ValueError:
+            raise ValueError("DCI run request is invalid") from None
+        if any(
+            token == flag or token.startswith(f"{flag}=")
+            for token in expanded_extra_args
+            for flag in reserved
+        ):
+            raise ValueError("DCI reserved context extension argument is invalid")
     for value in (
         request.cwd,
         request.system_prompt_file,
@@ -362,6 +379,26 @@ def run_pi_research(
         else paths.output_root / request.run_id
     )
     destination = destination.absolute()
+    resource_stack = ExitStack()
+    context_extension = None
+    context_profile = request.context_profile
+    if context_profile is not None:
+        from asterion.dci.context_extension import (
+            ContextExtensionError,
+            resolve_context_extension,
+        )
+
+        try:
+            context_extension = resource_stack.enter_context(
+                resolve_context_extension()
+            )
+        except ContextExtensionError:
+            resource_stack.close()
+            raise DciRunError(
+                "DCI resume validation failed"
+                if request.resume
+                else "DCI context extension is invalid"
+            ) from None
     try:
         recorder = DciRunRecorder(
             output_dir=destination,
@@ -372,9 +409,11 @@ def run_pi_research(
             directory_fd=_output_directory_fd,
         )
     except DciArtifactError as exc:
+        resource_stack.close()
         message = "DCI resume validation failed" if request.resume else str(exc)
         raise DciRunError(message) from None
     except ValueError:
+        resource_stack.close()
         message = (
             "DCI resume validation failed"
             if request.resume
@@ -412,6 +451,17 @@ def run_pi_research(
             node_max_old_space_size_mb=request.node_max_old_space_size_mb,
             stream_text=request.stream_text,
             inherited_fds=_resource_fds,
+            extension_path=(
+                context_extension.path if context_extension is not None else None
+            ),
+            context_profile=(
+                context_profile.name if context_profile is not None else None
+            ),
+            context_contract=(
+                context_profile.contract_version
+                if context_profile is not None
+                else None
+            ),
         )
         client.start()
         final_text = client.prompt_and_wait(
@@ -421,6 +471,11 @@ def run_pi_research(
             on_event=recorder.record_event,
             cancel_event=_cancel_event,
         )
+        if context_profile is not None:
+            assert context_extension is not None
+            _validate_context_entries(
+                client.get_entries(), context_profile, context_extension.version
+            )
         stderr_getter = getattr(client, "get_stderr", None)
         stderr_text = stderr_getter() if callable(stderr_getter) else ""
         normalized_events = recorder.finalize(
@@ -450,7 +505,10 @@ def run_pi_research(
             if client is not None:
                 client.stop()
         finally:
-            recorder.close()
+            try:
+                recorder.close()
+            finally:
+                resource_stack.close()
 
 
 def _pi_extra_args(request: DciRunRequest) -> tuple[str, ...]:
@@ -460,6 +518,36 @@ def _pi_extra_args(request: DciRunRequest) -> tuple[str, ...]:
     if request.thinking_level:
         values.extend(["--thinking", request.thinking_level])
     return tuple(values)
+
+
+def _validate_context_entries(
+    entries: tuple[dict[str, object], ...],
+    profile: DciContextProfile,
+    extension_version: str,
+) -> None:
+    telemetry_count = 0
+    state_count = 0
+    startup_count = 0
+    for entry in entries:
+        data = entry.get("data")
+        if not isinstance(data, dict):
+            raise RuntimeError("Pi context extension evidence is invalid")
+        if (
+            data.get("profile") != profile.name
+            or data.get("contractVersion") != profile.contract_version
+        ):
+            raise RuntimeError("Pi context extension evidence is invalid")
+        if entry.get("customType") == "dci-context-telemetry":
+            telemetry_count += 1
+            startup_count += data.get("event") == "startup"
+            if data.get("extensionVersion") != extension_version:
+                raise RuntimeError("Pi context extension evidence is invalid")
+        elif entry.get("customType") == "dci-context-state":
+            state_count += 1
+        else:
+            raise RuntimeError("Pi context extension evidence is invalid")
+    if telemetry_count == 0 or state_count == 0 or startup_count != 1:
+        raise RuntimeError("Pi context extension evidence is invalid")
 
 
 def _required_string(state: dict[str, object], name: str) -> str:
