@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-16 21:41 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-16 21:47 +0800. **Session remains active — not a final handoff.**
 
 Active work package: none
 
@@ -12,8 +12,8 @@ Active work package: none
 
 ## Committed / unpushed state
 
-- AF-300 Tasks 1–5 and review fixes are committed through `6fd4a0b`.
-- Task 6 implementation and terminal governance are ready for the atomic closure commit; its hash will be appended to JOURNAL in a separate state commit.
+- AF-300 Tasks 1–5 and review fixes are committed through `6fd4a0b`; Task 6 implementation and terminal governance are committed at `08eff1c`.
+- This separate state-only commit records the closure hash and refreshes the recovery checkpoint. After it lands, `main` is 280 commits ahead of `origin/main` with no intended tracked work remaining.
 - The Task 0 local-only review, external `pi/`, credentials, datasets, outputs, generated artifacts, and immutable provider-backed acceptance record remain untouched.
 
 ## Next concrete action

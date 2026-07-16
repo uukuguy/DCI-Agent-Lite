@@ -748,3 +748,4 @@
 - 2026-07-16 AF-300 provider-free parity passes 8/8, 533/533, 12/12, 6/6, with zero provider-backed operations.
 - 2026-07-16 Isolated Asterion wheel installs both CLIs/providers, includes four resource groups, and excludes repository-only content.
 - 2026-07-16 AF-300 closure passes 90 project, 1230 root, 11 TypeScript, and 19 Rust tests plus static gates.
+- 2026-07-16 AF-300 closes with extraction-ready root, provider-free parity, isolated wheel, and terminal governance. [08eff1c]
