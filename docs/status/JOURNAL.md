@@ -760,3 +760,5 @@
 - 2026-07-16 AF-300 command remediation governance reopens before documentation TDD. [69e7802]
 - 2026-07-16 Command RED proves standalone `provider-free` is outside the four legal verification levels; `acceptance` is the provider-free profile.
 - 2026-07-16 Command GREEN passes 44 focused docs/distribution/CLI tests, parser/profile dry probe, compile, Ruff, scope, and diff.
+- 2026-07-16 Standalone extraction now uses the legal provider-free `acceptance` verification profile. [147d1d7]
+- 2026-07-16 Final command closure passes 25 docs/governance tests, parser/profile dry checks, compile, Ruff, complete/null scope, and diff.

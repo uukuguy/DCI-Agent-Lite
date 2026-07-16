@@ -1,30 +1,29 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-16 22:16 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-16 22:18 +0800. **Session remains active — not a final handoff.**
 
-Active work package: AF-300
-
-Live state: AF-300 final command remediation in_progress
+Active work package: none
 
 ## TL;DR
 
-- AF-300 is reopened only to correct the standalone guide's invalid `--level provider-free` command to the real provider-free acceptance profile.
-- Prior final-review remediation, relocation, parity, wheel, and immutable acceptance evidence remain unchanged.
-- No provider/Judge operation, dataset, production code, or external boundary is authorized.
+- AF-300 final command remediation is complete: the standalone release gate now uses legal `--level acceptance`, the provider-free profile implemented by the DCI product.
+- Exact argv, focused documentation/distribution/CLI tests, and a parser/profile dry probe prevent recurrence.
+- Prior remediation, relocation, parity, wheel, and immutable acceptance evidence remain unchanged; no provider/Judge operation or dataset ran.
 
 ## Committed / unpushed state
 
 - AF-300 Tasks 1–5 and review fixes are committed through `6fd4a0b`; Task 6 implementation and terminal governance are committed at `08eff1c`.
 - Review remediation governance reopened at `6ce0db5`; documentation/tests landed at `d5b5cd6`; terminal governance closed at `c1625a5`.
+- Final command governance reopened at `69e7802`; the standalone level repair landed at `147d1d7`; the next commit closes terminal governance again.
 - The Task 0 local-only review, external `pi/`, credentials, datasets, outputs, generated artifacts, and immutable provider-backed acceptance record remain untouched.
 
 ## Next concrete action
 
-Add a RED documentation contract for legal standalone verification levels, then minimally repair the guide and close AF-300 again.
+Review the completed framework/worklist state and choose whether to scope a successor package; do not begin standalone release, full-dataset, or plugin work without that governance change.
 
 ## Open questions
 
-- None for this bounded command remediation.
+- Which framework-convergence objective should become the next explicitly designed work package?
 
 ## Ruled-out paths
 
