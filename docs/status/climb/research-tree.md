@@ -1,19 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (86 runs).
+> Deterministic summary generated from tracked state (88 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 87
-- Next hypothesis: AF-310-H-003
+- Last cycle: 89
+- Next hypothesis: AF-310-H-004
 - In flight: none
-- Next action: Start AF-310-H-003.
+- Next action: Start AF-310-H-004.
 
 ## Active hypotheses
 
-- **AF-310-H-003** (pending, rank 0.80): Prove packaged extension integrity, literal Pi transport, immutable resume identity, and isolated-wheel availability.
 - **AF-310-H-004** (pending, rank 0.70): Prove run, benchmark, resume, installed application, and wheel expose one content-free context-policy implementation.
 - **AF-310-H-005** (pending, rank 0.60): Force and retain credential-clean bounded real Pi evidence for L3 compaction and L4 summarization at the final extension digest.
 
@@ -107,6 +106,8 @@
 | 20260715-070106-dci-climb-af250h005 | AF-250-H-005 | 4 | confirmed 4/4 |
 | 20260717-054153-dci-climb-af310h001 | AF-310-H-001 | 4 | confirmed 4/4 |
 | 20260717-055113-dci-climb-af310h002 | AF-310-H-002 | 4 | confirmed 4/4 |
+| 20260717-061612-dci-climb-af310h003 | AF-310-H-003 | 4 | confirmed 4/4 |
+| 20260717-061648-dci-climb-af310h003 | AF-310-H-003 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

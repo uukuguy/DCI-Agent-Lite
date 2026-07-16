@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
+import re
+import stat
 from pathlib import Path
 from typing import Protocol
 
@@ -44,6 +47,10 @@ def project_dci_run(result: DciRunResult) -> PackageExecutionResult:
     }
     if _has_valid_evaluation(result.output_dir):
         value["evaluation_artifact_uri"] = "eval_result.json"
+    context_policy = _context_policy_projection(result.output_dir)
+    if context_policy is not None:
+        value["context_policy_artifact_uri"] = "context-policy.json"
+        value["context_policy"] = context_policy
     return PackageExecutionResult(
         events=(
             {"type": "research.completed", "payload": {"status": "completed"}},
@@ -64,3 +71,67 @@ def _has_valid_evaluation(output_dir: Path) -> bool:
     except (OSError, ValueError):
         return False
     return isinstance(value, dict) and isinstance(value.get("is_correct"), bool)
+
+
+def _context_policy_projection(output_dir: Path) -> dict[str, object] | None:
+    try:
+        state = json.loads((output_dir / "state.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(state, dict) or state.get("context_policy") is None:
+        return None
+    reference = state.get("context_policy")
+    if (
+        not isinstance(reference, dict)
+        or set(reference) != {"artifact", "sha256", "public_summary"}
+        or reference.get("artifact") != "context-policy.json"
+        or re.fullmatch(r"[0-9a-f]{64}", str(reference.get("sha256"))) is None
+    ):
+        raise ValueError("native DCI context policy is invalid")
+    path = output_dir / "context-policy.json"
+    try:
+        metadata = path.lstat()
+        raw = path.read_bytes()
+    except OSError as error:
+        raise ValueError("native DCI context policy is invalid") from error
+    if (
+        path.is_symlink()
+        or not stat.S_ISREG(metadata.st_mode)
+        or stat.S_IMODE(metadata.st_mode) != 0o600
+        or hashlib.sha256(raw).hexdigest() != reference["sha256"]
+    ):
+        raise ValueError("native DCI context policy is invalid")
+    summary = reference.get("public_summary")
+    expected = {
+        "schema",
+        "profile",
+        "extension_sha256",
+        "truncated_results",
+        "compactions",
+        "summary_attempts",
+        "summary_successes",
+        "summary_suppressed",
+    }
+    if (
+        not isinstance(summary, dict)
+        or set(summary) != expected
+        or summary.get("schema") != "dci.context-policy-evidence/v1"
+        or summary.get("profile")
+        not in {"level0", "level1", "level2", "level3", "level4"}
+        or re.fullmatch(r"[0-9a-f]{64}", str(summary.get("extension_sha256")))
+        is None
+        or any(
+            isinstance(summary.get(key), bool)
+            or not isinstance(summary.get(key), int)
+            or summary[key] < 0
+            for key in (
+                "truncated_results",
+                "compactions",
+                "summary_attempts",
+                "summary_successes",
+            )
+        )
+        or not isinstance(summary.get("summary_suppressed"), bool)
+    ):
+        raise ValueError("native DCI context policy is invalid")
+    return dict(summary)

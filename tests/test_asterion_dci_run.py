@@ -30,6 +30,7 @@ from asterion.runtime.protocol import MAX_DEADLINE_MS, validate_event_stream
 class FixturePiClient:
     last_kwargs: dict[str, object] = {}
     get_entries_calls = 0
+    last_since: str | None = None
     events = [
         {"type": "response", "id": "py-1", "success": True},
         {
@@ -58,8 +59,26 @@ class FixturePiClient:
             on_event(event)
         return "answer"
 
-    def get_entries(self) -> tuple[dict[str, object], ...]:
+    def probe_protocol(self, **_: object) -> dict[str, object]:
+        agent_dir = self.last_kwargs["agent_dir"]
+        assert isinstance(agent_dir, Path)
+        session_file = agent_dir / "sessions/session-fixture.jsonl"
+        session_file.parent.mkdir(parents=True, exist_ok=True)
+        session_file.touch(exist_ok=True)
+        return {
+            "sessionFile": str(session_file),
+            "sessionId": "session-fixture",
+            "isStreaming": False,
+            "isCompacting": False,
+            "messageCount": 0,
+            "pendingMessageCount": 0,
+        }
+
+    def get_entries(
+        self, *, since: str | None = None
+    ) -> tuple[dict[str, object], ...]:
         type(self).get_entries_calls += 1
+        type(self).last_since = since
         profile = self.last_kwargs.get("context_profile")
         contract = self.last_kwargs.get("context_contract")
         state = {
@@ -105,7 +124,8 @@ class FixturePiClient:
 
 
 class FailingPiClient(FixturePiClient):
-    def __init__(self, **_: object) -> None:
+    def __init__(self, **kwargs: object) -> None:
+        super().__init__(**kwargs)
         self.stderr_chunks = ["failure stderr"]
 
     def prompt_and_wait(self, _: str, **__: object) -> str:
@@ -1186,7 +1206,7 @@ class AsterionDciRunTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "context profile"):
             validate_dci_run_request(request)
 
-    def test_runtime_context_request_records_current_pi_capability_diagnostic(
+    def test_runtime_context_request_persists_effective_private_policy_evidence(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -1202,15 +1222,84 @@ class AsterionDciRunTests(unittest.TestCase):
                 result = run_pi_research(paths, request)
 
             state = json.loads((result.output_dir / "state.json").read_text())
+            policy_path = result.output_dir / "context-policy.json"
+            policy = json.loads(policy_path.read_text())
+            policy_mode = policy_path.stat().st_mode & 0o777
 
+        control = state["runtime_context_control"]
+        self.assertEqual(control["schema"], "dci.context-policy-identity/v1")
+        self.assertEqual(control["status"], "effective")
+        self.assertEqual(control["profile"], request.context_profile.identity_payload())
+        self.assertRegex(control["extension_sha256"], r"^[0-9a-f]{64}$")
+        self.assertEqual(control["extension_version"], "0.1.0")
+        self.assertEqual(policy["schema"], "dci.context-policy-evidence/v1")
+        self.assertEqual(policy["profile"], request.context_profile.identity_payload())
+        self.assertEqual(policy["extension_sha256"], control["extension_sha256"])
+        self.assertEqual(len(policy["attempts"]), 1)
+        self.assertEqual(policy["attempts"][0]["attempt"], 1)
+        self.assertEqual(policy["attempts"][0]["status"], "completed")
+        self.assertEqual(len(policy["attempts"][0]["telemetry"]), 1)
         self.assertEqual(
-            state["runtime_context_control"],
-            {
-                "effective_pi_control": None,
-                "requested_level": "level3",
-                "status": "unsupported",
-            },
+            policy["attempts"][0]["latest_state"]["schema"],
+            "dci.context-state/v1",
         )
+        summary = state["context_policy"]["public_summary"]
+        self.assertEqual(summary["profile"], "level3")
+        self.assertEqual(summary["truncated_results"], 0)
+        self.assertEqual(summary["compactions"], 0)
+        self.assertEqual(policy_mode, 0o600)
+        self.assertNotIn("question", json.dumps(policy))
+        self.assertNotIn("answer", json.dumps(policy))
+
+    def test_runtime_context_missing_entries_fails_before_success_finalization(
+        self,
+    ) -> None:
+        class MissingEntriesClient(FixturePiClient):
+            def get_entries(self) -> tuple[dict[str, object], ...]:
+                return ()
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            paths = resolve_dci_paths(root)
+            request = DciRunRequest(
+                run_id="run-1",
+                question="question",
+                cwd=root,
+                runtime_context_level="level3",
+            )
+            with patch("asterion.dci.run.PiRpcClient", MissingEntriesClient):
+                with self.assertRaisesRegex(DciRunError, "Pi execution failed"):
+                    run_pi_research(paths, request)
+            state = json.loads((paths.output_root / "run-1/state.json").read_text())
+
+        self.assertEqual(state["status"], "failed")
+        self.assertEqual(state["context_policy"]["public_summary"], None)
+
+    def test_resume_rejects_tampered_context_identity_before_client(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            paths = resolve_dci_paths(root)
+            output = root / "run"
+            request = DciRunRequest(
+                run_id="run-1",
+                question="question",
+                cwd=root,
+                runtime_context_level="level3",
+                keep_session=True,
+            )
+            with patch("asterion.dci.run.PiRpcClient", FailingPiClient):
+                with self.assertRaises(DciRunError):
+                    run_pi_research(paths, request, output_dir=output)
+            state_path = output / "state.json"
+            state = json.loads(state_path.read_text())
+            state["runtime_context_control"]["extension_sha256"] = "0" * 64
+            state_path.write_text(json.dumps(state))
+            resumed = replace(request, resume=True)
+
+            with patch("asterion.dci.run.PiRpcClient") as client:
+                with self.assertRaisesRegex(DciRunError, "resume validation failed"):
+                    run_pi_research(paths, resumed, output_dir=output)
+            client.assert_not_called()
 
     def test_runtime_options_map_to_native_pi_request(self) -> None:
         options = DciRuntimeOptions(
@@ -1346,6 +1435,50 @@ class AsterionDciRunTests(unittest.TestCase):
                 with self.assertRaisesRegex(DciRunError, "resume validation failed"):
                     run_pi_research(paths, changed, output_dir=output_dir)
             client.assert_not_called()
+
+    def test_context_policy_resume_keeps_independent_attempt_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            paths = resolve_dci_paths(root)
+            output_dir = root / "failed"
+            request = DciRunRequest(
+                run_id="run-1",
+                question="question",
+                cwd=root,
+                runtime_context_level="level4",
+                keep_session=True,
+            )
+            with patch("asterion.dci.run.PiRpcClient", FailingPiClient):
+                with self.assertRaises(DciRunError):
+                    run_pi_research(paths, request, output_dir=output_dir)
+            resumed = resume_request_from_output_dir(output_dir)
+            self.assertEqual(resumed.pi_session_id, "session-fixture")
+            self.assertEqual(
+                resumed.pi_session_file,
+                paths.pi.agent_dir / "sessions/session-fixture.jsonl",
+            )
+            with patch("asterion.dci.run.PiRpcClient", FixturePiClient):
+                run_pi_research(paths, resumed, output_dir=output_dir)
+            policy = json.loads((output_dir / "context-policy.json").read_text())
+
+        self.assertEqual(
+            [attempt["status"] for attempt in policy["attempts"]],
+            ["failed", "completed"],
+        )
+        self.assertEqual(
+            [attempt["attempt"] for attempt in policy["attempts"]], [1, 2]
+        )
+        self.assertTrue(
+            all(attempt["latest_state"] is not None for attempt in policy["attempts"])
+        )
+        self.assertTrue(
+            all(attempt["entries"] for attempt in policy["attempts"])
+        )
+        self.assertEqual(FixturePiClient.last_since, "entry-2")
+        self.assertEqual(
+            FixturePiClient.last_kwargs["session_file"],
+            paths.pi.agent_dir / "sessions/session-fixture.jsonl",
+        )
 
     def test_completed_run_writes_native_artifacts_and_protocol_projection(
         self,

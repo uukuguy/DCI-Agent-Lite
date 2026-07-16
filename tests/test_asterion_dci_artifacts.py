@@ -16,6 +16,8 @@ import fcntl
 
 import asterion.dci.artifacts as artifacts
 from asterion.dci.artifacts import (
+    DciContextPolicyEvidence,
+    DciContextTelemetry,
     DciConversationFeatures,
     DciRunLock,
     DciRunRecorder,
@@ -23,6 +25,7 @@ from asterion.dci.artifacts import (
     atomic_write_json,
 )
 from asterion.dci.config import resolve_dci_paths
+from asterion.dci.context_profiles import resolve_context_profile
 from asterion.dci.provenance import collect_pi_provenance, format_pi_revision_warning
 from asterion.dci.run import DciRunRequest
 from asterion.runtime.protocol import validate_event_stream
@@ -33,6 +36,51 @@ def request(root: Path) -> DciRunRequest:
 
 
 class AsterionDciArtifactTests(unittest.TestCase):
+    def test_context_policy_evidence_is_closed_and_body_free(self) -> None:
+        mapping = {
+            "schema": "dci.context-telemetry/v1",
+            "event": "session_compact",
+            "profile": "level4",
+            "contractVersion": "dci.context-profile/v1",
+            "extensionVersion": "0.1.0",
+            "accumulatedOriginalToolCharacters": 0,
+            "truncatedResults": 2,
+            "compactionCount": 1,
+            "compactionPending": False,
+            "summaryAttempts": 1,
+            "summarySuccesses": 1,
+            "consecutiveSummaryFailures": 0,
+            "summarySuppressed": False,
+        }
+        telemetry = DciContextTelemetry.from_mapping(mapping)
+        profile = resolve_context_profile("level4")
+        assert profile is not None
+        evidence = DciContextPolicyEvidence(
+            profile=profile,
+            extension_version="0.1.0",
+            extension_sha256="a" * 64,
+            telemetry=(telemetry,),
+        )
+
+        self.assertEqual(
+            evidence.public_summary(),
+            {
+                "schema": "dci.context-policy-evidence/v1",
+                "profile": "level4",
+                "extension_sha256": "a" * 64,
+                "truncated_results": 2,
+                "compactions": 1,
+                "summary_attempts": 1,
+                "summary_successes": 1,
+                "summary_suppressed": False,
+            },
+        )
+        for invalid in ({**mapping, "secret": "PRIVATE"}, {**mapping, "summaryAttempts": -1}):
+            with self.subTest(invalid=invalid), self.assertRaisesRegex(
+                RuntimeError, "context policy evidence is invalid"
+            ):
+                DciContextTelemetry.from_mapping(invalid)
+
     @staticmethod
     def _lock_payload(*, pid: int, owner_token: str) -> dict[str, object]:
         return {

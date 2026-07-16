@@ -400,6 +400,7 @@ class PiRpcClient:
         extension_path: Path | None = None,
         context_profile: str | None = None,
         context_contract: str | None = None,
+        session_file: Path | None = None,
     ) -> None:
         context_identity = (extension_path, context_profile, context_contract)
         if any(value is not None for value in context_identity) and not all(
@@ -415,6 +416,10 @@ class PiRpcClient:
             for value in (context_profile, context_contract)
         ):
             raise ValueError("Pi context extension identity is invalid")
+        if session_file is not None and (
+            not isinstance(session_file, Path) or not session_file.is_absolute()
+        ):
+            raise ValueError("Pi session identity is invalid")
         self.package_dir = Path(package_dir)
         self.cwd = Path(cwd)
         self.agent_dir = Path(agent_dir)
@@ -433,6 +438,7 @@ class PiRpcClient:
         self.extension_path = extension_path
         self.context_profile = context_profile
         self.context_contract = context_contract
+        self.session_file = session_file
         self.proc: subprocess.Popen[bytes] | None = None
         self.command: list[str] | None = None
         self.stderr_chunks: list[str] = []
@@ -455,6 +461,8 @@ class PiRpcClient:
                     self.context_contract,
                 ]
             )
+        if self.session_file is not None:
+            context_args.extend(["--session", str(self.session_file)])
         return build_pi_command(
             package_dir=self.package_dir,
             mode="rpc",
@@ -600,12 +608,17 @@ class PiRpcClient:
             return state
 
     def get_entries(
-        self, *, timeout_seconds: float = 10.0
+        self, *, since: str | None = None, timeout_seconds: float = 10.0
     ) -> tuple[dict[str, Any], ...]:
         """Return only closed, body-free DCI extension entries from Pi."""
 
+        if since is not None and (not isinstance(since, str) or not since):
+            raise ValueError("Pi RPC get_entries cursor is invalid")
         request_id = self._next_id()
-        self._send({"id": request_id, "type": "get_entries"})
+        request: dict[str, Any] = {"id": request_id, "type": "get_entries"}
+        if since is not None:
+            request["since"] = since
+        self._send(request)
         deadline = time.monotonic() + timeout_seconds
         while True:
             remaining = deadline - time.monotonic()

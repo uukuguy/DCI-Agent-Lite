@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -76,6 +78,42 @@ class AsterionDciBridgeTests(unittest.TestCase):
             dict(projection.artifacts[0]["value"])["evaluation_artifact_uri"],
             "eval_result.json",
         )
+
+    def test_projection_adds_body_free_context_policy_summary_and_reference(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output_dir = Path(temporary_directory) / "run"
+            output_dir.mkdir()
+            policy_path = output_dir / "context-policy.json"
+            policy_path.write_text("{}\n")
+            policy_path.chmod(0o600)
+            summary = {
+                "schema": "dci.context-policy-evidence/v1",
+                "profile": "level3",
+                "extension_sha256": "b" * 64,
+                "truncated_results": 2,
+                "compactions": 1,
+                "summary_attempts": 0,
+                "summary_successes": 0,
+                "summary_suppressed": False,
+            }
+            (output_dir / "state.json").write_text(
+                json.dumps(
+                    {
+                        "context_policy": {
+                            "artifact": "context-policy.json",
+                            "sha256": hashlib.sha256(policy_path.read_bytes()).hexdigest(),
+                            "public_summary": summary,
+                        }
+                    }
+                )
+            )
+            projection = project_dci_run(fixture_result(output_dir))
+
+        value = dict(projection.artifacts[0]["value"])
+        self.assertEqual(value["context_policy_artifact_uri"], "context-policy.json")
+        self.assertEqual(value["context_policy"]["profile"], "level3")
+        self.assertEqual(value["context_policy"]["compactions"], 1)
+        self.assertNotIn("SECRET", repr(value["context_policy"]))
 
 
 if __name__ == "__main__":

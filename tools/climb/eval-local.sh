@@ -1019,6 +1019,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="L3 pressure retains system context and the latest twelve complete turns"
         override_test="suppressed L4 keeps L3 compaction without another summary attempt"
         ;;
+    AF-310-H-003)
+        first_dimension="resource_integrity"
+        second_dimension="literal_transport"
+        third_dimension="immutable_resume"
+        fourth_dimension="isolated_wheel"
+        immutable_test="tests.test_asterion_dci_context_extension.AsterionDciContextExtensionTests.test_sync_check_proves_source_resource_and_manifest_are_exact"
+        repeat_test="tests.test_asterion_dci_pi_rpc.PiRpcCommandTests.test_context_extension_argv_is_literal_closed_and_optional"
+        dirty_test="tests.test_asterion_dci_run.AsterionDciRunTests.test_context_policy_resume_keeps_independent_attempt_evidence"
+        override_test="tests.test_asterion_dci_context_extension.AsterionDciContextExtensionTests.test_isolated_wheel_resolves_the_same_extension_bytes"
+        ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2
         exit 2

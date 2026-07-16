@@ -781,3 +781,5 @@
 - 05:54 H-002 ships live context policy and advances packaged transport to H-003. [0b1dc44]
 - 06:04 H-003 packages a digest-bound extension so source and isolated wheels resolve identical policy. [bbb3eb8]
 - 06:13 H-003 transports literal policy argv and validates body-free Pi entries before finalization. [186bf6b]
+- 06:16 AF-310-H-003 confirmed 4/4; package acceptance recorded.
+- 06:16 AF-310-H-003 confirmed 4/4; package acceptance recorded.

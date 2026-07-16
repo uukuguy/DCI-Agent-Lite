@@ -2000,12 +2000,36 @@ hypotheses:
   expected_lift: +1 integrity-bound runtime and resume path
   cost_h: 1.6
   ranking: 0.8
-  status: pending
+  status: confirmed
   created_at: '2026-07-17T05:32:00+08:00'
   verification_command: uv run --project asterion python -m unittest tests.test_asterion_dci_context_extension
     tests.test_asterion_dci_pi_rpc tests.test_asterion_dci_run tests.test_asterion_dci_artifacts
     -v
-  results: []
+  results:
+  - session: 2026-07-17-af-310-paper-context-management
+    cycle: 88
+    run: 20260717-061612-dci-climb-af310h003
+    local: 4
+    local_per_task:
+      resource_integrity: 1
+      literal_transport: 1
+      immutable_resume: 1
+      isolated_wheel: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
+  - session: 2026-07-17-af-310-paper-context-management
+    cycle: 89
+    run: 20260717-061648-dci-climb-af310h003
+    local: 4
+    local_per_task:
+      resource_integrity: 1
+      literal_transport: 1
+      immutable_resume: 1
+      isolated_wheel: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-310-H-004
   work_package_id: AF-310
   description: Prove run, benchmark, resume, installed application, and wheel expose

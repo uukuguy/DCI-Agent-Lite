@@ -44,6 +44,8 @@ class DciRunRequest:
     conversation_features: DciConversationFeatures | None = None
     pi_package_dir: Path | None = None
     pi_agent_dir: Path | None = None
+    pi_session_file: Path | None = None
+    pi_session_id: str | None = None
     resume: bool = False
     stream_text: bool = True
 
@@ -96,6 +98,7 @@ def validate_dci_run_request(
 
         resolve_context_profile(request.runtime_context_level)
     text(request.thinking_level, optional=True)
+    text(request.pi_session_id, optional=True)
     if request.thinking_level not in _THINKING_LEVELS | {None}:
         raise ValueError("DCI run request is invalid")
     if request.max_turns is not None and (
@@ -151,10 +154,22 @@ def validate_dci_run_request(
         request.append_system_prompt_file,
         request.pi_package_dir,
         request.pi_agent_dir,
+        request.pi_session_file,
     ):
         if value is not None and (
             not isinstance(value, Path) or not value.is_absolute()
         ):
+            raise ValueError("DCI run request is invalid")
+    if (request.pi_session_file is None) != (request.pi_session_id is None):
+        raise ValueError("DCI run request is invalid")
+    if request.context_profile is None and request.pi_session_file is not None:
+        raise ValueError("DCI run request is invalid")
+    if request.context_profile is not None:
+        if request.resume and (
+            not request.keep_session or request.pi_session_file is None
+        ):
+            raise ValueError("DCI run request is invalid")
+        if not request.resume and request.pi_session_file is not None:
             raise ValueError("DCI run request is invalid")
     if request.conversation_features is not None:
         from asterion.dci.artifacts import DciConversationFeatures
@@ -176,6 +191,19 @@ def validate_dci_run_request(
             and request.pi_package_dir != paths.pi.package_dir
         ):
             raise ValueError("DCI run request is invalid")
+        if request.pi_session_file is not None:
+            session_file = request.pi_session_file
+            try:
+                resolved_session = session_file.resolve(strict=True)
+                resolved_agent = paths.pi.agent_dir.resolve(strict=False)
+            except OSError:
+                raise ValueError("DCI run request is invalid") from None
+            if (
+                session_file.is_symlink()
+                or not resolved_session.is_file()
+                or not resolved_session.is_relative_to(resolved_agent)
+            ):
+                raise ValueError("DCI run request is invalid")
         if (
             request.pi_agent_dir is not None
             and request.pi_agent_dir != paths.pi.agent_dir
@@ -295,6 +323,17 @@ def resume_request_from_output_dir(
         raise DciRunError("DCI resume validation failed") from None
     pi_package_dir = Path(_required_string(state, "pi_package_dir"))
     pi_agent_dir = Path(_required_string(state, "pi_agent_dir"))
+    session = state.get("pi_context_session")
+    if runtime_context_level is None:
+        if session is not None:
+            raise DciRunError("DCI resume validation failed")
+        pi_session_file = None
+        pi_session_id = None
+    else:
+        if not isinstance(session, dict) or set(session) != {"session_file", "session_id"}:
+            raise DciRunError("DCI resume validation failed")
+        pi_session_file = Path(_required_string(session, "session_file"))
+        pi_session_id = _required_string(session, "session_id")
     if timeout_seconds is _RESUME_TIMEOUT_UNSET:
         resumed_timeout = persisted_timeout
     elif timeout_seconds is None:
@@ -328,6 +367,8 @@ def resume_request_from_output_dir(
         conversation_features=conversation_features,
         pi_package_dir=pi_package_dir,
         pi_agent_dir=pi_agent_dir,
+        pi_session_file=pi_session_file,
+        pi_session_id=pi_session_id,
         resume=True,
         stream_text=stream_text,
     )
@@ -407,6 +448,7 @@ def run_pi_research(
             features=request.conversation_features,
             resume=request.resume,
             directory_fd=_output_directory_fd,
+            context_extension=context_extension,
         )
     except DciArtifactError as exc:
         resource_stack.close()
@@ -422,6 +464,7 @@ def run_pi_research(
         raise DciRunError(message) from None
 
     client: PiRpcClient | None = None
+    context_evidence_recorded = False
     try:
         warning = format_pi_revision_warning(recorder.pi_source)
         if warning is not None:
@@ -462,8 +505,19 @@ def run_pi_research(
                 if context_profile is not None
                 else None
             ),
+            session_file=request.pi_session_file,
         )
         client.start()
+        if context_profile is not None and request.keep_session:
+            session_file, session_id = _validate_pi_context_session(
+                client.probe_protocol(), paths
+            )
+            if request.resume and (
+                session_file != request.pi_session_file
+                or session_id != request.pi_session_id
+            ):
+                raise RuntimeError("Pi context session identity is invalid")
+            recorder.record_context_session(session_file, session_id)
         final_text = client.prompt_and_wait(
             request.question,
             max_turns=request.max_turns,
@@ -473,9 +527,14 @@ def run_pi_research(
         )
         if context_profile is not None:
             assert context_extension is not None
-            _validate_context_entries(
-                client.get_entries(), context_profile, context_extension.version
+            context_entries = _get_context_entries(
+                client, recorder.context_entry_cursor
             )
+            _validate_context_entries(
+                context_entries, context_profile, context_extension.version
+            )
+            recorder.record_context_policy(context_entries)
+            context_evidence_recorded = True
         stderr_getter = getattr(client, "get_stderr", None)
         stderr_text = stderr_getter() if callable(stderr_getter) else ""
         normalized_events = recorder.finalize(
@@ -491,6 +550,22 @@ def run_pi_research(
             status="completed",
         )
     except (OSError, RuntimeError, ValueError):
+        if (
+            context_profile is not None
+            and context_extension is not None
+            and client is not None
+            and not context_evidence_recorded
+        ):
+            try:
+                context_entries = _get_context_entries(
+                    client, recorder.context_entry_cursor
+                )
+                _validate_context_entries(
+                    context_entries, context_profile, context_extension.version
+                )
+                recorder.record_context_policy(context_entries)
+            except (OSError, RuntimeError, ValueError, DciArtifactError):
+                pass
         stderr_getter = (
             getattr(client, "get_stderr", None) if client is not None else None
         )
@@ -548,6 +623,42 @@ def _validate_context_entries(
             raise RuntimeError("Pi context extension evidence is invalid")
     if telemetry_count == 0 or state_count == 0 or startup_count != 1:
         raise RuntimeError("Pi context extension evidence is invalid")
+
+
+def _get_context_entries(
+    client: PiRpcClient, cursor: str | None
+) -> tuple[dict[str, object], ...]:
+    if cursor is None:
+        return client.get_entries()
+    return client.get_entries(since=cursor)
+
+
+def _validate_pi_context_session(
+    state: dict[str, object], paths: DciPaths
+) -> tuple[Path, str]:
+    session_file_value = state.get("sessionFile")
+    session_id = state.get("sessionId")
+    if (
+        not isinstance(session_file_value, str)
+        or not session_file_value
+        or not isinstance(session_id, str)
+        or not session_id
+    ):
+        raise RuntimeError("Pi context session identity is invalid")
+    session_file = Path(session_file_value)
+    try:
+        resolved = session_file.resolve(strict=True)
+        agent_dir = paths.pi.agent_dir.resolve(strict=False)
+    except OSError:
+        raise RuntimeError("Pi context session identity is invalid") from None
+    if (
+        not session_file.is_absolute()
+        or session_file.is_symlink()
+        or not resolved.is_file()
+        or not resolved.is_relative_to(agent_dir)
+    ):
+        raise RuntimeError("Pi context session identity is invalid")
+    return resolved, session_id
 
 
 def _required_string(state: dict[str, object], name: str) -> str:

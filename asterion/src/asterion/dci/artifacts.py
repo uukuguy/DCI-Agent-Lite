@@ -13,7 +13,7 @@ import stat
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any, Callable
 
 from asterion.adapters.pi import PiProtocolAdapter, map_pi_capabilities
 from asterion.dci.config import DciPaths
@@ -27,6 +27,10 @@ from asterion.runtime.protocol import (
     validate_run_request,
 )
 
+if TYPE_CHECKING:
+    from asterion.dci.context_extension import ResolvedContextExtension
+    from asterion.dci.context_profiles import DciContextProfile
+
 try:
     import fcntl
 except ImportError:  # pragma: no cover - exercised only on non-POSIX hosts
@@ -35,6 +39,116 @@ except ImportError:  # pragma: no cover - exercised only on non-POSIX hosts
 
 class DciArtifactError(RuntimeError):
     """Safe failure at the native artifact filesystem boundary."""
+
+
+_POLICY_STATE_KEYS = {
+    "accumulatedOriginalToolCharacters",
+    "truncatedResults",
+    "compactionCount",
+    "compactionPending",
+    "summaryAttempts",
+    "summarySuccesses",
+    "consecutiveSummaryFailures",
+    "summarySuppressed",
+}
+_POLICY_NUMERIC_KEYS = _POLICY_STATE_KEYS - {
+    "compactionPending",
+    "summarySuppressed",
+}
+
+
+def _validated_policy_state(value: object) -> dict[str, object]:
+    if not isinstance(value, dict) or set(value) != _POLICY_STATE_KEYS:
+        raise DciArtifactError("DCI context policy evidence is invalid")
+    if any(
+        isinstance(value.get(key), bool)
+        or not isinstance(value.get(key), int)
+        or value[key] < 0
+        for key in _POLICY_NUMERIC_KEYS
+    ) or any(
+        not isinstance(value.get(key), bool)
+        for key in ("compactionPending", "summarySuppressed")
+    ):
+        raise DciArtifactError("DCI context policy evidence is invalid")
+    return dict(value)
+
+
+@dataclass(frozen=True)
+class DciContextTelemetry:
+    """One body-free, schema-closed policy counter snapshot."""
+
+    event: str
+    profile: str
+    contract_version: str
+    extension_version: str
+    state: dict[str, object]
+
+    @classmethod
+    def from_mapping(cls, value: object) -> DciContextTelemetry:
+        expected = _POLICY_STATE_KEYS | {
+            "schema",
+            "event",
+            "profile",
+            "contractVersion",
+            "extensionVersion",
+        }
+        if not isinstance(value, dict) or set(value) != expected:
+            raise DciArtifactError("DCI context policy evidence is invalid")
+        if (
+            value.get("schema") != "dci.context-telemetry/v1"
+            or not isinstance(value.get("event"), str)
+            or not value["event"]
+            or value.get("profile")
+            not in {"level0", "level1", "level2", "level3", "level4"}
+            or not isinstance(value.get("contractVersion"), str)
+            or not isinstance(value.get("extensionVersion"), str)
+        ):
+            raise DciArtifactError("DCI context policy evidence is invalid")
+        state = _validated_policy_state(
+            {key: value[key] for key in _POLICY_STATE_KEYS}
+        )
+        return cls(
+            event=value["event"],
+            profile=value["profile"],
+            contract_version=value["contractVersion"],
+            extension_version=value["extensionVersion"],
+            state=state,
+        )
+
+    def to_mapping(self) -> dict[str, object]:
+        return {
+            "schema": "dci.context-telemetry/v1",
+            "event": self.event,
+            "profile": self.profile,
+            "contractVersion": self.contract_version,
+            "extensionVersion": self.extension_version,
+            **self.state,
+        }
+
+
+@dataclass(frozen=True)
+class DciContextPolicyEvidence:
+    """Validated policy identity and telemetry used for safe public projection."""
+
+    profile: DciContextProfile
+    extension_version: str
+    extension_sha256: str
+    telemetry: tuple[DciContextTelemetry, ...]
+
+    def public_summary(self) -> dict[str, object]:
+        if not self.telemetry:
+            raise DciArtifactError("DCI context policy evidence is invalid")
+        latest = self.telemetry[-1].state
+        return {
+            "schema": "dci.context-policy-evidence/v1",
+            "profile": self.profile.name,
+            "extension_sha256": self.extension_sha256,
+            "truncated_results": latest["truncatedResults"],
+            "compactions": latest["compactionCount"],
+            "summary_attempts": latest["summaryAttempts"],
+            "summary_successes": latest["summarySuccesses"],
+            "summary_suppressed": latest["summarySuppressed"],
+        }
 
 
 def _reject_symlink(path: Path, *, label: str) -> None:
@@ -1557,10 +1671,45 @@ def _valid_timeout(value: object) -> bool:
     )
 
 
+def _context_policy_identity(
+    request: DciRunRequest,
+    extension: ResolvedContextExtension | None,
+) -> dict[str, object] | None:
+    profile = request.context_profile
+    if profile is None:
+        if extension is not None:
+            raise DciArtifactError("DCI context policy identity is invalid")
+        return None
+    if extension is None:
+        from asterion.dci.context_extension import (
+            ContextExtensionError,
+            resolve_context_extension,
+        )
+
+        try:
+            with resolve_context_extension() as resolved:
+                return _context_policy_identity(request, resolved)
+        except ContextExtensionError as error:
+            raise DciArtifactError("DCI context policy identity is invalid") from error
+    if (
+        extension.contract_version != profile.contract_version
+        or re.fullmatch(r"[0-9a-f]{64}", extension.sha256) is None
+    ):
+        raise DciArtifactError("DCI context policy identity is invalid")
+    return {
+        "schema": "dci.context-policy-identity/v1",
+        "status": "effective",
+        "profile": profile.identity_payload(),
+        "extension_version": extension.version,
+        "extension_sha256": extension.sha256,
+    }
+
+
 def _validate_recorder_resume_state(
     state: dict[str, Any],
     request: DciRunRequest,
     paths: DciPaths,
+    context_extension: ResolvedContextExtension | None = None,
 ) -> None:
     if state.get("status") not in {"failed", "incomplete", "running"}:
         raise DciArtifactError("DCI resume state is invalid")
@@ -1579,16 +1728,18 @@ def _validate_recorder_resume_state(
         "model": request.model,
         "tools": request.tools,
         "max_turns": request.max_turns,
-        "runtime_context_control": (
-            {
-                "requested_level": request.runtime_context_level,
-                "effective_pi_control": None,
-                "status": "unsupported",
-            }
-            if request.runtime_context_level is not None
-            else None
+        "runtime_context_control": _context_policy_identity(
+            request, context_extension
         ),
         "runtime_context_level": request.runtime_context_level,
+        "pi_context_session": (
+            {
+                "session_file": str(request.pi_session_file),
+                "session_id": request.pi_session_id,
+            }
+            if request.pi_session_file is not None
+            else None
+        ),
         "thinking_level": request.thinking_level,
         "node_max_old_space_size_mb": request.node_max_old_space_size_mb,
         "keep_session": request.keep_session,
@@ -1874,8 +2025,11 @@ class DciRunRecorder:
         features: DciConversationFeatures | None = None,
         resume: bool = False,
         directory_fd: int | None = None,
+        context_extension: ResolvedContextExtension | None = None,
     ) -> None:
         validate_dci_run_request(request, paths)
+        self.context_extension = context_extension
+        self.context_identity = _context_policy_identity(request, context_extension)
         self.output_dir = Path(output_dir)
         self.request = request
         self.paths = paths
@@ -1900,11 +2054,14 @@ class DciRunRecorder:
         self.conversation_full_path = self.output_dir / "conversation_full.json"
         self.conversation_path = self.output_dir / "conversation.json"
         self.latest_model_context_path = self.output_dir / "latest_model_context.json"
+        self.context_policy_path = self.output_dir / "context-policy.json"
         self.protocol_dir = self.output_dir / "protocol"
         try:
             if resume:
                 self.state = _read_json_object_at(self._root_fd, "state.json")
-                _validate_recorder_resume_state(self.state, request, paths)
+                _validate_recorder_resume_state(
+                    self.state, request, paths, context_extension
+                )
                 if "conversation_features" not in self.state:
                     raise DciArtifactError("DCI resume state is invalid")
                 persisted_features = DciConversationFeatures.from_mapping(
@@ -1955,13 +2112,15 @@ class DciRunRecorder:
                     "max_turns": request.max_turns,
                     "timeout_seconds": request.timeout_seconds,
                     "runtime_context_level": request.runtime_context_level,
-                    "runtime_context_control": (
+                    "runtime_context_control": self.context_identity,
+                    "pi_context_session": None,
+                    "context_policy": (
                         {
-                            "requested_level": request.runtime_context_level,
-                            "effective_pi_control": None,
-                            "status": "unsupported",
+                            "artifact": "context-policy.json",
+                            "sha256": None,
+                            "public_summary": None,
                         }
-                        if request.runtime_context_level is not None
+                        if self.context_identity is not None
                         else None
                     ),
                     "thinking_level": request.thinking_level,
@@ -2005,6 +2164,11 @@ class DciRunRecorder:
                         ),
                         "final_txt": str(self.final_path),
                         "stderr_txt": str(self.stderr_path),
+                        **(
+                            {"context_policy_json": str(self.context_policy_path)}
+                            if self.context_identity is not None
+                            else {}
+                        ),
                     },
                 }
                 self.conversation_full = {
@@ -2066,6 +2230,7 @@ class DciRunRecorder:
                     "stderr_tail_characters": 0,
                 }
             )
+            self._initialize_context_policy(attempt=attempt, resume=resume)
             self._protocol_request_name = f"{attempt_stem}.request.json"
             self._protocol_events_name = f"{attempt_stem}.events.jsonl"
             self.protocol_request_path = self.protocol_dir / self._protocol_request_name
@@ -2093,6 +2258,188 @@ class DciRunRecorder:
         except BaseException:
             self.close()
             raise
+
+    def _initialize_context_policy(self, *, attempt: int, resume: bool) -> None:
+        self.context_entry_cursor = None
+        if self.context_identity is None:
+            self.context_policy = None
+            return
+        profile = self.request.context_profile
+        extension = self.context_extension
+        if profile is None or extension is None:
+            raise DciArtifactError("DCI context policy identity is invalid")
+        if resume:
+            reference = self.state.get("context_policy")
+            document = _read_optional_json_document_at(
+                self._root_fd, "context-policy.json"
+            )
+            if (
+                not isinstance(reference, dict)
+                or set(reference) != {"artifact", "sha256", "public_summary"}
+                or reference.get("artifact") != "context-policy.json"
+                or document is None
+                or hashlib.sha256(document[1]).hexdigest() != reference.get("sha256")
+            ):
+                raise DciArtifactError("DCI resume state is invalid")
+            policy = document[0]
+            if (
+                set(policy)
+                != {
+                    "schema",
+                    "profile",
+                    "extension_version",
+                    "extension_sha256",
+                    "attempts",
+                }
+                or policy.get("schema") != "dci.context-policy-evidence/v1"
+                or policy.get("profile") != profile.identity_payload()
+                or policy.get("extension_version") != extension.version
+                or policy.get("extension_sha256") != extension.sha256
+                or not isinstance(policy.get("attempts"), list)
+                or len(policy["attempts"]) != attempt - 1
+                or not policy["attempts"]
+                or not isinstance(policy["attempts"][-1], dict)
+                or policy["attempts"][-1].get("latest_state") is None
+            ):
+                raise DciArtifactError("DCI resume state is invalid")
+            self.context_policy = policy
+            prior_entries = policy["attempts"][-1].get("entries")
+            if (
+                not isinstance(prior_entries, list)
+                or not prior_entries
+                or not isinstance(prior_entries[-1], dict)
+                or not isinstance(prior_entries[-1].get("id"), str)
+                or not prior_entries[-1]["id"]
+            ):
+                raise DciArtifactError("DCI resume state is invalid")
+            self.context_entry_cursor = prior_entries[-1]["id"]
+        else:
+            self.context_policy = {
+                "schema": "dci.context-policy-evidence/v1",
+                "profile": profile.identity_payload(),
+                "extension_version": extension.version,
+                "extension_sha256": extension.sha256,
+                "attempts": [],
+            }
+        self.context_policy["attempts"].append(
+            {
+                "attempt": attempt,
+                "status": "running",
+                "telemetry": [],
+                "latest_state": None,
+                "entries": [],
+            }
+        )
+
+    def _write_context_policy(self) -> None:
+        if self.context_policy is None:
+            return
+        _atomic_write_json_at(
+            self._root_fd, "context-policy.json", self.context_policy
+        )
+        reference = self.state.get("context_policy")
+        if not isinstance(reference, dict):
+            raise DciArtifactError("DCI context policy evidence is invalid")
+        reference["sha256"] = hashlib.sha256(
+            json_document_bytes(self.context_policy)
+        ).hexdigest()
+
+    def record_context_policy(
+        self, entries: tuple[dict[str, object], ...]
+    ) -> None:
+        """Persist one attempt's validated, body-free Pi policy entries."""
+
+        self._ensure_open()
+        if self.context_policy is None or self.context_extension is None:
+            raise DciArtifactError("DCI context policy evidence is invalid")
+        profile = self.request.context_profile
+        if profile is None:
+            raise DciArtifactError("DCI context policy evidence is invalid")
+        telemetry: list[DciContextTelemetry] = []
+        states: list[dict[str, object]] = []
+        safe_entries: list[dict[str, object]] = []
+        wrapper_keys = {"id", "parentId", "timestamp", "type", "customType", "data"}
+        for entry in entries:
+            if (
+                not isinstance(entry, dict)
+                or set(entry) != wrapper_keys
+                or entry.get("type") != "custom"
+                or entry.get("customType")
+                not in {"dci-context-telemetry", "dci-context-state"}
+                or not isinstance(entry.get("id"), str)
+                or not isinstance(entry.get("timestamp"), str)
+            ):
+                raise DciArtifactError("DCI context policy evidence is invalid")
+            data = entry.get("data")
+            if entry["customType"] == "dci-context-telemetry":
+                item = DciContextTelemetry.from_mapping(data)
+                if (
+                    item.profile != profile.name
+                    or item.contract_version != profile.contract_version
+                    or item.extension_version != self.context_extension.version
+                ):
+                    raise DciArtifactError("DCI context policy evidence is invalid")
+                telemetry.append(item)
+            else:
+                if (
+                    not isinstance(data, dict)
+                    or set(data)
+                    != {"schema", "profile", "contractVersion", "state"}
+                    or data.get("schema") != "dci.context-state/v1"
+                    or data.get("profile") != profile.name
+                    or data.get("contractVersion") != profile.contract_version
+                ):
+                    raise DciArtifactError("DCI context policy evidence is invalid")
+                _validated_policy_state(data.get("state"))
+                states.append(json.loads(json.dumps(data)))
+            safe_entries.append(json.loads(json.dumps(entry)))
+        if (
+            not telemetry
+            or not states
+            or sum(item.event == "startup" for item in telemetry) != 1
+        ):
+            raise DciArtifactError("DCI context policy evidence is invalid")
+        evidence = DciContextPolicyEvidence(
+            profile=profile,
+            extension_version=self.context_extension.version,
+            extension_sha256=self.context_extension.sha256,
+            telemetry=tuple(telemetry),
+        )
+        attempt = self.context_policy["attempts"][self._attempt_index]
+        if not isinstance(attempt, dict) or attempt.get("status") != "running":
+            raise DciArtifactError("DCI context policy evidence is invalid")
+        attempt["telemetry"] = [item.to_mapping() for item in telemetry]
+        attempt["latest_state"] = states[-1]
+        attempt["entries"] = safe_entries
+        reference = self.state.get("context_policy")
+        if not isinstance(reference, dict):
+            raise DciArtifactError("DCI context policy evidence is invalid")
+        reference["public_summary"] = evidence.public_summary()
+        self._write()
+
+    def record_context_session(self, session_file: Path, session_id: str) -> None:
+        """Bind one verified Pi session identity before the provider request."""
+
+        self._ensure_open()
+        if (
+            self.context_identity is None
+            or not self.request.keep_session
+            or not isinstance(session_file, Path)
+            or not session_file.is_absolute()
+            or not isinstance(session_id, str)
+            or not session_id
+        ):
+            raise DciArtifactError("DCI context session identity is invalid")
+        identity = {"session_file": str(session_file), "session_id": session_id}
+        existing = self.state.get("pi_context_session")
+        if self.request.resume:
+            if existing != identity:
+                raise DciArtifactError("DCI resume state is invalid")
+        elif existing is not None:
+            raise DciArtifactError("DCI context session identity is invalid")
+        else:
+            self.state["pi_context_session"] = identity
+        self._write()
 
     def _emit_normalized(self, event: dict[str, object]) -> None:
         self.normalized.append(dict(event))
@@ -2179,6 +2526,13 @@ class DciRunRecorder:
             attempt_record = self.state["attempts"][self._attempt_index]
             attempt_record["status"] = status
             attempt_record["stderr_tail_characters"] = len(stderr_tail)
+            if self.context_policy is not None:
+                policy_attempt = self.context_policy["attempts"][self._attempt_index]
+                if not isinstance(policy_attempt, dict):
+                    raise DciArtifactError("DCI context policy evidence is invalid")
+                if status == "completed" and policy_attempt.get("latest_state") is None:
+                    raise DciArtifactError("DCI context policy evidence is invalid")
+                policy_attempt["status"] = status
             self.state["status"] = status
             self.state["finished_at"] = _utc_now()
             self.state["assistant_text"] = answer
@@ -2271,6 +2625,7 @@ class DciRunRecorder:
         }
 
     def _write(self) -> None:
+        self._write_context_policy()
         _atomic_write_json_at(self._root_fd, "state.json", self.state)
         _atomic_write_json_at(
             self._root_fd, "conversation_full.json", self.conversation_full

@@ -32,6 +32,7 @@ def make_client(
     extension_path: Path | None = None,
     context_profile: str | None = None,
     context_contract: str | None = None,
+    session_file: Path | None = None,
 ) -> PiRpcClient:
     return PiRpcClient(
         package_dir=Path("pi/packages/coding-agent"),
@@ -50,6 +51,7 @@ def make_client(
         extension_path=extension_path,
         context_profile=context_profile,
         context_contract=context_contract,
+        session_file=session_file,
     )
 
 
@@ -512,6 +514,16 @@ class PiRpcCommandTests(unittest.TestCase):
             ):
                 make_client(**values)
 
+    def test_resume_session_file_is_one_literal_pi_argument(self) -> None:
+        session_file = Path("/session dir/tree; not-shell.jsonl")
+        client = make_client(session_file=session_file)
+        with patch("asterion.dci.pi_rpc.ensure_built_pi_cli") as built:
+            built.return_value = Path("/pi/dist/cli.js")
+            command = client._build_command(node_bin="/node")
+
+        self.assertEqual(command[-2:], ["--session", str(session_file)])
+        self.assertEqual(command.count("--session"), 1)
+
 
 class PiRpcLifecycleTests(unittest.TestCase):
     def test_get_entries_returns_only_valid_body_free_dci_entries(self) -> None:
@@ -630,6 +642,25 @@ class PiRpcLifecycleTests(unittest.TestCase):
             ):
                 client.get_entries()
             self.assertNotIn("PRIVATE-BODY", str(caught.exception))
+
+    def test_get_entries_resume_cursor_is_sent_as_one_literal_rpc_field(self) -> None:
+        client = make_client()
+        response = {
+            "id": "py-1",
+            "type": "response",
+            "command": "get_entries",
+            "success": True,
+            "data": {"entries": [], "leafId": "entry;not-shell"},
+        }
+        with (
+            patch.object(client, "_send") as send,
+            patch.object(client, "_read_json_line", return_value=response),
+        ):
+            self.assertEqual(client.get_entries(since="entry;not-shell"), ())
+
+        send.assert_called_once_with(
+            {"id": "py-1", "type": "get_entries", "since": "entry;not-shell"}
+        )
 
     def test_prompt_cancellation_sends_abort_before_returning(self) -> None:
         client = make_client()
