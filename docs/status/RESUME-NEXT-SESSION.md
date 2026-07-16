@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-16 23:40 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-16 23:41 +0800. **Session remains active — not a final handoff.**
 
 Active work package: none
 
@@ -12,7 +12,7 @@ Active work package: none
 
 ## Where things stand
 
-- Branch: `main`; the working tree should be clean after this checkpoint commit and remains unpushed.
+- Branch: `main`; design and checkpoint state are committed through the immediately following state-maintenance commits, remain unpushed, and leave a clean working tree.
 - Provider-free product verification still passes 8/8 rows, 533/533 selectors, 12/12 launcher pairs, 6/6 extras, and 7/7 bounded retained cases with zero provider operations.
 - Correct Context/artifact/CLI focused tests pass 101/101; an earlier nonzero command was only an invalid guessed test-module selector.
 - Governance is intentionally not reopened yet: `brainstorming` requires written-spec review before `writing-plans`, while the scope checker requires a real plan before an active package can be valid.
