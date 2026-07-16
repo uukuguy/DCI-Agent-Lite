@@ -323,7 +323,7 @@
 - Dependencies: AF-290
 - Acceptance: `asterion/` is the sole complete Asterion project root and independently buildable/testable without `src/dci`; obsolete product roots disappear; root parity still validates original DCI against Asterion; Python, TypeScript, Rust, schemas, examples, scripts, docs, 533 selectors, 12 launchers, distribution/isolated-wheel, static, and governance gates pass without provider requests; full datasets and release packaging remain deferred.
 - Design: `docs/superpowers/specs/2026-07-16-asterion-repository-directory-convergence-design.md`
-- Plan: pending written-spec approval
+- Plan: `docs/superpowers/plans/2026-07-16-af-300-asterion-project-root-convergence.md`
 
 ## AF-095 — Asterion framework identity and extraction
 

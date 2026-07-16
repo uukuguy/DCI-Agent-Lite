@@ -735,3 +735,4 @@
 - 2026-07-16 AF-300 design fixes example ownership while preserving package and DCI behavior. [ed56668]
 - 2026-07-16 User review broadens AF-300 from two examples to a complete extraction-ready Asterion project root.
 - 2026-07-16 Revised AF-300 makes Asterion a complete promotable subtree while preserving the mixed-repository baseline. [5a1527c]
+- 2026-07-16 AF-300 plan stages Python, languages, examples, docs, tests, and closure behind independent verification gates.

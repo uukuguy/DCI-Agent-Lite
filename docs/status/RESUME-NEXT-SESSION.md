@@ -19,11 +19,11 @@ Active work package: AF-300
 
 ## Next concrete action
 
-Obtain written-spec approval, then create the AF-300 implementation plan. Do not move files before that gate.
+Select the execution mode, then execute Task 1 of the AF-300 plan: establish `asterion/pyproject.toml` and `asterion/src/asterion/` through the required red/green boundary test.
 
 ## Open questions
 
-- Written-spec review remains the only AF-300 design gate; target paths, ownership classification, preservation boundaries, and deferred work are otherwise decided.
+- Execution mode remains to be selected; the written design is approved and the six-task implementation plan is ready.
 
 ## Ruled-out paths
 
@@ -37,5 +37,6 @@ Obtain written-spec approval, then create the AF-300 implementation plan. Do not
 ```bash
 python3 tools/project_scope_check.py
 sed -n '1,300p' docs/superpowers/specs/2026-07-16-asterion-repository-directory-convergence-design.md
+sed -n '1,360p' docs/superpowers/plans/2026-07-16-af-300-asterion-project-root-convergence.md
 git status --short
 ```
