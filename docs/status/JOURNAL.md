@@ -755,3 +755,4 @@
 - 2026-07-16 AF-300 review GREEN passes 31 focused docs/distribution/path tests, both CWD probes, CLI/config dry checks, compile, Ruff, scope, and diff.
 - 2026-07-16 AF-300 final-review contracts preserve mixed-root configuration, dual discovery, promoted standalone paths, and the retained-root boundary. [d5b5cd6]
 - 2026-07-16 AF-300 review closure passes 46 focused governance/docs/path tests, 2 project-boundary tests, CLI/config probes, compile, Ruff, scope, and diff.
+- 2026-07-16 AF-300 review remediation closes with terminal lifecycle and no active package. [c1625a5]

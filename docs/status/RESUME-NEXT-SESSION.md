@@ -13,7 +13,7 @@ Active work package: none
 ## Committed / unpushed state
 
 - AF-300 Tasks 1–5 and review fixes are committed through `6fd4a0b`; Task 6 implementation and terminal governance are committed at `08eff1c`.
-- Review remediation governance reopened at `6ce0db5`; documentation/tests landed at `d5b5cd6`; the next commit closes the terminal governance state.
+- Review remediation governance reopened at `6ce0db5`; documentation/tests landed at `d5b5cd6`; terminal governance closed at `c1625a5`.
 - The Task 0 local-only review, external `pi/`, credentials, datasets, outputs, generated artifacts, and immutable provider-backed acceptance record remain untouched.
 
 ## Next concrete action
