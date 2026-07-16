@@ -1,19 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (89 runs).
+> Deterministic summary generated from tracked state (90 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 90
-- Next hypothesis: AF-310-H-005
+- Last cycle: 91
+- Next hypothesis: None
 - In flight: none
-- Next action: Start AF-310-H-005.
+- Next action: Trigger Knowledge Layer.
 
 ## Active hypotheses
 
-- **AF-310-H-005** (pending, rank 0.60): Force and retain credential-clean bounded real Pi evidence for L3 compaction and L4 summarization at the final extension digest.
 
 ## Run ladder
 
@@ -108,6 +107,7 @@
 | 20260717-061612-dci-climb-af310h003 | AF-310-H-003 | 4 | confirmed 4/4 |
 | 20260717-061648-dci-climb-af310h003 | AF-310-H-003 | 4 | confirmed 4/4 |
 | 20260717-062553-dci-climb-af310h004 | AF-310-H-004 | 4 | confirmed 4/4 |
+| 20260717-064833-dci-climb-af310h005 | AF-310-H-005 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

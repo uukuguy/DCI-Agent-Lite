@@ -706,6 +706,31 @@ class PiRpcLifecycleTests(unittest.TestCase):
             {"id": "py-1", "type": "prompt", "message": "question"}
         )
 
+    def test_agent_settled_waits_for_async_extension_compaction(self) -> None:
+        client = make_client()
+        events = [
+            {"type": "response", "id": "py-1", "success": True},
+            {"type": "agent_start"},
+            {"type": "agent_settled"},
+        ]
+        compacting = {
+            "isStreaming": False,
+            "isCompacting": True,
+            "messageCount": 1,
+            "pendingMessageCount": 0,
+        }
+        idle = {**compacting, "isCompacting": False}
+        with (
+            patch.object(client, "_send"),
+            patch.object(client, "_read_json_line", side_effect=events),
+            patch.object(client, "probe_protocol", side_effect=(compacting, idle)) as probe,
+            patch("asterion.dci.pi_rpc.time.sleep"),
+        ):
+            result = client.prompt_and_wait("question", timeout_seconds=30)
+
+        self.assertEqual(result, "")
+        self.assertEqual(probe.call_count, 2)
+
     def test_retry_discards_partial_text_and_turn_limit_aborts_then_waits(self) -> None:
         client = make_client()
         events = [

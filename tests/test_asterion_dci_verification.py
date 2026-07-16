@@ -4,6 +4,8 @@ import os
 import sys
 import tempfile
 import unittest
+import io
+import json
 from pathlib import Path
 from unittest.mock import patch
 import asterion.dci.verification as verification_module
@@ -17,6 +19,164 @@ from asterion.dci.verification import (
     create_dci_product,
 )
 from tools.verify_asterion_dci_product import ProductAcceptanceSummary
+from tools.verify_dci_context_acceptance import (
+    ContextAcceptanceCase,
+    ContextAcceptanceReadiness,
+    main as context_acceptance_main,
+)
+
+
+class DciContextAcceptanceVerifierTests(unittest.TestCase):
+    def test_level3_case_requires_compaction_without_summary(self) -> None:
+        valid = ContextAcceptanceCase(
+            profile="level3",
+            compactions=1,
+            summary_attempts=0,
+            summary_successes=0,
+            summary_suppressed=False,
+            retained_turns=12,
+            artifact_digests=(("state.json", "a" * 64),),
+        )
+
+        valid.validate()
+        with self.assertRaises(ValueError):
+            ContextAcceptanceCase(
+                **{**valid.__dict__, "compactions": 0}
+            ).validate()
+        with self.assertRaises(ValueError):
+            ContextAcceptanceCase(
+                **{**valid.__dict__, "summary_attempts": 1}
+            ).validate()
+
+    def test_level4_case_requires_successful_unsuppressed_summary(self) -> None:
+        valid = ContextAcceptanceCase(
+            profile="level4",
+            compactions=1,
+            summary_attempts=1,
+            summary_successes=1,
+            summary_suppressed=False,
+            retained_turns=12,
+            artifact_digests=(("state.json", "a" * 64),),
+        )
+
+        valid.validate()
+        for changes in (
+            {"summary_attempts": 0},
+            {"summary_successes": 0},
+            {"summary_suppressed": True},
+            {"retained_turns": 11},
+        ):
+            with self.subTest(changes=changes), self.assertRaises(ValueError):
+                ContextAcceptanceCase(
+                    **{**valid.__dict__, **changes}
+                ).validate()
+
+    def test_default_mode_is_model_free_and_declares_cost_boundary(self) -> None:
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        calls: list[object] = []
+
+        code = context_acceptance_main(
+            [],
+            stdout=stdout,
+            stderr=stderr,
+            provider_runner=lambda *_args: calls.append(_args),
+        )
+
+        self.assertEqual(code, 0, stderr.getvalue())
+        self.assertEqual(calls, [])
+        self.assertIn("PASS", stdout.getvalue())
+        self.assertIn("Provider operations: 0", stdout.getvalue())
+        self.assertIn("Planned provider operations: 2", stdout.getvalue())
+        self.assertIn("API request multiplicity: externally ambiguous", stdout.getvalue())
+        self.assertIn("Full dataset ran: no", stdout.getvalue())
+
+    def test_provider_mode_rejects_missing_authority_before_runner(self) -> None:
+        calls: list[object] = []
+        stderr = io.StringIO()
+
+        code = context_acceptance_main(
+            ["--provider-backed"],
+            stdout=io.StringIO(),
+            stderr=stderr,
+            provider_runner=lambda *_args: calls.append(_args),
+        )
+
+        self.assertEqual(code, 2)
+        self.assertEqual(calls, [])
+        self.assertEqual(stderr.getvalue(), "DCI context acceptance preflight failed\n")
+
+    def test_provider_report_is_body_free_digest_bound_and_exactly_two_runs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_root = Path(temp_dir).resolve() / "private-output"
+            readiness = ContextAcceptanceReadiness(
+                output_root=output_root,
+                provider="fixture-provider",
+                model="fixture-model",
+                pi_revision="a" * 40,
+                extension_version="0.1.0",
+                extension_sha256="b" * 64,
+            )
+            calls: list[str] = []
+
+            def run_case(_readiness, profile: str) -> ContextAcceptanceCase:
+                calls.append(profile)
+                if profile == "level3":
+                    return ContextAcceptanceCase(
+                        profile=profile,
+                        compactions=1,
+                        summary_attempts=0,
+                        summary_successes=0,
+                        summary_suppressed=False,
+                        retained_turns=12,
+                        artifact_digests=(("state.json", "c" * 64),),
+                    )
+                return ContextAcceptanceCase(
+                    profile=profile,
+                    compactions=1,
+                    summary_attempts=1,
+                    summary_successes=1,
+                    summary_suppressed=False,
+                    retained_turns=12,
+                    artifact_digests=(("state.json", "d" * 64),),
+                )
+
+            stdout = io.StringIO()
+            code = context_acceptance_main(
+                [
+                    "--provider-backed",
+                    "--env-file",
+                    str(Path(temp_dir) / "SECRET-CREDENTIAL.env"),
+                    "--output-root",
+                    str(output_root),
+                ],
+                stdout=stdout,
+                stderr=io.StringIO(),
+                readiness_checker=lambda *_args: readiness,
+                provider_runner=run_case,
+            )
+
+            self.assertEqual(code, 0)
+            self.assertEqual(calls, ["level3", "level4"])
+            report = json.loads(
+                (output_root / "context-acceptance.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(report["provider_operations"], 2)
+            self.assertEqual(report["extension_sha256"], "b" * 64)
+            self.assertEqual(report["pi_revision"], "a" * 40)
+            self.assertEqual(
+                [case["profile"] for case in report["cases"]],
+                ["level3", "level4"],
+            )
+            public = json.dumps(report) + stdout.getvalue()
+            for canary in (
+                "SECRET-CREDENTIAL",
+                "SECRET-PROMPT",
+                "SECRET-ANSWER",
+                "SECRET-TOOL",
+                temp_dir,
+            ):
+                self.assertNotIn(canary, public)
 
 
 class FixtureBackend:

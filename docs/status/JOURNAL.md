@@ -789,3 +789,10 @@
 - 06:30 H004 ships canonical, digest-bound policy identity across CLI, batch, application, and wheel surfaces. [7b8dcdc]
 - 06:31 Recovery checkpoint advances AF-310 from H004 closure to H005 bounded evidence preparation. [a439c5f]
 - 06:37 H005 docs now define exact live profiles, evidence tiers, bounded commands, and reject legacy launcher levels. [pending docs commit]
+- 06:38 Exact live-profile docs and closed launcher inputs prepare safe bounded H005 verification. [a6d7496]
+- 06:48 H005 bounded acceptance starts after zero-call credential, Pi-revision, extension, and deterministic-fixture preflight passed.
+- 06:53 First H005 attempt falsified pre-prompt session-file existence; Pi returns identity before materialization, so validation now rechecks after prompt.
+- 06:57 Second H005 attempt observed Pi bash pre-truncation near 50k; one tool call cannot cross the 240k extension trigger.
+- 07:03 Third H005 attempt proved real L3 compaction; L4 exposed async summary settlement after `agent_settled`, now polled within the run deadline.
+- 06:48 AF-310-H-005 confirmed 4/4; package acceptance recorded.
+- 07:10 Fourth H005 attempt passed exactly two bounded provider cases: L3 compacted once without summary, L4 compacted once with one successful unsuppressed summary, both retained twelve turns; the 0600 body-free report binds Pi/extension/fixture and private artifact digests. No Judge or full dataset ran.

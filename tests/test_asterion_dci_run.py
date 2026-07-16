@@ -19,6 +19,7 @@ from asterion.dci.run import (
     DciRunError,
     DciRunRequest,
     _pi_extra_args,
+    _validate_pi_context_session,
     request_from_runtime_options,
     resume_request_from_output_dir,
     run_pi_research,
@@ -1194,6 +1195,77 @@ class AsterionDciRunTests(unittest.TestCase):
         self.assertIsInstance(extension_path, Path)
         self.assertEqual(extension_path.name, "dci-context-extension.ts")
         self.assertEqual(FixturePiClient.get_entries_calls, 1)
+
+    def test_context_session_path_may_materialize_only_after_first_prompt(self) -> None:
+        class LazySessionClient(FixturePiClient):
+            session_file: Path | None = None
+
+            def probe_protocol(self, **_: object) -> dict[str, object]:
+                agent_dir = self.last_kwargs["agent_dir"]
+                assert isinstance(agent_dir, Path)
+                type(self).session_file = agent_dir / "sessions/lazy-session.jsonl"
+                type(self).session_file.parent.mkdir(parents=True, exist_ok=True)
+                return {
+                    "sessionFile": str(type(self).session_file),
+                    "sessionId": "lazy-session",
+                    "isStreaming": False,
+                    "isCompacting": False,
+                    "messageCount": 0,
+                    "pendingMessageCount": 0,
+                }
+
+            def prompt_and_wait(self, message: str, *, on_event, **kwargs: object) -> str:
+                assert type(self).session_file is not None
+                self.assert_session_missing_before_prompt()
+                type(self).session_file.touch()
+                return super().prompt_and_wait(message, on_event=on_event, **kwargs)
+
+            @classmethod
+            def assert_session_missing_before_prompt(cls) -> None:
+                assert cls.session_file is not None
+                if cls.session_file.exists():
+                    raise AssertionError("session file materialized before prompt")
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            paths = resolve_dci_paths(root)
+            request = DciRunRequest(
+                run_id="lazy-session-run",
+                question="question",
+                cwd=root,
+                runtime_context_level="level3",
+                keep_session=True,
+            )
+            with patch("asterion.dci.run.PiRpcClient", LazySessionClient):
+                result = run_pi_research(paths, request)
+
+            state = json.loads((result.output_dir / "state.json").read_text())
+            self.assertEqual(state["pi_context_session"]["session_id"], "lazy-session")
+            self.assertTrue(LazySessionClient.session_file.is_file())
+
+    def test_context_session_validation_rechecks_file_after_prompt(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            agent_dir = Path(temporary_directory).resolve() / "agent"
+            agent_dir.mkdir()
+            paths = replace(
+                resolve_dci_paths(agent_dir.parent),
+                pi=replace(resolve_dci_paths(agent_dir.parent).pi, agent_dir=agent_dir),
+            )
+            session_file = agent_dir / "sessions/lazy.jsonl"
+            session_file.parent.mkdir()
+            state = {"sessionFile": str(session_file), "sessionId": "lazy"}
+
+            self.assertEqual(
+                _validate_pi_context_session(state, paths, require_file=False),
+                (session_file, "lazy"),
+            )
+            with self.assertRaisesRegex(RuntimeError, "session identity"):
+                _validate_pi_context_session(state, paths, require_file=True)
+            session_file.touch()
+            self.assertEqual(
+                _validate_pi_context_session(state, paths, require_file=True),
+                (session_file, "lazy"),
+            )
 
     def test_runtime_context_request_rejects_unknown_profile(self) -> None:
         request = DciRunRequest(

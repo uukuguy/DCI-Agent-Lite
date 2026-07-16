@@ -1039,6 +1039,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_asterion_dci_application_executor.AsterionDciApplicationExecutorTests.test_application_executor_maps_every_profile_to_the_canonical_identity"
         override_test="tests.test_asterion_dci_bridge.AsterionDciBridgeTests.test_projection_adds_body_free_context_policy_summary_and_reference"
         ;;
+    AF-310-H-005)
+        first_dimension="model_free_boundary"
+        second_dimension="level3_semantics"
+        third_dimension="level4_semantics"
+        fourth_dimension="body_free_evidence"
+        immutable_test="tests.test_asterion_dci_verification.DciContextAcceptanceVerifierTests.test_default_mode_is_model_free_and_declares_cost_boundary"
+        repeat_test="tests.test_asterion_dci_verification.DciContextAcceptanceVerifierTests.test_level3_case_requires_compaction_without_summary"
+        dirty_test="tests.test_asterion_dci_verification.DciContextAcceptanceVerifierTests.test_level4_case_requires_successful_unsuppressed_summary"
+        override_test="tests.test_asterion_dci_verification.DciContextAcceptanceVerifierTests.test_provider_report_is_body_free_digest_bound_and_exactly_two_runs"
+        ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2
         exit 2

@@ -4,6 +4,8 @@
 
 Active work package: AF-310
 
+Currently running: no process. H005 provider acceptance attempt 4 passed both bounded cases at `../outputs/asterion-dci-context-acceptance-af310h005-r4`; its 0600 report is body-free and digest-bound. L3 observed one compaction with no summary; L4 observed one successful unsuppressed summary. No Judge or full dataset.
+
 ## TL;DR
 
 - AF-300 remains fully closed; AF-310 is now the sole active package.

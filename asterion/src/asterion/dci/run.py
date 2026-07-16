@@ -510,7 +510,7 @@ def run_pi_research(
         client.start()
         if context_profile is not None and request.keep_session:
             session_file, session_id = _validate_pi_context_session(
-                client.probe_protocol(), paths
+                client.probe_protocol(), paths, require_file=False
             )
             if request.resume and (
                 session_file != request.pi_session_file
@@ -525,6 +525,14 @@ def run_pi_research(
             on_event=recorder.record_event,
             cancel_event=_cancel_event,
         )
+        if context_profile is not None and request.keep_session:
+            materialized_file, materialized_id = _validate_pi_context_session(
+                {"sessionFile": str(session_file), "sessionId": session_id},
+                paths,
+                require_file=True,
+            )
+            if materialized_file != session_file or materialized_id != session_id:
+                raise RuntimeError("Pi context session identity is invalid")
         if context_profile is not None:
             assert context_extension is not None
             context_entries = _get_context_entries(
@@ -634,7 +642,7 @@ def _get_context_entries(
 
 
 def _validate_pi_context_session(
-    state: dict[str, object], paths: DciPaths
+    state: dict[str, object], paths: DciPaths, *, require_file: bool = True
 ) -> tuple[Path, str]:
     session_file_value = state.get("sessionFile")
     session_id = state.get("sessionId")
@@ -647,14 +655,14 @@ def _validate_pi_context_session(
         raise RuntimeError("Pi context session identity is invalid")
     session_file = Path(session_file_value)
     try:
-        resolved = session_file.resolve(strict=True)
+        resolved = session_file.resolve(strict=require_file)
         agent_dir = paths.pi.agent_dir.resolve(strict=False)
     except OSError:
         raise RuntimeError("Pi context session identity is invalid") from None
     if (
         not session_file.is_absolute()
         or session_file.is_symlink()
-        or not resolved.is_file()
+        or (require_file and not resolved.is_file())
         or not resolved.is_relative_to(agent_dir)
     ):
         raise RuntimeError("Pi context session identity is invalid")

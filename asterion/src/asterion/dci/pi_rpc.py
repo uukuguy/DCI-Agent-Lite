@@ -580,7 +580,12 @@ class PiRpcClient:
             raise RuntimeError("Pi RPC queue returned an invalid event")
         return item
 
-    def probe_protocol(self, *, timeout_seconds: float = 10.0) -> dict[str, Any]:
+    def probe_protocol(
+        self,
+        *,
+        timeout_seconds: float = 10.0,
+        on_event: Callable[[dict[str, Any]], None] | None = None,
+    ) -> dict[str, Any]:
         request_id = self._next_id()
         self._send({"id": request_id, "type": "get_state"})
         deadline = time.monotonic() + timeout_seconds
@@ -590,6 +595,8 @@ class PiRpcClient:
                 raise RuntimeError("Pi RPC protocol probe timed out")
             response = self._read_json_line(timeout_seconds=remaining)
             if response.get("type") != "response" or response.get("id") != request_id:
+                if on_event is not None:
+                    on_event(response)
                 continue
             state = response.get("data")
             if response.get("success") is not True or not isinstance(state, dict):
@@ -755,10 +762,27 @@ class PiRpcClient:
                 settled = True
                 break
         if settled:
-            state = self.probe_protocol(timeout_seconds=10.0)
+            while True:
+                if cancel_event is not None and cancel_event.is_set():
+                    raise RuntimeError("RPC prompt was cancelled")
+                remaining = (
+                    None if deadline is None else deadline - time.monotonic()
+                )
+                if remaining is not None and remaining <= 0:
+                    raise RuntimeError(
+                        f"RPC prompt timed out after {timeout_seconds:g} seconds"
+                    )
+                state = self.probe_protocol(
+                    timeout_seconds=(
+                        10.0 if remaining is None else min(10.0, remaining)
+                    ),
+                    on_event=on_event,
+                )
+                if not state["isCompacting"]:
+                    break
+                time.sleep(0.05)
             if (
                 state["isStreaming"]
-                or state["isCompacting"]
                 or state["pendingMessageCount"] != 0
             ):
                 raise RuntimeError(
