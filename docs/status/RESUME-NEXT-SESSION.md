@@ -14,7 +14,7 @@ Active work package: none
 ## Committed / unpushed state
 
 - Documentation design, plan, complete DCI reference, integration guide, and extraction guide are committed on local `main`.
-- The final navigation/truth-reconciliation and terminal governance commit is the latest AF-290 change after closure.
+- Final navigation/truth reconciliation is committed, followed only by the AF-290 state checkpoint.
 - The user-owned untracked `.superpowers/sdd/task-0-review.md` remains intentionally untouched.
 
 ## Next concrete action
