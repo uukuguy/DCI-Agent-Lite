@@ -256,9 +256,10 @@ elif [ "$1" = "AF-060-H-004" ]; then
     fi
 elif [ "$1" = "AF-060-H-005" ]; then
     if ! {
-        uv run python -m unittest discover -v
-        uv run python -m compileall -q src tests tools
-        uv run ruff check src tests tools
+        uv run python -m unittest discover -s tests -v
+        (cd asterion && uv run python -m unittest discover -s tests -v)
+        uv run python -m compileall -q src asterion/src/asterion asterion/tests tests tools
+        uv run ruff check src asterion/src/asterion asterion/tests tests tools
         make test-typescript-host
         make test-rust-executor
         make check-rust-executor
@@ -291,9 +292,10 @@ elif [ "$1" = "AF-070-H-003" ]; then
     fi
 elif [ "$1" = "AF-070-H-004" ]; then
     if ! {
-        uv run python -m unittest discover -v
-        uv run python -m compileall -q src tests tools
-        uv run ruff check src tests tools
+        uv run python -m unittest discover -s tests -v
+        (cd asterion && uv run python -m unittest discover -s tests -v)
+        uv run python -m compileall -q src asterion/src/asterion asterion/tests tests tools
+        uv run ruff check src asterion/src/asterion asterion/tests tests tools
         npm --prefix asterion/packages/typescript/asterion-runtime ci
         npm --prefix asterion/packages/typescript/asterion-runtime test
         make test-rust-executor
@@ -322,9 +324,10 @@ elif [ "$1" = "AF-080-H-003" ]; then
     fi
 elif [ "$1" = "AF-080-H-004" ]; then
     if ! {
-        uv run python -m unittest discover -v
-        uv run python -m compileall -q src tests tools
-        uv run ruff check src tests tools
+        uv run python -m unittest discover -s tests -v
+        (cd asterion && uv run python -m unittest discover -s tests -v)
+        uv run python -m compileall -q src asterion/src/asterion asterion/tests tests tools
+        uv run ruff check src asterion/src/asterion asterion/tests tests tools
         npm --prefix asterion/packages/typescript/asterion-runtime ci
         npm --prefix asterion/packages/typescript/asterion-runtime test
         make test-rust-executor
@@ -353,9 +356,10 @@ elif [ "$1" = "AF-090-H-003" ]; then
     fi
 elif [ "$1" = "AF-090-H-004" ]; then
     if ! {
-        uv run python -m unittest discover -v
-        uv run python -m compileall -q src tests tools
-        uv run ruff check src tests tools
+        uv run python -m unittest discover -s tests -v
+        (cd asterion && uv run python -m unittest discover -s tests -v)
+        uv run python -m compileall -q src asterion/src/asterion asterion/tests tests tools
+        uv run ruff check src asterion/src/asterion asterion/tests tests tools
         npm --prefix asterion/packages/typescript/asterion-runtime ci
         npm --prefix asterion/packages/typescript/asterion-runtime test
         make test-rust-executor
@@ -396,9 +400,10 @@ elif [ "$1" = "AF-095-H-003" ]; then
     fi
 elif [ "$1" = "AF-095-H-004" ]; then
     if ! {
-        uv run python -m unittest discover -v
-        uv run python -m compileall -q src tests tools
-        uv run ruff check src tests tools
+        uv run python -m unittest discover -s tests -v
+        (cd asterion && uv run python -m unittest discover -s tests -v)
+        uv run python -m compileall -q src asterion/src/asterion asterion/tests tests tools
+        uv run ruff check src asterion/src/asterion asterion/tests tests tools
         npm --prefix asterion/packages/typescript/asterion-runtime ci
         npm --prefix asterion/packages/typescript/asterion-runtime test
         make test-rust-executor
@@ -437,9 +442,10 @@ elif [ "$1" = "AF-100-H-003" ]; then
     fi
 elif [ "$1" = "AF-100-H-004" ]; then
     if ! {
-        uv run python -m unittest discover -v
-        uv run python -m compileall -q src tests tools
-        uv run ruff check src tests tools
+        uv run python -m unittest discover -s tests -v
+        (cd asterion && uv run python -m unittest discover -s tests -v)
+        uv run python -m compileall -q src asterion/src/asterion asterion/tests tests tools
+        uv run ruff check src asterion/src/asterion asterion/tests tests tools
         npm --prefix asterion/packages/typescript/asterion-runtime ci
         npm --prefix asterion/packages/typescript/asterion-runtime test
         make test-rust-executor
@@ -528,9 +534,10 @@ elif [ "$1" = "AF-210-H-003" ]; then
     fi
 elif [ "$1" = "AF-210-H-004" ]; then
     if ! {
-        uv run python -m unittest discover -v
-        uv run python -m compileall -q src tests tools
-        uv run ruff check src tests tools
+        uv run python -m unittest discover -s tests -v
+        (cd asterion && uv run python -m unittest discover -s tests -v)
+        uv run python -m compileall -q src asterion/src/asterion asterion/tests tests tools
+        uv run ruff check src asterion/src/asterion asterion/tests tests tools
         npm --prefix asterion/packages/typescript/asterion-runtime ci
         npm --prefix asterion/packages/typescript/asterion-runtime test
         make test-rust-executor

@@ -1921,10 +1921,48 @@ class ClimbToolTests(unittest.TestCase):
         train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
 
         self.assertIn("AF-060-H-005", train_script)
-        self.assertIn("python -m unittest discover -v", train_script)
+        self.assertIn("python -m unittest discover -s tests -v", train_script)
         self.assertIn("make test-typescript-host", train_script)
         self.assertIn("make test-rust-executor", train_script)
         self.assertIn("make check-rust-executor", train_script)
+
+    def test_full_python_train_closures_cover_both_test_roots(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+        closure_ids = (
+            "AF-060-H-005",
+            "AF-070-H-004",
+            "AF-080-H-004",
+            "AF-090-H-004",
+            "AF-095-H-004",
+            "AF-100-H-004",
+            "AF-210-H-004",
+        )
+        branch_pattern = re.compile(
+            r'elif \[ "\$1" = "(?P<id>AF-[0-9]+-H-[0-9]+)" \]; then\n'
+            r"(?P<body>.*?)(?=\nelif \[ \"\$1\" = \"AF-|\Z)",
+            re.DOTALL,
+        )
+        branches = {
+            match.group("id"): match.group("body")
+            for match in branch_pattern.finditer(train_script)
+        }
+        full_discovery_ids = {
+            hypothesis_id
+            for hypothesis_id, body in branches.items()
+            if "uv run python -m unittest discover" in body
+        }
+
+        self.assertEqual(full_discovery_ids, set(closure_ids))
+        expected_lines = {
+            "uv run python -m unittest discover -s tests -v",
+            "(cd asterion && uv run python -m unittest discover -s tests -v)",
+            "uv run python -m compileall -q src asterion/src/asterion asterion/tests tests tools",
+            "uv run ruff check src asterion/src/asterion asterion/tests tests tools",
+        }
+        for hypothesis_id in closure_ids:
+            with self.subTest(hypothesis_id=hypothesis_id):
+                lines = {line.strip() for line in branches[hypothesis_id].splitlines()}
+                self.assertTrue(expected_lines <= lines, expected_lines - lines)
 
     def test_af060_h005_eval_reports_four_documentation_dimensions(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -2060,7 +2098,7 @@ class ClimbToolTests(unittest.TestCase):
         train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
 
         self.assertIn("AF-070-H-004", train_script)
-        self.assertIn("python -m unittest discover -v", train_script)
+        self.assertIn("python -m unittest discover -s tests -v", train_script)
         self.assertIn("npm --prefix asterion/packages/typescript/asterion-runtime ci", train_script)
         self.assertIn("make test-rust-executor", train_script)
         self.assertIn("make check-rust-executor", train_script)
@@ -2199,7 +2237,7 @@ class ClimbToolTests(unittest.TestCase):
         train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
 
         self.assertIn("AF-080-H-004", train_script)
-        self.assertIn("python -m unittest discover -v", train_script)
+        self.assertIn("python -m unittest discover -s tests -v", train_script)
         self.assertIn("npm --prefix asterion/packages/typescript/asterion-runtime ci", train_script)
         self.assertIn("make test-rust-executor", train_script)
         self.assertIn("make check-rust-executor", train_script)
@@ -2316,7 +2354,7 @@ class ClimbToolTests(unittest.TestCase):
     def test_af090_h004_train_runs_full_framework_closure_gate(self) -> None:
         train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
         self.assertIn("AF-090-H-004", train_script)
-        self.assertIn("python -m unittest discover -v", train_script)
+        self.assertIn("python -m unittest discover -s tests -v", train_script)
         self.assertIn("npm --prefix asterion/packages/typescript/asterion-runtime ci", train_script)
         self.assertIn("make test-rust-executor", train_script)
         self.assertIn("make check-rust-executor", train_script)
@@ -2427,7 +2465,7 @@ class ClimbToolTests(unittest.TestCase):
     def test_af095_h004_train_runs_full_framework_closure_gate(self) -> None:
         train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
         self.assertIn("AF-095-H-004", train_script)
-        self.assertIn("python -m unittest discover -v", train_script)
+        self.assertIn("python -m unittest discover -s tests -v", train_script)
         self.assertIn("asterion/packages/typescript/asterion-runtime ci", train_script)
         self.assertIn("make test-rust-executor", train_script)
         self.assertIn("make check-rust-executor", train_script)
@@ -2548,7 +2586,7 @@ class ClimbToolTests(unittest.TestCase):
     def test_af100_h004_train_runs_full_framework_closure_gate(self) -> None:
         train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
         self.assertIn("AF-100-H-004", train_script)
-        self.assertIn("python -m unittest discover -v", train_script)
+        self.assertIn("python -m unittest discover -s tests -v", train_script)
         self.assertIn("asterion/packages/typescript/asterion-runtime ci", train_script)
         self.assertIn("make test-rust-executor", train_script)
         self.assertIn("project_scope_check.py --climb-hypothesis AF-100-H-004", train_script)
