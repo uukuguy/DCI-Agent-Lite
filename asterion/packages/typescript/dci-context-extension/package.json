@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "build": "../asterion-runtime/node_modules/.bin/tsc -p tsconfig.json",
-    "test": "node --test test/*.test.mjs"
+    "sync-resource": "node scripts/sync-runtime-resource.mjs",
+    "check-resource": "node scripts/sync-runtime-resource.mjs --check",
+    "test": "node --test test/*.test.mjs && npm run check-resource"
   },
   "engines": {
     "node": ">=20"

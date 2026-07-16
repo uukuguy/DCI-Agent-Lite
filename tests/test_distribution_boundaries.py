@@ -312,6 +312,13 @@ class BuiltDistributionBoundaryTests(unittest.TestCase):
                 self.assertIn("asterion/dci/run.py", names)
                 self.assertIn("asterion/dci/application_executor.py", names)
                 self.assertIn(
+                    "asterion/dci/resources/pi/dci-context-extension.ts", names
+                )
+                self.assertIn(
+                    "asterion/dci/resources/pi/context-extension-manifest.json",
+                    names,
+                )
+                self.assertIn(
                     "asterion/applications/dci_agent_lite/provider.py", names
                 )
                 self.assertNotIn("dci/benchmark/pi_rpc_runner.py", names)
