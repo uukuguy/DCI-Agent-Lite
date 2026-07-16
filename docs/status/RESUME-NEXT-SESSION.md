@@ -1,30 +1,28 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-16 22:04 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-16 22:10 +0800. **Session remains active — not a final handoff.**
 
-Active work package: AF-300
-
-Live state: AF-300 review remediation in_progress
+Active work package: none
 
 ## TL;DR
 
-- AF-300 is explicitly reopened only to remediate three final-review documentation/CWD contracts and one structural-snapshot wording issue.
-- The accepted relocation, provider-free parity, isolated wheel, and immutable provider-backed evidence remain unchanged.
-- No production behavior, provider/Judge operation, full dataset, release, or plugin work is authorized.
+- AF-300 final-review remediation is complete: mixed-repository commands preserve root `.env`/`./pi`, Tier 5 runs both Python roots, and promoted standalone commands use `src/tests` plus `uv build .`.
+- The structural snapshot now names all intentional mixed-root consumers without implying governance-only retention.
+- The accepted relocation, provider-free parity, isolated wheel, and immutable provider-backed evidence remain unchanged; no provider/Judge operation or full dataset ran.
 
 ## Committed / unpushed state
 
 - AF-300 Tasks 1–5 and review fixes are committed through `6fd4a0b`; Task 6 implementation and terminal governance are committed at `08eff1c`.
-- The next commit is a governance-only AF-300 review-remediation reopen; documentation/tests follow only after scope preflight passes.
+- Review remediation governance reopened at `6ce0db5`; documentation/tests landed at `d5b5cd6`; the next commit closes the terminal governance state.
 - The Task 0 local-only review, external `pi/`, credentials, datasets, outputs, generated artifacts, and immutable provider-backed acceptance record remain untouched.
 
 ## Next concrete action
 
-Run `python3 tools/project_scope_check.py`, then add minimal RED documentation contracts for the three final-review command/root defects and the retained-root wording.
+Review the completed framework/worklist state and choose whether to scope a successor package; do not begin standalone release, full-dataset, or plugin work without that governance change.
 
 ## Open questions
 
-- None for this bounded remediation.
+- Which framework-convergence objective should become the next explicitly designed work package?
 
 ## Ruled-out paths
 

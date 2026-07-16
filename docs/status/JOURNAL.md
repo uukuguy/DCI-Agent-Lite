@@ -753,3 +753,5 @@
 - 2026-07-16 AF-300 review remediation governance reopens before documentation TDD. [6ce0db5]
 - 2026-07-16 AF-300 review RED reproduces mixed-root config drift, missing dual discovery, nested standalone paths, and narrowed retained-root state.
 - 2026-07-16 AF-300 review GREEN passes 31 focused docs/distribution/path tests, both CWD probes, CLI/config dry checks, compile, Ruff, scope, and diff.
+- 2026-07-16 AF-300 final-review contracts preserve mixed-root configuration, dual discovery, promoted standalone paths, and the retained-root boundary. [d5b5cd6]
+- 2026-07-16 AF-300 review closure passes 46 focused governance/docs/path tests, 2 project-boundary tests, CLI/config probes, compile, Ruff, scope, and diff.
