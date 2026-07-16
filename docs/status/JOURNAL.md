@@ -750,3 +750,4 @@
 - 2026-07-16 AF-300 closure passes 90 project, 1230 root, 11 TypeScript, and 19 Rust tests plus static gates.
 - 2026-07-16 AF-300 closes with extraction-ready root, provider-free parity, isolated wheel, and terminal governance. [08eff1c]
 - 2026-07-16 AF-300 review remediation reopens to correct three final-review documentation/CWD contracts and one structural-snapshot boundary; production/provider/dataset scope remains closed.
+- 2026-07-16 AF-300 review remediation governance reopens before documentation TDD. [6ce0db5]
