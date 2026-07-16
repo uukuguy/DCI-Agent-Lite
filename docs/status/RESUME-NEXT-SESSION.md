@@ -1,14 +1,16 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-16 22:10 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-16 22:16 +0800. **Session remains active — not a final handoff.**
 
-Active work package: none
+Active work package: AF-300
+
+Live state: AF-300 final command remediation in_progress
 
 ## TL;DR
 
-- AF-300 final-review remediation is complete: mixed-repository commands preserve root `.env`/`./pi`, Tier 5 runs both Python roots, and promoted standalone commands use `src/tests` plus `uv build .`.
-- The structural snapshot now names all intentional mixed-root consumers without implying governance-only retention.
-- The accepted relocation, provider-free parity, isolated wheel, and immutable provider-backed evidence remain unchanged; no provider/Judge operation or full dataset ran.
+- AF-300 is reopened only to correct the standalone guide's invalid `--level provider-free` command to the real provider-free acceptance profile.
+- Prior final-review remediation, relocation, parity, wheel, and immutable acceptance evidence remain unchanged.
+- No provider/Judge operation, dataset, production code, or external boundary is authorized.
 
 ## Committed / unpushed state
 
@@ -18,11 +20,11 @@ Active work package: none
 
 ## Next concrete action
 
-Review the completed framework/worklist state and choose whether to scope a successor package; do not begin standalone release, full-dataset, or plugin work without that governance change.
+Add a RED documentation contract for legal standalone verification levels, then minimally repair the guide and close AF-300 again.
 
 ## Open questions
 
-- Which framework-convergence objective should become the next explicitly designed work package?
+- None for this bounded command remediation.
 
 ## Ruled-out paths
 
