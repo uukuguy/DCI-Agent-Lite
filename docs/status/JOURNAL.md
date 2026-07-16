@@ -782,4 +782,5 @@
 - 06:04 H-003 packages a digest-bound extension so source and isolated wheels resolve identical policy. [bbb3eb8]
 - 06:13 H-003 transports literal policy argv and validates body-free Pi entries before finalization. [186bf6b]
 - 06:16 AF-310-H-003 confirmed 4/4; package acceptance recorded.
+- 06:18 H-003 binds policy evidence, Pi session resume, and final acceptance before public-surface work. [ddcd7b7]
 - 06:16 AF-310-H-003 confirmed 4/4; package acceptance recorded.
