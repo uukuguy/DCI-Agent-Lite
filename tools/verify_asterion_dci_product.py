@@ -730,7 +730,7 @@ def validate_launcher_pairs(root: Path) -> tuple[tuple[str, str], ...]:
         f"scripts/{relative}" for relative in LAUNCHER_RELATIVES
     }
     expected_targets = {
-        f"scripts/asterion/{relative}" for relative in LAUNCHER_RELATIVES
+        f"asterion/scripts/{relative}" for relative in LAUNCHER_RELATIVES
     }
     actual = {
         path.relative_to(root).as_posix()
@@ -740,12 +740,12 @@ def validate_launcher_pairs(root: Path) -> tuple[tuple[str, str], ...]:
     actual_targets = {
         path.relative_to(root).as_posix()
         for family in ("bcplus_eval", "qa", "bright")
-        for path in (root / "scripts" / "asterion" / family).glob("run_*.sh")
+        for path in (root / "asterion" / "scripts" / family).glob("run_*.sh")
     }
     if actual != expected or actual_targets != expected_targets:
         raise ValueError("source/Asterion launcher pairs are not exact")
     return tuple(
-        (f"scripts/{relative}", f"scripts/asterion/{relative}")
+        (f"scripts/{relative}", f"asterion/scripts/{relative}")
         for relative in LAUNCHER_RELATIVES
     )
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
-SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-REPO_ROOT=$(cd "$SCRIPT_DIR/../../.." && pwd)
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../../.." && pwd)
 if [ -f "$REPO_ROOT/.env" ]; then set -a; source "$REPO_ROOT/.env"; set +a; fi
 dataset="$REPO_ROOT/data/bcplus_qa.jsonl"
 corpus="$REPO_ROOT/corpus/bc_plus_docs"

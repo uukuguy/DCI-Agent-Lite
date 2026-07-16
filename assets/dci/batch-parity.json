@@ -304,7 +304,7 @@
       "source_name": "bcplus.level3",
       "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "scripts.asterion",
-      "target_symbol": "scripts/asterion/bcplus_eval/run_L3.sh",
+      "target_symbol": "asterion/scripts/bcplus_eval/run_L3.sh",
       "launcher_family": "bcplus",
       "source_profile": {
         "provider": "openai",
@@ -332,7 +332,7 @@
         "test_class": "AsterionDciBatchLauncherTests",
         "test_method": "test_scripts_bcplus_eval_run_l3_sh_launcher_bcplus_level3",
         "assertion_id": "AF-240-Task-6:scripts.bcplus-eval.run-L3.sh:launcher:bcplus.level3",
-        "assertion_summary": "Verify launcher bcplus.level3 from scripts/bcplus_eval/run_L3.sh against scripts/asterion/bcplus_eval/run_L3.sh."
+        "assertion_summary": "Verify launcher bcplus.level3 from scripts/bcplus_eval/run_L3.sh against asterion/scripts/bcplus_eval/run_L3.sh."
       }
     },
     {
@@ -342,7 +342,7 @@
       "source_name": "bcplus.dynamic-level-thinking",
       "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "scripts.asterion",
-      "target_symbol": "scripts/asterion/bcplus_eval/run_bcplus_eval_openai.sh",
+      "target_symbol": "asterion/scripts/bcplus_eval/run_bcplus_eval_openai.sh",
       "launcher_family": "bcplus",
       "source_profile": {
         "provider": "openai",
@@ -370,7 +370,7 @@
         "test_class": "AsterionDciBatchLauncherTests",
         "test_method": "test_scripts_bcplus_eval_run_bcplus_eval_openai_sh_launcher_bcplus_dynamic_level_thinking",
         "assertion_id": "AF-240-Task-6:scripts.bcplus-eval.run-bcplus-eval-openai.sh:launcher:bcplus.dynamic-level-thinking",
-        "assertion_summary": "Verify launcher bcplus.dynamic-level-thinking from scripts/bcplus_eval/run_bcplus_eval_openai.sh against scripts/asterion/bcplus_eval/run_bcplus_eval_openai.sh."
+        "assertion_summary": "Verify launcher bcplus.dynamic-level-thinking from scripts/bcplus_eval/run_bcplus_eval_openai.sh against asterion/scripts/bcplus_eval/run_bcplus_eval_openai.sh."
       }
     },
     {
@@ -11673,7 +11673,7 @@
       "source_name": "bright.biology",
       "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "scripts.asterion",
-      "target_symbol": "scripts/asterion/bright/run_bio.sh",
+      "target_symbol": "asterion/scripts/bright/run_bio.sh",
       "launcher_family": "bright",
       "source_profile": {
         "provider": "openai",
@@ -11701,7 +11701,7 @@
         "test_class": "AsterionDciBatchLauncherTests",
         "test_method": "test_scripts_bright_run_bio_sh_launcher_bright_biology",
         "assertion_id": "AF-240-Task-6:scripts.bright.run-bio.sh:launcher:bright.biology",
-        "assertion_summary": "Verify launcher bright.biology from scripts/bright/run_bio.sh against scripts/asterion/bright/run_bio.sh."
+        "assertion_summary": "Verify launcher bright.biology from scripts/bright/run_bio.sh against asterion/scripts/bright/run_bio.sh."
       }
     },
     {
@@ -11711,7 +11711,7 @@
       "source_name": "bright.earth-science",
       "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "scripts.asterion",
-      "target_symbol": "scripts/asterion/bright/run_earth_science.sh",
+      "target_symbol": "asterion/scripts/bright/run_earth_science.sh",
       "launcher_family": "bright",
       "source_profile": {
         "provider": "openai",
@@ -11739,7 +11739,7 @@
         "test_class": "AsterionDciBatchLauncherTests",
         "test_method": "test_scripts_bright_run_earth_science_sh_launcher_bright_earth_science",
         "assertion_id": "AF-240-Task-6:scripts.bright.run-earth-science.sh:launcher:bright.earth-science",
-        "assertion_summary": "Verify launcher bright.earth-science from scripts/bright/run_earth_science.sh against scripts/asterion/bright/run_earth_science.sh."
+        "assertion_summary": "Verify launcher bright.earth-science from scripts/bright/run_earth_science.sh against asterion/scripts/bright/run_earth_science.sh."
       }
     },
     {
@@ -11749,7 +11749,7 @@
       "source_name": "bright.economics",
       "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "scripts.asterion",
-      "target_symbol": "scripts/asterion/bright/run_economics.sh",
+      "target_symbol": "asterion/scripts/bright/run_economics.sh",
       "launcher_family": "bright",
       "source_profile": {
         "provider": "openai",
@@ -11777,7 +11777,7 @@
         "test_class": "AsterionDciBatchLauncherTests",
         "test_method": "test_scripts_bright_run_economics_sh_launcher_bright_economics",
         "assertion_id": "AF-240-Task-6:scripts.bright.run-economics.sh:launcher:bright.economics",
-        "assertion_summary": "Verify launcher bright.economics from scripts/bright/run_economics.sh against scripts/asterion/bright/run_economics.sh."
+        "assertion_summary": "Verify launcher bright.economics from scripts/bright/run_economics.sh against asterion/scripts/bright/run_economics.sh."
       }
     },
     {
@@ -11787,7 +11787,7 @@
       "source_name": "bright.robotics",
       "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "scripts.asterion",
-      "target_symbol": "scripts/asterion/bright/run_robotics.sh",
+      "target_symbol": "asterion/scripts/bright/run_robotics.sh",
       "launcher_family": "bright",
       "source_profile": {
         "provider": "openai",
@@ -11815,7 +11815,7 @@
         "test_class": "AsterionDciBatchLauncherTests",
         "test_method": "test_scripts_bright_run_robotics_sh_launcher_bright_robotics",
         "assertion_id": "AF-240-Task-6:scripts.bright.run-robotics.sh:launcher:bright.robotics",
-        "assertion_summary": "Verify launcher bright.robotics from scripts/bright/run_robotics.sh against scripts/asterion/bright/run_robotics.sh."
+        "assertion_summary": "Verify launcher bright.robotics from scripts/bright/run_robotics.sh against asterion/scripts/bright/run_robotics.sh."
       }
     },
     {
@@ -11825,7 +11825,7 @@
       "source_name": "qa.2wikimultihopqa",
       "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "scripts.asterion",
-      "target_symbol": "scripts/asterion/qa/run_2wikimultihopqa_dev_sample50.sh",
+      "target_symbol": "asterion/scripts/qa/run_2wikimultihopqa_dev_sample50.sh",
       "launcher_family": "qa",
       "source_profile": {
         "provider": "openai",
@@ -11853,7 +11853,7 @@
         "test_class": "AsterionDciBatchLauncherTests",
         "test_method": "test_scripts_qa_run_2wikimultihopqa_dev_sample50_sh_launcher_qa_2wikimultihopqa",
         "assertion_id": "AF-240-Task-6:scripts.qa.run-2wikimultihopqa-dev-sample50.sh:launcher:qa.2wikimultihopqa",
-        "assertion_summary": "Verify launcher qa.2wikimultihopqa from scripts/qa/run_2wikimultihopqa_dev_sample50.sh against scripts/asterion/qa/run_2wikimultihopqa_dev_sample50.sh."
+        "assertion_summary": "Verify launcher qa.2wikimultihopqa from scripts/qa/run_2wikimultihopqa_dev_sample50.sh against asterion/scripts/qa/run_2wikimultihopqa_dev_sample50.sh."
       }
     },
     {
@@ -11863,7 +11863,7 @@
       "source_name": "qa.bamboogle",
       "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "scripts.asterion",
-      "target_symbol": "scripts/asterion/qa/run_bamboogle_test_sample50.sh",
+      "target_symbol": "asterion/scripts/qa/run_bamboogle_test_sample50.sh",
       "launcher_family": "qa",
       "source_profile": {
         "provider": "openai",
@@ -11891,7 +11891,7 @@
         "test_class": "AsterionDciBatchLauncherTests",
         "test_method": "test_scripts_qa_run_bamboogle_test_sample50_sh_launcher_qa_bamboogle",
         "assertion_id": "AF-240-Task-6:scripts.qa.run-bamboogle-test-sample50.sh:launcher:qa.bamboogle",
-        "assertion_summary": "Verify launcher qa.bamboogle from scripts/qa/run_bamboogle_test_sample50.sh against scripts/asterion/qa/run_bamboogle_test_sample50.sh."
+        "assertion_summary": "Verify launcher qa.bamboogle from scripts/qa/run_bamboogle_test_sample50.sh against asterion/scripts/qa/run_bamboogle_test_sample50.sh."
       }
     },
     {
@@ -11901,7 +11901,7 @@
       "source_name": "qa.hotpotqa",
       "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "scripts.asterion",
-      "target_symbol": "scripts/asterion/qa/run_hotpotqa_dev_sample50.sh",
+      "target_symbol": "asterion/scripts/qa/run_hotpotqa_dev_sample50.sh",
       "launcher_family": "qa",
       "source_profile": {
         "provider": "openai",
@@ -11929,7 +11929,7 @@
         "test_class": "AsterionDciBatchLauncherTests",
         "test_method": "test_scripts_qa_run_hotpotqa_dev_sample50_sh_launcher_qa_hotpotqa",
         "assertion_id": "AF-240-Task-6:scripts.qa.run-hotpotqa-dev-sample50.sh:launcher:qa.hotpotqa",
-        "assertion_summary": "Verify launcher qa.hotpotqa from scripts/qa/run_hotpotqa_dev_sample50.sh against scripts/asterion/qa/run_hotpotqa_dev_sample50.sh."
+        "assertion_summary": "Verify launcher qa.hotpotqa from scripts/qa/run_hotpotqa_dev_sample50.sh against asterion/scripts/qa/run_hotpotqa_dev_sample50.sh."
       }
     },
     {
@@ -11939,7 +11939,7 @@
       "source_name": "qa.musique",
       "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "scripts.asterion",
-      "target_symbol": "scripts/asterion/qa/run_musique_dev_sample50.sh",
+      "target_symbol": "asterion/scripts/qa/run_musique_dev_sample50.sh",
       "launcher_family": "qa",
       "source_profile": {
         "provider": "openai",
@@ -11967,7 +11967,7 @@
         "test_class": "AsterionDciBatchLauncherTests",
         "test_method": "test_scripts_qa_run_musique_dev_sample50_sh_launcher_qa_musique",
         "assertion_id": "AF-240-Task-6:scripts.qa.run-musique-dev-sample50.sh:launcher:qa.musique",
-        "assertion_summary": "Verify launcher qa.musique from scripts/qa/run_musique_dev_sample50.sh against scripts/asterion/qa/run_musique_dev_sample50.sh."
+        "assertion_summary": "Verify launcher qa.musique from scripts/qa/run_musique_dev_sample50.sh against asterion/scripts/qa/run_musique_dev_sample50.sh."
       }
     },
     {
@@ -11977,7 +11977,7 @@
       "source_name": "qa.nq",
       "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "scripts.asterion",
-      "target_symbol": "scripts/asterion/qa/run_nq_test_sample50.sh",
+      "target_symbol": "asterion/scripts/qa/run_nq_test_sample50.sh",
       "launcher_family": "qa",
       "source_profile": {
         "provider": "openai",
@@ -12005,7 +12005,7 @@
         "test_class": "AsterionDciBatchLauncherTests",
         "test_method": "test_scripts_qa_run_nq_test_sample50_sh_launcher_qa_nq",
         "assertion_id": "AF-240-Task-6:scripts.qa.run-nq-test-sample50.sh:launcher:qa.nq",
-        "assertion_summary": "Verify launcher qa.nq from scripts/qa/run_nq_test_sample50.sh against scripts/asterion/qa/run_nq_test_sample50.sh."
+        "assertion_summary": "Verify launcher qa.nq from scripts/qa/run_nq_test_sample50.sh against asterion/scripts/qa/run_nq_test_sample50.sh."
       }
     },
     {
@@ -12015,7 +12015,7 @@
       "source_name": "qa.triviaqa",
       "current_asterion_owner": "asterion.dci.cli",
       "target_asterion_owner": "scripts.asterion",
-      "target_symbol": "scripts/asterion/qa/run_triviaqa_test_sample50.sh",
+      "target_symbol": "asterion/scripts/qa/run_triviaqa_test_sample50.sh",
       "launcher_family": "qa",
       "source_profile": {
         "provider": "openai",
@@ -12043,7 +12043,7 @@
         "test_class": "AsterionDciBatchLauncherTests",
         "test_method": "test_scripts_qa_run_triviaqa_test_sample50_sh_launcher_qa_triviaqa",
         "assertion_id": "AF-240-Task-6:scripts.qa.run-triviaqa-test-sample50.sh:launcher:qa.triviaqa",
-        "assertion_summary": "Verify launcher qa.triviaqa from scripts/qa/run_triviaqa_test_sample50.sh against scripts/asterion/qa/run_triviaqa_test_sample50.sh."
+        "assertion_summary": "Verify launcher qa.triviaqa from scripts/qa/run_triviaqa_test_sample50.sh against asterion/scripts/qa/run_triviaqa_test_sample50.sh."
       }
     },
     {

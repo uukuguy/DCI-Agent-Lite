@@ -2,7 +2,7 @@
   "schema": "asterion.dci.product-parity/v1",
   "batch_inventory": {
     "path": "assets/dci/batch-parity.json",
-    "sha256": "ceec342a6a6c9311d043379067bc33ba6445414dd8c236cff1d8416fcdad2e55",
+    "sha256": "2189ae454ee3aaad1a939c334855a6777d5a64fd96fde1d605e78604eea0c1b2",
     "row_count": 533
   },
   "product_acceptance": {
@@ -1377,7 +1377,7 @@
       "id": "installed-pi-application",
       "owner": "asterion.applications.dci_agent_lite",
       "source_entry_points": [
-        "applications/dci-agent-lite/python/dci_research_host.py"
+        "asterion/examples/applications/dci_research.py"
       ],
       "asterion_entry_points": [
         "asterion/src/asterion/applications/dci_agent_lite/assemblies/dci-research-capability.json",

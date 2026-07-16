@@ -15,7 +15,7 @@ from asterion.dci.cli import main
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE_LAUNCHER_ROOT = ROOT / "scripts"
-ASTERION_LAUNCHER_ROOT = SOURCE_LAUNCHER_ROOT / "asterion"
+ASTERION_LAUNCHER_ROOT = ROOT / "asterion/scripts"
 PROFILE_RESOURCE = (
     ROOT
     / "asterion/src/asterion/dci/resources/batch-profiles.json"
@@ -122,7 +122,7 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
     def test_dynamic_launcher_omits_unset_optionals_and_forwards_explicit_limit(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory).resolve()
-            launcher_dir = root / "scripts/asterion/bcplus_eval"
+            launcher_dir = root / "asterion/scripts/bcplus_eval"
             launcher_dir.mkdir(parents=True)
             launcher = launcher_dir / "run_bcplus_eval_openai.sh"
             launcher.write_text(

@@ -21,7 +21,7 @@ ASSEMBLY = ROOT / "asterion/src/asterion/applications/dci_agent_lite/assemblies/
 EXECUTABLE_ASSEMBLY = (
     ROOT / "asterion/src/asterion/applications/dci_agent_lite/assemblies/dci-research-capability.json"
 )
-HOST_MODULE = ROOT / "applications/dci-agent-lite/python/dci_research_host.py"
+HOST_MODULE = ROOT / "asterion/examples/applications/dci_research.py"
 GUIDE = ROOT / "docs/architecture/capability-execution.md"
 
 

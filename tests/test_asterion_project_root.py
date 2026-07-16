@@ -40,6 +40,14 @@ class AsterionProjectRootTests(unittest.TestCase):
         for obsolete in (ROOT / "schemas", ROOT / "packages/typescript", ROOT / "packages/rust"):
             self.assertFalse(obsolete.exists(), str(obsolete))
 
+    def test_examples_and_launchers_are_project_owned(self) -> None:
+        self.assertTrue((PROJECT / "examples/applications/dci_research.py").is_file())
+        self.assertTrue((PROJECT / "examples/applications/controlled_code.py").is_file())
+        launchers = sorted((PROJECT / "scripts").glob("**/run_*.sh"))
+        self.assertEqual(len(launchers), 12)
+        self.assertFalse((ROOT / "applications").exists())
+        self.assertFalse((ROOT / "scripts/asterion").exists())
+
 
 if __name__ == "__main__":
     unittest.main()
