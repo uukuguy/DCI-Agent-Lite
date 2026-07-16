@@ -162,6 +162,62 @@ class AsterionDocumentationTests(unittest.TestCase):
             self.assertIn(source, text)
             self.assertTrue((path.parent / source).resolve().exists())
 
+    def test_standalone_extraction_guide_is_complete_and_phased(self) -> None:
+        relative = "docs/architecture/asterion-standalone-extraction.md"
+        path = ROOT / relative
+        self.assertTrue(path.is_file(), relative)
+        text = path.read_text(encoding="utf-8")
+
+        for required in (
+            "# Asterion 独立项目拆分指南",
+            "## 当前自包含清单",
+            "## 外部依赖与明确排除项",
+            "## 目标目录树",
+            "## 迁移映射表",
+            "## Phase 1：冻结边界与基线",
+            "## Phase 2：建立独立仓库骨架",
+            "## Phase 3：迁移 Python 发行物",
+            "## Phase 4：迁移协议与跨语言包",
+            "## Phase 5：迁移 DCI 产品与应用",
+            "## Phase 6：隔离安装与发布验证",
+            "## Phase 7：切换与清理",
+            "## DCI 打包决策门",
+            "## 发布门禁",
+            "## 回滚方案",
+            "## 风险与非目标",
+            "packages/python/asterion-core",
+            "packages/typescript/asterion-runtime",
+            "packages/rust/controlled-executor",
+            "schemas/agent-runtime/v1",
+            "tests/fixtures",
+            "keep DCI bundled initially",
+            "separately versioned plugin decision gate",
+            "isolated wheel",
+            "provider-free acceptance",
+            "bounded Pi examples",
+        ):
+            self.assertIn(required, text)
+
+        for excluded in (
+            "外部 `pi/` checkout",
+            "corpora 与 benchmark datasets",
+            "credentials 与 `.env`",
+            "运行输出与评测 artifacts",
+            "`.worktrees/`",
+            "旧 `src/dci`",
+        ):
+            self.assertIn(excluded, text)
+
+        for command in (
+            "uv build packages/python/asterion-core",
+            "asterion list",
+            "asterion verify --provider dci-agent-lite --level provider-free",
+            "make asterion-verify-basic",
+            "npm test",
+            "cargo test",
+        ):
+            self.assertIn(command, text)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -726,3 +726,4 @@
 - 2026-07-16 AF-290 plan makes product, integration, extraction, and truth reconciliation independently testable.
 - 2026-07-16 Documentation TDD plan binds complete claims to source paths, commands, evidence labels, and contradiction checks. [12996c3]
 - 2026-07-16 Complete DCI reference separates product implementation, executable proof, Pi limits, and unrerun benchmark scores. [b487fe6]
+- 2026-07-16 Framework guide fixes directory authority and defines safe end-to-end capability integration. [5fe21f1]
