@@ -762,3 +762,4 @@
 - 2026-07-16 Command GREEN passes 44 focused docs/distribution/CLI tests, parser/profile dry probe, compile, Ruff, scope, and diff.
 - 2026-07-16 Standalone extraction now uses the legal provider-free `acceptance` verification profile. [147d1d7]
 - 2026-07-16 Final command closure passes 25 docs/governance tests, parser/profile dry checks, compile, Ruff, complete/null scope, and diff.
+- 2026-07-16 AF-300 final command remediation closes with terminal lifecycle and no active package. [3bea5c7]
