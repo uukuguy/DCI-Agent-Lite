@@ -1,47 +1,30 @@
-# AF-280 Completion Checkpoint
+# AF-290 Design Checkpoint
 
-> Updated: 2026-07-16 03:25 +0800. Asterion DCI verification now has complete CLI and Make entry points.
+> Updated: 2026-07-16 +0800. Accepted implementation remains unchanged; AF-290 is documentation-only.
 
-Active work package: none
+Active work package: AF-290
 
 ## TL;DR
 
-- The full Asterion DCI migration and unified `asterion describe/verify` implementation remain accepted.
-- Five explicit Make targets expose description plus preflight/basic/acceptance/complete verification from the repository root.
-- Defaults use the shared `.env`, `./corpus`, and `./outputs/asterion-verification`; Make variables can override them.
-- Provider-backed levels remain explicit; there is no ambiguous `asterion-verify` Make alias.
-- Project lifecycle is `complete`; no full dataset or provider-backed verification was run for AF-280.
-
-## Committed state
-
-- AF-280 design and plan: `448ce3c`, `9458cae`.
-- Make targets and exact argv tests: `c913d64`.
-- README and beginner-guide workflow: `7478db4`.
-
-The branch is `main`. The user-owned untracked `.superpowers/sdd/task-0-review.md` remains untouched.
-
-## Verified evidence
-
-- `make -n` renders exact argv for all five targets.
-- Three Makefile contract tests and twelve distribution-boundary tests pass.
-- Live `make asterion-describe` succeeds.
-- Live `make asterion-verify-acceptance` reports PASS, provider-backed operations `0`, and full dataset `no`.
-- Compile, Ruff, scope, and diff checks pass.
+- Write three evidence-backed documents: complete Asterion DCI reference, framework/capability integration guide, and standalone extraction design.
+- Clearly separate implemented behavior, executable verification, external-Pi limitations, and full-dataset results that were not rerun.
+- Explain canonical package-local `capabilities/` and `applications/` versus top-level historical/reference directories.
+- Do not move code or begin extraction in AF-290; directory restructuring and DCI gaps are discussed after the documents are accepted.
 
 ## Next action
 
-No accepted work remains. Use the Make targets below for repository operation; approve a successor package before further implementation.
+After written-spec approval, create the implementation plan and write the documents from source and executable evidence.
+
+## Ruled-out paths
+
+- Do not claim Pi context-management levels are effective when the configured Pi CLI does not expose the flag.
+- Do not equate 533 model-free behavior checks with rerunning every full benchmark dataset or reproducing published scores.
+- Do not move directories, split repositories, or modify external `pi/` under this documentation package.
 
 ## Ready commands
 
 ```bash
-make asterion-describe
-make asterion-verify-preflight
-make asterion-verify-basic
-make asterion-verify-acceptance
-make asterion-verify-complete
 python3 tools/project_scope_check.py
+sed -n '1,260p' docs/superpowers/specs/2026-07-16-asterion-documentation-set-design.md
 git status --short
 ```
-
-Usage guide: `docs/guides/asterion-capability-usage.md`.

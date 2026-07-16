@@ -2,7 +2,7 @@
 
 > Canonical work-package ledger. An `active` lifecycle requires exactly one `in_progress` package; a `complete` lifecycle permits none and forbids autonomous dispatch.
 
-> Project lifecycle: complete
+> Project lifecycle: active
 
 ## AF-000 — Framework control plane
 
@@ -303,6 +303,16 @@
 - Design: `docs/superpowers/specs/2026-07-16-asterion-make-entry-points-design.md`
 - Plan: `docs/superpowers/plans/2026-07-16-asterion-make-entry-points.md`
 - Closure evidence: five explicit phony targets map exactly to capability description and preflight/basic/acceptance/complete verification, with overridable provider, `.env`, corpus, and output defaults. No ambiguous verification alias exists. Exact dry-run argv tests pass; live `make asterion-describe` and provider-free `make asterion-verify-acceptance` pass with zero provider-backed operations and no full dataset. README and the beginner guide document cost-visible usage. Closure passes 15 focused tests, compile, Ruff, scope, and diff gates.
+
+## AF-290 — Complete product, framework, and extraction documentation
+
+- Status: in_progress
+- Parent objective: Asterion product comprehensibility and independent-project readiness
+- Scope: create a complete Asterion DCI product reference, framework/capability integration guide, and standalone extraction design; reconcile misleading context-management and benchmark claims without moving implementation directories.
+- Dependencies: AF-250, AF-270, AF-280
+- Acceptance: the documents distinguish implemented behavior, executable verification, external-Pi limitations, and unrerun full-dataset evidence; explain every canonical Asterion layer and the current top-level compatibility/reference directories; provide a complete capability-to-application integration path; enumerate the self-contained wheel and external dependencies; define a phased standalone repository extraction with gates and non-goals; README and documentation indexes link the set; stale contradictory context-management guidance is corrected.
+- Design: `docs/superpowers/specs/2026-07-16-asterion-documentation-set-design.md`
+- Plan: pending written-spec approval
 
 ## AF-095 — Asterion framework identity and extraction
 

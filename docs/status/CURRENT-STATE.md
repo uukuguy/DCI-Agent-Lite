@@ -4,11 +4,11 @@
 
 - Project: Asterion framework under development in the DCI-Agent-Lite repository; DCI remains the first capability and reference application.
 - Current branch: `main`
-- Theme-level focus: completed Asterion framework, full DCI migration, unified verification, and repository Make entry points.
+- Theme-level focus: document the complete Asterion DCI product, framework/capability integration model, and future standalone extraction boundary.
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `docs/architecture/agent-framework.md`
-- Active work package: none; project lifecycle is complete.
+- Active work package: AF-290 — complete product, framework, and extraction documentation.
 
 ## Current Architecture
 
@@ -56,7 +56,7 @@
 
 ## Open Problems (theme-level)
 
-- None in the accepted migration and Make-entry scope. Future implementation requires an explicitly approved successor package and lifecycle reopening.
+- AF-290 must reconcile the stale runtime context-level claims in `assets/docs/running.md` with the current external Pi capability boundary and distinguish complete benchmark implementation from unrerun full-dataset score reproduction.
 
 ## Key Files
 
