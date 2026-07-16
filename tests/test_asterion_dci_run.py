@@ -22,6 +22,7 @@ from asterion.dci.run import (
     request_from_runtime_options,
     resume_request_from_output_dir,
     run_pi_research,
+    validate_dci_run_request,
 )
 from asterion.runtime.protocol import MAX_DEADLINE_MS, validate_event_stream
 
@@ -1081,6 +1082,28 @@ class AsterionDciRunTests(unittest.TestCase):
         )
 
         self.assertEqual(_pi_extra_args(request), ("--thinking", "high"))
+
+    def test_runtime_context_request_resolves_the_canonical_profile(self) -> None:
+        request = DciRunRequest(
+            run_id="run-1",
+            question="question",
+            cwd=Path("/work"),
+            runtime_context_level="level3",
+        )
+
+        self.assertTrue(hasattr(request, "context_profile"))
+        self.assertEqual(request.context_profile.name, "level3")
+
+    def test_runtime_context_request_rejects_unknown_profile(self) -> None:
+        request = DciRunRequest(
+            run_id="run-1",
+            question="question",
+            cwd=Path("/work"),
+            runtime_context_level="level5",
+        )
+
+        with self.assertRaisesRegex(ValueError, "context profile"):
+            validate_dci_run_request(request)
 
     def test_runtime_context_request_records_current_pi_capability_diagnostic(
         self,

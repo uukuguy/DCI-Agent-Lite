@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-17 05:32 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-17 05:44 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-310
 
@@ -16,7 +16,7 @@ Active work package: AF-310
 - Branch: `main`; design and checkpoint state are committed through the immediately following state-maintenance commits, remain unpushed, and leave a clean working tree.
 - Provider-free product verification still passes 8/8 rows, 533/533 selectors, 12/12 launcher pairs, 6/6 extras, and 7/7 bounded retained cases with zero provider operations.
 - Correct Context/artifact/CLI focused tests pass 101/101; an earlier nonzero command was only an invalid guessed test-module selector.
-- Governance, D-044, and a fresh AF-310 Climb pool are active; AF-310-H-001 is the next hypothesis.
+- Governance, D-044, and a fresh AF-310 Climb pool are active; AF-310-H-001 is confirmed 4/4 and AF-310-H-002 is next.
 - No implementation, full dataset, provider request, or Climb cycle has started.
 
 ## Approved package sequence
@@ -28,10 +28,10 @@ Active work package: AF-310
 
 ## Next steps
 
-1. Run `python3 tools/project_scope_check.py`; it must name AF-310 and AF-310-H-001.
-2. Commit the Task 0 governed start and journal its hash.
-3. Write AF-310-H-001 failing profile-contract tests and observe the expected RED result.
-4. Implement only the minimum closed profile contract needed for GREEN, then record the Climb cycle and advance continuously.
+1. Commit the confirmed AF-310-H-001 contract, Climb adapter, and cycle state; journal its hash.
+2. Run `python3 tools/project_scope_check.py --climb-hypothesis AF-310-H-002`.
+3. Write the AF-310-H-002 TypeScript fake-Pi and policy-boundary tests and observe RED.
+4. Implement only the minimum dependency-free policy engine needed for GREEN, then run its Climb cycle.
 
 ## Don't go down these paths again
 
@@ -49,5 +49,5 @@ git status --short
 python3 tools/project_scope_check.py
 sed -n '1,460p' docs/superpowers/specs/2026-07-16-paper-aligned-dci-complete-implementation-design.md
 sed -n '1,220p' docs/superpowers/plans/2026-07-16-af-310-paper-aligned-runtime-context-management.md
-uv run --project asterion python -m unittest tests.test_asterion_dci_context_profiles -v
+npm --prefix asterion/packages/typescript/dci-context-extension test
 ```

@@ -60,7 +60,7 @@
 
 ## Open Problems (theme-level)
 
-- Exact DCI paper L0–L4 behavior is not implemented yet; AF-310-H-001 starts with the cross-language contract under TDD.
+- AF-310-H-001 is confirmed 4/4: the closed schema-backed L0–L4 profile names, exact thresholds, stable identity, and configuration/request validation pass. Live Pi behavior is not implemented yet; AF-310-H-002 owns the TypeScript policy engine.
 - Full-dataset validation and score reproduction remain deliberately deferred to separately authorized AF-340.
 
 ## Key Files

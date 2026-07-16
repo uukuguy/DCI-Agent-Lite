@@ -1,19 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (84 runs).
+> Deterministic summary generated from tracked state (85 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 85
-- Next hypothesis: AF-310-H-001
+- Last cycle: 86
+- Next hypothesis: AF-310-H-002
 - In flight: none
-- Next action: Write and run AF-310-H-001 profile-contract RED tests.
+- Next action: Start AF-310-H-002.
 
 ## Active hypotheses
 
-- **AF-310-H-001** (pending, rank 1.00): Define one closed schema-backed L0-L4 profile contract with exact Python and TypeScript fixture parity.
 - **AF-310-H-002** (pending, rank 0.90): Prove the Asterion Pi extension applies exact L0-L4 transformations to model-visible context and failure state.
 - **AF-310-H-003** (pending, rank 0.80): Prove packaged extension integrity, literal Pi transport, immutable resume identity, and isolated-wheel availability.
 - **AF-310-H-004** (pending, rank 0.70): Prove run, benchmark, resume, installed application, and wheel expose one content-free context-policy implementation.
@@ -107,6 +106,7 @@
 | 20260715-054158-dci-climb-af250h004 | AF-250-H-004 | 4 | confirmed 4/4 |
 | 20260715-062948-dci-climb-af250h005 | AF-250-H-005 | 4 | confirmed 4/4 |
 | 20260715-070106-dci-climb-af250h005 | AF-250-H-005 | 4 | confirmed 4/4 |
+| 20260717-054153-dci-climb-af310h001 | AF-310-H-001 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

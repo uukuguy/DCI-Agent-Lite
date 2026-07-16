@@ -17,6 +17,7 @@ from asterion.runtime.host import RunEvent
 if TYPE_CHECKING:
     from asterion.dci.artifacts import DciConversationFeatures
     from asterion.dci.config import DciRuntimeOptions
+    from asterion.dci.context_profiles import DciContextProfile
 
 
 @dataclass(frozen=True)
@@ -44,6 +45,14 @@ class DciRunRequest:
     pi_agent_dir: Path | None = None
     resume: bool = False
     stream_text: bool = True
+
+    @property
+    def context_profile(self) -> DciContextProfile | None:
+        """Resolve the canonical paper profile selected by this request."""
+
+        from asterion.dci.context_profiles import resolve_context_profile
+
+        return resolve_context_profile(self.runtime_context_level)
 
 
 @dataclass(frozen=True)
@@ -81,6 +90,10 @@ def validate_dci_run_request(
     text(request.provider, optional=True)
     text(request.model, optional=True)
     text(request.runtime_context_level, optional=True)
+    if request.runtime_context_level is not None:
+        from asterion.dci.context_profiles import resolve_context_profile
+
+        resolve_context_profile(request.runtime_context_level)
     text(request.thinking_level, optional=True)
     if request.thinking_level not in _THINKING_LEVELS | {None}:
         raise ValueError("DCI run request is invalid")

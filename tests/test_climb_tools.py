@@ -2952,22 +2952,12 @@ class ClimbToolTests(unittest.TestCase):
         self.assertEqual(recovery["local"], 4)
         self.assertEqual(recovery["verdict"], "confirmed 4/4")
 
-        session = json.loads(
-            (REPO_ROOT / "docs/status/climb/session-state.json").read_text()
-        )
-        self.assertEqual(session["session"], "2026-07-15-af-250-product-acceptance-matrix")
-        self.assertEqual(session["work_package_id"], "AF-250")
-        self.assertEqual(session["phase"], "completed")
-        self.assertIsNone(session["next_hypothesis"])
-        self.assertIsNone(session["in_flight"])
-
         worklist = (REPO_ROOT / "docs/status/WORKLIST.md").read_text()
         af250 = worklist.split("## AF-250 — Product acceptance matrix", 1)[1]
         af250 = af250.split("\n## ", 1)[0]
         self.assertIn("- Status: completed", af250)
 
-        resume = (REPO_ROOT / "docs/status/RESUME-NEXT-SESSION.md").read_text()
-        self.assertNotIn("Commit the cohesive AF-250", resume)
+        self.assertNotIn("Commit the cohesive AF-250", worklist)
 
     def test_af250_train_registers_distinct_executable_selectors(self) -> None:
         train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
@@ -3027,6 +3017,40 @@ class ClimbToolTests(unittest.TestCase):
                 )
                 self.assertEqual(evaluation["candidate_status"], "pending")
                 self.assertIs(evaluation["product_confirmation"], False)
+
+    def test_af310_train_registers_context_contract_hypothesis(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+
+        self.assertIn("AF-310-H-001", train_script)
+        self.assertIn("tests.test_asterion_dci_context_profiles", train_script)
+
+    def test_af310_h001_eval_reports_four_contract_dimensions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            env = os.environ.copy()
+            env["DCI_CLIMB_HYPOTHESIS_ID"] = "AF-310-H-001"
+
+            result = subprocess.run(
+                ["bash", "tools/climb/eval-local.sh", str(run_dir)],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            evaluation = json.loads((run_dir / "local-eval.json").read_text())
+            self.assertEqual(evaluation["hypothesis_id"], "AF-310-H-001")
+            self.assertEqual(evaluation["total"], 4)
+            self.assertEqual(
+                set(evaluation["per_task"]),
+                {
+                    "closed_profiles",
+                    "stable_identity",
+                    "invalid_values",
+                    "boundary_validation",
+                },
+            )
 
 
 if __name__ == "__main__":

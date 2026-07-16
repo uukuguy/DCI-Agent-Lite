@@ -86,6 +86,17 @@ class AsterionDciConfigTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         resolve_dci_runtime_options()
 
+    def test_runtime_options_reject_unknown_context_profile(self) -> None:
+        for value in ("level5", "legacy", " level3"):
+            with self.subTest(value=value):
+                with patch.dict(
+                    os.environ,
+                    {"DCI_RUNTIME_CONTEXT_LEVEL": value},
+                    clear=True,
+                ):
+                    with self.assertRaisesRegex(ValueError, "context profile"):
+                        resolve_dci_runtime_options()
+
     def test_defaults_never_select_legacy_dci_locations(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory).resolve()

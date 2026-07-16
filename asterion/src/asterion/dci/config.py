@@ -99,6 +99,11 @@ def resolve_dci_runtime_options(
     """Resolve shared DCI runtime defaults with explicit values taking priority."""
 
     values = {} if overrides is None else dict(overrides)
+    from asterion.dci.context_profiles import resolve_context_profile
+
+    context_profile = resolve_context_profile(
+        _override_or_env(values, "runtime_context_level", "DCI_RUNTIME_CONTEXT_LEVEL")
+    )
     return DciRuntimeOptions(
         provider=_override_or_env(values, "provider", "DCI_PROVIDER"),
         model=_override_or_env(values, "model", "DCI_MODEL"),
@@ -108,9 +113,7 @@ def resolve_dci_runtime_options(
                 values, "timeout_seconds", "DCI_RPC_TIMEOUT_SECONDS", "3600"
             )
         ),
-        runtime_context_level=_override_or_env(
-            values, "runtime_context_level", "DCI_RUNTIME_CONTEXT_LEVEL"
-        ),
+        runtime_context_level=(context_profile.name if context_profile else None),
         thinking_level=_override_or_env(
             values, "thinking_level", "DCI_PI_THINKING_LEVEL"
         ),
