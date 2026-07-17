@@ -110,9 +110,11 @@ preserves existing outputs and exact float serialization.
 Add a closed matrix schema that separately represents paper-declared
 100K/200K/400K BrowseComp/FineWeb rows and bounded analogues. Paper rows bind
 the appropriate trajectory/tool/corpus or context-ablation BrowseComp `n=100`
-query scope with seed/algorithm and selected-ID digest, plus FineWeb source,
-target count, seed/algorithm, selected-ID manifest, and the non-executable
-`paper-full` class. Bounded rows cover context levels 0–4, two
+query scope with seed/algorithm and selected-ID digest, plus FineWeb source and
+target count. Because the paper does not publish the FineWeb seed, algorithm,
+selected IDs, or manifest digest, paper corpus rows must mark those fields
+`paper-unreported` and null rather than inventing an identity. They retain the
+non-executable `paper-full` class. Bounded rows cover context levels 0–4, two
 tool profiles (`read,grep` and `read,bash`), and tiny base/+1/+2 corpus
 manifests. The restricted profile must use Pi's dedicated grep tool rather than
 command-string filtering inside bash. Rows must be sorted, unique,

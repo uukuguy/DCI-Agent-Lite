@@ -187,9 +187,12 @@ analogues. Paper rows use the named BrowseComp `n=100` query scope appropriate
 to trajectory/tool/corpus analysis or context ablation, context levels 0–4 and
 tool profiles `read,grep` and `read,bash`, plus the declared 100K, 200K, and 400K
 BrowseComp/FineWeb corpus targets. Each paper row records both the query-scope
-seed/algorithm/selected-ID digest and the FineWeb source identity, target
-document count, selection seed/algorithm, and selected-document manifest
-digest. All are `paper-full` and non-executable in AF-320.
+seed/algorithm/selected-ID digest and the FineWeb source identity and target
+document count. The paper says that FineWeb distractors were randomly sampled
+but does not publish their seed, algorithm, selected IDs, or manifest digest.
+Those fields therefore carry an explicit `paper-unreported` provenance status
+and null values; AF-320 must not fabricate an executable selection identity.
+All are `paper-full` and non-executable in AF-320.
 
 The executable analogues use three deliberately tiny, non-paper fixtures:
 

@@ -447,3 +447,11 @@
 - Bamboogle boundary: the paper-full identity is 125 test rows. The migrated `qa.bamboogle` profile, local file, and launcher are a separate 50-row sample and cannot satisfy or execute that paper-full identity, so the inventory leaves its full row unbound until AF-340 provides a reviewed source/authorization surface.
 - Fixture boundary: bounded-fixture declarations bind hash-verified packaged dataset and corpus artifacts. They do not authorize a paper-full scope or imply score reproduction.
 - Revalidation trigger: replace an Asterion-defined scope only when a primary paper artifact supplies the exact published seed or selected IDs; bind Bamboogle full execution only through AF-340 governance.
+
+## D-047 — Keep unpublished FineWeb distractor selections unbound
+
+- Status: ✅ accepted design correction
+- Decided: 2026-07-17
+- Decision: the paper declares random FineWeb distractor injection and the 100K/200K/400K corpus targets, but does not publish a FineWeb revision, seed, selection algorithm, selected IDs, or manifest digest. AF-320 records those fields as `paper-unreported` and null instead of manufacturing an identity.
+- Execution boundary: every affected corpus-scale row remains `paper-full` and unconditionally non-executable. A bounded analogue binds only packaged synthetic distractor fixtures and is never described as the paper selection.
+- Revalidation trigger: AF-340 may bind a FineWeb selection only from a reviewed primary artifact that makes the complete source and selected-document identity reproducible.

@@ -345,7 +345,7 @@
 - Parent objective: Paper-aligned complete DCI implementation in Asterion
 - Scope: ship the paper's exact thirteen-dataset inventory and experiment-specific selection identities, correct BEIR NDCG@10, trajectory coverage/localization/retained-evidence analysis, and deterministic paper-declared plus bounded ablation surfaces through the existing Asterion DCI product.
 - Dependencies: AF-310
-- Acceptance: schema-closed dataset/scope resources and product surfaces pass source/installed/wheel parity; unpublished BrowseComp samples remain explicitly Asterion-defined and Bamboogle full-125 remains distinct from the migrated sample-50 profile; native immutable evidence produces exact coverage and matched-gold localization metrics; full paper rows remain unconditionally non-executable before AF-340; bounded acceptance uses exactly two Pi agent operations and one exact GPT-4.1 Judge operation without a full dataset or score-reproduction claim.
+- Acceptance: schema-closed dataset/scope resources and product surfaces pass source/installed/wheel parity; unpublished BrowseComp samples remain explicitly Asterion-defined, unpublished FineWeb distractor selections remain explicitly unbound, and Bamboogle full-125 remains distinct from the migrated sample-50 profile; native immutable evidence produces exact coverage and matched-gold localization metrics; full paper rows remain unconditionally non-executable before AF-340; bounded acceptance uses exactly two Pi agent operations and one exact GPT-4.1 Judge operation without a full dataset or score-reproduction claim.
 - Design: `docs/superpowers/specs/2026-07-17-af-320-paper-benchmark-metric-parity-design.md`
 - Plan: `docs/superpowers/plans/2026-07-17-af-320-paper-benchmark-metric-parity.md`
 

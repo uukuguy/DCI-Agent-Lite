@@ -821,3 +821,4 @@
 - 10:46 AF-320-H-003 confirmed 4/4; package acceptance recorded.
 - 11:31 Recovery checkpoint advances AF-320 from confirmed metric/trajectory evidence to H004 deterministic ablation closure.
 - 11:33 H002/H003 Climb evidence advances the recovery boundary to H004. [7867a4d]
+- 11:47 Paper review found FineWeb distractor seed/IDs unpublished; D-047 forbids fabricated matrix identities before implementation.
