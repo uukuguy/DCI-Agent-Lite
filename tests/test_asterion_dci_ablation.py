@@ -161,7 +161,8 @@ class PaperAblationMatrixTests(unittest.TestCase):
         command = module.render_paper_ablation_command("bounded.tools.read-grep")
         self.assertEqual(
             command,
-            "asterion-dci benchmark --ablation-row bounded.tools.read-grep",
+            "asterion-dci benchmark --ablation-row bounded.tools.read-grep "
+            "--output-root outputs/asterion-dci-ablation/bounded.tools.read-grep",
         )
         self.assertNotIn("--profile", command)
         self.assertNotIn("provider", command)
@@ -261,7 +262,8 @@ class PaperAblationCommandTests(unittest.TestCase):
         )
         self.assertEqual(
             stdout.getvalue(),
-            "asterion-dci benchmark --ablation-row bounded.tools.read-grep\n",
+            "asterion-dci benchmark --ablation-row bounded.tools.read-grep "
+            "--output-root outputs/asterion-dci-ablation/bounded.tools.read-grep\n",
         )
 
     def test_ablation_command_failures_are_body_free(self) -> None:

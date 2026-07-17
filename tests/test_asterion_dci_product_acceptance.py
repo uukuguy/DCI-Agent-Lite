@@ -21,6 +21,7 @@ from tools.verify_asterion_dci_product import (
     validate_acceptance_document,
     validate_acceptance_reference,
     verify_product_acceptance,
+    run_installed_product_proof,
 )
 
 
@@ -433,3 +434,17 @@ class AsterionDciProductAcceptanceTests(unittest.TestCase):
             validate_acceptance_document(
                 credential, credential_values=("credential-value",)
             )
+
+
+class PaperBenchmarkWheelTests(unittest.TestCase):
+    def test_isolated_wheel_uses_packaged_paper_resources_not_cwd_lookalikes(self) -> None:
+        evidence = run_installed_product_proof(ROOT)
+        self.assertEqual(evidence["paper_contract"], "packaged")
+        self.assertEqual(
+            (
+                evidence["paper_dataset_count"],
+                evidence["paper_scope_count"],
+                evidence["paper_ablation_count"],
+            ),
+            (13, 16, 20),
+        )

@@ -12,6 +12,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Protocol
 
+from asterion.dci.ablation import (
+    paper_ablation_matrix_sha256,
+    paper_ablation_row_ids,
+)
 from asterion.applications.product import (
     CapabilityFunction,
     CapabilityProductDescription,
@@ -31,6 +35,14 @@ from asterion.dci.config import (
 )
 from asterion.dci.evaluation import evaluate_run_directory
 from asterion.dci.judge import JudgeConfig
+from asterion.dci.context_profiles import context_profile_names
+from asterion.dci.paper_benchmarks import (
+    paper_benchmark_ids,
+    paper_benchmark_inventory_sha256,
+    paper_experiment_scope_ids,
+    paper_experiment_scopes_sha256,
+    resolve_paper_benchmark,
+)
 from asterion.dci.run import DciRunRequest, DciRunResult, run_pi_research
 
 
@@ -80,6 +92,11 @@ DCI_PRODUCT_DESCRIPTION = CapabilityProductDescription(
     summary="DCI local-corpus research, evaluation, and benchmark capability",
     functions=(
         CapabilityFunction(
+            "ablation",
+            "Validate, list, and render deterministic paper/bounded matrices",
+            ("asterion-dci", "ablation", "--help"),
+        ),
+        CapabilityFunction(
             "benchmark",
             "Run bounded QA and IR benchmarks with metrics and analysis",
             ("asterion-dci", "benchmark", "--help"),
@@ -107,6 +124,11 @@ DCI_PRODUCT_DESCRIPTION = CapabilityProductDescription(
                 "--runtime",
                 "pi.reference",
             ),
+        ),
+        CapabilityFunction(
+            "paper-contracts",
+            "Describe body-free paper benchmark, metric, and matrix identities",
+            ("asterion-dci", "paper", "describe"),
         ),
         CapabilityFunction(
             "research",
@@ -221,6 +243,61 @@ DCI_PRODUCT_DESCRIPTION = CapabilityProductDescription(
         ),
     ),
 )
+
+
+def paper_product_contract() -> dict[str, object]:
+    """Return the installed, body-free AF-320 product identity."""
+
+    dataset_ids = paper_benchmark_ids()
+    scope_ids = paper_experiment_scope_ids()
+    matrix_sha256 = paper_ablation_matrix_sha256()
+    inventory_sha256 = paper_benchmark_inventory_sha256()
+    scopes_sha256 = paper_experiment_scopes_sha256()
+    batch_profiles = tuple(
+        sorted(
+            {
+                dataset.batch_profile
+                for dataset_id in dataset_ids
+                if (dataset := resolve_paper_benchmark(dataset_id)).batch_profile
+                is not None
+            }
+        )
+    )
+    return {
+        "schema": "dci.paper-product-contract/v1",
+        "dataset_ids": list(dataset_ids),
+        "experiment_scope_ids": list(scope_ids),
+        "ablation_row_ids": list(paper_ablation_row_ids()),
+        "context_profiles": list(context_profile_names()),
+        "batch_profiles": list(batch_profiles),
+        "beir_profiles": ["beir.arguana", "beir.scifact"],
+        "resolution_metrics": [
+            "coverage_any",
+            "coverage_mean",
+            "coverage_all",
+            "localization",
+            "retained_coverage",
+        ],
+        "analysis_configuration": {
+            "alignment_version": "dci.paper-alignment/v1",
+            "segment_characters": "required-positive-integer",
+            "read_minimum_evidence_overlap": 0.5,
+        },
+        "safe_artifact_schemas": [
+            "asterion.dci.batch-analysis/v1",
+            "asterion.dci.batch-item/v1",
+            "dci.trajectory-resolution-summary/v1",
+        ],
+        "benchmark_inventory_sha256": inventory_sha256,
+        "experiment_scopes_sha256": scopes_sha256,
+        "ablation_matrix_sha256": matrix_sha256,
+        "resources": {
+            "paper-ablation-matrix.json": matrix_sha256,
+            "paper-benchmarks.json": inventory_sha256,
+            "paper-experiment-scopes.json": scopes_sha256,
+        },
+        "paper_full_executable": False,
+    }
 
 
 class DciVerificationBackend(Protocol):

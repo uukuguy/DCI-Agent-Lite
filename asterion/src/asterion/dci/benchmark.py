@@ -114,6 +114,7 @@ class BenchmarkRequest:
     figures: bool = True
     resolution_registry: Path | None = None
     resolution_segment_characters: int | None = None
+    ablation_row: str | None = None
 
 
 @dataclass(frozen=True)
@@ -463,6 +464,52 @@ def _prepare(
         raise DciBenchmarkError("DCI benchmark resume policy is invalid")
     if request.figures and not request.analysis:
         raise DciBenchmarkError("DCI benchmark figures require analysis")
+    ablation_identity: dict[str, object] | None = None
+    if request.ablation_row is not None:
+        from asterion.dci.ablation import (
+            bounded_ablation_input_paths,
+            bounded_ablation_resolution_registry_path,
+            paper_ablation_matrix_sha256,
+            require_af320_executable_ablation,
+        )
+
+        try:
+            ablation = require_af320_executable_ablation(
+                request.ablation_row, benchmark_authorized=True
+            )
+            expected_dataset, expected_corpus = bounded_ablation_input_paths(
+                ablation.row_id
+            )
+            expected_registry = bounded_ablation_resolution_registry_path()
+        except (RuntimeError, ValueError) as error:
+            raise DciBenchmarkError("DCI benchmark ablation row is invalid") from error
+        if (
+            canonical_input_identity(request.dataset)
+            != canonical_input_identity(expected_dataset)
+            or request.corpus is None
+            or canonical_input_identity(request.corpus)
+            != canonical_input_identity(expected_corpus)
+            or canonical_input_identity(request.cwd)
+            != canonical_input_identity(expected_corpus)
+            or request.mode != "qa"
+            or request.runtime_options.tools != ",".join(ablation.tools)
+            or request.runtime_options.runtime_context_level
+            != ablation.context_profile
+            or request.max_turns != ablation.max_turns
+            or request.conversation_features is None
+            or not request.conversation_features.externalize_tool_results
+            or request.resolution_registry is None
+            or canonical_input_identity(request.resolution_registry)
+            != canonical_input_identity(expected_registry)
+            or request.resolution_segment_characters != ablation.segment_characters
+        ):
+            raise DciBenchmarkError("DCI benchmark ablation row is invalid")
+        ablation_identity = {
+            "schema": "dci.paper-ablation-selection/v1",
+            "row_id": ablation.row_id,
+            "row_sha256": ablation.identity_sha256,
+            "matrix_sha256": paper_ablation_matrix_sha256(),
+        }
     paper_scope = paper_scope_for_profile(request.profile)
     if paper_scope is not None:
         try:
@@ -548,6 +595,8 @@ def _prepare(
     }
     if resolution_config:
         config["resolution"] = resolution_config
+    if ablation_identity is not None:
+        config["ablation"] = ablation_identity
     config["run_fingerprint"] = _fingerprint(
         {key: value for key, value in config.items() if key not in {"judge", "judge_configuration_fingerprint"}}
     )
@@ -573,6 +622,8 @@ def _prepare(
             identity["resolution"] = resolution_config.get("manifests", {}).get(
                 row.query_id
             )
+        if ablation_identity is not None:
+            identity["ablation"] = ablation_identity
         documents.append(
             {
                 "schema": "asterion.dci.batch-item/v1",
@@ -917,7 +968,12 @@ def _validate_config_document(value: dict[str, Any]) -> None:
     }
     if (
         frozenset(value)
-        not in {frozenset(expected), frozenset(expected | {"resolution"})}
+        not in {
+            frozenset(expected),
+            frozenset(expected | {"resolution"}),
+            frozenset(expected | {"ablation"}),
+            frozenset(expected | {"resolution", "ablation"}),
+        }
         or value.get("schema") != "asterion.dci.batch/v1"
     ):
         raise DciBenchmarkError("DCI benchmark configuration evidence is invalid")

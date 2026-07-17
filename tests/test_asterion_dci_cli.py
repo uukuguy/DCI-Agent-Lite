@@ -1519,5 +1519,14 @@ class AsterionDciCliTests(unittest.TestCase):
         self.assertNotIn("provider detail", stderr.getvalue())
 
 
+from tests.test_asterion_dci_paper_product import (  # noqa: E402
+    PaperBenchmarkCliTests as _PaperBenchmarkCliTests,
+)
+
+
+class PaperBenchmarkCliTests(_PaperBenchmarkCliTests):
+    """Plan-addressable AF-320 CLI acceptance selector."""
+
+
 if __name__ == "__main__":
     unittest.main()

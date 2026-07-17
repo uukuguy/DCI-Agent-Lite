@@ -17,9 +17,12 @@ from pathlib import Path
 from typing import TextIO
 
 from asterion.dci.ablation import (
+    bounded_ablation_input_paths,
+    bounded_ablation_resolution_registry_path,
     paper_ablation_matrix_sha256,
     paper_ablation_row_ids,
     render_paper_ablation_command,
+    require_af320_executable_ablation,
     resolve_paper_ablation_row,
     validate_paper_ablation_matrix,
 )
@@ -39,6 +42,7 @@ from asterion.dci.export import (
     export_bcplus,
     export_bcplus_qa,
     export_bright,
+    export_resolution_summary,
 )
 from asterion.dci.judge import JudgeConfig
 from asterion.dci.pi_rpc import run_pi_terminal, validate_terminal_cwd
@@ -106,6 +110,7 @@ def _parser() -> argparse.ArgumentParser:
     benchmark.add_argument("--mode", choices=("qa", "ir"))
     benchmark.add_argument("--enable-ir", action="store_true")
     benchmark.add_argument("--profile")
+    benchmark.add_argument("--ablation-row")
     benchmark.add_argument("--corpus", "--corpus-dir", dest="corpus", type=Path)
     benchmark.add_argument("--corpus-hint")
     benchmark.add_argument("--resolution-registry", type=Path)
@@ -144,6 +149,12 @@ def _parser() -> argparse.ArgumentParser:
     qa.add_argument("--parquet-dir", type=Path, required=True)
     qa.add_argument("--output", type=Path, required=True)
     qa.add_argument("--no-decrypt", action="store_true")
+    resolution = exporters.add_parser("resolution")
+    resolution.add_argument("--run-dir", type=Path, required=True)
+    resolution.add_argument("--attempt", type=int, required=True)
+    resolution.add_argument("--corpus-dir", type=Path, required=True)
+    resolution.add_argument("--gold-manifest", type=Path, required=True)
+    resolution.add_argument("--segment-characters", type=int, required=True)
     ablation = commands.add_parser("ablation")
     ablation_commands = ablation.add_subparsers(
         dest="ablation_command", required=True
@@ -155,6 +166,9 @@ def _parser() -> argparse.ArgumentParser:
     )
     ablation_render = ablation_commands.add_parser("render")
     ablation_render.add_argument("row_id")
+    paper = commands.add_parser("paper")
+    paper_commands = paper.add_subparsers(dest="paper_command", required=True)
+    paper_commands.add_parser("describe")
     return parser
 
 
@@ -231,6 +245,43 @@ def main(
             return 0
         _write_command_failure(stderr, _requested_command(effective_argv))
         return 2
+    selected_ablation = None
+    if args.command == "benchmark" and args.ablation_row is not None:
+        try:
+            conflict_fields = (
+                "dataset",
+                "cwd",
+                "profile",
+                "corpus",
+                "mode",
+                "limit",
+                "max_turns",
+                "runtime_context_level",
+                "tools",
+                "resolution_registry",
+                "resolution_segment_characters",
+                "system_prompt_file",
+                "append_system_prompt_file",
+                "corpus_hint",
+                "thinking_level",
+            )
+            if (
+                args.enable_ir
+                or args.extra_arg
+                or args.conversation_clear_tool_results
+                or args.conversation_strip_thinking
+                or args.conversation_strip_usage
+                or any(
+                getattr(args, field) is not None for field in conflict_fields
+                )
+            ):
+                raise ValueError("ablation controls conflict")
+            selected_ablation = require_af320_executable_ablation(
+                args.ablation_row, benchmark_authorized=True
+            )
+        except (RuntimeError, ValueError):
+            stderr.write("DCI benchmark failed\n")
+            return 2
     if args.command == "ablation":
         try:
             if args.ablation_command == "validate":
@@ -263,6 +314,20 @@ def main(
         except (RuntimeError, ValueError):
             stderr.write("DCI ablation command failed\n")
             return 2
+    if args.command == "paper":
+        try:
+            from asterion.dci.verification import paper_product_contract
+
+            stdout.write(
+                json.dumps(
+                    paper_product_contract(), ensure_ascii=False, indent=2
+                )
+                + "\n"
+            )
+            return 0
+        except (RuntimeError, ValueError):
+            stderr.write("DCI paper command failed\n")
+            return 2
     try:
         invocation_cwd = Path.cwd().resolve()
         root = invocation_cwd if repo_root is None else Path(repo_root).resolve()
@@ -284,13 +349,27 @@ def main(
                     _output_path_from_invocation(args.output_root, invocation_cwd),
                     args.subset,
                 )
-            else:
+            elif args.export_kind == "bcplus-qa":
                 total = export_bcplus_qa(
                     _path_from_invocation(args.parquet_dir, invocation_cwd),
                     _output_path_from_invocation(args.output, invocation_cwd),
                     decrypt=not args.no_decrypt,
                 )
-        except (DciExportError, OSError, ValueError):
+            else:
+                if args.attempt < 1 or args.segment_characters < 1:
+                    raise ValueError("resolution export configuration is invalid")
+                projection = export_resolution_summary(
+                    run_dir=args.run_dir,
+                    attempt=args.attempt,
+                    corpus_dir=args.corpus_dir,
+                    gold_manifest_path=args.gold_manifest,
+                    segment_characters=args.segment_characters,
+                )
+                stdout.write(
+                    json.dumps(projection, ensure_ascii=False, indent=2) + "\n"
+                )
+                return 0
+        except (DciExportError, OSError, RuntimeError, ValueError):
             stderr.write("DCI export failed\n")
             return 2
         stdout.write(f"exported={total}\n")
@@ -312,6 +391,24 @@ def main(
         return 0
     if args.command == "benchmark":
         try:
+            if selected_ablation is not None:
+                dataset, corpus = bounded_ablation_input_paths(
+                    selected_ablation.row_id
+                )
+                args.dataset = dataset
+                args.corpus = corpus
+                args.cwd = corpus
+                args.mode = "qa"
+                args.tools = ",".join(selected_ablation.tools)
+                args.runtime_context_level = selected_ablation.context_profile
+                args.max_turns = selected_ablation.max_turns
+                args.conversation_externalize_tool_results = True
+                args.resolution_registry = (
+                    bounded_ablation_resolution_registry_path()
+                )
+                args.resolution_segment_characters = (
+                    selected_ablation.segment_characters
+                )
             _apply_benchmark_profile(
                 args, repo_root=root, invocation_cwd=invocation_cwd
             )
@@ -370,6 +467,11 @@ def main(
                     figures=not args.no_figures,
                     resolution_registry=benchmark_resolution_registry,
                     resolution_segment_characters=args.resolution_segment_characters,
+                    ablation_row=(
+                        selected_ablation.row_id
+                        if selected_ablation is not None
+                        else None
+                    ),
                     system_prompt_file=benchmark_system_prompt,
                     append_system_prompt_file=benchmark_append_prompt,
                     conversation_features=DciConversationFeatures(
@@ -678,6 +780,7 @@ def _read_evaluation_answer(
 def _write_command_failure(stderr: TextIO, command: str) -> None:
     messages = {
         "ablation": "DCI ablation command failed\n",
+        "paper": "DCI paper command failed\n",
         "evaluate": "DCI evaluation failed\n",
         "benchmark": "DCI benchmark failed\n",
         "system-prompt": "DCI system prompt generation failed\n",
@@ -701,6 +804,7 @@ def _requested_command(argv: list[str]) -> str:
             "evaluate",
             "benchmark",
             "ablation",
+            "paper",
         }
         else ""
     )

@@ -1382,6 +1382,15 @@ class AsterionDciProductParityTests(unittest.TestCase):
         self.assertEqual(evidence["profiles"], 14)
         self.assertEqual(evidence["asterion_dci_help"], 0)
         self.assertEqual(evidence["asterion_list"], 0)
+        self.assertEqual(evidence["paper_contract"], "packaged")
+        self.assertEqual(evidence["paper_dataset_count"], 13)
+        self.assertEqual(evidence["paper_scope_count"], 16)
+        self.assertEqual(evidence["paper_ablation_count"], 20)
+        self.assertEqual(set(evidence["paper_resource_digests"]), {
+            "ablation_matrix_sha256",
+            "benchmark_inventory_sha256",
+            "experiment_scopes_sha256",
+        })
         self.assertEqual(evidence["installed_application"], "completed")
         self.assertEqual(evidence["answer_artifact_uri"], "final.txt")
         self.assertEqual(evidence["native_artifact_uri"], "state.json")
@@ -1515,6 +1524,15 @@ class AsterionDciProductParityTests(unittest.TestCase):
     def test_af250_h004_matrix_schema_and_inventory_are_finalized(self) -> None:
         self.assertEqual(self.document["schema"], "asterion.dci.product-parity/v1")
         self.test_matrix_binds_the_exact_af240_inventory()
+
+
+from tests.test_asterion_dci_paper_product import (  # noqa: E402
+    PaperBenchmarkProductParityTests as _PaperBenchmarkProductParityTests,
+)
+
+
+class PaperBenchmarkProductParityTests(_PaperBenchmarkProductParityTests):
+    """Plan-addressable AF-320 source/product parity selector."""
 
 
 if __name__ == "__main__":

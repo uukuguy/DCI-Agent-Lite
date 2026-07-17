@@ -1,0 +1,13 @@
+{
+  "schema": "dci.gold-document-manifest/v1",
+  "dataset_id": "browsecomp-plus.tiny/v1",
+  "query_id": "paper-fixture-qa",
+  "documents": [
+    {
+      "id": "doc.txt",
+      "path": "doc.txt",
+      "sha256": "60e871ee189c12b9ba2b5f4a70d660aa3faf95febc085012efe93eb304c350cb",
+      "evidence_spans": [{"start": 0, "end": 47}]
+    }
+  ]
+}

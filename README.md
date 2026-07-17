@@ -238,6 +238,21 @@ coverage, analysis, and figures. The registry/manifest schemas, identity and
 reuse rules, and a runnable command are documented in the
 [complete Asterion DCI product reference](asterion/docs/guides/asterion-dci-complete-reference.md#benchmark-dci-agent-lite).
 
+Inspect the complete packaged paper contract and deterministic ablations without
+provider, Judge, or dataset operations:
+
+```bash
+uv run --project asterion asterion-dci paper describe
+uv run --project asterion asterion-dci ablation validate
+uv run --project asterion asterion-dci ablation list --execution-class bounded-fixture
+```
+
+The matrix contains ten non-executable paper declarations and ten tiny bounded
+analogues. A bounded run requires one explicit `--ablation-row` plus the normal
+provider/model and output authorization. `paper-full` rows are unconditionally
+rejected before provider configuration until AF-340; the unpublished FineWeb
+selection fields remain null rather than fabricated.
+
 The one-to-one Pi-default wrappers under `asterion/scripts/{bcplus_eval,qa,bright}`
 load the shared repository `.env`, preflight their dataset and corpus, and call
 only `asterion-dci benchmark`. For example:

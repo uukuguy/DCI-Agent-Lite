@@ -101,7 +101,8 @@ algorithm, IDs, and manifest digest as null; they do not invent reproduction
 identity. The restricted tool row is the literal Pi `read,grep` set and never
 smuggles command filtering through `bash`. A bounded render names exactly one
 row and still requires the ordinary benchmark/provider authorization when Task
-7 connects it to execution.
+execution still resolves normal provider/model authorization from explicit CLI
+options or `.env`; it never inherits a provider default from the matrix.
 
 Command class: **provider-free**
 

@@ -1,0 +1,11 @@
+{
+  "schema": "dci.gold-document-registry/v1",
+  "dataset_id": "browsecomp-plus.tiny/v1",
+  "manifests": [
+    {
+      "query_id": "paper-fixture-qa",
+      "path": "qa-manifest.json",
+      "sha256": "f4f0f36e3cdc0d79304363f2546ada33d4a5ae4872a807400f5a2e390692ff92"
+    }
+  ]
+}

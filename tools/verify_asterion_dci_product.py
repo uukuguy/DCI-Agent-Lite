@@ -1211,6 +1211,16 @@ def run_installed_product_proof(root: Path) -> dict[str, object]:
         output_root = temporary_root / "native-runs"
         for directory in (outside, fake_bin, pi_package / "dist", pi_agent):
             directory.mkdir(parents=True, exist_ok=True)
+        lookalike_resources = outside / "asterion" / "dci" / "resources"
+        lookalike_resources.mkdir(parents=True)
+        for name in (
+            "paper-ablation-matrix.json",
+            "paper-benchmarks.json",
+            "paper-experiment-scopes.json",
+        ):
+            (lookalike_resources / name).write_text(
+                '{"schema":"sentinel-cwd-lookalike"}\n', encoding="utf-8"
+            )
         (pi_package / "dist" / "cli.js").write_text("fixture\n", encoding="utf-8")
         fake_node = fake_bin / "node"
         extension_manifest = json.loads(
@@ -1281,6 +1291,60 @@ def run_installed_product_proof(root: Path) -> dict[str, object]:
             cwd=outside,
             environment=environment,
         )
+        paper_result = _checked_run(
+            [str(venv / "bin" / "asterion-dci"), "paper", "describe"],
+            cwd=outside,
+            environment=environment,
+        )
+        ablation_result = _checked_run(
+            [str(venv / "bin" / "asterion-dci"), "ablation", "validate"],
+            cwd=outside,
+            environment=environment,
+        )
+        paper_contract = json.loads(paper_result.stdout)
+        ablation_contract = json.loads(ablation_result.stdout)
+
+        def canonical_resource_sha256(name: str) -> str:
+            value = json.loads(
+                (
+                    root / "asterion" / "src" / "asterion" / "dci" / "resources" / name
+                ).read_text(encoding="utf-8")
+            )
+            raw = (
+                json.dumps(
+                    value,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                )
+                + "\n"
+            ).encode("utf-8")
+            return hashlib.sha256(raw).hexdigest()
+
+        expected_paper_digests = {
+            "ablation_matrix_sha256": canonical_resource_sha256(
+                "paper-ablation-matrix.json"
+            ),
+            "benchmark_inventory_sha256": canonical_resource_sha256(
+                "paper-benchmarks.json"
+            ),
+            "experiment_scopes_sha256": canonical_resource_sha256(
+                "paper-experiment-scopes.json"
+            ),
+        }
+        if (
+            paper_contract.get("schema") != "dci.paper-product-contract/v1"
+            or any(
+                paper_contract.get(field) != expected
+                for field, expected in expected_paper_digests.items()
+            )
+            or ablation_contract.get("rows") != 20
+            or ablation_contract.get("matrix_sha256")
+            != expected_paper_digests["ablation_matrix_sha256"]
+            or "sentinel-cwd-lookalike" in paper_result.stdout
+            or "sentinel-cwd-lookalike" in ablation_result.stdout
+        ):
+            raise RuntimeError("installed paper product identity is invalid")
         application = _checked_run(
             [
                 str(venv / "bin" / "asterion"), "run",
@@ -1303,6 +1367,11 @@ def run_installed_product_proof(root: Path) -> dict[str, object]:
             "profiles": int(probe.stdout.strip()),
             "asterion_dci_help": help_result.returncode,
             "asterion_list": list_result.returncode,
+            "paper_contract": "packaged",
+            "paper_dataset_count": len(paper_contract["dataset_ids"]),
+            "paper_scope_count": len(paper_contract["experiment_scope_ids"]),
+            "paper_ablation_count": ablation_contract["rows"],
+            "paper_resource_digests": expected_paper_digests,
             **artifact_evidence,
         }
 

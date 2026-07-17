@@ -284,10 +284,12 @@ class DciDescriptionAndPreflightTests(unittest.TestCase):
         self.assertEqual(
             tuple(function.function_id for function in description.functions),
             (
+                "ablation",
                 "benchmark",
                 "evaluate",
                 "export",
                 "installed-application",
+                "paper-contracts",
                 "research",
                 "resume",
                 "terminal",

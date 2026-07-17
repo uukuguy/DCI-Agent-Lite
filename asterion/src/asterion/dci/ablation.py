@@ -8,7 +8,7 @@ import re
 from dataclasses import asdict, dataclass
 from functools import lru_cache
 from importlib import resources
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from types import MappingProxyType
 from typing import Any, Mapping
 
@@ -219,12 +219,20 @@ def _bounded_manifests() -> Mapping[str, BoundedCorpusManifest]:
     )
     if tuple(parsed) != expected or tuple(len(value.documents) for value in parsed.values()) != (1, 2, 3):
         raise RuntimeError("DCI paper ablation contract is invalid")
-    base = tuple(document.resource for document in parsed["tiny.base/v1"].documents)
+    def document_identity(
+        manifest: BoundedCorpusManifest,
+    ) -> tuple[tuple[str, str], ...]:
+        return tuple(
+            (PurePosixPath(document.resource).name, document.sha256)
+            for document in manifest.documents
+        )
+
+    base = document_identity(parsed["tiny.base/v1"])
     plus_one = tuple(
-        document.resource for document in parsed["tiny.base-plus-one/v1"].documents
+        document_identity(parsed["tiny.base-plus-one/v1"])
     )
     plus_two = tuple(
-        document.resource for document in parsed["tiny.base-plus-two/v1"].documents
+        document_identity(parsed["tiny.base-plus-two/v1"])
     )
     if plus_one[:1] != base or plus_two[:2] != plus_one:
         raise RuntimeError("DCI paper ablation contract is invalid")
@@ -547,7 +555,10 @@ def render_paper_ablation_command(row_id: object) -> str:
     row = resolve_paper_ablation_row(row_id)
     if row.execution_class == "paper-full":
         return f"# NON-EXECUTABLE paper-full row: {row.row_id}"
-    return f"asterion-dci benchmark --ablation-row {row.row_id}"
+    return (
+        f"asterion-dci benchmark --ablation-row {row.row_id} "
+        f"--output-root outputs/asterion-dci-ablation/{row.row_id}"
+    )
 
 
 def require_af320_executable_ablation(
@@ -559,3 +570,50 @@ def require_af320_executable_ablation(
     if benchmark_authorized is not True:
         raise ValueError("DCI bounded benchmark authorization is required")
     return row
+
+
+def bounded_ablation_input_paths(row_id: object) -> tuple[Path, Path]:
+    """Resolve one bounded row only to hash-verified installed resources."""
+
+    row = resolve_paper_ablation_row(row_id)
+    if row.execution_class != "bounded-fixture" or row.corpus_manifest_id is None:
+        raise ValueError("DCI paper ablation row is not executable in AF-320")
+    manifest = resolve_bounded_corpus_manifest(row.corpus_manifest_id)
+    root = resources.files("asterion.dci.resources")
+    dataset = Path(str(root.joinpath("paper-fixtures/qa.jsonl")))
+    documents = tuple(Path(str(root.joinpath(item.resource))) for item in manifest.documents)
+    corpus_parents = {document.parent for document in documents}
+    if (
+        len(corpus_parents) != 1
+        or not dataset.is_file()
+        or dataset.is_symlink()
+        or any(not document.is_file() or document.is_symlink() for document in documents)
+    ):
+        raise RuntimeError("DCI paper ablation contract is invalid")
+    corpus = next(iter(corpus_parents))
+    if corpus.is_symlink() or not corpus.is_dir():
+        raise RuntimeError("DCI paper ablation contract is invalid")
+    expected_names = {document.name for document in documents}
+    try:
+        actual_names = {item.name for item in corpus.iterdir()}
+    except OSError:
+        raise RuntimeError("DCI paper ablation contract is invalid") from None
+    if actual_names != expected_names:
+        raise RuntimeError("DCI paper ablation contract is invalid")
+    return dataset.resolve(strict=True), corpus.resolve(strict=True)
+
+
+def bounded_ablation_resolution_registry_path() -> Path:
+    """Resolve the installed tiny QA gold registry without CWD fallback."""
+
+    root = resources.files("asterion.dci.resources")
+    registry = Path(str(root.joinpath("paper-fixtures/gold/qa-registry.json")))
+    manifest = registry.parent / "qa-manifest.json"
+    if (
+        not registry.is_file()
+        or registry.is_symlink()
+        or not manifest.is_file()
+        or manifest.is_symlink()
+    ):
+        raise RuntimeError("DCI paper ablation contract is invalid")
+    return registry.resolve(strict=True)
