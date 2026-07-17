@@ -233,7 +233,8 @@ TypeScript 6, Node 20 test runner, Pi extension/RPC APIs, JSON Schema,
 - Exports pure `truncateToolResult`, `transformContext`, `planCompaction`,
   `recordSummaryResult`, and a default Pi extension initializer.
 - Registers `--dci-context-profile` and `--dci-context-contract` extension flags.
-- Emits `dci.context-telemetry/v1` custom entries with counters only.
+- Emits `dci.context-telemetry/v2` custom entries with counters only; v2 represents
+  an unobserved preserved-turn count as `null` rather than conflating it with zero.
 
 - [ ] **Step 1: Build a fake Pi harness and RED policy matrix**
 
@@ -507,7 +508,7 @@ TypeScript 6, Node 20 test runner, Pi extension/RPC APIs, JSON Schema,
 
 **Interfaces:**
 - Replaces `runtime_context_control.status == "unsupported"` with an effective
-  `dci.context-policy-evidence/v1` record.
+  `dci.context-policy-evidence/v2` record.
 - Produces private `context-policy.json` and body-free public counters.
 
 - [ ] **Step 1: Write RED artifact and resume compatibility tests**
@@ -525,7 +526,7 @@ TypeScript 6, Node 20 test runner, Pi extension/RPC APIs, JSON Schema,
   ```python
   @dataclass(frozen=True)
   class DciContextPolicyEvidence:
-      schema: Literal["dci.context-policy-evidence/v1"]
+      schema: Literal["dci.context-policy-evidence/v2"]
       profile: DciContextProfile
       extension_version: str
       extension_sha256: str

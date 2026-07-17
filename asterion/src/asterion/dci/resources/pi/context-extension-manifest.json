@@ -1,8 +1,8 @@
 {
   "schema": "dci.context-extension-manifest/v1",
-  "extension_version": "0.1.0",
+  "extension_version": "0.2.0",
   "contract_version": "dci.context-profile/v1",
   "resource": "dci-context-extension.ts",
-  "byte_length": 13688,
-  "sha256": "cc24da3f617e89a955939945a5f640167a9dabcd2a8968bc5b64051990d26e29"
+  "byte_length": 14753,
+  "sha256": "4e9833b3b78c5d0223638e225bb167694a2e6f6247c2e2f3e2631cb16beefe8a"
 }

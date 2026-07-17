@@ -110,6 +110,7 @@ def _context_policy_projection(output_dir: Path) -> dict[str, object] | None:
         "extension_sha256",
         "truncated_results",
         "compactions",
+        "preserved_turns",
         "summary_attempts",
         "summary_successes",
         "summary_suppressed",
@@ -117,7 +118,7 @@ def _context_policy_projection(output_dir: Path) -> dict[str, object] | None:
     if (
         not isinstance(summary, dict)
         or set(summary) != expected
-        or summary.get("schema") != "dci.context-policy-evidence/v1"
+        or summary.get("schema") != "dci.context-policy-evidence/v2"
         or summary.get("profile")
         not in {"level0", "level1", "level2", "level3", "level4"}
         or summary.get("contract_version") != "dci.context-profile/v1"
@@ -134,6 +135,14 @@ def _context_policy_projection(output_dir: Path) -> dict[str, object] | None:
                 "compactions",
                 "summary_attempts",
                 "summary_successes",
+            )
+        )
+        or not (
+            summary.get("preserved_turns") is None
+            or (
+                not isinstance(summary.get("preserved_turns"), bool)
+                and isinstance(summary.get("preserved_turns"), int)
+                and summary["preserved_turns"] >= 0
             )
         )
         or not isinstance(summary.get("summary_suppressed"), bool)

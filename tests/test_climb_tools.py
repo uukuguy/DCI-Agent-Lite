@@ -4,6 +4,7 @@ import csv
 import ast
 import copy
 import functools
+import hashlib
 import importlib
 import json
 import os
@@ -2977,7 +2978,7 @@ class ClimbToolTests(unittest.TestCase):
         for hypothesis_id, selectors in AF250_MATRIX_TESTS.items():
             marker = f"    {hypothesis_id})"
             start = eval_script.index(marker)
-            end = eval_script.find("\n    AF-250-H-", start + len(marker))
+            end = eval_script.find("\n    AF-", start + len(marker))
             if end < 0:
                 end = eval_script.find("\n    *)", start + len(marker))
             branch = eval_script[start:end]
@@ -3190,6 +3191,177 @@ class ClimbToolTests(unittest.TestCase):
                     "body_free_evidence",
                 },
             )
+
+    def test_af310_h005_provider_binding_is_digest_bound_and_body_free(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            state_dir = root / "climb"
+            state_dir.mkdir()
+            shutil.copy(
+                REPO_ROOT / "docs/status/climb/hypotheses.yaml",
+                state_dir / "hypotheses.yaml",
+            )
+            hypotheses = state_dir / "hypotheses.yaml"
+            hypotheses.write_text(
+                re.sub(
+                    r"    provider_evidence:\n      path: provider-evidence/af-310-h-005.json\n"
+                    r"      sha256: [0-9a-f]{64}\n      report_sha256: [0-9a-f]{64}\n?",
+                    "",
+                    hypotheses.read_text(),
+                )
+            )
+            manifest = json.loads(
+                (
+                    REPO_ROOT
+                    / "asterion/src/asterion/dci/resources/pi/context-extension-manifest.json"
+                ).read_text()
+            )
+            revision = (REPO_ROOT / "pi-revision.txt").read_text().strip()
+            case = {
+                "profile": "level3",
+                "compactions": 1,
+                "preserved_turns": 12,
+                "summary_attempts": 0,
+                "summary_successes": 0,
+                "summary_suppressed": False,
+                "artifact_digests": {
+                    "context-policy.json": "",
+                    "events.jsonl": "",
+                    "state.json": "",
+                },
+            }
+            report = {
+                "schema": "asterion.dci.context-acceptance/v1",
+                "mode": "bounded-provider-backed",
+                "provider": "fixture-provider",
+                "model": "fixture-model",
+                "pi_revision": revision,
+                "extension_version": manifest["extension_version"],
+                "contract_version": manifest["contract_version"],
+                "extension_sha256": manifest["sha256"],
+                "corpus_fixture_sha256": "d" * 64,
+                "provider_operations": 2,
+                "user_turns_per_case": 13,
+                "api_request_multiplicity": "externally ambiguous",
+                "full_dataset_ran": False,
+                "cases": [
+                    case,
+                    {
+                        **case,
+                        "artifact_digests": dict(case["artifact_digests"]),
+                        "profile": "level4",
+                        "preserved_turns": None,
+                        "summary_attempts": 1,
+                        "summary_successes": 1,
+                    },
+                ],
+            }
+            for profile_case in report["cases"]:
+                artifact_dir = root / profile_case["profile"]
+                artifact_dir.mkdir()
+                for name in ("context-policy.json", "events.jsonl", "state.json"):
+                    artifact = artifact_dir / name
+                    artifact.write_bytes(f"{profile_case['profile']}:{name}".encode())
+                    artifact.chmod(0o600)
+                    profile_case["artifact_digests"][name] = hashlib.sha256(
+                        artifact.read_bytes()
+                    ).hexdigest()
+            report_path = root / "context-acceptance.json"
+            report_path.write_text(json.dumps(report))
+            report_path.chmod(0o600)
+            clean_pi = root / "clean-pi"
+            subprocess.run(
+                ["git", "clone", "-q", "--no-local", str(REPO_ROOT / "pi"), str(clean_pi)],
+                check=True,
+            )
+
+            command = [
+                "uv", "run", "--project", "asterion", "python",
+                "tools/climb/bind-provider-evidence.py",
+                "--report", str(report_path),
+                "--state-dir", str(state_dir),
+                "--pi-dir", str(clean_pi),
+            ]
+            insecure = list(command)
+            report_path.chmod(0o644)
+            rejected = subprocess.run(
+                insecure, cwd=REPO_ROOT, text=True, capture_output=True
+            )
+            self.assertNotEqual(rejected.returncode, 0)
+            report_path.chmod(0o600)
+
+            report_link = root / "report-link.json"
+            report_link.symlink_to(report_path)
+            linked = list(command)
+            linked[linked.index("--report") + 1] = str(report_link)
+            rejected = subprocess.run(
+                linked, cwd=REPO_ROOT, text=True, capture_output=True
+            )
+            self.assertNotEqual(rejected.returncode, 0)
+
+            artifact = root / "level3/events.jsonl"
+            original_artifact = artifact.read_bytes()
+            artifact.write_bytes(b"tampered")
+            artifact.chmod(0o600)
+            rejected = subprocess.run(
+                command, cwd=REPO_ROOT, text=True, capture_output=True
+            )
+            self.assertNotEqual(rejected.returncode, 0)
+            artifact.write_bytes(original_artifact)
+            artifact.chmod(0o600)
+
+            artifact_backup = root / "events-backup.jsonl"
+            artifact.rename(artifact_backup)
+            artifact.symlink_to(artifact_backup)
+            rejected = subprocess.run(
+                command, cwd=REPO_ROOT, text=True, capture_output=True
+            )
+            self.assertNotEqual(rejected.returncode, 0)
+            artifact.unlink()
+            artifact_backup.rename(artifact)
+
+            dirty_command = [
+                *command[:-1], str(REPO_ROOT / "pi")
+            ]
+            dirty = subprocess.run(
+                dirty_command, cwd=REPO_ROOT, text=True, capture_output=True
+            )
+            self.assertNotEqual(dirty.returncode, 0)
+            self.assertFalse((state_dir / "provider-evidence").exists())
+
+            result = subprocess.run(
+                command,
+                cwd=REPO_ROOT,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            updated = (state_dir / "hypotheses.yaml").read_text()
+            self.assertIn("provider_evidence:", updated)
+            evidence_path = state_dir / "provider-evidence/af-310-h-005.json"
+            evidence = json.loads(evidence_path.read_text())
+            self.assertEqual(evidence["provider_operations"], 2)
+            self.assertEqual(evidence["cases"][0]["preserved_turns"], 12)
+            serialized = evidence_path.read_text() + updated
+            self.assertNotIn("fixture-provider", serialized)
+            self.assertNotIn(str(root), serialized)
+
+            before = (evidence_path.read_bytes(), hypotheses.read_bytes())
+            repeated = subprocess.run(
+                result.args, cwd=REPO_ROOT, text=True, capture_output=True
+            )
+            self.assertEqual(repeated.returncode, 0, repeated.stderr)
+            self.assertEqual(before, (evidence_path.read_bytes(), hypotheses.read_bytes()))
+
+            report["provider"] = "different-provider"
+            report_path.write_text(json.dumps(report))
+            report_path.chmod(0o600)
+            conflicting = subprocess.run(
+                result.args, cwd=REPO_ROOT, text=True, capture_output=True
+            )
+            self.assertNotEqual(conflicting.returncode, 0)
+            self.assertEqual(before, (evidence_path.read_bytes(), hypotheses.read_bytes()))
 
 
 if __name__ == "__main__":

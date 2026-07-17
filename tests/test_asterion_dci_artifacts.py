@@ -38,7 +38,7 @@ def request(root: Path) -> DciRunRequest:
 class AsterionDciArtifactTests(unittest.TestCase):
     def test_context_policy_evidence_is_closed_and_body_free(self) -> None:
         mapping = {
-            "schema": "dci.context-telemetry/v1",
+            "schema": "dci.context-telemetry/v2",
             "event": "session_compact",
             "profile": "level4",
             "contractVersion": "dci.context-profile/v1",
@@ -46,6 +46,7 @@ class AsterionDciArtifactTests(unittest.TestCase):
             "accumulatedOriginalToolCharacters": 0,
             "truncatedResults": 2,
             "compactionCount": 1,
+            "preservedTurns": 12,
             "compactionPending": False,
             "summaryAttempts": 1,
             "summarySuccesses": 1,
@@ -65,13 +66,14 @@ class AsterionDciArtifactTests(unittest.TestCase):
         self.assertEqual(
             evidence.public_summary(),
             {
-                "schema": "dci.context-policy-evidence/v1",
+                "schema": "dci.context-policy-evidence/v2",
                 "profile": "level4",
                 "contract_version": "dci.context-profile/v1",
                 "extension_version": "0.1.0",
                 "extension_sha256": "a" * 64,
                 "truncated_results": 2,
                 "compactions": 1,
+                "preserved_turns": 12,
                 "summary_attempts": 1,
                 "summary_successes": 1,
                 "summary_suppressed": False,

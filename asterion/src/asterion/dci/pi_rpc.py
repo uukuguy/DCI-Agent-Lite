@@ -25,6 +25,7 @@ _DCI_STATE_KEYS = {
     "accumulatedOriginalToolCharacters",
     "truncatedResults",
     "compactionCount",
+    "preservedTurns",
     "compactionPending",
     "summaryAttempts",
     "summarySuccesses",
@@ -34,6 +35,7 @@ _DCI_STATE_KEYS = {
 _DCI_NUMERIC_STATE_KEYS = _DCI_STATE_KEYS - {
     "compactionPending",
     "summarySuppressed",
+    "preservedTurns",
 }
 _DCI_CUMULATIVE_KEYS = {
     "truncatedResults",
@@ -290,6 +292,16 @@ def _validated_policy_state(value: object) -> dict[str, Any]:
         item = value.get(key)
         if isinstance(item, bool) or not isinstance(item, int) or item < 0:
             raise RuntimeError("Pi RPC get_entries shape is invalid")
+    preserved_turns = value.get("preservedTurns")
+    if not (
+        preserved_turns is None
+        or (
+            not isinstance(preserved_turns, bool)
+            and isinstance(preserved_turns, int)
+            and preserved_turns >= 0
+        )
+    ):
+        raise RuntimeError("Pi RPC get_entries shape is invalid")
     if not all(
         isinstance(value.get(key), bool)
         for key in ("compactionPending", "summarySuppressed")
@@ -329,7 +341,7 @@ def _validated_dci_entries(values: list[object]) -> tuple[dict[str, Any], ...]:
         if custom_type == "dci-context-state":
             if set(data) != {"schema", "profile", "contractVersion", "state"}:
                 raise RuntimeError("Pi RPC get_entries shape is invalid")
-            if data.get("schema") != "dci.context-state/v1":
+            if data.get("schema") != "dci.context-state/v2":
                 raise RuntimeError("Pi RPC get_entries shape is invalid")
             state = _validated_policy_state(data.get("state"))
         else:
@@ -340,7 +352,7 @@ def _validated_dci_entries(values: list[object]) -> tuple[dict[str, Any], ...]:
                 "contractVersion",
                 "extensionVersion",
             }
-            if set(data) != expected or data.get("schema") != "dci.context-telemetry/v1":
+            if set(data) != expected or data.get("schema") != "dci.context-telemetry/v2":
                 raise RuntimeError("Pi RPC get_entries shape is invalid")
             state = _validated_policy_state(
                 {key: data[key] for key in _DCI_STATE_KEYS}
@@ -585,15 +597,29 @@ class PiRpcClient:
         *,
         timeout_seconds: float = 10.0,
         on_event: Callable[[dict[str, Any]], None] | None = None,
+        cancel_event: threading.Event | None = None,
     ) -> dict[str, Any]:
         request_id = self._next_id()
         self._send({"id": request_id, "type": "get_state"})
         deadline = time.monotonic() + timeout_seconds
         while True:
+            if cancel_event is not None and cancel_event.is_set():
+                raise RuntimeError("Pi RPC protocol probe was cancelled")
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise RuntimeError("Pi RPC protocol probe timed out")
-            response = self._read_json_line(timeout_seconds=remaining)
+            try:
+                response = self._read_json_line(
+                    timeout_seconds=(
+                        remaining
+                        if cancel_event is None
+                        else min(0.1, remaining)
+                    )
+                )
+            except TimeoutError:
+                if cancel_event is not None and time.monotonic() < deadline:
+                    continue
+                raise RuntimeError("Pi RPC protocol probe timed out") from None
             if response.get("type") != "response" or response.get("id") != request_id:
                 if on_event is not None:
                     on_event(response)
@@ -659,6 +685,8 @@ class PiRpcClient:
         on_event: Callable[[dict[str, Any]], None] | None = None,
         cancel_event: threading.Event | None = None,
     ) -> str:
+        if cancel_event is not None and cancel_event.is_set():
+            raise RuntimeError("RPC prompt was cancelled")
         request_id = self._next_id()
         self._send({"id": request_id, "type": "prompt", "message": message})
         text_parts: list[str] = []
@@ -671,12 +699,16 @@ class PiRpcClient:
             if timeout_seconds and timeout_seconds > 0
             else None
         )
+
+        def abort() -> None:
+            try:
+                self._send({"id": self._next_id(), "type": "abort"})
+            except (BrokenPipeError, RuntimeError):
+                pass
+
         while True:
             if cancel_event is not None and cancel_event.is_set():
-                try:
-                    self._send({"id": self._next_id(), "type": "abort"})
-                except (BrokenPipeError, RuntimeError):
-                    pass
+                abort()
                 raise RuntimeError("RPC prompt was cancelled")
             try:
                 remaining = (
@@ -693,10 +725,7 @@ class PiRpcClient:
                     deadline is None or time.monotonic() < deadline
                 ):
                     continue
-                try:
-                    self._send({"id": self._next_id(), "type": "abort"})
-                except (BrokenPipeError, RuntimeError):
-                    pass
+                abort()
                 raise RuntimeError(
                     f"RPC prompt timed out after {timeout_seconds:g} seconds"
                 ) from error
@@ -764,20 +793,34 @@ class PiRpcClient:
         if settled:
             while True:
                 if cancel_event is not None and cancel_event.is_set():
+                    abort()
                     raise RuntimeError("RPC prompt was cancelled")
                 remaining = (
                     None if deadline is None else deadline - time.monotonic()
                 )
                 if remaining is not None and remaining <= 0:
+                    abort()
                     raise RuntimeError(
                         f"RPC prompt timed out after {timeout_seconds:g} seconds"
                     )
-                state = self.probe_protocol(
-                    timeout_seconds=(
-                        10.0 if remaining is None else min(10.0, remaining)
-                    ),
-                    on_event=on_event,
-                )
+                try:
+                    state = self.probe_protocol(
+                        timeout_seconds=(
+                            10.0 if remaining is None else min(10.0, remaining)
+                        ),
+                        on_event=on_event,
+                        cancel_event=cancel_event,
+                    )
+                except RuntimeError:
+                    if cancel_event is not None and cancel_event.is_set():
+                        abort()
+                        raise RuntimeError("RPC prompt was cancelled") from None
+                    if deadline is not None and time.monotonic() >= deadline:
+                        abort()
+                        raise RuntimeError(
+                            f"RPC prompt timed out after {timeout_seconds:g} seconds"
+                        ) from None
+                    raise
                 if not state["isCompacting"]:
                     break
                 time.sleep(0.05)

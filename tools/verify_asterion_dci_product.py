@@ -1043,6 +1043,40 @@ for line in sys.stdin:
             "data": {"isStreaming": False, "isCompacting": False,
                      "messageCount": 0, "pendingMessageCount": 0},
         }), flush=True)
+    elif request.get("type") == "get_entries":
+        state = {
+            "accumulatedOriginalToolCharacters": 0,
+            "truncatedResults": 0,
+            "compactionCount": 0,
+            "preservedTurns": None,
+            "compactionPending": False,
+            "summaryAttempts": 0,
+            "summarySuccesses": 0,
+            "consecutiveSummaryFailures": 0,
+            "summarySuppressed": False,
+        }
+        common = {
+            "parentId": None,
+            "timestamp": "2026-07-17T00:00:00.000Z",
+            "type": "custom",
+        }
+        entries = [
+            {**common, "id": "fixture-telemetry",
+             "customType": "dci-context-telemetry", "data": {
+                 "schema": "dci.context-telemetry/v2", "event": "startup",
+                 "profile": "level3", "contractVersion": "dci.context-profile/v1",
+                 "extensionVersion": "__DCI_EXTENSION_VERSION__", **state,
+             }},
+            {**common, "id": "fixture-state", "parentId": "fixture-telemetry",
+             "customType": "dci-context-state", "data": {
+                 "schema": "dci.context-state/v2", "profile": "level3",
+                 "contractVersion": "dci.context-profile/v1", "state": state,
+             }},
+        ]
+        print(json.dumps({
+            "type": "response", "id": request_id, "command": "get_entries",
+            "success": True, "data": {"entries": entries, "leafId": "fixture-state"},
+        }), flush=True)
     elif request.get("type") == "prompt":
         print(json.dumps({"type": "response", "id": request_id, "success": True}), flush=True)
         print(json.dumps({"type": "agent_start"}), flush=True)
@@ -1179,7 +1213,19 @@ def run_installed_product_proof(root: Path) -> dict[str, object]:
             directory.mkdir(parents=True, exist_ok=True)
         (pi_package / "dist" / "cli.js").write_text("fixture\n", encoding="utf-8")
         fake_node = fake_bin / "node"
-        fake_node.write_text(_FAKE_NODE, encoding="utf-8")
+        extension_manifest = json.loads(
+            (
+                root
+                / "asterion/src/asterion/dci/resources/pi/context-extension-manifest.json"
+            ).read_text(encoding="utf-8")
+        )
+        extension_version = extension_manifest.get("extension_version")
+        if not isinstance(extension_version, str) or not extension_version:
+            raise RuntimeError("installed product proof extension identity is invalid")
+        fake_node.write_text(
+            _FAKE_NODE.replace("__DCI_EXTENSION_VERSION__", extension_version),
+            encoding="utf-8",
+        )
         fake_node.chmod(0o755)
 
         build_environment = os.environ.copy()

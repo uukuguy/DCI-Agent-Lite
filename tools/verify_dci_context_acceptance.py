@@ -50,6 +50,7 @@ class ContextAcceptanceReadiness:
     pi_revision: str
     extension_version: str
     extension_sha256: str
+    contract_version: str = "dci.context-profile/v1"
     paths: DciPaths | None = None
     runtime_options: DciRuntimeOptions | None = None
     corpus_dir: Path | None = None
@@ -65,7 +66,7 @@ class ContextAcceptanceCase:
     summary_attempts: int
     summary_successes: int
     summary_suppressed: bool
-    retained_turns: int
+    preserved_turns: int | None
     artifact_digests: tuple[tuple[str, str], ...]
 
     def validate(self) -> None:
@@ -75,16 +76,26 @@ class ContextAcceptanceCase:
             self.compactions,
             self.summary_attempts,
             self.summary_successes,
-            self.retained_turns,
         ):
             if isinstance(value, bool) or not isinstance(value, int) or value < 0:
                 raise ValueError("DCI context acceptance case is invalid")
-        if type(self.summary_suppressed) is not bool or self.retained_turns != 12:
+        if not (
+            self.preserved_turns is None
+            or (
+                not isinstance(self.preserved_turns, bool)
+                and isinstance(self.preserved_turns, int)
+                and self.preserved_turns >= 0
+            )
+        ):
+            raise ValueError("DCI context acceptance case is invalid")
+        if type(self.summary_suppressed) is not bool:
             raise ValueError("DCI context acceptance case is invalid")
         if self.compactions < 1:
             raise ValueError("DCI context acceptance case is invalid")
         if self.profile == "level3" and (
-            self.summary_attempts != 0 or self.summary_successes != 0
+            self.summary_attempts != 0
+            or self.summary_successes != 0
+            or self.preserved_turns != 12
         ):
             raise ValueError("DCI context acceptance case is invalid")
         if self.profile == "level4" and (
@@ -237,6 +248,7 @@ def _default_readiness(
         pi_revision=revision,
         extension_version=extension_version,
         extension_sha256=extension_sha256,
+        contract_version=resolve_context_profile("level3").contract_version,
         paths=paths,
         runtime_options=options,
         corpus_dir=corpus_dir,
@@ -281,6 +293,7 @@ def _default_provider_runner(
         run_id=f"context-acceptance-{profile_name}",
         question=question,
         cwd=readiness.corpus_dir,
+        prelude_questions=("Reply only with ok.",) * 12,
         provider=options.provider,
         model=options.model,
         tools="read,bash",
@@ -315,7 +328,7 @@ def _default_provider_runner(
         summary_attempts=summary.get("summary_attempts"),
         summary_successes=summary.get("summary_successes"),
         summary_suppressed=summary.get("summary_suppressed"),
-        retained_turns=profile.retained_turns,
+        preserved_turns=summary.get("preserved_turns"),
         artifact_digests=_artifact_digests(output_dir),
     )
     case.validate()
@@ -331,6 +344,7 @@ def _report(
         or _PUBLIC_NAME.fullmatch(readiness.model) is None
         or _REVISION.fullmatch(readiness.pi_revision) is None
         or not readiness.extension_version
+        or readiness.contract_version != "dci.context-profile/v1"
         or _SHA256.fullmatch(readiness.extension_sha256) is None
         or _SHA256.fullmatch(readiness.corpus_sha256) is None
         or [case.profile for case in cases] != ["level3", "level4"]
@@ -345,9 +359,11 @@ def _report(
         "model": readiness.model,
         "pi_revision": readiness.pi_revision,
         "extension_version": readiness.extension_version,
+        "contract_version": readiness.contract_version,
         "extension_sha256": readiness.extension_sha256,
         "corpus_fixture_sha256": readiness.corpus_sha256,
         "provider_operations": 2,
+        "user_turns_per_case": 13,
         "api_request_multiplicity": "externally ambiguous",
         "full_dataset_ran": False,
         "cases": [
@@ -357,7 +373,7 @@ def _report(
                 "summary_attempts": case.summary_attempts,
                 "summary_successes": case.summary_successes,
                 "summary_suppressed": case.summary_suppressed,
-                "retained_turns": case.retained_turns,
+                "preserved_turns": case.preserved_turns,
                 "artifact_digests": dict(case.artifact_digests),
             }
             for case in cases
@@ -365,12 +381,29 @@ def _report(
     }
 
 
-def _write_report(output_root: Path, report: dict[str, object]) -> None:
-    path = output_root / "context-acceptance.json"
+def _write_report(
+    output_root: Path,
+    report: dict[str, object],
+    *,
+    name: str = "context-acceptance.json",
+) -> None:
+    path = output_root / name
     raw = (json.dumps(report, sort_keys=True, indent=2) + "\n").encode()
     descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(descriptor, "wb") as stream:
         stream.write(raw)
+
+
+def _write_failure_report(output_root: Path, attempted_operations: int) -> None:
+    output_root.mkdir(parents=True, exist_ok=True)
+    report = {
+        "schema": "asterion.dci.context-acceptance-failure/v1",
+        "stage": "provider-runtime-or-evidence",
+        "attempted_provider_operations": attempted_operations,
+        "api_request_multiplicity": "externally ambiguous",
+        "full_dataset_ran": False,
+    }
+    _write_report(output_root, report, name="context-acceptance-failure.json")
 
 
 def main(
@@ -405,8 +438,14 @@ def main(
     runner = _default_provider_runner if provider_runner is None else provider_runner
     try:
         readiness = checker(args, root)
+    except (OSError, RuntimeError, TypeError, ValueError):
+        stderr.write("DCI context acceptance preflight failed\n")
+        return 2
+    attempted_operations = 0
+    try:
         cases = []
         for profile in ("level3", "level4"):
+            attempted_operations += 1
             case = runner(readiness, profile)
             if not isinstance(case, ContextAcceptanceCase):
                 raise ValueError("DCI context acceptance evidence is invalid")
@@ -416,7 +455,14 @@ def main(
         readiness.output_root.mkdir(parents=True, exist_ok=True)
         _write_report(readiness.output_root, report)
     except (OSError, RuntimeError, TypeError, ValueError):
-        stderr.write("DCI context acceptance preflight failed\n")
+        try:
+            _write_failure_report(readiness.output_root, attempted_operations)
+        except OSError:
+            pass
+        stderr.write(
+            "DCI context acceptance runtime/evidence failed after "
+            f"{attempted_operations} provider operations\n"
+        )
         return 2
     stdout.write("PASS\n")
     stdout.write("Provider operations: 2\n")

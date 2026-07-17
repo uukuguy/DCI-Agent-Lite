@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import math
+import time
 import sys
 import threading
 from contextlib import ExitStack
@@ -38,6 +41,7 @@ class DciRunRequest:
     node_max_old_space_size_mb: int | None = None
     keep_session: bool = False
     extra_args: tuple[str, ...] = ()
+    prelude_questions: tuple[str, ...] = ()
     show_tools: bool = False
     system_prompt_file: Path | None = None
     append_system_prompt_file: Path | None = None
@@ -89,6 +93,21 @@ def validate_dci_run_request(
 
     text(request.run_id)
     text(request.question)
+    if (
+        not isinstance(request.prelude_questions, tuple)
+        or len(request.prelude_questions) > 12
+        or any(
+            not isinstance(value, str) or not value.strip()
+            for value in request.prelude_questions
+        )
+        or request.prelude_questions
+        and (
+            request.resume
+            or not request.keep_session
+            or request.context_profile is None
+        )
+    ):
+        raise ValueError("DCI run request is invalid")
     text(request.tools)
     text(request.provider, optional=True)
     text(request.model, optional=True)
@@ -293,6 +312,12 @@ def resume_request_from_output_dir(
     )
     keep_session = _required_bool(state, "keep_session")
     extra_args_count = _required_nonnegative_int(state, "extra_args_count")
+    prelude_count = _required_nonnegative_int(state, "prelude_question_count")
+    prelude_fingerprint = _required_string(
+        state, "prelude_questions_fingerprint"
+    )
+    if prelude_count != 0 or prelude_fingerprint != prelude_questions_fingerprint(()):
+        raise DciRunError("DCI resume validation failed")
     persisted_fingerprint = _required_string(state, "extra_args_fingerprint")
     if extra_args is None:
         if extra_args_count:
@@ -518,13 +543,29 @@ def run_pi_research(
             ):
                 raise RuntimeError("Pi context session identity is invalid")
             recorder.record_context_session(session_file, session_id)
-        final_text = client.prompt_and_wait(
-            request.question,
-            max_turns=request.max_turns,
-            timeout_seconds=request.timeout_seconds,
-            on_event=recorder.record_event,
-            cancel_event=_cancel_event,
+        prompt_deadline = (
+            time.monotonic() + request.timeout_seconds
+            if request.timeout_seconds and request.timeout_seconds > 0
+            else None
         )
+        final_text = ""
+        for prompt in (*request.prelude_questions, request.question):
+            if _cancel_event is not None and _cancel_event.is_set():
+                raise RuntimeError("RPC prompt was cancelled")
+            remaining = (
+                None
+                if prompt_deadline is None
+                else max(0.0, prompt_deadline - time.monotonic())
+            )
+            if remaining is not None and remaining <= 0:
+                raise RuntimeError("RPC prompt sequence timed out")
+            final_text = client.prompt_and_wait(
+                prompt,
+                max_turns=request.max_turns,
+                timeout_seconds=remaining,
+                on_event=recorder.record_event,
+                cancel_event=_cancel_event,
+            )
         if context_profile is not None and request.keep_session:
             materialized_file, materialized_id = _validate_pi_context_session(
                 {"sessionFile": str(session_file), "sessionId": session_id},
@@ -601,6 +642,15 @@ def _pi_extra_args(request: DciRunRequest) -> tuple[str, ...]:
     if request.thinking_level:
         values.extend(["--thinking", request.thinking_level])
     return tuple(values)
+
+
+def prelude_questions_fingerprint(values: tuple[str, ...]) -> str:
+    """Return a stable private-input identity without persisting prompt bodies."""
+
+    if not isinstance(values, tuple) or any(not isinstance(value, str) for value in values):
+        raise ValueError("DCI prelude questions are invalid")
+    payload = json.dumps(values, ensure_ascii=False, separators=(",", ":")).encode()
+    return hashlib.sha256(payload).hexdigest()
 
 
 def _validate_context_entries(

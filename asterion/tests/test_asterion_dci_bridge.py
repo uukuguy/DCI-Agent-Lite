@@ -96,13 +96,14 @@ class AsterionDciBridgeTests(unittest.TestCase):
             )
             policy_path.chmod(0o600)
             summary = {
-                "schema": "dci.context-policy-evidence/v1",
+                "schema": "dci.context-policy-evidence/v2",
                 "profile": "level3",
                 "contract_version": "dci.context-profile/v1",
                 "extension_version": "0.1.0",
                 "extension_sha256": "b" * 64,
                 "truncated_results": 2,
                 "compactions": 1,
+                "preserved_turns": 12,
                 "summary_attempts": 0,
                 "summary_successes": 0,
                 "summary_suppressed": False,

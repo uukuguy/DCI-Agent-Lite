@@ -86,6 +86,7 @@ class FixturePiClient:
             "accumulatedOriginalToolCharacters": 0,
             "truncatedResults": 0,
             "compactionCount": 0,
+            "preservedTurns": None,
             "compactionPending": False,
             "summaryAttempts": 0,
             "summarySuccesses": 0,
@@ -100,11 +101,11 @@ class FixturePiClient:
                 "type": "custom",
                 "customType": "dci-context-telemetry",
                 "data": {
-                    "schema": "dci.context-telemetry/v1",
+                    "schema": "dci.context-telemetry/v2",
                     "event": "startup",
                     "profile": profile,
                     "contractVersion": contract,
-                    "extensionVersion": "0.1.0",
+                    "extensionVersion": "0.2.0",
                     **state,
                 },
             },
@@ -115,7 +116,7 @@ class FixturePiClient:
                 "type": "custom",
                 "customType": "dci-context-state",
                 "data": {
-                    "schema": "dci.context-state/v1",
+                    "schema": "dci.context-state/v2",
                     "profile": profile,
                     "contractVersion": contract,
                     "state": state,
@@ -1267,6 +1268,65 @@ class AsterionDciRunTests(unittest.TestCase):
                 (session_file, "lazy"),
             )
 
+    def test_bounded_prelude_questions_share_one_pi_process(self) -> None:
+        class SequenceClient(FixturePiClient):
+            prompts: list[str] = []
+
+            def prompt_and_wait(self, message: str, *, on_event, **kwargs: object) -> str:
+                type(self).prompts.append(message)
+                return super().prompt_and_wait(message, on_event=on_event, **kwargs)
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            paths = resolve_dci_paths(root)
+            request = DciRunRequest(
+                run_id="prompt-sequence",
+                question="pressure",
+                cwd=root,
+                prelude_questions=("prelude",) * 12,
+                runtime_context_level="level3",
+                keep_session=True,
+            )
+            with patch("asterion.dci.run.PiRpcClient", SequenceClient):
+                result = run_pi_research(paths, request)
+
+            self.assertEqual(SequenceClient.prompts, ["prelude"] * 12 + ["pressure"])
+            state = json.loads((result.output_dir / "state.json").read_text())
+            self.assertEqual(state["prelude_question_count"], 12)
+            self.assertEqual(len(state["prelude_questions_fingerprint"]), 64)
+
+    def test_cancellation_between_preludes_never_sends_the_next_prompt(self) -> None:
+        cancelled = threading.Event()
+
+        class CancellingSequenceClient(FixturePiClient):
+            prompts: list[str] = []
+
+            def prompt_and_wait(self, message: str, *, on_event, **kwargs: object) -> str:
+                type(self).prompts.append(message)
+                answer = super().prompt_and_wait(message, on_event=on_event, **kwargs)
+                cancelled.set()
+                return answer
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            request = DciRunRequest(
+                run_id="cancel-prompt-sequence",
+                question="pressure",
+                cwd=root,
+                prelude_questions=("first", "must-not-send"),
+                runtime_context_level="level3",
+                keep_session=True,
+            )
+            with (
+                patch("asterion.dci.run.PiRpcClient", CancellingSequenceClient),
+                self.assertRaisesRegex(DciRunError, "execution failed"),
+            ):
+                run_pi_research(
+                    resolve_dci_paths(root), request, _cancel_event=cancelled
+                )
+
+        self.assertEqual(CancellingSequenceClient.prompts, ["first"])
+
     def test_runtime_context_request_rejects_unknown_profile(self) -> None:
         request = DciRunRequest(
             run_id="run-1",
@@ -1303,8 +1363,8 @@ class AsterionDciRunTests(unittest.TestCase):
         self.assertEqual(control["status"], "effective")
         self.assertEqual(control["profile"], request.context_profile.identity_payload())
         self.assertRegex(control["extension_sha256"], r"^[0-9a-f]{64}$")
-        self.assertEqual(control["extension_version"], "0.1.0")
-        self.assertEqual(policy["schema"], "dci.context-policy-evidence/v1")
+        self.assertEqual(control["extension_version"], "0.2.0")
+        self.assertEqual(policy["schema"], "dci.context-policy-evidence/v2")
         self.assertEqual(policy["profile"], request.context_profile.identity_payload())
         self.assertEqual(policy["extension_sha256"], control["extension_sha256"])
         self.assertEqual(len(policy["attempts"]), 1)
@@ -1313,7 +1373,7 @@ class AsterionDciRunTests(unittest.TestCase):
         self.assertEqual(len(policy["attempts"][0]["telemetry"]), 1)
         self.assertEqual(
             policy["attempts"][0]["latest_state"]["schema"],
-            "dci.context-state/v1",
+            "dci.context-state/v2",
         )
         summary = state["context_policy"]["public_summary"]
         self.assertEqual(summary["profile"], "level3")

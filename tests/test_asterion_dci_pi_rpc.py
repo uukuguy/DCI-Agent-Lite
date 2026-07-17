@@ -532,6 +532,7 @@ class PiRpcLifecycleTests(unittest.TestCase):
             "accumulatedOriginalToolCharacters": 20,
             "truncatedResults": 1,
             "compactionCount": 0,
+            "preservedTurns": None,
             "compactionPending": False,
             "summaryAttempts": 0,
             "summarySuccesses": 0,
@@ -545,7 +546,7 @@ class PiRpcLifecycleTests(unittest.TestCase):
             "type": "custom",
             "customType": "dci-context-telemetry",
             "data": {
-                "schema": "dci.context-telemetry/v1",
+                "schema": "dci.context-telemetry/v2",
                 "event": "startup",
                 "profile": "level3",
                 "contractVersion": "dci.context-profile/v1",
@@ -559,7 +560,7 @@ class PiRpcLifecycleTests(unittest.TestCase):
             "parentId": "entry-1",
             "customType": "dci-context-state",
             "data": {
-                "schema": "dci.context-state/v1",
+                "schema": "dci.context-state/v2",
                 "profile": "level3",
                 "contractVersion": "dci.context-profile/v1",
                 "state": state,
@@ -669,7 +670,7 @@ class PiRpcLifecycleTests(unittest.TestCase):
         with patch.object(client, "_send") as send:
             with self.assertRaisesRegex(RuntimeError, "cancelled"):
                 client.prompt_and_wait("question", cancel_event=cancelled)
-        self.assertEqual(send.call_args_list[-1].args[0]["type"], "abort")
+        send.assert_not_called()
 
     def test_waits_for_acknowledgement_and_idle_agent_settled_state(self) -> None:
         client = make_client()
@@ -730,6 +731,62 @@ class PiRpcLifecycleTests(unittest.TestCase):
 
         self.assertEqual(result, "")
         self.assertEqual(probe.call_count, 2)
+
+    def test_async_compaction_cancellation_sends_abort(self) -> None:
+        client = make_client()
+        cancel = threading.Event()
+        events = [
+            {"type": "response", "id": "py-1", "success": True},
+            {"type": "agent_settled"},
+        ]
+        compacting = {
+            "isStreaming": False,
+            "isCompacting": True,
+            "messageCount": 1,
+            "pendingMessageCount": 0,
+        }
+
+        def cancel_during_poll(*_args: object, **_kwargs: object) -> dict[str, object]:
+            cancel.set()
+            return compacting
+
+        with (
+            patch.object(client, "_send") as send,
+            patch.object(client, "_read_json_line", side_effect=events),
+            patch.object(client, "probe_protocol", side_effect=cancel_during_poll),
+            patch("asterion.dci.pi_rpc.time.sleep"),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "cancelled"):
+                client.prompt_and_wait(
+                    "question", timeout_seconds=30, cancel_event=cancel
+                )
+
+        self.assertEqual(send.call_args_list[-1].args[0]["type"], "abort")
+
+    def test_async_compaction_timeout_sends_abort(self) -> None:
+        client = make_client()
+        events = [
+            {"type": "response", "id": "py-1", "success": True},
+            {"type": "agent_settled"},
+        ]
+        compacting = {
+            "isStreaming": False,
+            "isCompacting": True,
+            "messageCount": 1,
+            "pendingMessageCount": 0,
+        }
+        clock = iter((0.0, 0.0, 0.005, 0.02))
+        with (
+            patch.object(client, "_send") as send,
+            patch.object(client, "_read_json_line", side_effect=events),
+            patch.object(client, "probe_protocol", return_value=compacting),
+            patch("asterion.dci.pi_rpc.time.monotonic", side_effect=clock),
+            patch("asterion.dci.pi_rpc.time.sleep"),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "timed out"):
+                client.prompt_and_wait("question", timeout_seconds=0.01)
+
+        self.assertEqual(send.call_args_list[-1].args[0]["type"], "abort")
 
     def test_retry_discards_partial_text_and_turn_limit_aborts_then_waits(self) -> None:
         client = make_client()

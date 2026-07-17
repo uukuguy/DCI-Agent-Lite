@@ -111,12 +111,18 @@ test("L3 compaction keeps twelve user-led entries with no summary", async () => 
   assert.deepEqual(result, {
     compaction: { summary: "", firstKeptEntryId: "user-2", tokensBefore: 50_000 },
   });
+  pi.handlers.get("session_compact")({}, context());
+  const completed = pi.entries
+    .filter((entry) => entry.customType === "dci-context-telemetry")
+    .at(-1);
+  assert.equal(completed.data.event, "session_compact");
+  assert.equal(completed.data.preservedTurns, 12);
 });
 
 test("L4 accepts only a 20000-token preparation and restores matching state", async () => {
   const extension = await loadExtension();
   const restored = {
-    schema: "dci.context-state/v1",
+    schema: "dci.context-state/v2",
     profile: "level4",
     contractVersion: extension.PROFILE_CONTRACT_VERSION,
     state: { ...extension.createPolicyState(), summaryAttempts: 2 },
@@ -152,6 +158,8 @@ test("L4 accepts only a 20000-token preparation and restores matching state", as
     ),
     undefined,
   );
+  pi.handlers.get("session_compact")({}, ctx);
+  assert.equal(pi.entries.at(-2).data.preservedTurns, null);
   assert.equal(pi.entries.at(-2).data.summaryAttempts, 2);
 });
 
@@ -174,7 +182,7 @@ test("suppressed L4 keeps L3 compaction without another summary attempt", async 
       type: "custom",
       customType: "dci-context-state",
       data: {
-        schema: "dci.context-state/v1",
+        schema: "dci.context-state/v2",
         profile: "level4",
         contractVersion: extension.PROFILE_CONTRACT_VERSION,
         state: suppressedState,

@@ -2,7 +2,7 @@
 
 > Canonical work-package ledger. An `active` lifecycle requires exactly one `in_progress` package; a `complete` lifecycle permits none and forbids autonomous dispatch.
 
-> Project lifecycle: active
+> Project lifecycle: complete
 
 ## AF-000 — Framework control plane
 
@@ -330,14 +330,14 @@
 
 ## AF-310 — Paper-aligned runtime context management
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Paper-aligned complete DCI implementation in Asterion
 - Scope: implement and ship the exact DCI paper L0–L4 live context-management contract through an Asterion-owned Pi extension, then expose one immutable implementation through run, benchmark, resume, installed application, and isolated-wheel execution without modifying external Pi.
 - Dependencies: AF-300
 - Acceptance: Asterion owns and ships exact L0–L4 profiles; every public surface selects the same implementation; fixtures prove model-visible transformations and failure boundaries; bounded Pi runs force and observe L3 compaction and L4 summarization; external `pi/` remains unmodified; documentation distinguishes implemented, model-free verified, bounded provider verified, and experiment-reproduced evidence.
 - Design: `docs/superpowers/specs/2026-07-16-paper-aligned-dci-complete-implementation-design.md`
 - Plan: `docs/superpowers/plans/2026-07-16-af-310-paper-aligned-runtime-context-management.md`
-- Current hypothesis: AF-310-H-005 must retain bounded real Pi evidence that forces L3 compaction and L4 summarization at the final shipped extension digest. AF-310-H-001 through AF-310-H-004 are confirmed 4/4; H004 proves CLI, benchmark/reuse identity, resume-backed native artifacts, installed application projection, and isolated wheel all expose the same content-free policy implementation.
+- Closure evidence: AF-310-H-001 through H-005 are confirmed 4/4. The shipped dependency-free extension and Python consumers use closed telemetry/state/public-evidence v2 schemas, expose identical digest-bound L0–L4 policy through CLI, benchmark, resume, installed application, and isolated wheel, and preserve cancellation/deadline boundaries. Final clean-checkout r9 forced one L3 compaction with twelve observed preserved user turns and no summary plus one L4 compaction with one successful unsuppressed summary in exactly two bounded Pi operations and thirteen user turns per case. The 0600 body-free report and six private artifact digests are rehashed into immutable Climb evidence; the external `pi/` was not modified, no Judge or full dataset ran. Closure passes 1288 Python and 11 TypeScript tests, Ruff, compile, product 8/8, 533/533 delegated selectors, 12/12 launcher pairs, 6/6 extras, installed application/wheel, scope, and diff gates.
 
 ## AF-095 — Asterion framework identity and extraction
 

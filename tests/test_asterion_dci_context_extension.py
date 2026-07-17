@@ -42,7 +42,7 @@ class AsterionDciContextExtensionTests(unittest.TestCase):
             manifest,
             {
                 "schema": "dci.context-extension-manifest/v1",
-                "extension_version": "0.1.0",
+                "extension_version": "0.2.0",
                 "contract_version": "dci.context-profile/v1",
                 "resource": "dci-context-extension.ts",
                 "byte_length": len(source_bytes),
@@ -55,7 +55,7 @@ class AsterionDciContextExtensionTests(unittest.TestCase):
 
         with resolve_context_extension() as resolved:
             self.assertEqual(resolved.path.read_bytes(), expected_bytes)
-            self.assertEqual(resolved.version, "0.1.0")
+            self.assertEqual(resolved.version, "0.2.0")
             self.assertEqual(resolved.contract_version, "dci.context-profile/v1")
             self.assertEqual(
                 resolved.sha256, hashlib.sha256(expected_bytes).hexdigest()
@@ -151,7 +151,7 @@ class AsterionDciContextExtensionTests(unittest.TestCase):
             names = ["level0", "level1", "level2", "level3", "level4"]
             self.assertEqual(identity["sha256"], expected_digest)
             self.assertEqual(identity["bytes"], expected_digest)
-            self.assertEqual(identity["version"], "0.1.0")
+            self.assertEqual(identity["version"], "0.2.0")
             self.assertEqual(identity["contract"], "dci.context-profile/v1")
             self.assertEqual(identity["parsed"], names)
             self.assertEqual(identity["mapped"], names)
@@ -227,7 +227,7 @@ class AsterionDciContextExtensionTests(unittest.TestCase):
     ) -> None:
         manifest = {
             "schema": "dci.context-extension-manifest/v1",
-            "extension_version": "0.1.0",
+            "extension_version": "0.2.0",
             "contract_version": "dci.context-profile/v1",
             "resource": "dci-context-extension.ts",
             "byte_length": len(source_bytes),

@@ -1,47 +1,39 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-17 06:28 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-17 08:18 +0800. **Session remains active — not a final handoff.**
 
-Active work package: AF-310
+Active work package: none
 
-Currently running: no process. H005 provider acceptance attempt 4 passed both bounded cases at `../outputs/asterion-dci-context-acceptance-af310h005-r4`; its 0600 report is body-free and digest-bound. L3 observed one compaction with no summary; L4 observed one successful unsuppressed summary. No Judge or full dataset.
+Currently running: no process. AF-310 and its Climb session are complete. Final closure evidence is clean-checkout r9 at `../outputs/asterion-dci-context-acceptance-af310h005-r9`; its body-free tracked binding is `docs/status/climb/provider-evidence/af-310-h-005.json`.
 
 ## TL;DR
 
-- AF-300 remains fully closed; AF-310 is now the sole active package.
-- Audit showed that current source-product parity is complete but paper-level DCI is not: exact L0–L4 live context policies, BEIR ArguAna/SciFact, paper coverage/localization and ablations, complete application exposure, bounded Claude semantics, and full experiment reproduction remain.
-- The user approved the four-package AF-310 → AF-340 architecture and continuous package-parented Climb execution. The formal design is committed at `docs/superpowers/specs/2026-07-16-paper-aligned-dci-complete-implementation-design.md` [926bbf6].
-- The reviewed AF-310 implementation plan is committed at `docs/superpowers/plans/2026-07-16-af-310-paper-aligned-runtime-context-management.md` [0454cca].
+- AF-310-H-001 through H-005 are confirmed 4/4 and AF-310 is completed.
+- Exact paper L0–L4 live context behavior is shipped once through the Asterion-owned extension and exposed by run, benchmark, resume, application, CLI, and isolated wheel.
+- r9 used a separate clean clone at locked Pi revision `8479bd84743e8889f728acb21a62794102db0529`; original `pi/` remained untouched and retains its pre-existing user changes.
+- r9 used exactly two bounded Pi operations and thirteen user turns per case: L3 compacted once, observed twelve preserved turns, and made no summary attempt; L4 compacted once and completed one successful unsuppressed summary.
+- No Judge or full dataset ran. AF-340 remains the only package authorized to request full paper reproduction budget.
 
-## Where things stand
+## Verified closure
 
-- Branch: `main`; AF-310-H-004 public-surface equivalence and its 4/4 Climb cycle are committed at `7b8dcdc`; H005 documentation/verifier work is next.
-- Provider-free product verification still passes 8/8 rows, 533/533 selectors, 12/12 launcher pairs, 6/6 extras, and 7/7 bounded retained cases with zero provider operations.
-- Correct Context/artifact/CLI focused tests pass 101/101; an earlier nonzero command was only an invalid guessed test-module selector.
-- Governance, D-044, and the AF-310 Climb pool are active; AF-310-H-001 through AF-310-H-004 are confirmed 4/4, and AF-310-H-005 is next.
-- H004 passes 134 CLI/batch/application tests, 6 capability tests, 4 bridge tests, the isolated-wheel all-surface probe, compile, Ruff, shell, scope, and diff checks. No external `pi/` modification, full dataset, or provider request occurred.
+- Tracked provider evidence SHA: `65c43d4fecdacc296dfc1997ae49f5ec870e22e6a1b78f70c8a134f955f28e15`.
+- Report SHA: `6003346ffc4e8e4e07663747fd1d235f050ad03fa32cceb04358645e3638cd7b` (revalidate from the tracked binding if paths move).
+- Extension: `0.2.0`, digest `4e9833b3b78c5d0223638e225bb167694a2e6f6247c2e2f3e2631cb16beefe8a`.
+- Full local closure: 1288/1288 Python and 11/11 TypeScript tests; product verifier 8/8, 533/533, 12/12, 6/6, and 7/7; compile, Ruff, installed product, scope, and diff checks pass.
+- Independent review found no Critical issue; its dirty-Pi and stale-state blockers were resolved by r9 clean-clone evidence, a no-override binder, security negative tests, and this state reconciliation.
 
-## Approved package sequence
+## Next concrete action
 
-1. AF-310 — exact paper-aligned L0–L4 runtime context management through an Asterion-owned Pi extension, without modifying external `pi/`.
-2. AF-320 — all thirteen paper datasets, coverage/localization, and bounded context/tool/corpus ablation surfaces.
-3. AF-330 — complete capability/application composition plus bounded Pi and Claude Code semantic verification.
-4. AF-340 — separately budget-authorized full paper experiment and score reproduction.
+1. Read the four-package design and inspect original DCI/paper benchmark inventory without provider or dataset execution.
+2. Create and review the AF-320 benchmark-completeness design and implementation plan.
+3. Activate exactly one AF-320 work package and parent its Climb hypotheses before implementation.
 
-## Next steps
+## Boundaries
 
-1. Run `python3 tools/project_scope_check.py --climb-hypothesis AF-310-H-005`.
-2. Implement Task 7's truthful launchers/examples/documentation before bounded provider execution, including the exact L0–L4 table and evidence-layer distinctions.
-3. Implement the model-free acceptance verifier, then use the explicit H005 provider authorization only for its two bounded L3/L4 cases; never run a full dataset.
-
-## Don't go down these paths again
-
-- Do not call post-run conversation processing live runtime context management.
-- Do not use generic Pi compaction as proof of the paper's exact L0–L4 thresholds.
-- Do not modify or commit external `pi/`; use the official explicit extension boundary.
-- Do not treat 533/533 current-source selectors as paper-experiment completeness.
-- Do not reopen completed Climb hypotheses or reuse AF-250 session state.
+- Do not modify or clean the external `pi/`; use clean disposable clones for acceptance when required.
+- Do not treat 533 current-source selectors as all thirteen paper datasets.
 - Do not run full datasets before AF-340 receives explicit budget authorization.
+- AF-320 owns dataset adapters, paper coverage/localization metrics, and bounded ablation surfaces; AF-330 owns complete dual-runtime application semantics.
 
 ## Ready commands
 
@@ -49,7 +41,5 @@ Currently running: no process. H005 provider acceptance attempt 4 passed both bo
 git status --short
 python3 tools/project_scope_check.py
 sed -n '1,460p' docs/superpowers/specs/2026-07-16-paper-aligned-dci-complete-implementation-design.md
-sed -n '1,220p' docs/superpowers/plans/2026-07-16-af-310-paper-aligned-runtime-context-management.md
-npm --prefix asterion/packages/typescript/dci-context-extension test
-python3 tools/project_scope_check.py --climb-hypothesis AF-310-H-005
+rg -n "AF-320|dataset|coverage|localization|ablation" docs/superpowers/specs/2026-07-16-paper-aligned-dci-complete-implementation-design.md
 ```

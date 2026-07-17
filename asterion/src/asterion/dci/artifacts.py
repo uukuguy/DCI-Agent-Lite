@@ -18,7 +18,11 @@ from typing import TYPE_CHECKING, Any, Callable
 from asterion.adapters.pi import PiProtocolAdapter, map_pi_capabilities
 from asterion.dci.config import DciPaths
 from asterion.dci.provenance import collect_pi_provenance
-from asterion.dci.run import DciRunRequest, validate_dci_run_request
+from asterion.dci.run import (
+    DciRunRequest,
+    prelude_questions_fingerprint,
+    validate_dci_run_request,
+)
 from asterion.runtime.host import RunEvent
 from asterion.runtime.protocol import (
     MAX_DEADLINE_MS,
@@ -45,6 +49,7 @@ _POLICY_STATE_KEYS = {
     "accumulatedOriginalToolCharacters",
     "truncatedResults",
     "compactionCount",
+    "preservedTurns",
     "compactionPending",
     "summaryAttempts",
     "summarySuccesses",
@@ -54,6 +59,7 @@ _POLICY_STATE_KEYS = {
 _POLICY_NUMERIC_KEYS = _POLICY_STATE_KEYS - {
     "compactionPending",
     "summarySuppressed",
+    "preservedTurns",
 }
 
 
@@ -65,6 +71,13 @@ def _validated_policy_state(value: object) -> dict[str, object]:
         or not isinstance(value.get(key), int)
         or value[key] < 0
         for key in _POLICY_NUMERIC_KEYS
+    ) or not (
+        value.get("preservedTurns") is None
+        or (
+            not isinstance(value.get("preservedTurns"), bool)
+            and isinstance(value.get("preservedTurns"), int)
+            and value["preservedTurns"] >= 0
+        )
     ) or any(
         not isinstance(value.get(key), bool)
         for key in ("compactionPending", "summarySuppressed")
@@ -95,7 +108,7 @@ class DciContextTelemetry:
         if not isinstance(value, dict) or set(value) != expected:
             raise DciArtifactError("DCI context policy evidence is invalid")
         if (
-            value.get("schema") != "dci.context-telemetry/v1"
+            value.get("schema") != "dci.context-telemetry/v2"
             or not isinstance(value.get("event"), str)
             or not value["event"]
             or value.get("profile")
@@ -117,7 +130,7 @@ class DciContextTelemetry:
 
     def to_mapping(self) -> dict[str, object]:
         return {
-            "schema": "dci.context-telemetry/v1",
+            "schema": "dci.context-telemetry/v2",
             "event": self.event,
             "profile": self.profile,
             "contractVersion": self.contract_version,
@@ -140,13 +153,14 @@ class DciContextPolicyEvidence:
             raise DciArtifactError("DCI context policy evidence is invalid")
         latest = self.telemetry[-1].state
         return {
-            "schema": "dci.context-policy-evidence/v1",
+            "schema": "dci.context-policy-evidence/v2",
             "profile": self.profile.name,
             "contract_version": self.profile.contract_version,
             "extension_version": self.extension_version,
             "extension_sha256": self.extension_sha256,
             "truncated_results": latest["truncatedResults"],
             "compactions": latest["compactionCount"],
+            "preserved_turns": latest["preservedTurns"],
             "summary_attempts": latest["summaryAttempts"],
             "summary_successes": latest["summarySuccesses"],
             "summary_suppressed": latest["summarySuppressed"],
@@ -1719,6 +1733,10 @@ def _validate_recorder_resume_state(
     expected = {
         "run_id": request.run_id,
         "question": request.question,
+        "prelude_question_count": len(request.prelude_questions),
+        "prelude_questions_fingerprint": prelude_questions_fingerprint(
+            request.prelude_questions
+        ),
         "cwd": str(request.cwd),
         "provider": request.provider,
         "model": request.model,
@@ -2101,6 +2119,10 @@ class DciRunRecorder:
                     "events_path": str(self.events_path),
                     "stderr_path": str(self.stderr_path),
                     "question": request.question,
+                    "prelude_question_count": len(request.prelude_questions),
+                    "prelude_questions_fingerprint": prelude_questions_fingerprint(
+                        request.prelude_questions
+                    ),
                     "cwd": str(request.cwd),
                     "provider": request.provider,
                     "model": request.model,
@@ -2287,7 +2309,7 @@ class DciRunRecorder:
                     "extension_sha256",
                     "attempts",
                 }
-                or policy.get("schema") != "dci.context-policy-evidence/v1"
+                or policy.get("schema") != "dci.context-policy-evidence/v2"
                 or policy.get("profile") != profile.identity_payload()
                 or policy.get("extension_version") != extension.version
                 or policy.get("extension_sha256") != extension.sha256
@@ -2311,7 +2333,7 @@ class DciRunRecorder:
             self.context_entry_cursor = prior_entries[-1]["id"]
         else:
             self.context_policy = {
-                "schema": "dci.context-policy-evidence/v1",
+                "schema": "dci.context-policy-evidence/v2",
                 "profile": profile.identity_payload(),
                 "extension_version": extension.version,
                 "extension_sha256": extension.sha256,
@@ -2381,7 +2403,7 @@ class DciRunRecorder:
                     not isinstance(data, dict)
                     or set(data)
                     != {"schema", "profile", "contractVersion", "state"}
-                    or data.get("schema") != "dci.context-state/v1"
+                    or data.get("schema") != "dci.context-state/v2"
                     or data.get("profile") != profile.name
                     or data.get("contractVersion") != profile.contract_version
                 ):

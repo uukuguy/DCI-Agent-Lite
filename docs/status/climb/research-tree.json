@@ -2515,7 +2515,12 @@
           },
           "online": null,
           "verdict": "confirmed 4/4",
-          "decision_reason": "deterministic local package acceptance"
+          "decision_reason": "deterministic local package acceptance",
+          "provider_evidence": {
+            "path": "provider-evidence/af-310-h-005.json",
+            "sha256": "65c43d4fecdacc296dfc1997ae49f5ec870e22e6a1b78f70c8a134f955f28e15",
+            "report_sha256": "6003346ffc4e8e4e07663747fd1d235f050ad03fa32cceb04358645e3638cd7b"
+          }
         }
       ]
     }

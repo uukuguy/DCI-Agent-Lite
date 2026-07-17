@@ -34,7 +34,7 @@ class DciContextAcceptanceVerifierTests(unittest.TestCase):
             summary_attempts=0,
             summary_successes=0,
             summary_suppressed=False,
-            retained_turns=12,
+            preserved_turns=12,
             artifact_digests=(("state.json", "a" * 64),),
         )
 
@@ -55,7 +55,7 @@ class DciContextAcceptanceVerifierTests(unittest.TestCase):
             summary_attempts=1,
             summary_successes=1,
             summary_suppressed=False,
-            retained_turns=12,
+            preserved_turns=12,
             artifact_digests=(("state.json", "a" * 64),),
         )
 
@@ -64,7 +64,7 @@ class DciContextAcceptanceVerifierTests(unittest.TestCase):
             {"summary_attempts": 0},
             {"summary_successes": 0},
             {"summary_suppressed": True},
-            {"retained_turns": 11},
+            {"preserved_turns": -1},
         ):
             with self.subTest(changes=changes), self.assertRaises(ValueError):
                 ContextAcceptanceCase(
@@ -128,7 +128,7 @@ class DciContextAcceptanceVerifierTests(unittest.TestCase):
                         summary_attempts=0,
                         summary_successes=0,
                         summary_suppressed=False,
-                        retained_turns=12,
+                        preserved_turns=12,
                         artifact_digests=(("state.json", "c" * 64),),
                     )
                 return ContextAcceptanceCase(
@@ -137,7 +137,7 @@ class DciContextAcceptanceVerifierTests(unittest.TestCase):
                     summary_attempts=1,
                     summary_successes=1,
                     summary_suppressed=False,
-                    retained_turns=12,
+                    preserved_turns=None,
                     artifact_digests=(("state.json", "d" * 64),),
                 )
 
@@ -162,6 +162,8 @@ class DciContextAcceptanceVerifierTests(unittest.TestCase):
                 (output_root / "context-acceptance.json").read_text(encoding="utf-8")
             )
             self.assertEqual(report["provider_operations"], 2)
+            self.assertEqual(report["user_turns_per_case"], 13)
+            self.assertEqual(report["contract_version"], "dci.context-profile/v1")
             self.assertEqual(report["extension_sha256"], "b" * 64)
             self.assertEqual(report["pi_revision"], "a" * 40)
             self.assertEqual(
@@ -177,6 +179,50 @@ class DciContextAcceptanceVerifierTests(unittest.TestCase):
                 temp_dir,
             ):
                 self.assertNotIn(canary, public)
+
+    def test_provider_failure_retains_only_body_free_attempt_count(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_root = Path(temp_dir) / "private-output"
+            readiness = ContextAcceptanceReadiness(
+                output_root=output_root,
+                provider="fixture-provider",
+                model="fixture-model",
+                pi_revision="a" * 40,
+                extension_version="0.2.0",
+                extension_sha256="b" * 64,
+            )
+            calls: list[str] = []
+
+            def fail_second(_readiness, profile: str) -> ContextAcceptanceCase:
+                calls.append(profile)
+                if profile == "level4":
+                    raise RuntimeError("SECRET-PROVIDER-BODY")
+                return ContextAcceptanceCase(
+                    profile="level3",
+                    compactions=1,
+                    preserved_turns=12,
+                    summary_attempts=0,
+                    summary_successes=0,
+                    summary_suppressed=False,
+                    artifact_digests=(("state.json", "c" * 64),),
+                )
+
+            stderr = io.StringIO()
+            code = context_acceptance_main(
+                ["--provider-backed", "--env-file", "private", "--output-root", str(output_root)],
+                stdout=io.StringIO(),
+                stderr=stderr,
+                readiness_checker=lambda *_args: readiness,
+                provider_runner=fail_second,
+            )
+
+            self.assertEqual(code, 2)
+            self.assertEqual(calls, ["level3", "level4"])
+            failure_path = output_root / "context-acceptance-failure.json"
+            report = json.loads(failure_path.read_text())
+            self.assertEqual(report["attempted_provider_operations"], 2)
+            self.assertEqual(failure_path.stat().st_mode & 0o777, 0o600)
+            self.assertNotIn("SECRET-", failure_path.read_text() + stderr.getvalue())
 
 
 class FixtureBackend:

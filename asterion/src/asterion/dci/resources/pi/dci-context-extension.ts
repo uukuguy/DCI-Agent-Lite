@@ -1,5 +1,5 @@
 export const PROFILE_CONTRACT_VERSION = "dci.context-profile/v1";
-export const EXTENSION_VERSION = "0.1.0";
+export const EXTENSION_VERSION = "0.2.0";
 export const TRUNCATION_MARKER = "\n[DCI tool result truncated]";
 
 export const PROFILE_DEFINITIONS = {
@@ -102,6 +102,7 @@ export interface PolicyState {
   accumulatedOriginalToolCharacters: number;
   truncatedResults: number;
   compactionCount: number;
+  preservedTurns: number | null;
   compactionPending: boolean;
   summaryAttempts: number;
   summarySuccesses: number;
@@ -110,7 +111,7 @@ export interface PolicyState {
 }
 
 interface PersistedState {
-  schema: "dci.context-state/v1";
+  schema: "dci.context-state/v2";
   profile: ProfileName;
   contractVersion: typeof PROFILE_CONTRACT_VERSION;
   state: PolicyState;
@@ -128,6 +129,7 @@ export function createPolicyState(): PolicyState {
     accumulatedOriginalToolCharacters: 0,
     truncatedResults: 0,
     compactionCount: 0,
+    preservedTurns: null,
     compactionPending: false,
     summaryAttempts: 0,
     summarySuccesses: 0,
@@ -251,6 +253,7 @@ function validatePolicyState(value: unknown): PolicyState {
     "accumulatedOriginalToolCharacters",
     "truncatedResults",
     "compactionCount",
+    "preservedTurns",
     "compactionPending",
     "summaryAttempts",
     "summarySuccesses",
@@ -260,11 +263,17 @@ function validatePolicyState(value: unknown): PolicyState {
   if (Object.keys(state).sort().join("|") !== keys.slice().sort().join("|")) {
     throw new Error("DCI context state is invalid");
   }
-  for (const key of keys.slice(0, 3).concat(keys.slice(4, 7))) {
+  for (const key of keys.filter(
+    (item) => item !== "compactionPending" && item !== "summarySuppressed" && item !== "preservedTurns",
+  )) {
     const item = state[key];
     if (!Number.isInteger(item) || (item as number) < 0) {
       throw new Error("DCI context state is invalid");
     }
+  }
+  if (state.preservedTurns !== null &&
+      (!Number.isInteger(state.preservedTurns) || (state.preservedTurns as number) < 0)) {
+    throw new Error("DCI context state is invalid");
   }
   if (typeof state.compactionPending !== "boolean" || typeof state.summarySuppressed !== "boolean") {
     throw new Error("DCI context state is invalid");
@@ -279,6 +288,15 @@ function firstEntryForRecentTurns(entries: SessionEntry[], retainedTurns: number
   return userEntries.length > retainedTurns
     ? userEntries[userEntries.length - retainedTurns]?.id
     : undefined;
+}
+
+function preservedTurnsFrom(entries: SessionEntry[], firstKeptEntryId: string | undefined): number | null {
+  if (firstKeptEntryId === undefined) return null;
+  const first = entries.findIndex((entry) => entry.id === firstKeptEntryId);
+  if (first < 0) return null;
+  return entries
+    .slice(first)
+    .filter((entry) => entry.type === "message" && entry.message?.role === "user").length;
 }
 
 export default function dciContextExtension(pi: ExtensionApi): void {
@@ -297,7 +315,7 @@ export default function dciContextExtension(pi: ExtensionApi): void {
   const persist = (event: string): void => {
     if (profile === undefined) throw new Error("DCI context profile is unavailable");
     pi.appendEntry("dci-context-telemetry", {
-      schema: "dci.context-telemetry/v1",
+      schema: "dci.context-telemetry/v2",
       event,
       profile: profile.profile,
       contractVersion: PROFILE_CONTRACT_VERSION,
@@ -305,7 +323,7 @@ export default function dciContextExtension(pi: ExtensionApi): void {
       ...state,
     });
     const persisted: PersistedState = {
-      schema: "dci.context-state/v1",
+      schema: "dci.context-state/v2",
       profile: profile.profile,
       contractVersion: PROFILE_CONTRACT_VERSION,
       state: { ...state },
@@ -328,7 +346,7 @@ export default function dciContextExtension(pi: ExtensionApi): void {
     if (prior !== undefined) {
       const data = prior.data as Partial<PersistedState> | undefined;
       if (
-        data?.schema !== "dci.context-state/v1" ||
+        data?.schema !== "dci.context-state/v2" ||
         data.profile !== profile.profile ||
         data.contractVersion !== PROFILE_CONTRACT_VERSION
       ) {
@@ -394,10 +412,18 @@ export default function dciContextExtension(pi: ExtensionApi): void {
 
   pi.on("session_before_compact", (event) => {
     if (profile === undefined) throw new Error("DCI context profile is unavailable");
+    const branchEntries = event.branchEntries as SessionEntry[];
     if (profile.profile === "level4" && !state.summarySuppressed) {
       if (event.preparation?.settings?.keepRecentTokens !== 20_000) {
         throw new Error("DCI level4 requires a 20000-token compaction boundary");
       }
+      state = {
+        ...state,
+        preservedTurns: preservedTurnsFrom(
+          branchEntries,
+          event.preparation.firstKeptEntryId,
+        ),
+      };
       return undefined;
     }
     if (
@@ -408,8 +434,12 @@ export default function dciContextExtension(pi: ExtensionApi): void {
       return undefined;
     }
     const firstKeptEntryId =
-      firstEntryForRecentTurns(event.branchEntries as SessionEntry[], profile.retained_turns) ??
+      firstEntryForRecentTurns(branchEntries, profile.retained_turns) ??
       event.preparation.firstKeptEntryId;
+    state = {
+      ...state,
+      preservedTurns: preservedTurnsFrom(branchEntries, firstKeptEntryId),
+    };
     return {
       compaction: {
         summary: "",

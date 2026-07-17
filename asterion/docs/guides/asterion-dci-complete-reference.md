@@ -142,6 +142,8 @@ Asterion 通过 Asterion-owned Pi extension 实现闭合的 `dci.context-profile
 
 `asterion-dci run`、benchmark、resume、安装应用和 wheel 都解析同一个 profile identity 与 extension digest。未知值、保留 transport flag、损坏 extension、profile/阈值/digest/session 不匹配都会在 provider 请求前失败。
 
+私有 `state.json` 的 `runtime_context_control` 保存这份不可变策略 identity；公开应用结果只投影 body-free 版本、计数器、extension digest 和 opaque artifact reference。
+
 证据层严格分为 **Implemented**、**Model-free verified**、**Bounded provider verified** 和 **Experiment reproduced**。当前实现与模型外测试属于前两层；有界 L3/L4 证据由 `tools/verify_dci_context_acceptance.py --provider-backed` 单独生成；完整论文复现仍属于 AF-340，Full dataset ran: no。
 
 ### 2. 已保存 conversation artifact 的处理
