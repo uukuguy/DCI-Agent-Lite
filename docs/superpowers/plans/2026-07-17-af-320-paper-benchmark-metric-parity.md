@@ -1,8 +1,28 @@
 # AF-320 Paper Benchmark and Metric Parity Implementation Plan
 
+> **Execution:** Implement this plan task-by-task in the active session. Steps use
+> checkbox (`- [ ]`) syntax for tracking; repository policy currently forbids
+> unsolicited sub-agent dispatch.
+
 > Status: approved after independent review. Execute only after AF-320
 > governance is active. Use TDD for every production change. Full datasets are
 > forbidden.
+
+**Goal:** Reproduce the paper-described DCI capabilities and evidence paths while separating functional acceptance from literal experiment configuration.
+
+**Architecture:** Keep paper experiment identities as provenance, but execute bounded acceptance with the configured production Judge. Persist and independently revalidate the effective Judge configuration and prompt/request-shaping identity without requiring a specific provider or model.
+
+**Tech Stack:** Python 3.10+, `unittest`, Asterion DCI native artifacts, JSON body-free evidence, external Pi JSONL runtime.
+
+## Global Constraints
+
+- Active package is AF-320; run `python3 tools/project_scope_check.py` before implementation and closure.
+- No full dataset, matrix expansion, score-reproduction claim, credential persistence, or modification of the user-owned external `pi/` checkout.
+- Provider mode performs exactly two Pi agent operations and one configured Judge operation.
+- Effective Judge provider/model/API/endpoint/request-shaping identity must be truthful, body-free, cache-safe, and artifact-bound.
+- Paper-model and published-score comparability remain AF-340 scope.
+
+---
 
 ## Goal
 
@@ -14,7 +34,7 @@ ablation matrices through the existing Asterion DCI product.
 
 Create a schema-closed packaged inventory containing exactly the thirteen
 canonical dataset IDs and their family/mode/metric/resource contracts, source
-split/count, versioned QA exclusion policy, GPT-4.1 Judge identity, and closed
+split/count, versioned QA exclusion policy, paper-declared GPT-4.1 Judge provenance, and closed
 execution class. Add a separate schema-closed experiment-scope registry for
 paper selection mode/count, seed provenance/algorithm, and selected-ID identity.
 Never invent a paper seed: published DCI-Bench selections with an unreported
@@ -146,13 +166,116 @@ Create a cost-visible verifier whose default mode is model-free. Provider mode
 preflights private configuration, clean locked external runtime, packaged
 resources, two tiny fixture cases, output root, and exact operation count before
 starting a process. It runs exactly three external operations: one QA agent
-case, its exact GPT-4.1 Judge request, and one BEIR/IR agent case. It never
+case, its configured production Judge request, and one BEIR/IR agent case. It never
 expands a matrix or full dataset, and retains a 0600 body-free report plus
 private artifact digests.
 
 Bind final evidence into the terminal Climb result with artifact rehashing,
 clean-runtime identity, no-follow/private-file checks, idempotence, and
 conflict-no-mutation tests. Failed attempts remain diagnostic.
+
+### D-048 correction — configured Judge functional acceptance
+
+**Files:**
+- Modify: `asterion/src/asterion/dci/verification.py`
+- Modify: `asterion/src/asterion/dci/artifacts.py`
+- Modify: `tests/test_asterion_dci_verification.py`
+- Modify: `tests/test_asterion_dci_artifacts.py`
+- Modify: `README.md`
+- Modify: `asterion/docs/guides/asterion-dci-complete-reference.md`
+- Modify: `asterion/docs/verification/asterion-dci-validation-guide.md`
+- Modify: `.env.template`
+
+**Interfaces:**
+- Consumes: `JudgeConfig.public_dict()`, `build_judge_request()`, private `eval_result.json`, and the fixed `qa-agent`, `qa-judge`, `ir-agent` operation sequence.
+- Produces: `paper_judge_identity(config: JudgeConfig) -> tuple[tuple[str, object], ...]`; the report's `judge` object containing effective public configuration plus `prompt_contract_sha256`; binder validation against the private evaluation artifact.
+
+- [ ] **Step 1: Write RED verifier tests for configured DeepSeek**
+
+```python
+judge = JudgeConfig(
+    base_url="https://api.deepseek.com/v1",
+    api="chat-completions",
+    model="deepseek-v4-flash",
+    api_key_env="DEEPSEEK_API_KEY",
+    api_key="private-fixture-key",
+)
+identity = dict(paper_judge_identity(judge))
+self.assertEqual(identity["judge_model"], "deepseek-v4-flash")
+self.assertEqual(identity["judge_api"], "chat-completions")
+self.assertRegex(identity["prompt_contract_sha256"], r"^[0-9a-f]{64}$")
+```
+
+- [ ] **Step 2: Run RED and confirm the obsolete literal-model gate**
+
+Run: `uv run --project asterion python -m unittest -v tests.test_asterion_dci_verification.PaperBenchmarkVerifierTests`
+
+Expected: FAIL because `paper_judge_identity` is absent and `_paper_default_readiness` still requires official `gpt-4.1/responses`.
+
+- [ ] **Step 3: Implement the minimal dynamic Judge identity**
+
+```python
+def paper_judge_identity(config: JudgeConfig) -> tuple[tuple[str, object], ...]:
+    public = config.public_dict()
+    template = build_judge_request(
+        config,
+        question="[question]",
+        gold_answer="[gold-answer]",
+        predicted_answer="[predicted-answer]",
+    )
+    public["prompt_contract_sha256"] = canonical_json_sha256(template)
+    return tuple(sorted(public.items()))
+```
+
+Remove provider/model/base/API literal comparisons from preflight. Continue requiring a valid `JudgeConfig`, a non-empty configured Judge credential, private configuration, packaged fixtures, an empty private output root, and a clean locked Pi runtime.
+
+- [ ] **Step 4: Write RED binder tests for truthful identity and mutation rejection**
+
+```python
+report["judge"] = dict(paper_judge_identity(deepseek_config))
+evaluation["judge_model"] = "deepseek-v4-flash"
+evaluation["judge_api"] = "chat-completions"
+evaluation["judge_base_url"] = "https://api.deepseek.com/v1"
+self.assertRegex(
+    bind_paper_benchmark_evidence(report_path, state_dir=state_dir, pi_dir=pi_dir),
+    r"^[0-9a-f]{64}$",
+)
+```
+
+Mutate any report/evaluation Judge field or `prompt_contract_sha256`; expect rejection before Climb mutation.
+
+- [ ] **Step 5: Implement binder equality against private evaluation evidence**
+
+The binder must require the report's exact `judge` keys, compare every `JudgeConfig.public_dict()` field persisted in `eval_result.json`, validate `judge_request_fingerprint`, and compare the current packaged prompt-contract digest. It must not contain a literal allowed-model list.
+
+- [ ] **Step 6: Turn focused tests GREEN**
+
+Run: `uv run --project asterion python -m unittest -v tests.test_asterion_dci_verification.PaperBenchmarkVerifierTests tests.test_asterion_dci_artifacts.PaperBenchmarkEvidenceBinderTests`
+
+Expected: all tests pass, including DeepSeek acceptance, identity mutation, symlink, mode, dirty-runtime, idempotence, and conflict-no-mutation cases.
+
+- [ ] **Step 7: Update operator documentation**
+
+Document that any supported configured Judge can prove functional acceptance; effective identity is recorded; GPT-4.1 is paper experiment provenance and becomes mandatory only for an AF-340 paper-score comparison claim.
+
+- [ ] **Step 8: Verify and commit the correction**
+
+Run Ruff and compilation for touched Python, the Task 7/8 selectors, model-free installed/wheel verification, `python3 tools/project_scope_check.py`, and `git diff --check`.
+
+Commit: `fix(dci): accept configured judge evidence`
+
+- [ ] **Step 9: Run bounded DeepSeek evidence and bind H004**
+
+Use a disposable clean checkout at `pi-revision.txt`, reuse only the existing private Pi auth directory, and invoke:
+
+```bash
+asterion-dci paper verify \
+  --provider-backed \
+  --env-file .env \
+  --output-root PRIVATE_EMPTY_OUTPUT
+```
+
+Require exactly `Agent operations: 2`, `Judge operations: 1`, `External operations: 3`, and `Full dataset ran: no`; then run `tools/climb/bind-paper-benchmark-evidence.py` against the successful report and the same clean Pi checkout.
 
 ## Task 9 — Independent review and package closure
 
