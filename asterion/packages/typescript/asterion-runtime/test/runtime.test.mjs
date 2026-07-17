@@ -143,7 +143,10 @@ test("validates every checked-in reference package manifest", async () => {
     "code-quality-evaluation.json",
     "code-quality-workflow.json",
     "controlled-code-policy.json",
+    "dci-analysis.json",
+    "dci-benchmark.json",
     "dci-evaluation.json",
+    "dci-export.json",
     "dci-research.json",
     "execution-audit-observability.json",
     "local-corpus-policy.json",
@@ -192,6 +195,8 @@ test("validates every checked-in reference assembly", async () => {
   const names = entries.map(({ name }) => name).sort();
   assert.deepEqual(names, [
     "controlled-code-validation.json",
+    "dci-complete-application-claude.json",
+    "dci-complete-application-pi.json",
     "dci-local-research.json",
     "dci-research-capability-claude.json",
     "dci-research-capability.json",

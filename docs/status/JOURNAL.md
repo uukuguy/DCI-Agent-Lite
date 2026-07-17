@@ -871,3 +871,5 @@
 - 17:16 H004 r6 proved MiniMax-M3 Claude execution; a stale exported Judge key stopped evaluation.
 - 17:16 Clean-key r7 completed one Grep, one DeepSeek Judge, five stages, and no full dataset.
 - 17:16 H004 tracked evidence rebinds six private artifacts to report `1b0c5b09…65c8b`.
+- 17:24 Climb research-tree regeneration attaches the tracked H004 provider/report digests to its confirmed node.
+- 17:24 TypeScript reference inventory now covers all complete-application package and assembly manifests; 11/11 Node tests pass.
