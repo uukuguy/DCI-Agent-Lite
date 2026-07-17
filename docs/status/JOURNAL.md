@@ -863,3 +863,4 @@
 - 16:26 Claude now reuses the shared agent timeout so real bounded runs can finish. [5de6bb8]
 - 16:31 H004 r4 reached MiniMax-M3 but wrong international routing caused ten 401 retries; Judge did not run.
 - 16:51 D-049 now distinguishes MiniMax Token Plan bearer credentials from ordinary API-key authentication.
+- 16:51 MiniMax credential-scheme design correction preserves one shared key variable. [5f27777]

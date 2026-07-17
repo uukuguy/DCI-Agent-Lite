@@ -60,13 +60,13 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
             (
                 "minimax",
                 "MINIMAX_API_KEY",
-                "international-secret",
+                "sk-cp-international-secret",
                 "https://api.minimax.io/anthropic",
             ),
             (
                 "minimax-cn",
                 "MINIMAX_CN_API_KEY",
-                "china-secret",
+                "sk-cp-china-secret",
                 "https://api.minimaxi.com/anthropic",
             ),
         )
@@ -115,6 +115,34 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
                     native_environment["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"],
                     "1",
                 )
+
+    def test_claude_factory_maps_ordinary_minimax_key_to_api_key_auth(self) -> None:
+        from asterion.runtime.defaults import default_runtime_factory_registry
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            environment = {
+                "ASTERION_CLAUDE_EXECUTABLE": "claude",
+                "ASTERION_RUNTIME_CWD": str(root),
+                "DCI_PROVIDER": "minimax",
+                "DCI_MODEL": "MiniMax-M3",
+                "MINIMAX_API_KEY": "ordinary-api-key",
+                "ANTHROPIC_API_KEY": "stale-api-key",
+                "ANTHROPIC_AUTH_TOKEN": "stale-auth-token",
+            }
+            with (
+                patch.dict(os.environ, environment, clear=True),
+                patch("asterion.runtime.defaults.load_dotenv"),
+                patch("asterion.runtime.defaults.shutil.which", return_value="/tool/claude"),
+            ):
+                binding = default_runtime_factory_registry().select(
+                    "claude-code.reference"
+                )
+                runtime = binding.factory(self._context(root))
+
+        native_environment = runtime._environment
+        self.assertEqual(native_environment["ANTHROPIC_API_KEY"], "ordinary-api-key")
+        self.assertNotIn("ANTHROPIC_AUTH_TOKEN", native_environment)
 
     def test_claude_factory_rejects_unsupported_provider_without_constructing_client(
         self,

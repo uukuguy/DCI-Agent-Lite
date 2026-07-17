@@ -129,7 +129,7 @@ def _claude_provider_environment(environment: Mapping[str, str]) -> dict[str, st
 
     native_environment = dict(environment)
     native_environment["ANTHROPIC_BASE_URL"] = base_url
-    if provider == "anthropic":
+    if provider == "anthropic" or not api_key.startswith("sk-cp-"):
         native_environment["ANTHROPIC_API_KEY"] = api_key
         native_environment.pop("ANTHROPIC_AUTH_TOKEN", None)
     else:
