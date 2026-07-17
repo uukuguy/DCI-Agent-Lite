@@ -816,3 +816,7 @@
 - 09:44 Paper coverage, localization, and retained metrics gain immutable fail-closed primitives. [7ad3e3a]
 - 10:04 AF-320 native trajectory analysis binds private observations and body-free resolution evidence. [b3ac9d0]
 - 11:18 AF-320 integrates exact resolution analysis so paper metrics are executable and identity-bound. [d3edee2]
+- 11:22 AF-320 registers H002/H003 Climb adapters so metric and trajectory closure is reproducible. [ab2a820]
+- 10:45 AF-320-H-002 confirmed 4/4; package acceptance recorded.
+- 10:46 AF-320-H-003 confirmed 4/4; package acceptance recorded.
+- 11:31 Recovery checkpoint advances AF-320 from confirmed metric/trajectory evidence to H004 deterministic ablation closure.

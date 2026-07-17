@@ -1,20 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (91 runs).
+> Deterministic summary generated from tracked state (93 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 92
-- Next hypothesis: AF-320-H-002
+- Last cycle: 94
+- Next hypothesis: AF-320-H-004
 - In flight: none
-- Next action: Start AF-320-H-002.
+- Next action: Start AF-320-H-004.
 
 ## Active hypotheses
 
-- **AF-320-H-002** (pending, rank 0.90): Prove paper-exact parameterized coverage/localization and retained-evidence primitives with query and matched-gold aggregation.
-- **AF-320-H-003** (pending, rank 0.80): Prove conservative native observation alignment, byte-exact evidence identity, cache invalidation, and body-free projections.
 - **AF-320-H-004** (pending, rank 0.70): Prove non-executable paper matrices, deterministic bounded analogues, complete product parity, and terminal three-operation evidence binding.
 
 ## Run ladder
@@ -112,6 +110,8 @@
 | 20260717-062553-dci-climb-af310h004 | AF-310-H-004 | 4 | confirmed 4/4 |
 | 20260717-064833-dci-climb-af310h005 | AF-310-H-005 | 4 | confirmed 4/4 |
 | 20260717-092832-dci-climb-af320h001 | AF-320-H-001 | 4 | confirmed 4/4 |
+| 20260717-104543-dci-climb-af320h002 | AF-320-H-002 | 4 | confirmed 4/4 |
+| 20260717-104602-dci-climb-af320h003 | AF-320-H-003 | 4 | confirmed 4/4 |
 
 ## Negative cache
 
