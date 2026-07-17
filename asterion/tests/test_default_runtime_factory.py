@@ -24,6 +24,7 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
                         "DCI_PROVIDER": "minimax",
                         "DCI_MODEL": "MiniMax-M2.7",
                         "MINIMAX_API_KEY": "test-minimax-key",
+                        "DCI_RPC_TIMEOUT_SECONDS": "3600",
                     },
                     clear=True,
                 ),
@@ -50,6 +51,7 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
         )
         self.assertEqual(runtime.manifest.runtime_id, "claude-code.reference")
         self.assertEqual(runtime.manifest.capabilities, binding.capabilities)
+        self.assertEqual(runtime._default_timeout_seconds, 3600.0)
 
     def test_claude_factory_derives_minimax_environment_from_shared_config(self) -> None:
         from asterion.runtime.defaults import default_runtime_factory_registry
@@ -157,6 +159,7 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
                 "ANTHROPIC_API_KEY": "anthropic-secret",
                 "ANTHROPIC_AUTH_TOKEN": "stale-auth-token",
                 "ANTHROPIC_BASE_URL": "https://stale.invalid",
+                "DCI_RPC_TIMEOUT_SECONDS": "0",
             }
             with (
                 patch.dict(os.environ, environment, clear=True),
@@ -174,6 +177,34 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
         )
         self.assertEqual(native_environment["ANTHROPIC_API_KEY"], "anthropic-secret")
         self.assertNotIn("ANTHROPIC_AUTH_TOKEN", native_environment)
+        self.assertIsNone(runtime._default_timeout_seconds)
+
+    def test_claude_factory_rejects_invalid_shared_timeout_without_secret_echo(self) -> None:
+        from asterion.runtime.defaults import default_runtime_factory_registry
+        from asterion.runtime.factory import RuntimeFactoryError
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            environment = {
+                "ASTERION_CLAUDE_EXECUTABLE": "claude",
+                "ASTERION_RUNTIME_CWD": str(root),
+                "DCI_PROVIDER": "minimax",
+                "DCI_MODEL": "MiniMax-M3",
+                "MINIMAX_API_KEY": "SECRET-key",
+                "DCI_RPC_TIMEOUT_SECONDS": "SECRET-invalid",
+            }
+            with (
+                patch.dict(os.environ, environment, clear=True),
+                patch("asterion.runtime.defaults.load_dotenv"),
+                patch("asterion.runtime.defaults.shutil.which", return_value="/tool/claude"),
+            ):
+                binding = default_runtime_factory_registry().select(
+                    "claude-code.reference"
+                )
+                with self.assertRaises(RuntimeFactoryError) as caught:
+                    binding.factory(self._context(root))
+
+        self.assertNotIn("SECRET", str(caught.exception))
 
     def test_claude_factory_rejects_missing_provider_key_without_exposing_config(
         self,

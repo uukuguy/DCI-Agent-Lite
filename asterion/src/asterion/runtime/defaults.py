@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 import shutil
 from collections.abc import Mapping
@@ -104,10 +105,12 @@ def _create_claude_code_runtime(
     if executable is None or not runtime_cwd.is_dir():
         raise RuntimeFactoryError("Claude Code runtime is unavailable")
     environment = _claude_provider_environment(os.environ)
+    default_timeout_seconds = _configured_timeout_seconds(os.environ)
     return ClaudeCodeRuntimeClient(
         executable=executable,
         cwd=runtime_cwd,
         environment=environment,
+        default_timeout_seconds=default_timeout_seconds,
         evidence_root=evidence_root,
     )
 
@@ -143,6 +146,17 @@ def _claude_provider_environment(environment: Mapping[str, str]) -> dict[str, st
     native_environment["API_TIMEOUT_MS"] = "3000000"
     native_environment["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] = "1"
     return native_environment
+
+
+def _configured_timeout_seconds(environment: Mapping[str, str]) -> float | None:
+    value = environment.get("DCI_RPC_TIMEOUT_SECONDS", "3600").strip()
+    try:
+        timeout_seconds = float(value)
+    except ValueError:
+        raise RuntimeFactoryError("Claude Code timeout configuration is invalid") from None
+    if not math.isfinite(timeout_seconds) or timeout_seconds < 0:
+        raise RuntimeFactoryError("Claude Code timeout configuration is invalid")
+    return timeout_seconds or None
 
 
 def _configured_path(name: str, default: Path, *, root: Path) -> Path:

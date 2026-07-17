@@ -41,12 +41,14 @@ class ClaudeCodeRuntimeClient:
         executable: str,
         cwd: Path,
         environment: Mapping[str, str],
+        default_timeout_seconds: float | None = 30,
         evidence_root: Path | None = None,
         run_process: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
     ) -> None:
         self._executable = executable
         self._cwd = Path(cwd)
         self._environment = dict(environment)
+        self._default_timeout_seconds = default_timeout_seconds
         self._evidence_root = Path(evidence_root) if evidence_root is not None else None
         self._run_process = run_process
         self._completed_runs: dict[str, Path] = {}
@@ -73,7 +75,9 @@ class ClaudeCodeRuntimeClient:
         if signal is not None and signal.cancelled:
             raise ProtocolError("Claude Code runtime request was cancelled")
         timeout_seconds = (
-            request.deadline_ms / 1000 if request.deadline_ms is not None else 30
+            request.deadline_ms / 1000
+            if request.deadline_ms is not None
+            else self._default_timeout_seconds
         )
         try:
             if self._evidence_root is None:
@@ -188,7 +192,7 @@ def run_claude_code(
     output_dir: Path,
     cwd: Path,
     tools: list[str],
-    timeout_seconds: float,
+    timeout_seconds: float | None,
     executable: str = "claude",
     environment: Mapping[str, str] | None = None,
     run_process: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
@@ -209,7 +213,7 @@ def run_claude_code(
         "input": {"text": prompt},
         "requested_capabilities": map_claude_capabilities(tools),
     }
-    if 0 < timeout_seconds * 1000 <= MAX_DEADLINE_MS:
+    if timeout_seconds is not None and 0 < timeout_seconds * 1000 <= MAX_DEADLINE_MS:
         request["deadline_ms"] = max(1, int(round(timeout_seconds * 1000)))
     validate_run_request(request)
     _write_json(output_dir / "request.json", request)

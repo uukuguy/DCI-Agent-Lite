@@ -859,3 +859,4 @@
 - 15:48 Shared provider translation plan defines MiniMax mapping and TDD closure. [84bb22b]
 - 15:59 Shared provider config now drives Claude MiniMax safely, enabling H004 without OAuth. [6387f42]
 - 16:00 Recovery checkpoint replaces the stale OAuth blocker with the exact MiniMax configuration boundary. [234a41d]
+- 16:22 H004 MiniMax-M3 r3 hit the hardcoded 30-second Claude timeout before events; Judge did not run.

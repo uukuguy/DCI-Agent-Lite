@@ -77,6 +77,26 @@ class ClaudeCodeRuntimeClientTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(all(event.run_id == "runtime-run" for event in events))
         validate_event_stream([event.to_mapping() for event in events])
 
+    async def test_configured_default_timeout_applies_without_request_deadline(self) -> None:
+        process = Mock(
+            return_value=subprocess.CompletedProcess([], 0, FIXTURE.read_text(), "")
+        )
+        runtime = ClaudeCodeRuntimeClient(
+            executable="claude",
+            cwd=Path.cwd(),
+            environment={},
+            default_timeout_seconds=3600.0,
+            run_process=process,
+        )
+
+        events = [
+            event
+            async for event in runtime.run(RunRequest("configured-timeout", "question"))
+        ]
+
+        self.assertEqual(process.call_args.kwargs["timeout"], 3600.0)
+        self.assertEqual(events[-1].type, "run.completed")
+
     async def test_pre_cancel_fails_before_starting_fixture_process(self) -> None:
         process = Mock()
         runtime = ClaudeCodeRuntimeClient(
