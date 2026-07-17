@@ -1,0 +1,31 @@
+{
+  "schema": "asterion.dci.climb-provider-evidence/v1",
+  "work_package_id": "AF-330",
+  "hypothesis_id": "AF-330-H-004",
+  "runtime_id": "claude-code.reference",
+  "source_commit": "993f2a8",
+  "report_sha256": "1b0c5b09ab28f56d542f0e8745d3507b79ba8d6ea12c68435efee2df2d765c8b",
+  "implementation_sha256": "76dee0eb4dd4d70f6d942846b869bf93a5a13ef7ccfc237bde03111e77aa6d76",
+  "status": "completed",
+  "agent_operations": 1,
+  "judge_operations": 1,
+  "tool_call_count": 1,
+  "tools": {
+    "Glob": 0,
+    "Grep": 1,
+    "Read": 0
+  },
+  "corpus_contained": true,
+  "web_calls": 0,
+  "subagent_calls": 0,
+  "judge_request_fingerprint": "bd6cad9e4468481f65e0456fced1428bd2666ccdb4fa35e40042e053a9314057",
+  "full_dataset": false,
+  "private_artifacts": {
+    "eval_result.json": "aa41bb122d509037d55019cd24aba808b218d82157bec6d8e1f45c361aa6eb77",
+    "events.jsonl": "168d347d7645b3fc8396eeba0a51c06204091106b515669aad5e444d17fdf91f",
+    "final.txt": "1067f0f4a61dc2e160e8021067d5ffecaf9723742f4fa7f457312cc813cf2e6c",
+    "raw-events.jsonl": "025fa82722982fb56e398f8f1caf1e4f823d0e8b46d187550244c9e6a5aa86fd",
+    "request.json": "e83aa95a77dc25f124c0bcaca0d15cff0e5dea9819c351554d871d4ede99fa05",
+    "runtime-policy.json": "f8e8e45b2f8af40f2eb8df6be0cd9caa444845dd4c9c5f74bb280baaf659a2ca"
+  }
+}

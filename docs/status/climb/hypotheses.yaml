@@ -2275,8 +2275,24 @@ hypotheses:
   expected_lift: +1 bound Claude semantic application path
   cost_h: 2.0
   ranking: 0.7
-  status: pending
+  status: confirmed
   created_at: '2026-07-17T12:49:00+08:00'
   verification_command: uv run --project asterion python -m unittest -v tests.test_claude_code_runtime
     tests.test_dci_dual_runtime_acceptance
-  results: []
+  results:
+  - session: 2026-07-17-af-330-complete-application-dual-runtime
+    cycle: 99
+    run: 20260717-171259-dci-climb-af330h004
+    local: 4
+    local_per_task:
+      restricted_command_surface: 1
+      five_stage_claude_execution: 1
+      outside_path_rejection: 1
+      provider_evidence: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
+    provider_evidence:
+      path: provider-evidence/af-330-h-004.json
+      sha256: 5cb395d0dedee6a9c202add311d7fc7291ac078d8152739b048d370c8e7837bd
+      report_sha256: 1b0c5b09ab28f56d542f0e8745d3507b79ba8d6ea12c68435efee2df2d765c8b

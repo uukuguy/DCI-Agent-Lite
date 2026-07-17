@@ -1,19 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (97 runs).
+> Deterministic summary generated from tracked state (98 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 98
-- Next hypothesis: AF-330-H-004
+- Last cycle: 99
+- Next hypothesis: None
 - In flight: none
-- Next action: Start AF-330-H-004.
+- Next action: Trigger Knowledge Layer.
 
 ## Active hypotheses
 
-- **AF-330-H-004** (pending, rank 0.70): Prove a bounded real Claude Code run uses a fail-closed Read/Grep/Glob-only local-corpus boundary and body-free evidence binding.
 
 ## Run ladder
 
@@ -116,6 +115,7 @@
 | 20260717-130305-dci-climb-af330h001 | AF-330-H-001 | 4 | confirmed 4/4 |
 | 20260717-144035-dci-climb-af330h002 | AF-330-H-002 | 4 | confirmed 4/4 |
 | 20260717-145028-dci-climb-af330h003 | AF-330-H-003 | 4 | confirmed 4/4 |
+| 20260717-171259-dci-climb-af330h004 | AF-330-H-004 | 4 | confirmed 4/4 |
 
 ## Negative cache
 
