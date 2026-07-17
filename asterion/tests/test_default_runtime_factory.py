@@ -102,6 +102,8 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
                     runtime = binding.factory(self._context(root))
 
                 native_environment = runtime._environment
+                self.assertEqual(runtime._agent_provider, provider)
+                self.assertEqual(runtime._agent_model, "MiniMax-M2.7")
                 self.assertEqual(
                     native_environment["ANTHROPIC_BASE_URL"], expected_base_url
                 )

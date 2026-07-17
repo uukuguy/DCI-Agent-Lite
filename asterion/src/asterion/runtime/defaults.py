@@ -134,6 +134,8 @@ def _create_claude_code_runtime(
         environment=environment,
         default_timeout_seconds=default_timeout_seconds,
         evidence_root=evidence_root,
+        agent_provider=os.environ.get("DCI_PROVIDER", "").strip(),
+        agent_model=os.environ.get("DCI_MODEL", "").strip(),
     )
 
 

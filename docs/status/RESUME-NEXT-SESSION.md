@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-17 18:00 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-17 18:18 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-330
 
@@ -10,18 +10,18 @@ Currently running: no process.
 
 ## TL;DR
 
-- H001–H004 are confirmed 4/4; AF-330 remains open only for full closure gates and final review.
+- H001–H004 were confirmed 4/4, but final review correctly invalidated r9 terminal closure until task cancellation and raw-stream replay are evidenced by a fresh run.
 - Commits `9b6a1f6`, `c5a0411`, and compatibility repair `1951d12` bind runtime authority and independently re-audit retained evidence.
 - Fresh r9 completed MiniMax-M3 Claude Code, one Grep, all five stages, and one configured DeepSeek Judge without a full dataset.
-- The terminal verifier confirms exact runtime-CWD/corpus identity, six private artifact hashes, report `35f289a8…f047`, tracked record `78a62d45…fa0e`, implementation `613578bd…6477`, and reviewed source `1951d12`.
-- Climb cycle 101 invokes that verifier and reconfirms H004 4/4. Old r7/r8 are diagnostic only.
+- The prior verifier bound runtime-CWD/corpus and digests for r9 but did not replay raw Claude events, so its report/record are diagnostic rather than terminal.
+- Climb cycle 101 invoked the prior verifier; old r7/r8/r9 are now diagnostic under the stronger raw-replay contract.
 - `.env` is privately configured for the international MiniMax Claude API and DeepSeek Judge; never print or commit it. External `pi/` remains untouched.
 
 ## Next concrete action
 
-1. Commit the fresh r8 evidence, Climb cycle 100 state, and verifier-backed H004 training gate.
-2. Run full root/Asterion Python, TypeScript, Rust, compile, Ruff, shell, scope, diff, product/install/wheel, privacy, and native-resume closure gates.
-3. Obtain final independent review; close AF-330 only if no Critical/Important findings remain.
+1. Verify and commit task-cancellation plus raw-stream replay/provider-identity repairs.
+2. Run a fresh bounded Claude application, bind its new evidence, and rerun Climb.
+3. Rerun closure gates and final independent review; close AF-330 only if no Critical/Important findings remain.
 
 ## Boundaries
 

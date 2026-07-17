@@ -10,6 +10,7 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 
 from asterion.assembly.protocol import resolve_assembly
+from asterion.adapters.claude_code import ClaudeCodeProtocolAdapter
 from asterion.applications.dci_agent_lite.provider import create_provider
 from asterion.capabilities.dci_research.complete import (
     DciCompleteAnalysisImplementation,
@@ -515,9 +516,10 @@ class DciRestrictedClaudeEvidenceTests(unittest.TestCase):
         run.mkdir(mode=0o700)
         corpus.mkdir()
         documents = {
-            "request.json": {"requested_capabilities": ["filesystem.read", "claude.tool.grep", "claude.tool.glob"]},
+            "request.json": {"run_id": "fixture-run", "requested_capabilities": ["filesystem.read", "claude.tool.grep", "claude.tool.glob"]},
             "runtime-policy.json": {
                 "runtime_cwd": str(corpus.resolve()),
+                "agent_provider": "minimax", "agent_model": "fixture-model",
                 "tools": ["Read", "Grep", "Glob"], "allowed_tools": ["Read", "Grep", "Glob"],
                 "max_turns": 4, "permission_mode": "dontAsk", "strict_mcp": True,
                 "mcp_servers": {}, "safe_mode": True, "no_session_persistence": True,
@@ -529,14 +531,19 @@ class DciRestrictedClaudeEvidenceTests(unittest.TestCase):
             path = run / name
             path.write_text(json.dumps(value))
             path.chmod(0o600)
-        events = (
-            {"type": "run.started", "payload": {"capabilities": ["claude.tool.glob", "claude.tool.grep", "filesystem.read"]}},
-            {"type": "tool.call", "payload": {"name": "Grep", "arguments": {"path": "."}}},
-            {"type": "run.completed", "payload": {"status": "completed"}},
+        raw_events = (
+            {"type": "system", "subtype": "init", "tools": ["Glob", "Grep", "Read"], "cwd": str(corpus.resolve()), "model": "fixture-model", "claude_code_version": "fixture-version"},
+            {"type": "assistant", "message": {"content": [{"type": "tool_use", "id": "call-1", "name": "Grep", "input": {"path": "."}}]}},
+            {"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "call-1", "content": "cobalt lantern", "is_error": False}]}},
+            {"type": "result", "subtype": "success", "is_error": False, "result": "cobalt lantern"},
         )
+        events = []
+        adapter = ClaudeCodeProtocolAdapter(run_id="fixture-run", emit=events.append)
+        for raw_event in raw_events:
+            adapter.consume(raw_event)
         for name, value in {
             "events.jsonl": "".join(json.dumps(event) + "\n" for event in events),
-            "raw-events.jsonl": "private raw stream\n",
+            "raw-events.jsonl": "".join(json.dumps(event) + "\n" for event in raw_events),
             "final.txt": "cobalt lantern\n",
         }.items():
             path = run / name
@@ -549,7 +556,19 @@ class DciRestrictedClaudeEvidenceTests(unittest.TestCase):
             run, corpus = self._fixture(Path(directory))
             report = audit_restricted_claude_application(run_dir=run, corpus_dir=corpus)
         self.assertEqual(report["tools"], {"Read": 0, "Grep": 1, "Glob": 0})
+        self.assertEqual(report["agent_provider"], "minimax")
+        self.assertEqual(report["agent_model"], "fixture-model")
+        self.assertEqual(report["agent_operations"], 1)
         self.assertNotIn("cobalt lantern", repr(report))
+
+    def test_arbitrary_raw_stream_cannot_certify_normalized_events(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            run, corpus = self._fixture(Path(directory))
+            path = run / "raw-events.jsonl"
+            path.write_text("private raw stream\n")
+            path.chmod(0o600)
+            with self.assertRaises(DciDualRuntimeVerificationError):
+                audit_restricted_claude_application(run_dir=run, corpus_dir=corpus)
 
     def test_outside_path_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -604,6 +623,9 @@ class DciRestrictedClaudeEvidenceTests(unittest.TestCase):
         self.assertEqual(
             record["schema"], "asterion.dci.climb-provider-evidence/v2"
         )
+        self.assertEqual(record["agent_operations"], 1)
+        self.assertEqual(record["agent_provider"], "minimax")
+        self.assertEqual(record["agent_model"], "fixture-model")
         self.assertNotIn("cobalt lantern", repr(record))
 
     def test_tracked_claude_evidence_is_body_free_and_bounded(self) -> None:

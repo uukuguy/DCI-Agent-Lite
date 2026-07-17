@@ -109,8 +109,11 @@ unmodified.
 - One MiniMax provider/model/key configuration selects the same agent backend
   through either runtime without user-authored `ANTHROPIC_*` duplication.
 - Terminal acceptance reruns the auditor against retained private evidence and
-  verifies its report, implementation, source, and tracked-record digests; a
-  counter-only tracked assertion cannot close the package.
+  reparses the raw Claude stream through the production adapter, requires exact
+  normalized-event equality, derives one agent operation plus safe
+  provider/model/Claude-version identity, and verifies report, implementation,
+  source, and tracked-record digests; a counter-only assertion cannot close the
+  package.
 
 Original DCI durable resume remains exposed through the native DCI run and
 `asterion-dci resume` path. The generic five-stage composer is deliberately one

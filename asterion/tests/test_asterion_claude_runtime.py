@@ -189,6 +189,46 @@ class ClaudeCodeRuntimeClientTests(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(ProcessLookupError):
                 os.kill(pid, 0)
 
+    async def test_task_cancellation_terminates_and_reaps_child(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            pid_file = root / "child.pid"
+            executable = root / "blocking-claude"
+            executable.write_text(
+                f"#!{sys.executable}\n"
+                "import os, pathlib, time\n"
+                "pathlib.Path(os.environ['TEST_CHILD_PID_FILE']).write_text(str(os.getpid()))\n"
+                "time.sleep(30)\n"
+            )
+            executable.chmod(0o700)
+            runtime = ClaudeCodeRuntimeClient(
+                executable=str(executable),
+                cwd=root,
+                environment={"TEST_CHILD_PID_FILE": str(pid_file)},
+                default_timeout_seconds=None,
+            )
+            task = asyncio.create_task(
+                anext(runtime.run(RunRequest("cancel-task", "question")))
+            )
+            for _ in range(100):
+                if pid_file.exists():
+                    break
+                await asyncio.sleep(0.01)
+            self.assertTrue(pid_file.exists())
+            pid = int(pid_file.read_text())
+            task.cancel()
+
+            try:
+                with self.assertRaises(ProtocolError):
+                    await asyncio.wait_for(task, timeout=3)
+                with self.assertRaises(ProcessLookupError):
+                    os.kill(pid, 0)
+            finally:
+                try:
+                    os.kill(pid, 9)
+                except ProcessLookupError:
+                    pass
+
 
 if __name__ == "__main__":
     unittest.main()

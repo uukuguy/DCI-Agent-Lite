@@ -889,4 +889,7 @@
 - 17:59 Fresh r9 revalidates one MiniMax-M3 Claude, one Grep, five stages, and one DeepSeek Judge after compatibility repair; no full dataset ran.
 - 18:00 Terminal binding now anchors report `35f289a8…f047`, record `78a62d45…fa0e`, implementation `613578bd…6477`, and source `1951d12`.
 - 18:00 Climb cycle 101 reconfirmed H004 4/4 against r9 through the terminal verifier.
+- 18:10 Final review found no Critical issues but withheld AF-330 for three Important gaps: task cancellation orphaning, raw-stream self-certification, and stale recovery text.
+- 18:18 Task cancellation now signals, drains, kills, and reaps the owned Claude process; retained evidence replays raw JSONL through the production adapter and derives agent/provider/model/version identity.
 - 17:59 AF-330-H-004 confirmed 4/4; package acceptance recorded.
+- 18:19 AF-330 cancellation and raw-replay repair passes 122/122 Asterion tests, Ruff, compile, scope, and diff checks.

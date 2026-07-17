@@ -12,6 +12,8 @@ from pathlib import Path
 from collections.abc import Mapping
 
 from asterion.capabilities.dci_research.complete import complete_application_identity
+from asterion.adapters.claude_code import ClaudeCodeProtocolAdapter
+from asterion.runtime.protocol import ProtocolError, validate_event_stream
 
 
 class DciDualRuntimeVerificationError(RuntimeError):
@@ -150,14 +152,24 @@ def audit_restricted_claude_application(
     final_raw = _private_file(run / "final.txt")
     try:
         events = [json.loads(line) for line in events_raw.splitlines() if line]
+        raw_events = [json.loads(line) for line in raw_events_raw.splitlines() if line]
     except (TypeError, ValueError):
         raise DciDualRuntimeVerificationError("private runtime evidence is invalid") from None
     request_capabilities = ["filesystem.read", "claude.tool.grep", "claude.tool.glob"]
     started_capabilities = ["claude.tool.glob", "claude.tool.grep", "filesystem.read"]
     tools = ["Read", "Grep", "Glob"]
+    raw_tools = ["Glob", "Grep", "Read"]
+    run_id = request.get("run_id")
+    agent_provider = policy.get("agent_provider")
+    agent_model = policy.get("agent_model")
     if (
-        request.get("requested_capabilities") != request_capabilities
+        not isinstance(run_id, str)
+        or not run_id
+        or request.get("requested_capabilities") != request_capabilities
         or policy.get("runtime_cwd") != str(corpus)
+        or agent_provider not in {"anthropic", "minimax", "minimax-cn"}
+        or not isinstance(agent_model, str)
+        or not agent_model
         or policy.get("tools") != tools
         or policy.get("allowed_tools") != tools
         or policy.get("max_turns") != 4
@@ -171,6 +183,46 @@ def audit_restricted_claude_application(
         or events[-1].get("type") != "run.completed"
     ):
         raise DciDualRuntimeVerificationError("restricted Claude contract did not complete")
+    init_events = [
+        event
+        for event in raw_events
+        if isinstance(event, dict)
+        and event.get("type") == "system"
+        and event.get("subtype") == "init"
+    ]
+    result_events = [
+        event
+        for event in raw_events
+        if isinstance(event, dict) and event.get("type") == "result"
+    ]
+    if len(init_events) != 1 or len(result_events) != 1:
+        raise DciDualRuntimeVerificationError("restricted Claude raw stream is invalid")
+    init = init_events[0]
+    result_event = result_events[0]
+    claude_code_version = init.get("claude_code_version")
+    if (
+        init.get("cwd") != str(corpus)
+        or init.get("model") != agent_model
+        or init.get("tools") != raw_tools
+        or not isinstance(claude_code_version, str)
+        or not claude_code_version
+        or result_event.get("subtype") != "success"
+        or result_event.get("is_error") is not False
+    ):
+        raise DciDualRuntimeVerificationError("restricted Claude raw identity is invalid")
+    reprojected: list[dict[str, object]] = []
+    adapter = ClaudeCodeProtocolAdapter(run_id=run_id, emit=reprojected.append)
+    try:
+        for raw_event in raw_events:
+            if not isinstance(raw_event, dict):
+                raise ProtocolError("raw event is not an object")
+            adapter.consume(raw_event)
+        validate_event_stream(events)
+        validate_event_stream(reprojected)
+    except (ProtocolError, TypeError, ValueError):
+        raise DciDualRuntimeVerificationError("restricted Claude raw stream is invalid") from None
+    if events != reprojected:
+        raise DciDualRuntimeVerificationError("restricted Claude normalized evidence is invalid")
     settings = policy.get("settings")
     sandbox = settings.get("sandbox") if isinstance(settings, dict) else None
     if (
@@ -216,6 +268,10 @@ def audit_restricted_claude_application(
         "schema": "asterion.dci.dual-runtime-acceptance/v1",
         "runtime_id": "claude-code.reference",
         "status": "completed",
+        "agent_provider": agent_provider,
+        "agent_model": agent_model,
+        "claude_code_version": claude_code_version,
+        "agent_operations": len(result_events),
         "implementation_sha256": complete_application_identity(),
         "tools": tool_counts,
         "tool_call_count": sum(tool_counts.values()),
@@ -284,6 +340,10 @@ def build_restricted_claude_record(
         for key in (
             "runtime_id",
             "status",
+            "agent_provider",
+            "agent_model",
+            "claude_code_version",
+            "agent_operations",
             "implementation_sha256",
             "tool_call_count",
             "tools",
@@ -302,7 +362,6 @@ def build_restricted_claude_record(
         "source_commit": source_commit,
         "source_sha256": source_sha256,
         "report_sha256": report_sha256,
-        "agent_operations": 1,
         "judge_operations": 1,
         **copied,
     }

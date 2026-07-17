@@ -8,6 +8,7 @@ import json
 import os
 import signal as process_signal
 import subprocess
+import threading
 import time
 from asyncio import CancelledError
 from collections.abc import Callable, Mapping
@@ -45,6 +46,8 @@ class ClaudeCodeRuntimeClient:
         environment: Mapping[str, str],
         default_timeout_seconds: float | None = 30,
         evidence_root: Path | None = None,
+        agent_provider: str | None = None,
+        agent_model: str | None = None,
         run_process: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
     ) -> None:
         self._executable = executable
@@ -52,6 +55,8 @@ class ClaudeCodeRuntimeClient:
         self._environment = dict(environment)
         self._default_timeout_seconds = default_timeout_seconds
         self._evidence_root = Path(evidence_root) if evidence_root is not None else None
+        self._agent_provider = agent_provider
+        self._agent_model = agent_model
         self._run_process = run_process
         self._completed_runs: dict[str, Path] = {}
 
@@ -93,20 +98,30 @@ class ClaudeCodeRuntimeClient:
                 output_dir = self._evidence_root / name
                 output_dir.mkdir(mode=0o700)
             try:
-                await asyncio.to_thread(
-                    run_claude_code,
-                    prompt=request.input_text,
-                    output_dir=output_dir,
-                    cwd=self._cwd,
-                    tools=["Read", "Grep", "Glob"],
-                    timeout_seconds=timeout_seconds,
-                    executable=self._executable,
-                    environment=self._environment,
-                    run_process=self._run_process,
-                    cancelled=(
-                        (lambda: signal.cancelled) if signal is not None else None
-                    ),
+                local_cancel = threading.Event()
+                work = asyncio.create_task(
+                    asyncio.to_thread(
+                        run_claude_code,
+                        prompt=request.input_text,
+                        output_dir=output_dir,
+                        cwd=self._cwd,
+                        tools=["Read", "Grep", "Glob"],
+                        timeout_seconds=timeout_seconds,
+                        executable=self._executable,
+                        environment=self._environment,
+                        agent_provider=self._agent_provider,
+                        agent_model=self._agent_model,
+                        run_process=self._run_process,
+                        cancelled=lambda: local_cancel.is_set()
+                        or (signal is not None and signal.cancelled),
+                    )
                 )
+                try:
+                    await asyncio.shield(work)
+                except CancelledError:
+                    local_cancel.set()
+                    await _drain_cancelled_process(work)
+                    raise ProtocolError("Claude Code runtime execution failed") from None
                 mappings = [
                     {**json.loads(line), "run_id": request.run_id}
                     for line in (output_dir / "events.jsonl").read_text().splitlines()
@@ -130,6 +145,21 @@ class ClaudeCodeRuntimeClient:
             raise ProtocolError("Claude Code runtime execution failed") from None
         for mapping in mappings:
             yield RunEvent.from_mapping(mapping)
+
+
+async def _drain_cancelled_process(work: asyncio.Task[object]) -> None:
+    while not work.done():
+        current = asyncio.current_task()
+        if current is not None:
+            current.uncancel()
+        try:
+            await asyncio.shield(work)
+        except CancelledError:
+            continue
+    try:
+        work.result()
+    except BaseException:
+        pass
 
 
 def build_claude_command(*, executable: str, tools: list[str]) -> list[str]:
@@ -200,6 +230,8 @@ def run_claude_code(
     timeout_seconds: float | None,
     executable: str = "claude",
     environment: Mapping[str, str] | None = None,
+    agent_provider: str | None = None,
+    agent_model: str | None = None,
     run_process: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
     cancelled: Callable[[], bool] | None = None,
 ) -> dict[str, Any]:
@@ -228,6 +260,8 @@ def run_claude_code(
         {
             "schema": "asterion.claude-code.restricted-policy/v1",
             "runtime_cwd": str(cwd.resolve()),
+            "agent_provider": agent_provider,
+            "agent_model": agent_model,
             "tools": tools,
             "allowed_tools": tools,
             "max_turns": 4,
