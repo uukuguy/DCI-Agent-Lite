@@ -289,15 +289,19 @@ request. Installed `pi.reference` applications share this native implementation.
 The installed registry also exposes `claude-code.reference`. Its factory uses
 `ASTERION_CLAUDE_EXECUTABLE` (default `claude`), `ASTERION_RUNTIME_CWD`, and the
 private `ASTERION_CLAUDE_OUTPUT_ROOT` (default
-`outputs/asterion-claude-runs`), but constructing it neither authenticates nor
-sends a provider request. Claude runs expose only `Read,Grep,Glob`, use
-nonpersistent `dontAsk` mode, strict empty MCP configuration, and a native
-sandbox that fails when unavailable; persisted run files are private. The
+`outputs/asterion-claude-runs`). Pi and Claude Code use the same
+`DCI_PROVIDER`, `DCI_MODEL`, and provider API key. The Claude Code adapter derives
+its native `ANTHROPIC_*` child-process environment for `anthropic`, `minimax`,
+and `minimax-cn`; users do not duplicate gateway configuration. Unsupported
+provider/runtime combinations fail before Claude Code starts. Constructing the
+runtime neither authenticates nor sends a provider request. Claude runs expose
+only `Read,Grep,Glob`, use nonpersistent `dontAsk` mode, strict empty MCP
+configuration, and a native sandbox that fails when unavailable; persisted run
+files are private. The
 bundled DCI application explicitly supports `pi.reference` and
-`claude-code.reference`; the latter remains fixture-verified until an operator
-supplies a working login for the required real provider-backed acceptance. For
-either runtime, the generic CLI selects the application's unique matching
-canonical assembly.
+`claude-code.reference`; the latter requires one real provider-backed acceptance
+before AF-330 closes. For either runtime, the generic CLI selects the
+application's unique matching canonical assembly.
 
 The bundled controlled-code application requires an explicit executor binary,
 Rust policy, and validation configuration. Supply all three through flags or
@@ -406,6 +410,9 @@ cp .env.template .env
 Common variables:
 
 - `ANTHROPIC_API_KEY` for Anthropic model runs.
+- `MINIMAX_API_KEY` or `MINIMAX_CN_API_KEY` for MiniMax international or China
+  model runs. Set `DCI_PROVIDER=minimax` or `minimax-cn`; both Pi and Claude Code
+  consume that same selection.
 - `OPENAI_API_KEY` for OpenAI model runs or the optional official OpenAI judge configuration.
 - `DEEPSEEK_API_KEY` for the primary DeepSeek judge example.
 - Normal `DCI_*` settings are shared by source DCI, `asterion-dci`, its benchmark,

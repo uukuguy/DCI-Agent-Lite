@@ -271,6 +271,24 @@ class SourceDistributionBoundaryTests(unittest.TestCase):
         self.assertIn("project_dci_run", execution)
         self.assertRegex(execution.lower(), r"generic\s+asterion cli")
 
+    def test_claude_runtime_uses_shared_provider_configuration(self) -> None:
+        environment = (ROOT / ".env.template").read_text()
+        readme = (ROOT / "README.md").read_text()
+        guide = (
+            ASTERION_PROJECT / "docs/guides/asterion-capability-usage.md"
+        ).read_text()
+
+        for required in (
+            "DCI_PROVIDER=minimax",
+            "DCI_PROVIDER=minimax-cn",
+            "MINIMAX_API_KEY=your_minimax_key_here",
+            "MINIMAX_CN_API_KEY=your_minimax_cn_key_here",
+        ):
+            self.assertIn(required, environment)
+        self.assertNotIn("ANTHROPIC_AUTH_TOKEN=your_gateway_token_here", environment)
+        self.assertIn("Claude Code adapter derives", readme)
+        self.assertIn("不需要再设置 `ANTHROPIC_*`", guide)
+
     def test_durable_dci_documentation_names_resume_and_protected_artifacts(self) -> None:
         readme = (ROOT / "README.md").read_text()
         execution = (ASTERION_PROJECT / "docs/architecture/capability-execution.md").read_text()

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import shutil
+from collections.abc import Mapping
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -20,6 +21,18 @@ from asterion.runtimes.pi import PiRuntimeClient
 
 PI_CAPABILITIES = ("filesystem.read", "shell")
 CLAUDE_CAPABILITIES = ("claude.tool.glob", "claude.tool.grep", "filesystem.read")
+_CLAUDE_PROVIDER_CONFIG = {
+    "anthropic": ("https://api.anthropic.com", "ANTHROPIC_API_KEY"),
+    "minimax": ("https://api.minimax.io/anthropic", "MINIMAX_API_KEY"),
+    "minimax-cn": ("https://api.minimaxi.com/anthropic", "MINIMAX_CN_API_KEY"),
+}
+_CLAUDE_MODEL_ENVIRONMENT_NAMES = (
+    "ANTHROPIC_MODEL",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL",
+    "ANTHROPIC_SMALL_FAST_MODEL",
+)
 
 
 def default_runtime_factory_registry() -> RuntimeFactoryRegistry:
@@ -90,12 +103,46 @@ def _create_claude_code_runtime(
     )
     if executable is None or not runtime_cwd.is_dir():
         raise RuntimeFactoryError("Claude Code runtime is unavailable")
+    environment = _claude_provider_environment(os.environ)
     return ClaudeCodeRuntimeClient(
         executable=executable,
         cwd=runtime_cwd,
-        environment=os.environ.copy(),
+        environment=environment,
         evidence_root=evidence_root,
     )
+
+
+def _claude_provider_environment(environment: Mapping[str, str]) -> dict[str, str]:
+    provider = environment.get("DCI_PROVIDER", "").strip()
+    model = environment.get("DCI_MODEL", "").strip()
+    provider_config = _CLAUDE_PROVIDER_CONFIG.get(provider)
+    if provider_config is None or not model:
+        raise RuntimeFactoryError("Claude Code provider configuration is unavailable")
+
+    base_url, key_name = provider_config
+    api_key = environment.get(key_name, "").strip()
+    if not api_key:
+        raise RuntimeFactoryError("Claude Code provider configuration is unavailable")
+
+    native_environment = dict(environment)
+    native_environment["ANTHROPIC_BASE_URL"] = base_url
+    if provider == "anthropic":
+        native_environment["ANTHROPIC_API_KEY"] = api_key
+        native_environment.pop("ANTHROPIC_AUTH_TOKEN", None)
+    else:
+        native_environment["ANTHROPIC_AUTH_TOKEN"] = api_key
+        native_environment.pop("ANTHROPIC_API_KEY", None)
+    for name in _CLAUDE_MODEL_ENVIRONMENT_NAMES:
+        native_environment[name] = model
+    for name in (
+        "CLAUDE_CODE_USE_BEDROCK",
+        "CLAUDE_CODE_USE_FOUNDRY",
+        "CLAUDE_CODE_USE_VERTEX",
+    ):
+        native_environment.pop(name, None)
+    native_environment["API_TIMEOUT_MS"] = "3000000"
+    native_environment["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] = "1"
+    return native_environment
 
 
 def _configured_path(name: str, default: Path, *, root: Path) -> Path:

@@ -21,9 +21,13 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
                     {
                         "ASTERION_CLAUDE_EXECUTABLE": "claude",
                         "ASTERION_RUNTIME_CWD": str(root),
+                        "DCI_PROVIDER": "minimax",
+                        "DCI_MODEL": "MiniMax-M2.7",
+                        "MINIMAX_API_KEY": "test-minimax-key",
                     },
-                    clear=False,
+                    clear=True,
                 ),
+                patch("asterion.runtime.defaults.load_dotenv"),
                 patch("asterion.runtime.defaults.shutil.which", return_value="/tool/claude"),
             ):
                 binding = default_runtime_factory_registry().select(
@@ -46,6 +50,157 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
         )
         self.assertEqual(runtime.manifest.runtime_id, "claude-code.reference")
         self.assertEqual(runtime.manifest.capabilities, binding.capabilities)
+
+    def test_claude_factory_derives_minimax_environment_from_shared_config(self) -> None:
+        from asterion.runtime.defaults import default_runtime_factory_registry
+
+        cases = (
+            (
+                "minimax",
+                "MINIMAX_API_KEY",
+                "international-secret",
+                "https://api.minimax.io/anthropic",
+            ),
+            (
+                "minimax-cn",
+                "MINIMAX_CN_API_KEY",
+                "china-secret",
+                "https://api.minimaxi.com/anthropic",
+            ),
+        )
+        for provider, key_name, secret, expected_base_url in cases:
+            with self.subTest(provider=provider), tempfile.TemporaryDirectory() as temp_dir:
+                root = Path(temp_dir)
+                environment = {
+                    "ASTERION_CLAUDE_EXECUTABLE": "claude",
+                    "ASTERION_RUNTIME_CWD": str(root),
+                    "DCI_PROVIDER": provider,
+                    "DCI_MODEL": "MiniMax-M2.7",
+                    key_name: secret,
+                    "ANTHROPIC_API_KEY": "stale-api-key",
+                    "ANTHROPIC_AUTH_TOKEN": "stale-auth-token",
+                    "ANTHROPIC_BASE_URL": "https://stale.invalid",
+                    "ANTHROPIC_MODEL": "stale-model",
+                }
+                with (
+                    patch.dict(os.environ, environment, clear=True),
+                    patch("asterion.runtime.defaults.load_dotenv"),
+                    patch(
+                        "asterion.runtime.defaults.shutil.which",
+                        return_value="/tool/claude",
+                    ),
+                ):
+                    binding = default_runtime_factory_registry().select(
+                        "claude-code.reference"
+                    )
+                    runtime = binding.factory(self._context(root))
+
+                native_environment = runtime._environment
+                self.assertEqual(
+                    native_environment["ANTHROPIC_BASE_URL"], expected_base_url
+                )
+                self.assertEqual(native_environment["ANTHROPIC_AUTH_TOKEN"], secret)
+                self.assertNotIn("ANTHROPIC_API_KEY", native_environment)
+                for name in (
+                    "ANTHROPIC_MODEL",
+                    "ANTHROPIC_DEFAULT_OPUS_MODEL",
+                    "ANTHROPIC_DEFAULT_SONNET_MODEL",
+                    "ANTHROPIC_DEFAULT_HAIKU_MODEL",
+                ):
+                    self.assertEqual(native_environment[name], "MiniMax-M2.7")
+                self.assertEqual(native_environment["API_TIMEOUT_MS"], "3000000")
+                self.assertEqual(
+                    native_environment["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"],
+                    "1",
+                )
+
+    def test_claude_factory_rejects_unsupported_provider_without_constructing_client(
+        self,
+    ) -> None:
+        from asterion.runtime.defaults import default_runtime_factory_registry
+        from asterion.runtime.factory import RuntimeFactoryError
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            environment = {
+                "ASTERION_CLAUDE_EXECUTABLE": "claude",
+                "ASTERION_RUNTIME_CWD": str(root),
+                "DCI_PROVIDER": "SECRET-unsupported-provider",
+                "DCI_MODEL": "SECRET-model",
+                "OPENAI_API_KEY": "SECRET-key",
+            }
+            with (
+                patch.dict(os.environ, environment, clear=True),
+                patch("asterion.runtime.defaults.load_dotenv"),
+                patch("asterion.runtime.defaults.shutil.which", return_value="/tool/claude"),
+                patch("asterion.runtime.defaults.ClaudeCodeRuntimeClient") as client,
+            ):
+                binding = default_runtime_factory_registry().select(
+                    "claude-code.reference"
+                )
+                with self.assertRaises(RuntimeFactoryError) as caught:
+                    binding.factory(self._context(root))
+
+        client.assert_not_called()
+        self.assertNotIn("SECRET", str(caught.exception))
+
+    def test_claude_factory_uses_anthropic_api_key_without_stale_auth_token(self) -> None:
+        from asterion.runtime.defaults import default_runtime_factory_registry
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            environment = {
+                "ASTERION_CLAUDE_EXECUTABLE": "claude",
+                "ASTERION_RUNTIME_CWD": str(root),
+                "DCI_PROVIDER": "anthropic",
+                "DCI_MODEL": "claude-test-model",
+                "ANTHROPIC_API_KEY": "anthropic-secret",
+                "ANTHROPIC_AUTH_TOKEN": "stale-auth-token",
+                "ANTHROPIC_BASE_URL": "https://stale.invalid",
+            }
+            with (
+                patch.dict(os.environ, environment, clear=True),
+                patch("asterion.runtime.defaults.load_dotenv"),
+                patch("asterion.runtime.defaults.shutil.which", return_value="/tool/claude"),
+            ):
+                binding = default_runtime_factory_registry().select(
+                    "claude-code.reference"
+                )
+                runtime = binding.factory(self._context(root))
+
+        native_environment = runtime._environment
+        self.assertEqual(
+            native_environment["ANTHROPIC_BASE_URL"], "https://api.anthropic.com"
+        )
+        self.assertEqual(native_environment["ANTHROPIC_API_KEY"], "anthropic-secret")
+        self.assertNotIn("ANTHROPIC_AUTH_TOKEN", native_environment)
+
+    def test_claude_factory_rejects_missing_provider_key_without_exposing_config(
+        self,
+    ) -> None:
+        from asterion.runtime.defaults import default_runtime_factory_registry
+        from asterion.runtime.factory import RuntimeFactoryError
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            environment = {
+                "ASTERION_CLAUDE_EXECUTABLE": "claude",
+                "ASTERION_RUNTIME_CWD": str(root),
+                "DCI_PROVIDER": "minimax",
+                "DCI_MODEL": "SECRET-model",
+            }
+            with (
+                patch.dict(os.environ, environment, clear=True),
+                patch("asterion.runtime.defaults.load_dotenv"),
+                patch("asterion.runtime.defaults.shutil.which", return_value="/tool/claude"),
+            ):
+                binding = default_runtime_factory_registry().select(
+                    "claude-code.reference"
+                )
+                with self.assertRaises(RuntimeFactoryError) as caught:
+                    binding.factory(self._context(root))
+
+        self.assertNotIn("SECRET", str(caught.exception))
 
     def test_missing_claude_executable_fails_without_echoing_the_path(self) -> None:
         from asterion.runtime.defaults import default_runtime_factory_registry
@@ -141,6 +296,17 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
                         )
                     )
         self.assertNotIn("SECRET-PACKAGE", str(caught.exception))
+
+    @staticmethod
+    def _context(root: Path) -> RuntimeFactoryContext:
+        return RuntimeFactoryContext(
+            provider_id="dci-agent-lite",
+            application_id="dci.research-capability",
+            application_version="1.0.0",
+            runtime_id="claude-code.reference",
+            assembly_path=root / "assembly.json",
+            options={},
+        )
 
 
 if __name__ == "__main__":

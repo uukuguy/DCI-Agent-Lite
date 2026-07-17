@@ -79,6 +79,16 @@ OPENAI_API_KEY=<YOUR_JUDGE_API_KEY>
 
 如果 `DCI_PROVIDER=openai`，Pi 使用 `OPENAI_API_KEY`；如果是 `anthropic`，使用 `ANTHROPIC_API_KEY`。通过 Pi 登录保存到 `.pi/agent/auth.json` 的认证也可直接共用，例如 `openai-codex`，无需另造 `OPENAI_CODEX_API_KEY`。Judge 的密钥变量由 `DCI_EVAL_JUDGE_API_KEY_ENV` 指定。Asterion 只检查认证是否存在，不会在输出中显示密钥值。
 
+Pi 和 Claude Code 是两个可选的 agent runtime，但共享同一组 agent 配置。比如使用 MiniMax 国际站：
+
+```dotenv
+DCI_PROVIDER=minimax
+DCI_MODEL=MiniMax-M2.7
+MINIMAX_API_KEY=<YOUR_MINIMAX_KEY>
+```
+
+国内站只需改成 `DCI_PROVIDER=minimax-cn` 和 `MINIMAX_CN_API_KEY=<YOUR_MINIMAX_CN_KEY>`。选择 Claude Code runtime 时，Asterion 会在其私有子进程环境中完成接口翻译，不需要再设置 `ANTHROPIC_*`。不支持的 provider/runtime 组合会在启动 agent 前失败。Judge 仍独立使用 `DCI_EVAL_JUDGE_*`，不会复用或覆盖 agent 配置。
+
 还需要：
 
 - Node.js 20 或更高版本；
