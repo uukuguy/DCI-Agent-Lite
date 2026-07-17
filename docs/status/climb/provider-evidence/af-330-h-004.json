@@ -3,9 +3,9 @@
   "work_package_id": "AF-330",
   "hypothesis_id": "AF-330-H-004",
   "runtime_id": "claude-code.reference",
-  "source_commit": "ffca6ae",
-  "source_sha256": "d13c04aa9321d26fc099766d9b87a56de966330cdc775758d9628dfd8da4e581",
-  "report_sha256": "9e929881c215061e5ed91fb0357be8264f24883001159fa7e5a5870d68bd8736",
+  "source_commit": "f3e2528",
+  "source_sha256": "7b02405d4f939a8036c150715928c718c2921f8f33c83cfbdbc9286223074e76",
+  "report_sha256": "07a69074b3af2f3ad69fa4aa738c1dbeda7a97ef77d77515d6256ed6a18bdce2",
   "implementation_sha256": "613578bd2eb78fba49a796f88baeef579981263f8a88a1e285649fa430476477",
   "status": "completed",
   "agent_provider": "minimax",
@@ -22,14 +22,14 @@
   "corpus_contained": true,
   "web_calls": 0,
   "subagent_calls": 0,
-  "judge_request_fingerprint": "4a3e25bb1b313ab47f60acc4f79b8d04ee19187235aea5d4052ad09344dea739",
+  "judge_request_fingerprint": "88f33e690df86dd256bfc801ce1ce10260c001a0ddc23d626b7f4f447102852e",
   "full_dataset": false,
   "private_artifacts": {
-    "eval_result.json": "f57d857cd4ea03ab9fe4a1e0c2d179dcb8a0c4f2a835fb660b952a35a0f3488a",
-    "events.jsonl": "e5ff70c122adc4819c97ba400bd895a859b5d419b066a9b7ee306a677d577cf4",
-    "final.txt": "944a414ac6aa4f3dfa5e6f46079863ffea5f93b5f3f80e00ebdca51489101476",
-    "raw-events.jsonl": "b9ce1089303a7219e3114eaca5bae3f0167dbb589fcaa5f3b2dfe7245a9bb73d",
-    "request.json": "acbcc4b92cab8084034789d12c6d07e42d61c3a13756cfc2885093824b91e725",
+    "eval_result.json": "4aeb70b92886e8643541553ca3ed4e8a10e0957b52e3113db67889eb3e524236",
+    "events.jsonl": "ed2e4f1c942f209d101505104bb51bd55d45b3b044d976d1541a9633760d33d4",
+    "final.txt": "1067f0f4a61dc2e160e8021067d5ffecaf9723742f4fa7f457312cc813cf2e6c",
+    "raw-events.jsonl": "8be16725669dda7e5d0c330fd85f909bf5c54294d7c46dd18896b4e45d2176cf",
+    "request.json": "cab324fbede22226c144449e318751c416dfb3bac22aa4d0a4ca6592b872c181",
     "runtime-policy.json": "4d2ebba163e191910c4c4567aa328af30f05f46b2acab1c1b60bbfb863dffd58"
   }
 }

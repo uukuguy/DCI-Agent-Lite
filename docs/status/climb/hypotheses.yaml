@@ -2328,7 +2328,19 @@ hypotheses:
     online: null
     verdict: confirmed 4/4
     decision_reason: deterministic local package acceptance
+  - session: 2026-07-17-af-330-complete-application-dual-runtime
+    cycle: 103
+    run: 20260717-184511-dci-climb-af330h004
+    local: 4
+    local_per_task:
+      restricted_command_surface: 1
+      five_stage_claude_execution: 1
+      outside_path_rejection: 1
+      provider_evidence: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
     provider_evidence:
       path: provider-evidence/af-330-h-004.json
-      sha256: 81137f4ca8e8001aec12018e4dfdf9589ec184341e3a6748a090f43d03135075
-      report_sha256: 9e929881c215061e5ed91fb0357be8264f24883001159fa7e5a5870d68bd8736
+      sha256: a62e62cd7ac85679828f17ff8236e605dd167b54e7f99f8141c3cdca9ac8ae89
+      report_sha256: 07a69074b3af2f3ad69fa4aa738c1dbeda7a97ef77d77515d6256ed6a18bdce2

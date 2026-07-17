@@ -904,3 +904,8 @@
 - 18:32 Closure-gate state is committed for independent AF-330 terminal review. [30bc331]
 - 18:38 Final review withheld closure: an exited Claude parent could skip group SIGKILL while a descendant retained pipes.
 - 18:42 Descendant-held-pipe RED reproduced blocked cancellation; bounded group SIGKILL repair passes 123/123 Asterion tests.
+- 18:43 Bounded process-group escalation prevents exited parents from hiding live Claude descendants. [f3e2528]
+- 18:45 Fresh r12 passed repaired MiniMax-M3 Claude, one Grep, five stages, and one DeepSeek Judge; no full dataset ran.
+- 18:45 Terminal replay bound report `07a69074…bce2`, record `a62e62cd…ae89`, implementation `613578bd…6477`, and source `f3e2528`.
+- 18:45 Climb cycle 103 reconfirmed H004 4/4 against repaired r12 evidence.
+- 18:45 AF-330-H-004 confirmed 4/4; package acceptance recorded.
