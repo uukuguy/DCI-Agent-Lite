@@ -864,3 +864,4 @@
 - 16:31 H004 r4 reached MiniMax-M3 but wrong international routing caused ten 401 retries; Judge did not run.
 - 16:51 D-049 now distinguishes MiniMax Token Plan bearer credentials from ordinary API-key authentication.
 - 16:51 MiniMax credential-scheme design correction preserves one shared key variable. [5f27777]
+- 16:54 Claude now maps ordinary MiniMax API keys like locked Pi while retaining Token Plan bearer support. [993f2a8]
