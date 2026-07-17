@@ -229,6 +229,67 @@ class ClaudeCodeRuntimeClientTests(unittest.IsolatedAsyncioTestCase):
                 except ProcessLookupError:
                     pass
 
+    @unittest.skipIf(os.name == "nt", "POSIX process-group behavior")
+    async def test_task_cancellation_kills_descendant_holding_pipe(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            parent_pid_file = root / "parent.pid"
+            child_pid_file = root / "child.pid"
+            executable = root / "claude-with-descendant"
+            child = (
+                "import os,pathlib,signal,time;"
+                "signal.signal(signal.SIGTERM,signal.SIG_IGN);"
+                "pathlib.Path(os.environ['TEST_CHILD_PID_FILE']).write_text(str(os.getpid()));"
+                "time.sleep(30)"
+            )
+            executable.write_text(
+                f"#!{sys.executable}\n"
+                "import os, pathlib, subprocess, sys, time\n"
+                f"subprocess.Popen([sys.executable, '-c', {child!r}])\n"
+                "child_path = pathlib.Path(os.environ['TEST_CHILD_PID_FILE'])\n"
+                "while not child_path.exists():\n"
+                "    time.sleep(0.01)\n"
+                "pathlib.Path(os.environ['TEST_PARENT_PID_FILE']).write_text(str(os.getpid()))\n"
+                "time.sleep(30)\n"
+            )
+            executable.chmod(0o700)
+            runtime = ClaudeCodeRuntimeClient(
+                executable=str(executable),
+                cwd=root,
+                environment={
+                    "TEST_PARENT_PID_FILE": str(parent_pid_file),
+                    "TEST_CHILD_PID_FILE": str(child_pid_file),
+                },
+                default_timeout_seconds=None,
+            )
+            task = asyncio.create_task(
+                anext(runtime.run(RunRequest("cancel-descendant", "question")))
+            )
+            for _ in range(200):
+                if parent_pid_file.exists() and child_pid_file.exists():
+                    break
+                await asyncio.sleep(0.01)
+            self.assertTrue(parent_pid_file.exists())
+            self.assertTrue(child_pid_file.exists())
+            parent_pid = int(parent_pid_file.read_text())
+            child_pid = int(child_pid_file.read_text())
+            task.cancel()
+
+            try:
+                await asyncio.sleep(2.5)
+                self.assertTrue(task.done(), "cancellation blocked on a surviving descendant")
+                with self.assertRaises(ProcessLookupError):
+                    os.kill(child_pid, 0)
+            finally:
+                try:
+                    os.killpg(parent_pid, 9)
+                except ProcessLookupError:
+                    pass
+                try:
+                    await asyncio.wait_for(task, timeout=3)
+                except (ProtocolError, asyncio.CancelledError, asyncio.TimeoutError):
+                    pass
+
 
 if __name__ == "__main__":
     unittest.main()

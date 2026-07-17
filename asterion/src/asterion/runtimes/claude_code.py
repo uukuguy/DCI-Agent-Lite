@@ -405,22 +405,36 @@ def _run_owned_process(
 
 
 def _terminate_owned_process(process: subprocess.Popen[str]) -> None:
-    if process.poll() is not None:
-        process.communicate()
-        return
     try:
         if os.name != "nt":
             os.killpg(process.pid, process_signal.SIGTERM)
-        else:
+        elif process.poll() is None:
             process.terminate()
         process.communicate(timeout=2)
+        return
     except (OSError, subprocess.TimeoutExpired):
-        if process.poll() is None:
-            if os.name != "nt":
+        if os.name != "nt":
+            try:
+                os.killpg(process.pid, process_signal.SIGKILL)
+            except OSError:
+                pass
+        elif process.poll() is None:
+            try:
+                process.kill()
+            except OSError:
+                pass
+    try:
+        process.communicate(timeout=2)
+    except (OSError, subprocess.TimeoutExpired):
+        for stream in (process.stdin, process.stdout, process.stderr):
+            if stream is not None:
                 try:
-                    os.killpg(process.pid, process_signal.SIGKILL)
+                    stream.close()
                 except OSError:
                     pass
-            else:
+        if process.poll() is None:
+            try:
                 process.kill()
-        process.communicate()
+                process.wait(timeout=2)
+            except (OSError, subprocess.TimeoutExpired):
+                pass

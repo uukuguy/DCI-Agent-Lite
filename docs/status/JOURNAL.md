@@ -901,3 +901,6 @@
 - 18:26 Climb cycle 102 reconfirmed H004 4/4 against r11 through the strengthened terminal verifier.
 - 18:27 Raw-replayed r11 evidence and Climb cycle 102 establish H004 terminal acceptance. [2f27ff3]
 - 18:31 AF-330 closure passes 1396 root, 122 Asterion, 11 TypeScript, 19 Rust, product, wheel, static, and privacy gates.
+- 18:32 Closure-gate state is committed for independent AF-330 terminal review. [30bc331]
+- 18:38 Final review withheld closure: an exited Claude parent could skip group SIGKILL while a descendant retained pipes.
+- 18:42 Descendant-held-pipe RED reproduced blocked cancellation; bounded group SIGKILL repair passes 123/123 Asterion tests.
