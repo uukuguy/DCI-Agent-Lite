@@ -30,7 +30,11 @@ from asterion.dci.config import resolve_dci_paths
 from asterion.dci.context_profiles import resolve_context_profile
 from asterion.dci.provenance import collect_pi_provenance, format_pi_revision_warning
 from asterion.dci.run import DciRunRequest
-from asterion.dci.verification import paper_benchmark_resource_digests
+from asterion.dci.judge import JudgeConfig
+from asterion.dci.verification import (
+    paper_benchmark_resource_digests,
+    paper_judge_identity,
+)
 from asterion.runtime.protocol import validate_event_stream
 
 
@@ -1199,6 +1203,16 @@ class AsterionDciArtifactTests(unittest.TestCase):
 
 
 class PaperBenchmarkEvidenceBinderTests(unittest.TestCase):
+    @staticmethod
+    def _judge() -> JudgeConfig:
+        return JudgeConfig(
+            base_url="https://api.deepseek.com/v1",
+            api="chat-completions",
+            model="deepseek-v4-flash",
+            api_key_env="DEEPSEEK_API_KEY",
+            api_key="private-fixture-key",
+        )
+
     def _fixture(self, root: Path) -> tuple[Path, Path, Path]:
         pi_dir = root / "pi-clean"
         pi_dir.mkdir()
@@ -1223,19 +1237,13 @@ class PaperBenchmarkEvidenceBinderTests(unittest.TestCase):
             directory = output_root / operation_id
             directory.mkdir(parents=True)
             if operation_id == "qa-judge":
+                judge = self._judge()
                 evaluation = output_root / "qa-agent/eval_result.json"
                 evaluation.write_text(
                     json.dumps(
                         {
                             "is_correct": True,
-                            "judge_model": "gpt-4.1",
-                            "judge_api": "responses",
-                            "judge_base_url": "https://api.openai.com/v1",
-                            "judge_max_output_tokens": 1024,
-                            "judge_json_mode": True,
-                            "judge_strict_json_schema": False,
-                            "judge_responses_store": False,
-                            "judge_thinking": None,
+                            **judge.public_dict(),
                             "judge_request_fingerprint": "a" * 64,
                         }
                     )
@@ -1268,11 +1276,11 @@ class PaperBenchmarkEvidenceBinderTests(unittest.TestCase):
                 }
             )
         report = {
-            "schema": "asterion.dci.paper-benchmark-acceptance/v1",
+            "schema": "asterion.dci.paper-benchmark-acceptance/v2",
             "mode": "bounded-provider-backed",
             "provider": "fixture-provider",
             "model": "fixture-model",
-            "judge_model": "gpt-4.1",
+            "judge": dict(paper_judge_identity(self._judge())),
             "pi_revision": revision,
             "pi_tracked_status_sha256": hashlib.sha256(b"").hexdigest(),
             "agent_operations": 2,
@@ -1323,6 +1331,9 @@ class PaperBenchmarkEvidenceBinderTests(unittest.TestCase):
         for case in (
             "artifact",
             "evaluation",
+            "report-judge",
+            "judge-type",
+            "prompt-contract",
             "symlink",
             "mode",
             "dirty",
@@ -1336,9 +1347,27 @@ class PaperBenchmarkEvidenceBinderTests(unittest.TestCase):
                 elif case == "evaluation":
                     evaluation = report.parent / "qa-agent/eval_result.json"
                     value = json.loads(evaluation.read_text())
-                    value["judge_model"] = "not-gpt-4.1"
+                    value["judge_model"] = "deepseek-v4-tampered"
                     evaluation.write_text(json.dumps(value))
                     evaluation.chmod(0o600)
+                elif case in {"report-judge", "judge-type", "prompt-contract"}:
+                    value = json.loads(report.read_text())
+                    field = (
+                        "judge_model"
+                        if case == "report-judge"
+                        else "judge_json_mode"
+                        if case == "judge-type"
+                        else "prompt_contract_sha256"
+                    )
+                    value["judge"][field] = (
+                        "deepseek-v4-tampered"
+                        if case == "report-judge"
+                        else 1
+                        if case == "judge-type"
+                        else "0" * 64
+                    )
+                    report.write_text(json.dumps(value))
+                    report.chmod(0o600)
                 elif case == "symlink":
                     artifact = report.parent / "qa-agent/state.json"
                     target = report.parent / "private-target"

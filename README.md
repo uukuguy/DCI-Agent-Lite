@@ -256,10 +256,13 @@ selection fields remain null rather than fabricated.
 
 `paper verify` is model-free by default and reports zero agent/Judge operations.
 Its explicit `--provider-backed --env-file PRIVATE_ENV --output-root PRIVATE_DIR`
-mode preflights a clean locked Pi checkout, installed fixtures, an exact
-`gpt-4.1` Responses Judge, and an empty private output root before running the
-fixed `QA agent → Judge → IR agent` plan. It never expands the matrix or runs a
-full dataset. Successful evidence can be terminally bound with
+mode preflights a clean locked Pi checkout, installed fixtures, the exact public
+identity of the configured supported Judge, and an empty private output root
+before running the fixed `QA agent → Judge → IR agent` plan. It never expands the matrix or runs a
+full dataset. The report binds the effective Judge endpoint, API, model, safe
+request-shaping settings, and prompt-contract digest. GPT-4.1 remains the paper
+experiment provenance and is required only for an AF-340 paper-score comparison
+claim. Successful evidence can be terminally bound with
 `tools/climb/bind-paper-benchmark-evidence.py`; private prompts, answers, tool
 bodies, and credentials must never be committed.
 

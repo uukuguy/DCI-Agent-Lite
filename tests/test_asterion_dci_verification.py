@@ -6,6 +6,7 @@ import tempfile
 import unittest
 import io
 import json
+import subprocess
 from pathlib import Path
 from unittest.mock import patch
 import asterion.dci.verification as verification_module
@@ -23,6 +24,7 @@ from asterion.dci.verification import (
     _load_product_acceptance_runner,
     create_dci_product,
     paper_benchmark_acceptance_main,
+    paper_judge_identity,
 )
 from tools.verify_asterion_dci_product import ProductAcceptanceSummary
 from tools.verify_dci_context_acceptance import (
@@ -563,16 +565,94 @@ class DciAcceptanceVerificationTests(unittest.TestCase):
 
 
 class PaperBenchmarkVerifierTests(unittest.TestCase):
+    @staticmethod
+    def _deepseek_judge() -> JudgeConfig:
+        return JudgeConfig(
+            base_url="https://api.deepseek.com/v1",
+            api="chat-completions",
+            model="deepseek-v4-flash",
+            api_key_env="DEEPSEEK_API_KEY",
+            api_key="private-fixture-key",
+        )
+
+    def test_configured_judge_identity_is_public_complete_and_prompt_bound(self) -> None:
+        identity = dict(paper_judge_identity(self._deepseek_judge()))
+
+        self.assertEqual(identity["judge_model"], "deepseek-v4-flash")
+        self.assertEqual(identity["judge_api"], "chat-completions")
+        self.assertEqual(identity["judge_base_url"], "https://api.deepseek.com/v1")
+        self.assertEqual(identity["judge_api_key_env"], "DEEPSEEK_API_KEY")
+        self.assertRegex(identity["prompt_contract_sha256"], r"^[0-9a-f]{64}$")
+        self.assertNotIn("private-fixture-key", json.dumps(identity))
+
+    def test_provider_preflight_accepts_configured_deepseek_judge(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir).resolve()
+            pi_dir = root / "pi"
+            (pi_dir / "packages/coding-agent").mkdir(parents=True)
+            (pi_dir / ".pi/agent").mkdir(parents=True)
+            (pi_dir / "packages/coding-agent/package.json").write_text("{}\n")
+            subprocess.run(["git", "init", "-q"], cwd=pi_dir, check=True)
+            subprocess.run(
+                ["git", "config", "user.email", "fixture@example.invalid"],
+                cwd=pi_dir,
+                check=True,
+            )
+            subprocess.run(
+                ["git", "config", "user.name", "Fixture"], cwd=pi_dir, check=True
+            )
+            subprocess.run(["git", "add", "."], cwd=pi_dir, check=True)
+            subprocess.run(["git", "commit", "-qm", "fixture"], cwd=pi_dir, check=True)
+            revision = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=pi_dir,
+                check=True,
+                text=True,
+                capture_output=True,
+            ).stdout.strip()
+            (root / "pi-revision.txt").write_text(revision + "\n")
+            env_file = root / ".env"
+            env_file.write_text(
+                "DCI_PROVIDER=openai\n"
+                "DCI_MODEL=fixture-model\n"
+                "OPENAI_API_KEY=private-provider-key\n"
+                "DCI_EVAL_JUDGE_BASE_URL=https://api.deepseek.com/v1\n"
+                "DCI_EVAL_JUDGE_API=chat-completions\n"
+                "DCI_EVAL_JUDGE_MODEL=deepseek-v4-flash\n"
+                "DCI_EVAL_JUDGE_API_KEY_ENV=DEEPSEEK_API_KEY\n"
+                "DEEPSEEK_API_KEY=private-judge-key\n"
+            )
+            env_file.chmod(0o600)
+            args = verification_module._paper_parser().parse_args(
+                [
+                    "--provider-backed",
+                    "--env-file",
+                    str(env_file),
+                    "--output-root",
+                    str(root / "private-output"),
+                ]
+            )
+            with patch.dict(os.environ, {}, clear=True):
+                readiness = verification_module._paper_default_readiness(args, root)
+
+        self.assertEqual(
+            dict(readiness.judge_identity)["judge_model"], "deepseek-v4-flash"
+        )
+        self.assertEqual(
+            dict(readiness.judge_identity)["judge_api"], "chat-completions"
+        )
+
     def test_agent_operation_externalizes_tool_results_for_private_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             corpus = root / "corpus"
             corpus.mkdir()
+            judge = self._deepseek_judge()
             readiness = PaperBenchmarkReadiness(
                 output_root=root / "output",
                 provider="fixture-provider",
                 model="fixture-model",
-                judge_model="gpt-4.1",
+                judge_identity=paper_judge_identity(judge),
                 pi_revision="a" * 40,
                 pi_tracked_status_sha256="b" * 64,
                 resource_digests=(("resource", "c" * 64),),
@@ -580,7 +660,7 @@ class PaperBenchmarkVerifierTests(unittest.TestCase):
                 runtime_options=DciRuntimeOptions(
                     provider="fixture-provider", model="fixture-model"
                 ),
-                judge_config=JudgeConfig(model="gpt-4.1"),
+                judge_config=judge,
                 corpus_dir=corpus,
             )
 
@@ -647,7 +727,7 @@ class PaperBenchmarkVerifierTests(unittest.TestCase):
                 output_root=output_root,
                 provider="fixture-provider",
                 model="fixture-model",
-                judge_model="gpt-4.1",
+                judge_identity=paper_judge_identity(self._deepseek_judge()),
                 pi_revision="a" * 40,
                 pi_tracked_status_sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                 resource_digests=(
@@ -695,6 +775,8 @@ class PaperBenchmarkVerifierTests(unittest.TestCase):
             self.assertEqual(report["agent_operations"], 2)
             self.assertEqual(report["judge_operations"], 1)
             self.assertEqual(report["external_operations"], 3)
+            self.assertEqual(report["judge"]["judge_model"], "deepseek-v4-flash")
+            self.assertEqual(report["judge"]["judge_api"], "chat-completions")
             self.assertEqual(report["operation_order"], calls)
             self.assertIs(report["full_dataset_ran"], False)
             self.assertEqual(report_path.stat().st_mode & 0o777, 0o600)
@@ -709,7 +791,7 @@ class PaperBenchmarkVerifierTests(unittest.TestCase):
                 output_root=output_root,
                 provider="fixture-provider",
                 model="fixture-model",
-                judge_model="gpt-4.1",
+                judge_identity=paper_judge_identity(self._deepseek_judge()),
                 pi_revision="a" * 40,
                 pi_tracked_status_sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                 resource_digests=(("ablation_matrix", "b" * 64),),

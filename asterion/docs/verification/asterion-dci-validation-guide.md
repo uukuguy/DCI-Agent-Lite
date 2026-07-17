@@ -97,10 +97,12 @@ uv run --project asterion asterion-dci paper verify \
 
 Before starting Pi it requires an empty private output root, a clean checkout at
 the locked Pi revision, hash-valid installed QA/IR/corpus resources, provider
-credentials, and the exact `gpt-4.1` Responses Judge. It then runs only
-`qa-agent`, `qa-judge`, and `ir-agent`, in that order. The 0600 report contains
-identities and digests but no prompt, answer, tool body, credential, or private
-path. Agent API request multiplicity remains externally ambiguous. Bind a
+credentials, and the complete public identity of the configured supported Judge.
+It then runs only `qa-agent`, `qa-judge`, and `ir-agent`, in that order. The 0600
+report binds the effective endpoint, API, model, request shaping, and prompt
+contract, but contains no prompt, answer, tool body, credential, or private path.
+GPT-4.1 is paper experiment provenance and is required only for AF-340 paper-score
+comparability. Agent API request multiplicity remains externally ambiguous. Bind a
 successful report only after the verifier exits successfully:
 
 ```bash

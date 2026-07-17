@@ -56,7 +56,7 @@ from asterion.dci.paper_benchmarks import (
 from asterion.dci.run import DciRunRequest, DciRunResult, run_pi_research
 
 
-PAPER_BENCHMARK_REPORT_SCHEMA = "asterion.dci.paper-benchmark-acceptance/v1"
+PAPER_BENCHMARK_REPORT_SCHEMA = "asterion.dci.paper-benchmark-acceptance/v2"
 _PAPER_OPERATION_PLAN = ("qa-agent", "qa-judge", "ir-agent")
 _SHA256 = re.compile(r"[0-9a-f]{64}")
 _REVISION = re.compile(r"[0-9a-f]{40,64}")
@@ -324,7 +324,7 @@ class PaperBenchmarkReadiness:
     output_root: Path
     provider: str
     model: str
-    judge_model: str
+    judge_identity: tuple[tuple[str, object], ...]
     pi_revision: str
     pi_tracked_status_sha256: str
     resource_digests: tuple[tuple[str, str], ...]
@@ -394,36 +394,31 @@ def paper_benchmark_resource_digests() -> tuple[tuple[str, str], ...]:
         values.append((identity, hashlib.sha256(raw).hexdigest()))
     manifest = resolve_bounded_corpus_manifest("tiny.base/v1")
     values.append(("corpus_manifest", manifest.identity_sha256))
-    judge = JudgeConfig(model="gpt-4.1")
-    judge_contract = {
-        "contract": "dci.paper-answer-judge/gpt-4.1/v1",
-        "api": judge.api,
-        "base_url": judge.base_url,
-        "model": judge.model,
-        "request": build_judge_request(
-            judge,
-            question="[question]",
-            gold_answer="[gold-answer]",
-            predicted_answer="[predicted-answer]",
-        ),
-    }
-    values.append(
-        (
-            "judge_contract",
-            hashlib.sha256(
-                (
-                    json.dumps(
-                        judge_contract,
-                        ensure_ascii=False,
-                        sort_keys=True,
-                        separators=(",", ":"),
-                    )
-                    + "\n"
-                ).encode()
-            ).hexdigest(),
-        )
-    )
     return tuple(values)
+
+
+def _canonical_json_sha256(value: object) -> str:
+    raw = json.dumps(
+        value,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode()
+    return hashlib.sha256(raw).hexdigest()
+
+
+def paper_judge_identity(config: JudgeConfig) -> tuple[tuple[str, object], ...]:
+    """Return the credential-free Judge and request-shaping identity."""
+
+    public = config.public_dict()
+    request = build_judge_request(
+        config,
+        question="[question]",
+        gold_answer="[gold-answer]",
+        predicted_answer="[predicted-answer]",
+    )
+    public["prompt_contract_sha256"] = _canonical_json_sha256(request)
+    return tuple(sorted(public.items()))
 
 
 def _paper_parser() -> argparse.ArgumentParser:
@@ -482,6 +477,7 @@ def _clean_pi_identity(pi_dir: Path) -> tuple[str, str]:
         ],
         check=True,
         capture_output=True,
+        text=True,
     ).stdout
     if status:
         raise ValueError("DCI paper benchmark Pi runtime is not clean")
@@ -504,14 +500,6 @@ def _paper_default_readiness(
     if (
         _PUBLIC_IDENTITY.fullmatch(options.provider) is None
         or _PUBLIC_IDENTITY.fullmatch(options.model) is None
-        or judge.model != "gpt-4.1"
-        or judge.api != "responses"
-        or judge.base_url != "https://api.openai.com/v1"
-        or judge.max_output_tokens != 1024
-        or judge.json_mode is not True
-        or judge.strict_json_schema is not False
-        or judge.responses_store is not False
-        or judge.effective_thinking is not None
         or not judge.api_key
         or not (paths.pi.package_dir / "package.json").is_file()
         or not paths.pi.agent_dir.is_dir()
@@ -537,7 +525,7 @@ def _paper_default_readiness(
         output_root=_prepare_private_output(args.output_root),
         provider=options.provider,
         model=options.model,
-        judge_model=judge.model,
+        judge_identity=paper_judge_identity(judge),
         pi_revision=revision,
         pi_tracked_status_sha256=status_sha256,
         resource_digests=paper_benchmark_resource_digests(),
@@ -685,7 +673,13 @@ def _paper_report(
     if (
         _PUBLIC_IDENTITY.fullmatch(readiness.provider) is None
         or _PUBLIC_IDENTITY.fullmatch(readiness.model) is None
-        or readiness.judge_model != "gpt-4.1"
+        or len(dict(readiness.judge_identity)) != len(readiness.judge_identity)
+        or set(dict(readiness.judge_identity))
+        != set(JudgeConfig().public_dict()) | {"prompt_contract_sha256"}
+        or _SHA256.fullmatch(
+            str(dict(readiness.judge_identity).get("prompt_contract_sha256"))
+        )
+        is None
         or _REVISION.fullmatch(readiness.pi_revision) is None
         or _SHA256.fullmatch(readiness.pi_tracked_status_sha256) is None
         or [item.operation_id for item in operations] != list(_PAPER_OPERATION_PLAN)
@@ -700,7 +694,7 @@ def _paper_report(
         "mode": "bounded-provider-backed",
         "provider": readiness.provider,
         "model": readiness.model,
-        "judge_model": readiness.judge_model,
+        "judge": dict(readiness.judge_identity),
         "pi_revision": readiness.pi_revision,
         "pi_tracked_status_sha256": readiness.pi_tracked_status_sha256,
         "agent_operations": 2,
@@ -731,7 +725,7 @@ def paper_benchmark_acceptance_main(
     readiness_checker: PaperReadinessChecker | None = None,
     operation_runner: PaperOperationRunner | None = None,
 ) -> int:
-    """Verify local contracts or run exactly two agents and one GPT-4.1 Judge."""
+    """Verify local contracts or run exactly two agents and one configured Judge."""
 
     stdout = sys.stdout if stdout is None else stdout
     stderr = sys.stderr if stderr is None else stderr

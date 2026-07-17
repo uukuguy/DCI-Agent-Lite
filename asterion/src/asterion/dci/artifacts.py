@@ -47,7 +47,7 @@ _PAPER_REPORT_KEYS = {
     "mode",
     "provider",
     "model",
-    "judge_model",
+    "judge",
     "pi_revision",
     "pi_tracked_status_sha256",
     "agent_operations",
@@ -3059,7 +3059,9 @@ def bind_paper_benchmark_evidence(
     from asterion.dci.verification import (
         PAPER_BENCHMARK_REPORT_SCHEMA,
         paper_benchmark_resource_digests,
+        paper_judge_identity,
     )
+    from asterion.dci.judge import JudgeConfig
 
     report_path = Path(report_path)
     raw = _read_private_evidence(report_path)
@@ -3073,7 +3075,6 @@ def bind_paper_benchmark_evidence(
         or set(report) != _PAPER_REPORT_KEYS
         or report.get("schema") != PAPER_BENCHMARK_REPORT_SCHEMA
         or report.get("mode") != "bounded-provider-backed"
-        or report.get("judge_model") != "gpt-4.1"
         or report.get("pi_revision") != revision
         or report.get("pi_tracked_status_sha256") != status_sha256
         or report.get("agent_operations") != 2
@@ -3087,6 +3088,70 @@ def bind_paper_benchmark_evidence(
         or _PUBLIC_EVIDENCE_ID.fullmatch(str(report.get("model"))) is None
     ):
         raise ValueError("paper benchmark evidence report is invalid")
+    judge = report.get("judge")
+    judge_public_keys = set(JudgeConfig().public_dict())
+    if not isinstance(judge, dict) or set(judge) != judge_public_keys | {
+        "prompt_contract_sha256"
+    }:
+        raise ValueError("paper benchmark Judge identity is invalid")
+    if (
+        any(
+            type(judge[name]) is not str
+            for name in (
+                "judge_base_url",
+                "judge_api",
+                "judge_model",
+                "judge_api_key_env",
+            )
+        )
+        or any(
+            type(judge[name]) is not int
+            for name in ("judge_timeout_seconds", "judge_max_output_tokens")
+        )
+        or any(
+            type(judge[name]) is not bool
+            for name in (
+                "judge_json_mode",
+                "judge_strict_json_schema",
+                "judge_responses_store",
+            )
+        )
+        or not (
+            judge["judge_thinking"] is None
+            or type(judge["judge_thinking"]) is str
+        )
+        or any(
+            isinstance(judge[name], bool)
+            or not isinstance(judge[name], (int, float))
+            for name in (
+                "judge_input_price_per_1m",
+                "judge_cached_input_price_per_1m",
+                "judge_output_price_per_1m",
+            )
+        )
+        or _HEX_SHA256.fullmatch(str(judge["prompt_contract_sha256"])) is None
+    ):
+        raise ValueError("paper benchmark Judge identity is invalid")
+    try:
+        reconstructed_judge = JudgeConfig(
+            base_url=judge["judge_base_url"],
+            api=judge["judge_api"],
+            model=judge["judge_model"],
+            timeout_seconds=judge["judge_timeout_seconds"],
+            max_output_tokens=judge["judge_max_output_tokens"],
+            json_mode=judge["judge_json_mode"],
+            strict_json_schema=judge["judge_strict_json_schema"],
+            responses_store=judge["judge_responses_store"],
+            thinking=judge["judge_thinking"] or "omit",
+            input_price_per_1m=judge["judge_input_price_per_1m"],
+            cached_input_price_per_1m=judge["judge_cached_input_price_per_1m"],
+            output_price_per_1m=judge["judge_output_price_per_1m"],
+            api_key_env=judge["judge_api_key_env"],
+        )
+    except (AttributeError, TypeError, ValueError):
+        raise ValueError("paper benchmark Judge identity is invalid") from None
+    if dict(paper_judge_identity(reconstructed_judge)) != judge:
+        raise ValueError("paper benchmark Judge identity is invalid")
     operations = report.get("operations")
     if not isinstance(operations, list) or len(operations) != 3:
         raise ValueError("paper benchmark evidence report is invalid")
@@ -3152,14 +3217,7 @@ def bind_paper_benchmark_evidence(
         != hashlib.sha256(evaluation_raw).hexdigest()
         or not isinstance(evaluation, dict)
         or evaluation.get("is_correct") is not True
-        or evaluation.get("judge_model") != "gpt-4.1"
-        or evaluation.get("judge_api") != "responses"
-        or evaluation.get("judge_base_url") != "https://api.openai.com/v1"
-        or evaluation.get("judge_max_output_tokens") != 1024
-        or evaluation.get("judge_json_mode") is not True
-        or evaluation.get("judge_strict_json_schema") is not False
-        or evaluation.get("judge_responses_store") is not False
-        or evaluation.get("judge_thinking") is not None
+        or any(evaluation.get(name) != judge[name] for name in judge_public_keys)
         or _HEX_SHA256.fullmatch(
             str(evaluation.get("judge_request_fingerprint"))
         )
@@ -3169,7 +3227,7 @@ def bind_paper_benchmark_evidence(
 
     report_sha256 = hashlib.sha256(raw).hexdigest()
     record = {
-        "schema": "dci.climb.paper-benchmark-evidence/v1",
+        "schema": "dci.climb.paper-benchmark-evidence/v2",
         "hypothesis_id": hypothesis_id,
         "report_sha256": report_sha256,
         "pi_revision": revision,
@@ -3181,6 +3239,7 @@ def bind_paper_benchmark_evidence(
         "api_request_multiplicity": "externally ambiguous",
         "operation_order": list(_PAPER_OPERATION_PLAN),
         "full_dataset_ran": False,
+        "judge": judge,
         "resources": report["resources"],
         "operations": operations,
     }

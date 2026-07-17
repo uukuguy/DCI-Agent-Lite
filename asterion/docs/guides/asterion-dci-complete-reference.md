@@ -271,13 +271,15 @@ profile、mode、limit、tools、context 或 resolution override 都会在读取
 `paper verify` 缺省只验证安装资源、identity、矩阵与三操作 cost contract，输出
 `Agent operations: 0`、`Judge operations: 0` 和 `Full dataset ran: no`。只有显式
 传入 `--provider-backed --env-file PRIVATE_ENV --output-root PRIVATE_DIR` 才会执行
-固定的 `QA agent → exact GPT-4.1 Judge → IR agent`；preflight 要求私有配置、空的
+固定的 `QA agent → configured Judge → IR agent`；preflight 要求私有配置、空的
 0700 output root、与 `pi-revision.txt` 一致且 clean 的外部 Pi checkout。成功报告
-为 0600、body-free，并绑定两个 agent operation、一个 Judge operation、安装资源和
+为 0600、body-free，并绑定实际 Judge 的 endpoint、API、model、安全 request-shaping
+字段和 prompt-contract digest，以及两个 agent operation、一个 Judge operation、安装资源和
 私有 artifact digests。agent 多轮内部 API request 数仍标为 externally ambiguous，
 不会伪称三个 operation 等于三个底层 HTTP request。binder 会重新哈希全部引用产物
 并再次检查 clean runtime；任何 symlink、权限、digest、runtime 或既有 binding 冲突
-都在不修改 Climb 状态的情况下失败。完整数据集和论文分数复现仍属于 AF-340。
+都在不修改 Climb 状态的情况下失败。GPT-4.1 是论文实验 provenance；只有 AF-340
+声称论文分数可比时才要求该实验配置。完整数据集和论文分数复现仍属于 AF-340。
 
 完整实现的模型外验收包括 533/533 个细粒度 selector、6/6 个额外 batch 语义和 12/12 个原始/Asterion launcher 对。迁移期间还运行过一条有界 Pi+Judge batch 及精确 reuse 证明；AF-320 的三操作 terminal evidence 只有在上述 verifier 成功且 binder 重哈希后才可标记为 bounded provider verified。
 
