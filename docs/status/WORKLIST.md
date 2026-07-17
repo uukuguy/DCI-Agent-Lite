@@ -2,7 +2,7 @@
 
 > Canonical work-package ledger. An `active` lifecycle requires exactly one `in_progress` package; a `complete` lifecycle permits none and forbids autonomous dispatch.
 
-> Project lifecycle: active
+> Project lifecycle: complete
 
 ## AF-000 — Framework control plane
 
@@ -352,13 +352,14 @@
 
 ## AF-330 — Complete application and dual-runtime exposure
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Paper-aligned complete DCI implementation in Asterion
 - Scope: make research, evaluation, benchmark, analysis, and export distinct executable capability/application units with exact event/artifact edges, then prove the restricted local-corpus application with bounded real Pi and Claude Code runs.
 - Dependencies: AF-320
 - Acceptance: product CLI, generic application, installed application, and isolated wheel share implementation/artifact identity; Pi and Claude Code share domain contracts and one `DCI_PROVIDER`/`DCI_MODEL` agent selection with adapter-owned provider translation; both real bounded runtimes prove attempt-local corpus access without web, subagents, Bash, outside answer-bearing access, or public body/path leakage; cancellation, deadline, failure, resume, privacy, configuration redaction, and evidence binding pass; fixture-only Claude evidence and full datasets cannot close the package.
 - Design: `docs/superpowers/specs/2026-07-17-af-330-complete-application-dual-runtime-design.md`
 - Plan: `docs/superpowers/plans/2026-07-17-af-330-complete-application-dual-runtime.md`
+- Closure evidence: AF-330-H-001 through H-004 are confirmed 4/4. One exact five-stage research/evaluation/benchmark/analysis/export graph executes through Pi and Claude Code with shared domain contracts, adapter-owned provider translation, exact stage identities, cancellation/deadline/failure safety, original `asterion-dci resume`, and body-free public evidence. Bounded real Pi and final r12 MiniMax-M3 Claude Code runs each stayed inside an attempt-local corpus without Bash, web, subagents, or a full dataset and completed one configured DeepSeek evaluation. The r12 terminal verifier replays raw Claude JSONL through the production adapter and binds report `07a69074…bce2`, tracked record `a62e62cd…ae89`, implementation `613578bd…6477`, and descendant-safe source `f3e2528`; Climb cycle 103 independently confirms it. Closure passes 1396 root Python, 123 Asterion, 11 TypeScript, 19 Rust, product 8/8, 533/533 delegated selectors, 12/12 launchers, 6/6 extras, 7/7 bounded cases, isolated wheel, compile, Ruff, shell, fmt, Clippy, scope, diff, and actual-key privacy gates. Final independent review reports no Critical, Important, or Minor findings. Full-dataset and paper-score reproduction remain outside this completed lifecycle pending separately authorized AF-340 governance.
 
 ## AF-095 — Asterion framework identity and extraction
 

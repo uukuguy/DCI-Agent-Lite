@@ -1,10 +1,10 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-17 18:51 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-17 18:58 +0800. **Session remains active — not a final handoff.**
 
-Active work package: AF-330
+Active work package: none
 
-Package: AF-330 complete application and dual-runtime exposure
+Package: none — project lifecycle complete
 
 Currently running: no process.
 
@@ -18,11 +18,13 @@ Currently running: no process.
 - Commit `ffca6ae` passes 122/122 Asterion tests and closes the task-cancellation/raw-replay implementation gaps.
 - Post-repair full closure passes 1396 root Python, 123 Asterion, 11 TypeScript, 19 Rust, product 8/8, delegated 533/533, launchers 12/12, extras 6/6, bounded 7/7, zero provider requests, fresh isolated wheel, static, scope, diff, and actual-key scans.
 - Final review found one Important descendant-held-pipe cleanup defect. A real RED reproduced it; bounded group SIGKILL escalation now passes 123/123 Asterion tests, and r12 rebinds the repaired source.
+- Terminal re-review reports no Critical, Important, or Minor findings and marks the implementation ready.
+- AF-330 is completed; every worklist package is completed and the project lifecycle is `complete`.
 - `.env` is privately configured for the international MiniMax Claude API and DeepSeek Judge; never print or commit it. External `pi/` remains untouched.
 
 ## Next concrete action
 
-1. Obtain final independent re-review; close AF-330 only if no Critical/Important findings remain.
+1. No active implementation. Reopen governance explicitly before new work; AF-340 requires separate budget authorization.
 
 ## Boundaries
 

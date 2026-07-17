@@ -5,11 +5,11 @@
 
 ## In-flight / session state
 
-- Phase: implementation
+- Phase: completed
 - Last cycle: 103
 - Next hypothesis: None
 - In flight: none
-- Next action: Trigger Knowledge Layer.
+- Next action: Project lifecycle complete; await explicit governance reopening.
 
 ## Active hypotheses
 
