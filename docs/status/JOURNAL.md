@@ -843,3 +843,5 @@
 - 12:49 AF-320 paper benchmark parity closes with configured-Judge evidence. [a45e5f1]
 - 12:49 AF-330 activates complete application composition and bounded Pi/Claude semantic acceptance. [2df0473]
 - 13:03 AF-330-H-001 confirmed 4/4; package acceptance recorded.
+- 13:04 Complete five-stage Pi/Claude application graph closes H001. [935d44e]
+- 13:07 H002 RED proves the installed provider still lacks complete-stage bindings.
