@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-17 17:32 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-17 17:45 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-330
 
@@ -10,18 +10,18 @@ Currently running: no process.
 
 ## TL;DR
 
-- H001–H004 are recorded 4/4, but AF-330 remains open after independent review found terminal-evidence and runtime-authority gaps.
-- Real r7 completed MiniMax-M3 Claude Code, one Grep, all five stages, and one configured DeepSeek Judge without a full dataset.
-- r7 is now diagnostic rather than terminal: its old private `runtime-policy.json` does not record the actual runtime CWD, so its corpus-containment claim cannot satisfy D-050.
-- The active repair binds runtime CWD to the audited corpus, limits the Claude child to operational/provider variables, rejects nonzero exits, validates every upstream schema/implementation digest, and propagates in-flight cancellation through Claude, native Pi, and Judge work.
-- Commit `9b6a1f6` implements the repair and passes 119/119 Asterion tests plus compile, Ruff, scope, and diff checks. The independent terminal verifier is implemented and focused-green; it still needs its commit and a fresh real provider run.
+- H001–H004 are confirmed 4/4; AF-330 remains open only for full closure gates and final review.
+- Commits `9b6a1f6` and `c5a0411` bind runtime authority and independently re-audit retained evidence.
+- Fresh r8 completed MiniMax-M3 Claude Code, one Grep, all five stages, and one configured DeepSeek Judge without a full dataset.
+- The terminal verifier confirms exact runtime-CWD/corpus identity, six private artifact hashes, report `2abfdd27…eae44`, tracked record `df56c32b…ab34b`, implementation `613578bd…6477`, and reviewed source `c5a0411`.
+- Climb cycle 100 invokes that verifier and reconfirms H004 4/4. Old r7 is diagnostic only.
 - `.env` is privately configured for the international MiniMax Claude API and DeepSeek Judge; never print or commit it. External `pi/` remains untouched.
 
 ## Next concrete action
 
-1. Commit the terminal verifier that reruns the private auditor and binds report, tracked record, source commit, implementation digest, modes, paths, and artifact hashes.
-2. Run a fresh bounded Claude application under a new run ID with exported `MINIMAX_API_KEY` and `DEEPSEEK_API_KEY` explicitly unset so `.env` is authoritative.
-3. Re-audit and rebind fresh evidence, rerun Climb and full repository gates, then close AF-330 only if independent review has no Critical/Important findings.
+1. Commit the fresh r8 evidence, Climb cycle 100 state, and verifier-backed H004 training gate.
+2. Run full root/Asterion Python, TypeScript, Rust, compile, Ruff, shell, scope, diff, product/install/wheel, privacy, and native-resume closure gates.
+3. Obtain final independent review; close AF-330 only if no Critical/Important findings remain.
 
 ## Boundaries
 
@@ -36,4 +36,5 @@ Currently running: no process.
 python3 tools/project_scope_check.py
 git status --short
 cd asterion && uv run python -m unittest discover -v
+uv run python tools/verify_af330_claude_evidence.py --repo-root . --run-dir outputs/af330-claude-runs/4d76132159961ef1e73f208489c54d8b9553193eba3a3cbc2696fdf07bd38a29 --corpus-dir outputs/af330-claude-corpus --report outputs/af330-claude-evidence/r8-report.json --record docs/status/climb/provider-evidence/af-330-h-004.json
 ```

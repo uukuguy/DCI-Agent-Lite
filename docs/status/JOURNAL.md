@@ -878,3 +878,8 @@
 - 17:32 Restricted execution repairs bind CWD/corpus, isolate provider credentials, reject nonzero exits and forged stage identity, and cancel/reap Claude plus native Pi/Judge work; 119/119 Asterion tests pass.
 - 17:33 D-050 runtime authority repair closes the review's execution-side gaps before fresh evidence. [9b6a1f6]
 - 17:40 Terminal verification now re-audits private artifacts and binds report, tracked record, reviewed source commit, and implementation identities.
+- 17:44 AF-330-H-004 confirmed 4/4; package acceptance recorded.
+- 17:45 Independent terminal binding replaces counter-only H004 evidence verification. [c5a0411]
+- 17:44 Fresh r8 completed MiniMax-M3 Claude, one Grep, five stages, and one DeepSeek Judge with exact CWD/corpus binding; no full dataset ran.
+- 17:44 Terminal verifier bound report `2abfdd27…eae44`, record `df56c32b…ab34b`, implementation `613578bd…6477`, and reviewed source `c5a0411`.
+- 17:45 Climb cycle 100 reconfirmed AF-330-H-004 4/4 by invoking the retained-evidence terminal verifier.

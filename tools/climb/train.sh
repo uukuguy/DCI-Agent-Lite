@@ -815,12 +815,22 @@ elif [ "$1" = "AF-330-H-003" ]; then
         exit 1
     fi
 elif [ "$1" = "AF-330-H-004" ]; then
+    if [ -z "${AF330_CLAUDE_RUN_DIR:-}" ] || [ -z "${AF330_CLAUDE_CORPUS_DIR:-}" ] || [ -z "${AF330_CLAUDE_REPORT:-}" ]; then
+        echo "ERROR: $1 requires retained private Claude evidence paths." >&2
+        exit 2
+    fi
     if ! {
         uv run python -m unittest tests.test_claude_code_runtime -v
         (cd asterion && uv run python -m unittest \
             tests.test_asterion_claude_runtime \
             tests.test_dci_complete_application.DciCompleteApplicationExecutionTests.test_claude_run_is_judged_and_exports_without_private_bodies \
             tests.test_dci_complete_application.DciRestrictedClaudeEvidenceTests -v)
+        uv run python tools/verify_af330_claude_evidence.py \
+            --repo-root "$ROOT" \
+            --run-dir "$AF330_CLAUDE_RUN_DIR" \
+            --corpus-dir "$AF330_CLAUDE_CORPUS_DIR" \
+            --report "$AF330_CLAUDE_REPORT" \
+            --record "$ROOT/docs/status/climb/provider-evidence/af-330-h-004.json"
     } >"$run_dir/train.log" 2>&1; then
         echo "ERROR: $1 restricted Claude acceptance failed; see $run_dir/train.log" >&2
         exit 1

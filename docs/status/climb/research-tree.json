@@ -1,10 +1,10 @@
 {
-  "run_count": 98,
+  "run_count": 99,
   "session": {
     "session": "2026-07-17-af-330-complete-application-dual-runtime",
     "phase": "implementation",
     "work_package_id": "AF-330",
-    "last_cycle": 99,
+    "last_cycle": 100,
     "next_hypothesis": null,
     "in_flight": null,
     "next_action": "Trigger Knowledge Layer.",
@@ -2764,11 +2764,26 @@
           },
           "online": null,
           "verdict": "confirmed 4/4",
+          "decision_reason": "deterministic local package acceptance"
+        },
+        {
+          "session": "2026-07-17-af-330-complete-application-dual-runtime",
+          "cycle": 100,
+          "run": "20260717-174458-dci-climb-af330h004",
+          "local": 4,
+          "local_per_task": {
+            "restricted_command_surface": 1,
+            "five_stage_claude_execution": 1,
+            "outside_path_rejection": 1,
+            "provider_evidence": 1
+          },
+          "online": null,
+          "verdict": "confirmed 4/4",
           "decision_reason": "deterministic local package acceptance",
           "provider_evidence": {
             "path": "provider-evidence/af-330-h-004.json",
-            "sha256": "5cb395d0dedee6a9c202add311d7fc7291ac078d8152739b048d370c8e7837bd",
-            "report_sha256": "1b0c5b09ab28f56d542f0e8745d3507b79ba8d6ea12c68435efee2df2d765c8b"
+            "sha256": "df56c32b568bb754356a2620872267bf6fd74104aa97654995bc0a4e83fab34b",
+            "report_sha256": "2abfdd274181b29d6da8d521278d2c5f508c23b52418f1e565e162eed34eae44"
           }
         }
       ]
@@ -4931,6 +4946,28 @@
       "verdict": "confirmed 4/4",
       "train_cost_h": "0.01",
       "manifest_path": "runs/climb/20260717-171259-dci-climb-af330h004/manifest.json"
+    },
+    {
+      "run_id": "20260717-174458-dci-climb-af330h004",
+      "cycle": "100",
+      "session": "2026-07-17-af-330-complete-application-dual-runtime",
+      "hypothesis_id": "AF-330-H-004",
+      "paradigm": "dci-restricted-claude-application",
+      "parent_run": "",
+      "pushed_at": "2026-07-17T17:44:59+08:00",
+      "lb_landed_at": "",
+      "local_score": "4",
+      "immutable_resolution": "",
+      "repeat_validation": "",
+      "dirty_checkout_safety": "",
+      "override_compatibility": "",
+      "online_score": "",
+      "gap": "",
+      "push_decision": "PUSH",
+      "decision_reason": "deterministic local package acceptance",
+      "verdict": "confirmed 4/4",
+      "train_cost_h": "0.01",
+      "manifest_path": "runs/climb/20260717-174458-dci-climb-af330h004/manifest.json"
     }
   ],
   "calibration": {
