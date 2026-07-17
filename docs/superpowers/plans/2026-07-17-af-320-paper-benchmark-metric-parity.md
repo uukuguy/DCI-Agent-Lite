@@ -190,7 +190,7 @@ conflict-no-mutation tests. Failed attempts remain diagnostic.
 - Consumes: `JudgeConfig.public_dict()`, `build_judge_request()`, private `eval_result.json`, and the fixed `qa-agent`, `qa-judge`, `ir-agent` operation sequence.
 - Produces: `paper_judge_identity(config: JudgeConfig) -> tuple[tuple[str, object], ...]`; the report's `judge` object containing effective public configuration plus `prompt_contract_sha256`; binder validation against the private evaluation artifact.
 
-- [ ] **Step 1: Write RED verifier tests for configured DeepSeek**
+- [x] **Step 1: Write RED verifier tests for configured DeepSeek**
 
 ```python
 judge = JudgeConfig(
@@ -206,13 +206,13 @@ self.assertEqual(identity["judge_api"], "chat-completions")
 self.assertRegex(identity["prompt_contract_sha256"], r"^[0-9a-f]{64}$")
 ```
 
-- [ ] **Step 2: Run RED and confirm the obsolete literal-model gate**
+- [x] **Step 2: Run RED and confirm the obsolete literal-model gate**
 
 Run: `uv run --project asterion python -m unittest -v tests.test_asterion_dci_verification.PaperBenchmarkVerifierTests`
 
 Expected: FAIL because `paper_judge_identity` is absent and `_paper_default_readiness` still requires official `gpt-4.1/responses`.
 
-- [ ] **Step 3: Implement the minimal dynamic Judge identity**
+- [x] **Step 3: Implement the minimal dynamic Judge identity**
 
 ```python
 def paper_judge_identity(config: JudgeConfig) -> tuple[tuple[str, object], ...]:
@@ -229,7 +229,7 @@ def paper_judge_identity(config: JudgeConfig) -> tuple[tuple[str, object], ...]:
 
 Remove provider/model/base/API literal comparisons from preflight. Continue requiring a valid `JudgeConfig`, a non-empty configured Judge credential, private configuration, packaged fixtures, an empty private output root, and a clean locked Pi runtime.
 
-- [ ] **Step 4: Write RED binder tests for truthful identity and mutation rejection**
+- [x] **Step 4: Write RED binder tests for truthful identity and mutation rejection**
 
 ```python
 report["judge"] = dict(paper_judge_identity(deepseek_config))
@@ -244,21 +244,21 @@ self.assertRegex(
 
 Mutate any report/evaluation Judge field or `prompt_contract_sha256`; expect rejection before Climb mutation.
 
-- [ ] **Step 5: Implement binder equality against private evaluation evidence**
+- [x] **Step 5: Implement binder equality against private evaluation evidence**
 
 The binder must require the report's exact `judge` keys, compare every `JudgeConfig.public_dict()` field persisted in `eval_result.json`, validate `judge_request_fingerprint`, and compare the current packaged prompt-contract digest. It must not contain a literal allowed-model list.
 
-- [ ] **Step 6: Turn focused tests GREEN**
+- [x] **Step 6: Turn focused tests GREEN**
 
 Run: `uv run --project asterion python -m unittest -v tests.test_asterion_dci_verification.PaperBenchmarkVerifierTests tests.test_asterion_dci_artifacts.PaperBenchmarkEvidenceBinderTests`
 
 Expected: all tests pass, including DeepSeek acceptance, identity mutation, symlink, mode, dirty-runtime, idempotence, and conflict-no-mutation cases.
 
-- [ ] **Step 7: Update operator documentation**
+- [x] **Step 7: Update operator documentation**
 
 Document that any supported configured Judge can prove functional acceptance; effective identity is recorded; GPT-4.1 is paper experiment provenance and becomes mandatory only for an AF-340 paper-score comparison claim.
 
-- [ ] **Step 8: Verify and commit the correction**
+- [x] **Step 8: Verify and commit the correction**
 
 Run Ruff and compilation for touched Python, the Task 7/8 selectors, model-free installed/wheel verification, `python3 tools/project_scope_check.py`, and `git diff --check`.
 
