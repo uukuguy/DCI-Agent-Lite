@@ -434,7 +434,7 @@
 - Status: ✅ accepted design decision
 - Decided: 2026-07-17
 - Decision: AF-320 owns schema-closed dataset and experiment-scope registries, exact evidence-derived coverage/localization metrics, corrected bounded NDCG@10, and paper-declared ablation rows. Dataset identity and experiment selection identity are separate contracts.
-- Paper boundary: BrowseComp main all-830, its distinct analysis/context n=100 scopes, Appendix random-50, full BRIGHT/Bamboogle, and applicable random-50 selections retain separate seed/algorithm/selected-ID identities. Parameterized localization never invents an undocumented universal segment width.
+- Paper boundary: BrowseComp main all-830, its distinct analysis/context n=100 scopes, Appendix random-50, full BRIGHT/Bamboogle, and applicable random-50 selections retain separate seed-provenance/algorithm/selected-ID identities. An unreported paper seed is represented as unreported and verified through the exact published selected-ID manifest, never fabricated. Parameterized localization never invents an undocumented universal segment width.
 - Execution boundary: `paper-full` rows may be listed, validated, rendered, and packaged but cannot execute in AF-320 under any generic option or environment value. AF-340 alone may add a separately reviewed authorization and budget surface.
 - Evidence boundary: analysis identity rehashes the exact protocol stream, every consumed external tool blob, final model-visible context, gold manifest, and opened corpus/gold files. Public projections remain body-free.
 - Revalidation trigger: change selection scopes, aggregation, evidence identity, or full-run authority only after reconciling the paper version, design, worklist, cache migration, and security review.

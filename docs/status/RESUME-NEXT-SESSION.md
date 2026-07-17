@@ -11,7 +11,7 @@ Currently running: no process. AF-310 and its Climb session are complete. AF-320
 ## TL;DR
 
 - AF-320 is the sole active package; its reviewed design separates the thirteen dataset identities from experiment-specific selection scopes.
-- The contract preserves BrowseComp all-830, two distinct n=100 scopes, Appendix random-50, full BRIGHT/Bamboogle, and applicable random-50 selections with deterministic manifests.
+- The contract preserves BrowseComp all-830, two distinct n=100 scopes, Appendix random-50, full BRIGHT/Bamboogle, and applicable random-50 selections with deterministic manifests and truthful seed provenance.
 - AF-320 first repairs duplicate-inflated NDCG@10, then adds BEIR profiles, exact coverage/localization/retained metrics, native evidence alignment, and deterministic ablation surfaces by TDD.
 - `paper-full` rows remain unconditionally non-executable; AF-340 remains the only package that may add full-run authorization and budget.
 - External `pi/` retains pre-existing user changes and must remain untouched.

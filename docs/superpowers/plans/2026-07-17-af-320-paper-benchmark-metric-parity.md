@@ -16,7 +16,10 @@ Create a schema-closed packaged inventory containing exactly the thirteen
 canonical dataset IDs and their family/mode/metric/resource contracts, source
 split/count, versioned QA exclusion policy, GPT-4.1 Judge identity, and closed
 execution class. Add a separate schema-closed experiment-scope registry for
-paper selection mode/count, seed/algorithm, and selected-ID identity. Encode
+paper selection mode/count, seed provenance/algorithm, and selected-ID identity.
+Never invent a seed: published selections with an unreported seed package and
+hash the exact selected-ID manifest and verify it against the full source ID
+population. Encode
 BrowseComp all-830 main results, trajectory/tool/corpus `n=100`, context-ablation
 random `n=100`, and Appendix A.1 random-50 as distinct scopes; also encode full
 BRIGHT/Bamboogle versus applicable random-50 selection, including the ArguAna
@@ -30,7 +33,8 @@ session with four hypotheses:
 4. deterministic ablation/product closure.
 
 RED tests reject missing/extra/duplicate datasets, aliases, unsupported metrics,
-selection-scope or manifest collisions, missing BrowseComp scopes, unversioned
+selection-scope or manifest collisions, fabricated/missing seed provenance,
+missing BrowseComp scopes, unversioned
 exclusions, executable `paper-full` rows, wrong corpus/gold fields, and an
 unparented Climb hypothesis. GREEN adds
 only the contract/resource/governance surface. Run focused tests, compile, Ruff,

@@ -42,7 +42,8 @@ Each dataset has one canonical identifier, family, mode, source split and row
 count, versioned exclusion policy, dataset path, corpus path, gold-field
 contract, metric/Judge identity, bounded fixture, and execution class. A
 separate experiment-scope registry binds each paper result/analysis to dataset
-ID, selection mode/count, explicit seed/algorithm, and selected-ID digest. The
+ID, selection mode/count, seed provenance, selection algorithm, and selected-ID
+manifest digest. The
 two registries are schema-closed, sorted, packaged in the Asterion wheel, and
 validated against the batch profile and launcher registries. Aliases are not
 accepted as distinct datasets or scopes.
@@ -62,11 +63,15 @@ per-dataset default:
   the versioned ambiguous/time-sensitive-QA exclusion policy. ArguAna selects
   50 from 1,406 source queries and SciFact selects 50 from 300.
 
-Every sampled scope, including both BrowseComp `n=100` scopes, records a seed
-plus a fully specified sampling algorithm and the sorted selected-ID manifest
-SHA-256. The all-830 scope records its sorted-ID manifest SHA-256. QA and
-BrowseComp correctness records the GPT-4.1 model/API/prompt identity in both
-result and Judge cache identity.
+Every sampled scope records whether the paper reported a seed. A reported seed
+is stored with a fully specified sampling algorithm. When the paper/published
+DCI-Bench selection does not report a seed, AF-320 records no fabricated numeric
+seed: it packages the exact selected-ID manifest, marks the seed
+`paper-unreported`, hashes the sorted IDs, and verifies membership plus exact
+source-split count before use. The two Asterion-defined BrowseComp `n=100`
+scopes use explicit reproducible seeds and algorithms. The all-830 scope records
+its sorted-ID manifest SHA-256. QA and BrowseComp correctness records the
+GPT-4.1 model/API/prompt identity in both result and Judge cache identity.
 
 ArguAna and SciFact use the existing IR path after repairing its NDCG@10
 implementation to standard binary DCG/IDCG semantics: keep only the first
