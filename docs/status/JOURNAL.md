@@ -853,3 +853,4 @@
 - 14:50 AF-330-H-003 confirmed 4/4; package acceptance recorded.
 - 15:23 Restricted Claude application adds private evidence and DeepSeek evaluation for H004. [86363de]
 - 15:23 Real Claude acceptance failed before Judge because local OAuth is logged out; H004 remains pending.
+- 15:23 Recovery checkpoint preserves implemented H004 and the external Claude-login acceptance boundary. [66f8fbe]
