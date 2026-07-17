@@ -885,3 +885,8 @@
 - 17:45 Climb cycle 100 reconfirmed AF-330-H-004 4/4 by invoking the retained-evidence terminal verifier.
 - 17:52 Full root verification found 16 downstream failures from one compatibility regression: cancel-aware executor always passed a new keyword to legacy injected two-argument callables.
 - 17:54 Native executor now passes cancellation only when present, preserving the historical injection seam while complete Pi runs remain cancel-aware.
+- 17:55 Conditional cancellation propagation restores native executor compatibility after the full-suite regression. [1951d12]
+- 17:59 Fresh r9 revalidates one MiniMax-M3 Claude, one Grep, five stages, and one DeepSeek Judge after compatibility repair; no full dataset ran.
+- 18:00 Terminal binding now anchors report `35f289a8…f047`, record `78a62d45…fa0e`, implementation `613578bd…6477`, and source `1951d12`.
+- 18:00 Climb cycle 101 reconfirmed H004 4/4 against r9 through the terminal verifier.
+- 17:59 AF-330-H-004 confirmed 4/4; package acceptance recorded.

@@ -616,7 +616,7 @@ class DciRestrictedClaudeEvidenceTests(unittest.TestCase):
         self.assertEqual(
             record["schema"], "asterion.dci.climb-provider-evidence/v2"
         )
-        self.assertEqual(record["source_commit"], "c5a0411")
+        self.assertEqual(record["source_commit"], "1951d12")
         self.assertRegex(record["source_sha256"], r"^[0-9a-f]{64}$")
         self.assertEqual(record["agent_operations"], 1)
         self.assertEqual(record["judge_operations"], 1)
