@@ -913,4 +913,5 @@
 - 18:52 Descendant-safe closure state is committed for terminal re-review. [a63ad1c]
 - 18:57 Terminal re-review found no Critical, Important, or Minor issues; AF-330 is ready to close.
 - 18:58 AF-330 completed and project lifecycle closed; AF-340 remains separately budget-gated.
+- 18:59 AF-330 lifecycle closes after descendant-safe r12 evidence, full gates, and zero-finding re-review. [7ba8356]
 - 18:45 AF-330-H-004 confirmed 4/4; package acceptance recorded.
