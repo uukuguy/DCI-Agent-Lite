@@ -3226,6 +3226,41 @@ class ClimbToolTests(unittest.TestCase):
                 },
             )
 
+    def test_af320_resolution_hypotheses_have_four_dimension_adapters(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+        expected = {
+            "AF-320-H-002": {
+                "coverage_contract",
+                "localization_aggregation",
+                "retained_unavailable",
+                "batch_analysis",
+            },
+            "AF-320-H-003": {
+                "conservative_alignment",
+                "byte_exact_identity",
+                "reuse_invalidation",
+                "body_free_projection",
+            },
+        }
+        for hypothesis_id, dimensions in expected.items():
+            with self.subTest(hypothesis_id=hypothesis_id), tempfile.TemporaryDirectory() as temp_dir:
+                self.assertIn(hypothesis_id, train_script)
+                run_dir = Path(temp_dir)
+                env = os.environ.copy()
+                env["DCI_CLIMB_HYPOTHESIS_ID"] = hypothesis_id
+                result = subprocess.run(
+                    ["bash", "tools/climb/eval-local.sh", str(run_dir)],
+                    cwd=REPO_ROOT,
+                    env=env,
+                    text=True,
+                    capture_output=True,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                evaluation = json.loads((run_dir / "local-eval.json").read_text())
+                self.assertEqual(evaluation["hypothesis_id"], hypothesis_id)
+                self.assertEqual(evaluation["total"], 4)
+                self.assertEqual(set(evaluation["per_task"]), dimensions)
+
     def test_af310_h005_provider_binding_is_digest_bound_and_body_free(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

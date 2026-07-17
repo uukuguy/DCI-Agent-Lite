@@ -1059,6 +1059,26 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_asterion_dci_metrics.AsterionDciMetricTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_compute_ndcg_at_k"
         override_test="tests.test_asterion_dci_batch.AsterionDciBatchTests.test_af320_copied_paper_dataset_is_digest_gated_without_profile"
         ;;
+    AF-320-H-002)
+        first_dimension="coverage_contract"
+        second_dimension="localization_aggregation"
+        third_dimension="retained_unavailable"
+        fourth_dimension="batch_analysis"
+        immutable_test="tests.test_asterion_dci_resolution_metrics.ResolutionCoverageTests.test_any_mean_all_match_hand_computed_multi_gold_values"
+        repeat_test="tests.test_asterion_dci_resolution_metrics.ResolutionLocalizationTests.test_query_and_dataset_localization_use_surfaced_gold_micro_aggregation"
+        dirty_test="tests.test_asterion_dci_resolution_metrics.ResolutionCoverageTests.test_retained_coverage_is_separate_and_missing_context_is_unavailable"
+        override_test="tests.test_asterion_dci_paper_resolution_analysis.PaperResolutionAnalysisTests.test_query_summary_jsonl_markdown_and_micro_aggregate_are_deterministic"
+        ;;
+    AF-320-H-003)
+        first_dimension="conservative_alignment"
+        second_dimension="byte_exact_identity"
+        third_dimension="reuse_invalidation"
+        fourth_dimension="body_free_projection"
+        immutable_test="tests.test_asterion_dci_trajectory_resolution.TrajectoryResolutionTest.test_read_span_aligns_only_returned_gold_evidence"
+        repeat_test="tests.test_asterion_dci_trajectory_resolution.TrajectoryResolutionTest.test_protocol_mutation_and_externalized_body_truncation_fail_closed"
+        dirty_test="tests.test_asterion_dci_batch.AsterionDciBatchValidationTests.test_paper_resolution_evidence_flows_to_batch_analysis_and_reuse_identity"
+        override_test="tests.test_asterion_dci_trajectory_resolution.TrajectoryResolutionTest.test_private_artifact_is_atomic_and_public_projection_is_body_free"
+        ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2
         exit 2
