@@ -875,3 +875,4 @@
 - 17:24 TypeScript reference inventory now covers all complete-application package and assembly manifests; 11/11 Node tests pass.
 - 17:25 AF-330 synchronizes TypeScript/Climb inventories so complete manifests and H004 digests stay executable. [0772ffb]
 - 17:31 D-050 accepts end-to-end restricted authority after review found CWD, environment, cancellation, artifact, and evidence-binding gaps.
+- 17:32 Restricted execution repairs bind CWD/corpus, isolate provider credentials, reject nonzero exits and forged stage identity, and cancel/reap Claude plus native Pi/Judge work; 119/119 Asterion tests pass.

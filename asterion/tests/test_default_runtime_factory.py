@@ -82,7 +82,11 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
                     "ANTHROPIC_API_KEY": "stale-api-key",
                     "ANTHROPIC_AUTH_TOKEN": "stale-auth-token",
                     "ANTHROPIC_BASE_URL": "https://stale.invalid",
-                    "ANTHROPIC_MODEL": "stale-model",
+                        "ANTHROPIC_MODEL": "stale-model",
+                        "DEEPSEEK_API_KEY": "judge-secret",
+                        "CLAUDE_CODE_OAUTH_TOKEN": "oauth-secret",
+                        "UNRELATED_SECRET": "unrelated-secret",
+                        "PATH": "/safe/bin",
                 }
                 with (
                     patch.dict(os.environ, environment, clear=True),
@@ -115,6 +119,10 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
                     native_environment["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"],
                     "1",
                 )
+                self.assertEqual(native_environment["PATH"], "/safe/bin")
+                self.assertNotIn("DEEPSEEK_API_KEY", native_environment)
+                self.assertNotIn("CLAUDE_CODE_OAUTH_TOKEN", native_environment)
+                self.assertNotIn("UNRELATED_SECRET", native_environment)
 
     def test_claude_factory_maps_ordinary_minimax_key_to_api_key_auth(self) -> None:
         from asterion.runtime.defaults import default_runtime_factory_registry

@@ -6,7 +6,9 @@ import asyncio
 import hashlib
 import json
 import os
+import signal as process_signal
 import subprocess
+import time
 from asyncio import CancelledError
 from collections.abc import Callable, Mapping
 from pathlib import Path
@@ -101,6 +103,9 @@ class ClaudeCodeRuntimeClient:
                     executable=self._executable,
                     environment=self._environment,
                     run_process=self._run_process,
+                    cancelled=(
+                        (lambda: signal.cancelled) if signal is not None else None
+                    ),
                 )
                 mappings = [
                     {**json.loads(line), "run_id": request.run_id}
@@ -196,6 +201,7 @@ def run_claude_code(
     executable: str = "claude",
     environment: Mapping[str, str] | None = None,
     run_process: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+    cancelled: Callable[[], bool] | None = None,
 ) -> dict[str, Any]:
     """Run one Claude Code prompt and persist raw plus normalized artifacts.
 
@@ -221,6 +227,7 @@ def run_claude_code(
         output_dir / "runtime-policy.json",
         {
             "schema": "asterion.claude-code.restricted-policy/v1",
+            "runtime_cwd": str(cwd.resolve()),
             "tools": tools,
             "allowed_tools": tools,
             "max_turns": 4,
@@ -234,18 +241,31 @@ def run_claude_code(
     )
 
     process_environment = dict(os.environ if environment is None else environment)
-    completed = run_process(
-        build_claude_command(executable=executable, tools=tools),
-        cwd=cwd,
-        env=process_environment,
-        input=prompt,
-        text=True,
-        capture_output=True,
-        timeout=timeout_seconds,
-        check=False,
-    )
+    command = build_claude_command(executable=executable, tools=tools)
+    if run_process is subprocess.run:
+        completed = _run_owned_process(
+            command,
+            cwd=cwd,
+            environment=process_environment,
+            input_text=prompt,
+            timeout_seconds=timeout_seconds,
+            cancelled=cancelled,
+        )
+    else:
+        completed = run_process(
+            command,
+            cwd=cwd,
+            env=process_environment,
+            input=prompt,
+            text=True,
+            capture_output=True,
+            timeout=timeout_seconds,
+            check=False,
+        )
     _write_private(output_dir / "raw-events.jsonl", completed.stdout)
     _write_private(output_dir / "stderr.txt", completed.stderr)
+    if completed.returncode != 0:
+        raise OSError("Claude Code process failed")
 
     events: list[dict[str, object]] = []
     events_path = output_dir / "events.jsonl"
@@ -296,3 +316,77 @@ def run_claude_code(
         "final_text": final_text,
         "output_dir": str(output_dir),
     }
+
+
+def _run_owned_process(
+    command: list[str],
+    *,
+    cwd: Path,
+    environment: Mapping[str, str],
+    input_text: str,
+    timeout_seconds: float | None,
+    cancelled: Callable[[], bool] | None,
+) -> subprocess.CompletedProcess[str]:
+    """Run, cancel, and reap one directly owned Claude process."""
+
+    if cancelled is not None and cancelled():
+        raise CancelledError
+    process = subprocess.Popen(
+        command,
+        cwd=cwd,
+        env=dict(environment),
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        start_new_session=os.name != "nt",
+    )
+    deadline = (
+        time.monotonic() + timeout_seconds
+        if timeout_seconds is not None
+        else None
+    )
+    pending_input: str | None = input_text
+    try:
+        while True:
+            if cancelled is not None and cancelled():
+                raise CancelledError
+            remaining = None if deadline is None else deadline - time.monotonic()
+            if remaining is not None and remaining <= 0:
+                raise subprocess.TimeoutExpired(command, timeout_seconds)
+            poll_seconds = 0.05 if remaining is None else min(0.05, remaining)
+            try:
+                stdout, stderr = process.communicate(
+                    input=pending_input,
+                    timeout=poll_seconds,
+                )
+                return subprocess.CompletedProcess(
+                    command, process.returncode, stdout, stderr
+                )
+            except subprocess.TimeoutExpired:
+                pending_input = None
+    except BaseException:
+        _terminate_owned_process(process)
+        raise
+
+
+def _terminate_owned_process(process: subprocess.Popen[str]) -> None:
+    if process.poll() is not None:
+        process.communicate()
+        return
+    try:
+        if os.name != "nt":
+            os.killpg(process.pid, process_signal.SIGTERM)
+        else:
+            process.terminate()
+        process.communicate(timeout=2)
+    except (OSError, subprocess.TimeoutExpired):
+        if process.poll() is None:
+            if os.name != "nt":
+                try:
+                    os.killpg(process.pid, process_signal.SIGKILL)
+                except OSError:
+                    pass
+            else:
+                process.kill()
+        process.communicate()

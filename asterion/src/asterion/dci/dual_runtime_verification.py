@@ -145,6 +145,7 @@ def audit_restricted_claude_application(
     tools = ["Read", "Grep", "Glob"]
     if (
         request.get("requested_capabilities") != request_capabilities
+        or policy.get("runtime_cwd") != str(corpus)
         or policy.get("tools") != tools
         or policy.get("allowed_tools") != tools
         or policy.get("max_turns") != 4

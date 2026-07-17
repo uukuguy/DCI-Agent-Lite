@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import os
+import threading
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 
 from asterion.dci.config import (
-    DciPaths,
     load_asterion_dci_env,
     resolve_dci_paths,
     resolve_dci_runtime_options,
@@ -28,14 +28,19 @@ class EnvironmentDciRunExecutor:
         self,
         *,
         repo_root: Path | None = None,
-        run_native: Callable[[DciPaths, DciRunRequest], DciRunResult] = run_pi_research,
+        run_native: Callable[..., DciRunResult] = run_pi_research,
         honor_request_tools: bool = False,
     ) -> None:
         self._repo_root = Path.cwd() if repo_root is None else Path(repo_root)
         self._run_native = run_native
         self._honor_request_tools = honor_request_tools
 
-    def run(self, request: DciRunRequest) -> DciRunResult:
+    def run(
+        self,
+        request: DciRunRequest,
+        *,
+        cancel_event: threading.Event | None = None,
+    ) -> DciRunResult:
         root = self._repo_root.resolve()
         load_asterion_dci_env(root)
         cwd = Path(os.environ.get("ASTERION_RUNTIME_CWD", root)).resolve()
@@ -58,4 +63,5 @@ class EnvironmentDciRunExecutor:
         return self._run_native(
             resolve_dci_paths(root),
             mapped,
+            _cancel_event=cancel_event,
         )

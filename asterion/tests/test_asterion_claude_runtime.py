@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import json
+import os
 import subprocess
 import stat
+import sys
 import tempfile
 import unittest
+import asyncio
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -18,6 +22,10 @@ FIXTURE = Path(__file__).parent / "fixtures/claude_code/valid-success.jsonl"
 
 class Cancelled:
     cancelled = True
+
+
+class MutableCancellation:
+    cancelled = False
 
 
 class ClaudeCodeRuntimeClientTests(unittest.IsolatedAsyncioTestCase):
@@ -45,6 +53,8 @@ class ClaudeCodeRuntimeClientTests(unittest.IsolatedAsyncioTestCase):
             assert run_dir is not None
             self.assertEqual(stat.S_IMODE(run_dir.stat().st_mode), 0o700)
             self.assertEqual((run_dir / "final.txt").read_text(), "OK\n")
+            policy = json.loads((run_dir / "runtime-policy.json").read_text())
+            self.assertEqual(policy["runtime_cwd"], str(Path(directory).resolve()))
             self.assertTrue(all(stat.S_IMODE(path.stat().st_mode) == 0o600 for path in run_dir.iterdir()))
             self.assertEqual(events[-1].type, "run.completed")
 
@@ -129,6 +139,55 @@ class ClaudeCodeRuntimeClientTests(unittest.IsolatedAsyncioTestCase):
             )
 
         self.assertNotIn("SECRET", str(caught.exception))
+
+    async def test_nonzero_process_exit_cannot_claim_completion(self) -> None:
+        process = Mock(
+            return_value=subprocess.CompletedProcess([], 17, FIXTURE.read_text(), "")
+        )
+        runtime = ClaudeCodeRuntimeClient(
+            executable="claude",
+            cwd=Path.cwd(),
+            environment={},
+            run_process=process,
+        )
+
+        with self.assertRaises(ProtocolError):
+            await anext(runtime.run(RunRequest("nonzero-run", "question")))
+
+    async def test_inflight_cancellation_terminates_and_reaps_child(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            pid_file = root / "child.pid"
+            executable = root / "blocking-claude"
+            executable.write_text(
+                f"#!{sys.executable}\n"
+                "import os, pathlib, time\n"
+                "pathlib.Path(os.environ['TEST_CHILD_PID_FILE']).write_text(str(os.getpid()))\n"
+                "time.sleep(30)\n"
+            )
+            executable.chmod(0o700)
+            signal = MutableCancellation()
+            runtime = ClaudeCodeRuntimeClient(
+                executable=str(executable),
+                cwd=root,
+                environment={"TEST_CHILD_PID_FILE": str(pid_file)},
+                default_timeout_seconds=None,
+            )
+            task = asyncio.create_task(
+                anext(runtime.run(RunRequest("cancel-running", "question"), signal=signal))
+            )
+            for _ in range(100):
+                if pid_file.exists():
+                    break
+                await asyncio.sleep(0.01)
+            self.assertTrue(pid_file.exists())
+            pid = int(pid_file.read_text())
+            signal.cancelled = True
+
+            with self.assertRaises(ProtocolError):
+                await asyncio.wait_for(task, timeout=3)
+            with self.assertRaises(ProcessLookupError):
+                os.kill(pid, 0)
 
 
 if __name__ == "__main__":

@@ -34,6 +34,28 @@ _CLAUDE_MODEL_ENVIRONMENT_NAMES = (
     "ANTHROPIC_DEFAULT_HAIKU_MODEL",
     "ANTHROPIC_SMALL_FAST_MODEL",
 )
+_CLAUDE_OPERATIONAL_ENVIRONMENT_NAMES = (
+    "PATH",
+    "HOME",
+    "TMPDIR",
+    "TMP",
+    "TEMP",
+    "LANG",
+    "LC_ALL",
+    "TERM",
+    "SHELL",
+    "USER",
+    "LOGNAME",
+    "SSL_CERT_FILE",
+    "SSL_CERT_DIR",
+    "NODE_EXTRA_CA_CERTS",
+    "HTTP_PROXY",
+    "HTTPS_PROXY",
+    "NO_PROXY",
+    "http_proxy",
+    "https_proxy",
+    "no_proxy",
+)
 
 
 def default_runtime_factory_registry() -> RuntimeFactoryRegistry:
@@ -127,7 +149,11 @@ def _claude_provider_environment(environment: Mapping[str, str]) -> dict[str, st
     if not api_key:
         raise RuntimeFactoryError("Claude Code provider configuration is unavailable")
 
-    native_environment = dict(environment)
+    native_environment = {
+        name: environment[name]
+        for name in _CLAUDE_OPERATIONAL_ENVIRONMENT_NAMES
+        if environment.get(name)
+    }
     native_environment["ANTHROPIC_BASE_URL"] = base_url
     if provider == "anthropic" or not api_key.startswith("sk-cp-"):
         native_environment["ANTHROPIC_API_KEY"] = api_key

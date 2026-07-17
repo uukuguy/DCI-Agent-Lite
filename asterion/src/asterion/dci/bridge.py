@@ -6,6 +6,7 @@ import hashlib
 import json
 import re
 import stat
+import threading
 from pathlib import Path
 from typing import Protocol
 
@@ -17,7 +18,12 @@ from asterion.runtime.protocol import validate_event_stream
 class DciRunExecutor(Protocol):
     """Narrow native DCI executor boundary reserved for application integration."""
 
-    def run(self, request: DciRunRequest) -> DciRunResult: ...
+    def run(
+        self,
+        request: DciRunRequest,
+        *,
+        cancel_event: threading.Event | None = None,
+    ) -> DciRunResult: ...
 
 
 def project_dci_run(result: DciRunResult) -> PackageExecutionResult:

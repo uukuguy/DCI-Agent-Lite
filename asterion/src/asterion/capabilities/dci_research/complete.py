@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import os
 import stat
+import threading
 from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path
@@ -16,13 +18,14 @@ from asterion.dci.analysis import aggregate_results
 from asterion.dci.bridge import DciRunExecutor, project_dci_run
 from asterion.dci.evaluation import evaluate_run_directory_async
 from asterion.dci.judge import JudgeConfig, judge_answer_async
-from asterion.dci.run import DciRunRequest
+from asterion.dci.run import DciRunRequest, DciRunResult
 from asterion.packages.execution import (
     PackageExecutionError,
     PackageExecutionResult,
     PackageInvocation,
 )
 from asterion.runtime.host import RunRequest
+from asterion.runtime.host import CancellationSignal
 from asterion.runtime.protocol import ProtocolError, validate_event_stream
 
 
@@ -127,7 +130,13 @@ def _artifact(invocation: PackageInvocation, media_type: str) -> dict[str, objec
     ]
     if len(matches) != 1 or not isinstance(matches[0].get("value"), Mapping):
         raise PackageExecutionError("complete application upstream evidence is invalid")
-    return dict(matches[0]["value"])
+    value = dict(matches[0]["value"])
+    if (
+        value.get("schema") != IMPLEMENTATION_PROTOCOL
+        or value.get("implementation_sha256") != complete_application_identity()
+    ):
+        raise PackageExecutionError("complete application upstream evidence is invalid")
+    return value
 
 
 def _result(
@@ -185,14 +194,16 @@ class DciCompleteResearchImplementation:
         question, gold = _envelope(invocation.input_text)
         if invocation.runtime.manifest.runtime_id == "pi.reference":
             try:
-                native = self._native_executor.run(
+                native = await _run_native_cancellable(
+                    self._native_executor,
                     DciRunRequest(
                         run_id=invocation.run_id,
                         question=question,
                         cwd=Path.cwd(),
                         tools="read,grep",
                         max_turns=4,
-                    )
+                    ),
+                    invocation.signal,
                 )
                 projected = project_dci_run(native)
                 self._store.start(
@@ -270,6 +281,42 @@ class DciCompleteResearchImplementation:
         )
 
 
+async def _run_native_cancellable(
+    executor: DciRunExecutor,
+    request: DciRunRequest,
+    signal: CancellationSignal | None,
+) -> DciRunResult:
+    cancel_event = threading.Event()
+    work = asyncio.create_task(
+        asyncio.to_thread(executor.run, request, cancel_event=cancel_event)
+    )
+    try:
+        while not work.done():
+            if signal is not None and signal.cancelled:
+                cancel_event.set()
+            await asyncio.wait({work}, timeout=0.05)
+        return work.result()
+    except asyncio.CancelledError:
+        cancel_event.set()
+        await _drain_native_work(work)
+        raise
+
+
+async def _drain_native_work(work: asyncio.Task[object]) -> None:
+    while not work.done():
+        current = asyncio.current_task()
+        if current is not None:
+            current.uncancel()
+        try:
+            await asyncio.wait({work})
+        except asyncio.CancelledError:
+            continue
+    try:
+        work.result()
+    except Exception:
+        pass
+
+
 Evaluator = Callable[..., Awaitable[dict[str, object]]]
 AnswerEvaluator = Callable[..., Awaitable[dict[str, object]]]
 
@@ -306,17 +353,23 @@ class DciCompleteEvaluationImplementation:
         try:
             config = self._judge_config()
             if attempt.predicted_answer is None:
-                verdict = await self._evaluator(
-                    attempt.output_dir,
-                    gold_answer=attempt.gold_answer,
-                    judge_config=config,
+                verdict = await _await_with_signal(
+                    self._evaluator(
+                        attempt.output_dir,
+                        gold_answer=attempt.gold_answer,
+                        judge_config=config,
+                    ),
+                    invocation.signal,
                 )
             else:
-                verdict = await self._answer_evaluator(
-                    config=config,
-                    question=attempt.question,
-                    gold_answer=attempt.gold_answer,
-                    predicted_answer=attempt.predicted_answer,
+                verdict = await _await_with_signal(
+                    self._answer_evaluator(
+                        config=config,
+                        question=attempt.question,
+                        gold_answer=attempt.gold_answer,
+                        predicted_answer=attempt.predicted_answer,
+                    ),
+                    invocation.signal,
                 )
                 _write_private_json(attempt.output_dir / "eval_result.json", verdict)
         except Exception:
@@ -330,6 +383,31 @@ class DciCompleteEvaluationImplementation:
             media_type="application/vnd.dci.verdict+json",
             value={"is_correct": is_correct, "judge_request_fingerprint": fingerprint},
         )
+
+
+async def _await_with_signal(
+    operation: Awaitable[dict[str, object]],
+    signal: CancellationSignal | None,
+) -> dict[str, object]:
+    work = asyncio.create_task(operation)
+    try:
+        while not work.done():
+            if signal is not None and signal.cancelled:
+                work.cancel()
+                try:
+                    await work
+                except asyncio.CancelledError:
+                    pass
+                raise PackageExecutionError("complete evaluation was cancelled")
+            await asyncio.wait({work}, timeout=0.05)
+        return work.result()
+    except asyncio.CancelledError:
+        work.cancel()
+        try:
+            await work
+        except asyncio.CancelledError:
+            pass
+        raise
 
 
 class DciCompleteBenchmarkImplementation:

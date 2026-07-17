@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import json
+import threading
+import time
 import tempfile
 import unittest
 from collections.abc import AsyncIterator
@@ -26,6 +29,7 @@ from asterion.dci.dual_runtime_verification import (
 )
 from asterion.packages.catalog import PackageRef
 from asterion.packages.catalog import discover_packages
+from asterion.packages.execution import PackageExecutionError, PackageInvocation
 from asterion.runner.composed import run_composed_application
 from asterion.runtime.host import RunEvent, RunRequest, RuntimeManifest
 
@@ -175,7 +179,8 @@ class _NativeExecutor:
         self.questions: list[str] = []
         self.requests = []
 
-    def run(self, request) -> DciRunResult:
+    def run(self, request, *, cancel_event=None) -> DciRunResult:
+        del cancel_event
         self.requests.append(request)
         self.questions.append(request.question)
         return DciRunResult(
@@ -229,6 +234,132 @@ class _ClaudeRuntime:
 
 
 class DciCompleteApplicationExecutionTests(unittest.IsolatedAsyncioTestCase):
+    async def test_native_research_forwards_inflight_cancellation(self) -> None:
+        class Signal:
+            cancelled = False
+
+        class BlockingExecutor:
+            def __init__(self) -> None:
+                self.started = threading.Event()
+                self.stopped = threading.Event()
+
+            def run(self, request, *, cancel_event=None):
+                del request
+                if cancel_event is None:
+                    raise RuntimeError("missing cancellation event")
+                self.started.set()
+                while not cancel_event.is_set():
+                    time.sleep(0.01)
+                self.stopped.set()
+                raise RuntimeError("cancelled")
+
+        executor = BlockingExecutor()
+        signal = Signal()
+        implementation = DciCompleteResearchImplementation(
+            store=DciCompleteAttemptStore(), native_executor=executor
+        )
+        invocation = PackageInvocation(
+            package_ref=PackageRef("dci.research", "1.0.0"),
+            manifest={},
+            run_id="cancel-native",
+            input_text=json.dumps(
+                {"protocol": INPUT_PROTOCOL, "question": "question", "gold_answer": "gold"}
+            ),
+            upstream_artifacts=(),
+            runtime=_UnusedPiRuntime(),
+            host_services={},
+            signal=signal,
+        )
+        task = asyncio.create_task(implementation.execute(invocation))
+        self.assertTrue(await asyncio.to_thread(executor.started.wait, 1))
+        signal.cancelled = True
+
+        with self.assertRaises(PackageExecutionError):
+            await asyncio.wait_for(task, timeout=3)
+        self.assertTrue(executor.stopped.is_set())
+
+    async def test_stage_rejects_wrong_upstream_schema_or_implementation(self) -> None:
+        implementation = DciCompleteBenchmarkImplementation()
+        for value in (
+            {"schema": "wrong", "implementation_sha256": complete_application_identity(), "is_correct": True},
+            {"schema": "asterion.dci.complete-application/v1", "implementation_sha256": "0" * 64, "is_correct": True},
+        ):
+            with self.subTest(value=value), self.assertRaises(PackageExecutionError):
+                await implementation.execute(
+                    PackageInvocation(
+                        package_ref=PackageRef("dci.benchmark", "1.0.0"),
+                        manifest={},
+                        run_id="tampered-upstream",
+                        input_text="",
+                        upstream_artifacts=(
+                            {
+                                "artifact_id": "verdict",
+                                "media_type": "application/vnd.dci.verdict+json",
+                                "value": value,
+                            },
+                        ),
+                        runtime=_UnusedPiRuntime(),
+                        host_services={},
+                    )
+                )
+
+    async def test_evaluation_cancels_inflight_judge_when_signal_changes(self) -> None:
+        class Signal:
+            cancelled = False
+
+        signal = Signal()
+        started = asyncio.Event()
+        stopped = asyncio.Event()
+
+        async def evaluator(**kwargs):
+            del kwargs
+            started.set()
+            try:
+                await asyncio.sleep(30)
+            finally:
+                stopped.set()
+
+        with tempfile.TemporaryDirectory() as directory:
+            store = DciCompleteAttemptStore()
+            store.start(
+                "cancel-evaluation",
+                question="question",
+                gold_answer="gold",
+                output_dir=Path(directory),
+                predicted_answer="answer",
+            )
+            implementation = DciCompleteEvaluationImplementation(
+                store=store,
+                answer_evaluator=evaluator,
+                judge_config=lambda: object(),
+            )
+            invocation = PackageInvocation(
+                package_ref=PackageRef("dci.evaluation", "1.0.0"),
+                manifest={},
+                run_id="cancel-evaluation",
+                input_text="",
+                upstream_artifacts=(
+                    {
+                        "artifact_id": "research",
+                        "media_type": "application/vnd.dci.research+json",
+                        "value": {
+                            "schema": "asterion.dci.complete-application/v1",
+                            "implementation_sha256": complete_application_identity(),
+                        },
+                    },
+                ),
+                runtime=_UnusedPiRuntime(),
+                host_services={},
+                signal=signal,
+            )
+            task = asyncio.create_task(implementation.execute(invocation))
+            await asyncio.wait_for(started.wait(), timeout=1)
+            signal.cancelled = True
+
+            with self.assertRaises(PackageExecutionError):
+                await asyncio.wait_for(task, timeout=3)
+            self.assertTrue(stopped.is_set())
+
     async def test_claude_run_is_judged_and_exports_without_private_bodies(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             store = DciCompleteAttemptStore()
@@ -383,6 +514,7 @@ class DciRestrictedClaudeEvidenceTests(unittest.TestCase):
         documents = {
             "request.json": {"requested_capabilities": ["filesystem.read", "claude.tool.grep", "claude.tool.glob"]},
             "runtime-policy.json": {
+                "runtime_cwd": str(corpus.resolve()),
                 "tools": ["Read", "Grep", "Glob"], "allowed_tools": ["Read", "Grep", "Glob"],
                 "max_turns": 4, "permission_mode": "dontAsk", "strict_mcp": True,
                 "mcp_servers": {}, "safe_mode": True, "no_session_persistence": True,
@@ -423,6 +555,17 @@ class DciRestrictedClaudeEvidenceTests(unittest.TestCase):
             events = [json.loads(line) for line in path.read_text().splitlines()]
             events[1]["payload"]["arguments"]["path"] = "/outside"
             path.write_text("".join(json.dumps(event) + "\n" for event in events))
+            path.chmod(0o600)
+            with self.assertRaises(DciDualRuntimeVerificationError):
+                audit_restricted_claude_application(run_dir=run, corpus_dir=corpus)
+
+    def test_policy_working_directory_must_equal_audited_corpus(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            run, corpus = self._fixture(Path(directory))
+            path = run / "runtime-policy.json"
+            policy = json.loads(path.read_text())
+            policy["runtime_cwd"] = str(run.resolve())
+            path.write_text(json.dumps(policy))
             path.chmod(0o600)
             with self.assertRaises(DciDualRuntimeVerificationError):
                 audit_restricted_claude_application(run_dir=run, corpus_dir=corpus)
