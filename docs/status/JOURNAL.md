@@ -812,3 +812,4 @@
 - 09:26 D-046 separates unpublished BrowseComp reproduction IDs and Bamboogle full-125 from local sample-50 surfaces.
 - 09:28 AF-320-H-001 confirmed 4/4; package acceptance recorded.
 - 09:30 Paper inventory and BEIR parity enforce truthful, non-executable AF-320 scopes. [28c822b]
+- 09:32 Recovery checkpoint advances AF-320 from confirmed H001 to H002 metric primitives.
