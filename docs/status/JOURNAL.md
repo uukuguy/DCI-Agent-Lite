@@ -823,3 +823,4 @@
 - 11:33 H002/H003 Climb evidence advances the recovery boundary to H004. [7867a4d]
 - 11:47 Paper review found FineWeb distractor seed/IDs unpublished; D-047 forbids fabricated matrix identities before implementation.
 - 11:49 FineWeb provenance correction keeps H004 paper rows truthful and non-executable. [2c0a67d]
+- 12:18 Deterministic paper/bounded matrices add safe model-free ablation inspection. [44448e6]
