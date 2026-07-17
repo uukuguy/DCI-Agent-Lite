@@ -814,3 +814,4 @@
 - 09:30 Paper inventory and BEIR parity enforce truthful, non-executable AF-320 scopes. [28c822b]
 - 09:32 Recovery checkpoint advances AF-320 from confirmed H001 to H002 metric primitives.
 - 09:44 Paper coverage, localization, and retained metrics gain immutable fail-closed primitives. [7ad3e3a]
+- 10:04 AF-320 native trajectory analysis binds private observations and body-free resolution evidence. [b3ac9d0]
