@@ -76,6 +76,33 @@ commit the output root, credentials, prompts, answers, or tool bodies. Profile
 runs intended for resume must preserve the original Pi session with
 `--keep-session`.
 
+### Paper and bounded ablation matrix
+
+The packaged matrix keeps ten paper-declared rows separate from ten tiny
+bounded analogues; it never generates a Cartesian product at execution time.
+Validate and inspect it without loading `.env`, Pi, a provider, a Judge, or a
+dataset:
+
+```bash
+uv run --project asterion asterion-dci ablation validate
+uv run --project asterion asterion-dci ablation list
+uv run --project asterion asterion-dci ablation list \
+  --execution-class bounded-fixture
+uv run --project asterion asterion-dci ablation render \
+  paper.corpus.100000
+uv run --project asterion asterion-dci ablation render \
+  bounded.tools.read-grep
+```
+
+The paper render is deliberately a `NON-EXECUTABLE` comment. Every
+`paper-full` row remains blocked until separately reviewed AF-340 authority.
+FineWeb corpus rows preserve the paper's unreported revision, seed, selection
+algorithm, IDs, and manifest digest as null; they do not invent reproduction
+identity. The restricted tool row is the literal Pi `read,grep` set and never
+smuggles command filtering through `bash`. A bounded render names exactly one
+row and still requires the ordinary benchmark/provider authorization when Task
+7 connects it to execution.
+
 Command class: **provider-free**
 
 ```bash
@@ -102,6 +129,7 @@ uv run --project asterion asterion-dci system-prompt --help
 uv run --project asterion asterion-dci evaluate --help
 uv run --project asterion asterion-dci benchmark --help
 uv run --project asterion asterion-dci export --help
+uv run --project asterion asterion-dci ablation --help
 bash -n scripts/examples/dci_basic_example.sh \
   scripts/examples/dci_runtime_context_example.sh \
   scripts/examples/asterion_dci_basic_example.sh \

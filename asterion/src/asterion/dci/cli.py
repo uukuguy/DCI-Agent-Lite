@@ -16,6 +16,13 @@ from importlib import resources
 from pathlib import Path
 from typing import TextIO
 
+from asterion.dci.ablation import (
+    paper_ablation_matrix_sha256,
+    paper_ablation_row_ids,
+    render_paper_ablation_command,
+    resolve_paper_ablation_row,
+    validate_paper_ablation_matrix,
+)
 from asterion.dci.config import (
     DciRuntimeOptions,
     load_asterion_dci_env,
@@ -137,6 +144,17 @@ def _parser() -> argparse.ArgumentParser:
     qa.add_argument("--parquet-dir", type=Path, required=True)
     qa.add_argument("--output", type=Path, required=True)
     qa.add_argument("--no-decrypt", action="store_true")
+    ablation = commands.add_parser("ablation")
+    ablation_commands = ablation.add_subparsers(
+        dest="ablation_command", required=True
+    )
+    ablation_commands.add_parser("validate")
+    ablation_list = ablation_commands.add_parser("list")
+    ablation_list.add_argument(
+        "--execution-class", choices=("paper-full", "bounded-fixture")
+    )
+    ablation_render = ablation_commands.add_parser("render")
+    ablation_render.add_argument("row_id")
     return parser
 
 
@@ -213,6 +231,38 @@ def main(
             return 0
         _write_command_failure(stderr, _requested_command(effective_argv))
         return 2
+    if args.command == "ablation":
+        try:
+            if args.ablation_command == "validate":
+                payload: dict[str, object] = {
+                    "schema": "dci.paper-ablation-validation/v1",
+                    "rows": validate_paper_ablation_matrix(),
+                    "matrix_sha256": paper_ablation_matrix_sha256(),
+                }
+            elif args.ablation_command == "list":
+                rows = tuple(
+                    resolve_paper_ablation_row(row_id)
+                    for row_id in paper_ablation_row_ids()
+                )
+                if args.execution_class is not None:
+                    rows = tuple(
+                        row
+                        for row in rows
+                        if row.execution_class == args.execution_class
+                    )
+                payload = {
+                    "schema": "dci.paper-ablation-list/v1",
+                    "matrix_sha256": paper_ablation_matrix_sha256(),
+                    "rows": [row.to_mapping() for row in rows],
+                }
+            else:
+                stdout.write(render_paper_ablation_command(args.row_id) + "\n")
+                return 0
+            stdout.write(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+            return 0
+        except (RuntimeError, ValueError):
+            stderr.write("DCI ablation command failed\n")
+            return 2
     try:
         invocation_cwd = Path.cwd().resolve()
         root = invocation_cwd if repo_root is None else Path(repo_root).resolve()
@@ -627,6 +677,7 @@ def _read_evaluation_answer(
 
 def _write_command_failure(stderr: TextIO, command: str) -> None:
     messages = {
+        "ablation": "DCI ablation command failed\n",
         "evaluate": "DCI evaluation failed\n",
         "benchmark": "DCI benchmark failed\n",
         "system-prompt": "DCI system prompt generation failed\n",
@@ -649,6 +700,7 @@ def _requested_command(argv: list[str]) -> str:
             "system-prompt",
             "evaluate",
             "benchmark",
+            "ablation",
         }
         else ""
     )
