@@ -638,8 +638,11 @@ class DciRestrictedClaudeEvidenceTests(unittest.TestCase):
         self.assertEqual(
             record["schema"], "asterion.dci.climb-provider-evidence/v2"
         )
-        self.assertEqual(record["source_commit"], "1951d12")
+        self.assertEqual(record["source_commit"], "ffca6ae")
         self.assertRegex(record["source_sha256"], r"^[0-9a-f]{64}$")
+        self.assertEqual(record["agent_provider"], "minimax")
+        self.assertEqual(record["agent_model"], "MiniMax-M3")
+        self.assertRegex(record["claude_code_version"], r"^\d+\.\d+\.\d+$")
         self.assertEqual(record["agent_operations"], 1)
         self.assertEqual(record["judge_operations"], 1)
         self.assertEqual(record["tools"], {"Glob": 0, "Grep": 1, "Read": 0})

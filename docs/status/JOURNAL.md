@@ -893,3 +893,9 @@
 - 18:18 Task cancellation now signals, drains, kills, and reaps the owned Claude process; retained evidence replays raw JSONL through the production adapter and derives agent/provider/model/version identity.
 - 17:59 AF-330-H-004 confirmed 4/4; package acceptance recorded.
 - 18:19 AF-330 cancellation and raw-replay repair passes 122/122 Asterion tests, Ruff, compile, scope, and diff checks.
+- 18:20 Raw replay and cancellation draining make fresh Claude evidence independently certifiable. [ffca6ae]
+- 18:21 r10 rejected: MiniMax-M3 completed without a tool call, so DeepSeek correctly marked the ungrounded answer false.
+- 18:25 AF-330-H-004 confirmed 4/4; package acceptance recorded.
+- 18:25 Fresh r11 passed MiniMax-M3 Claude, one Grep, five stages, and one DeepSeek Judge; r10 remains rejected.
+- 18:26 Terminal raw replay bound report `9e929881…8736`, record `81137f4c…075`, implementation `613578bd…6477`, and source `ffca6ae`.
+- 18:26 Climb cycle 102 reconfirmed H004 4/4 against r11 through the strengthened terminal verifier.
