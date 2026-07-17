@@ -873,3 +873,5 @@
 - 17:16 H004 tracked evidence rebinds six private artifacts to report `1b0c5b09…65c8b`.
 - 17:24 Climb research-tree regeneration attaches the tracked H004 provider/report digests to its confirmed node.
 - 17:24 TypeScript reference inventory now covers all complete-application package and assembly manifests; 11/11 Node tests pass.
+- 17:25 AF-330 synchronizes TypeScript/Climb inventories so complete manifests and H004 digests stay executable. [0772ffb]
+- 17:31 D-050 accepts end-to-end restricted authority after review found CWD, environment, cancellation, artifact, and evidence-binding gaps.

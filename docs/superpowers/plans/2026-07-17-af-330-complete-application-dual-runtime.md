@@ -100,6 +100,12 @@ safe `RuntimeFactoryError` without values.
 
 ## Task 6 — Terminal closure
 
+- RED/GREEN the independent-review repairs: exact runtime-CWD/corpus binding,
+  minimal provider-only child environment, in-flight cancel/kill/reap, nonzero
+  exit rejection, upstream schema/implementation validation, and retained
+  evidence re-audit against the tracked record.
+- Confirm original native DCI resume remains executable without introducing a
+  generic application persistence/control plane.
 - Run focused and full Python suites, compile, Ruff, shell syntax, product/static
   verifier, source/install/wheel checks, privacy/credential scan, scope preflight,
   `git diff --check`, and independent inline review.

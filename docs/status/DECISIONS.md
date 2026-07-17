@@ -162,7 +162,7 @@
 
 ## D-019 — Keep Claude Code authentication on the subprocess environment boundary
 
-- Status: ✅ accepted and implemented decision
+- Status: 🔴 superseded for restricted application execution by D-050
 - Decided: 2026-07-12
 - Decision: support both Claude Code's stored login and its environment-configured Anthropic-compatible/cloud backends by copying the complete caller environment to the restricted subprocess.
 - Rationale: allowlisting only `ANTHROPIC_*` would break PATH, proxy, Bedrock, Vertex, AWS, and GCP configuration; placing tokens or routing data in CLI arguments or protocol payloads would create persistence and process-inspection risks.
@@ -474,3 +474,14 @@
 - Failure boundary: a runtime/provider pair without an explicit adapter mapping fails before provider construction. Asterion does not guess that an OpenAI-compatible provider is Claude-compatible and does not silently fall back to stored OAuth.
 - Judge boundary: `DCI_EVAL_JUDGE_*` remains independent because Judge evaluation is a separate role and operation from the selected agent runtime.
 - Revalidation trigger: add another shared provider only after both runtime adapters have an explicit tested mapping and credential-redaction coverage.
+
+## D-050 — Bind restricted application authority from execution through verification
+
+- Status: ✅ accepted design correction
+- Decided: 2026-07-17
+- Decision: a restricted Claude run persists its resolved working-directory identity in private policy evidence, and the terminal auditor requires that identity to equal the explicitly supplied corpus root before interpreting any relative tool path. A successful normalized stream cannot override a nonzero child exit.
+- Environment boundary: restricted execution uses a minimal operational allowlist plus adapter-derived provider variables. Judge credentials, arbitrary caller secrets, stored-OAuth selectors, and competing Claude/Anthropic authentication variables are excluded unless the selected adapter derives them for this run. This narrows D-019's historical complete-environment behavior for the AF-330 restricted path.
+- Cancellation boundary: the runtime owns the Claude child process and must terminate, reap, and fail safely when cancellation arrives after start; deadline and cancellation evidence cannot claim completion while provider work survives. Native Pi application execution retains the existing Asterion DCI cancellation/deadline and durable native-resume contracts.
+- Artifact boundary: every stage validates the complete-application schema and implementation digest of its sole upstream artifact before evaluation or mutation. Generic application composition remains one invocation, not a new persistent workflow control plane; `asterion-dci resume` remains the authoritative original-DCI restart path.
+- Evidence boundary: closure reruns the independent auditor over retained private artifacts, compares the resulting report digest and implementation/source identities with the tracked body-free record, and rejects path, mode, digest, or identity substitution. A tracked counter-only JSON assertion is not terminal rebinding.
+- Revalidation trigger: broaden the child environment, change working-directory authority, add mid-graph workflow persistence, or weaken terminal evidence only through a new reviewed security/protocol decision and adversarial tests.

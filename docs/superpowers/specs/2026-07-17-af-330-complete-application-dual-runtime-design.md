@@ -26,6 +26,8 @@ Evaluation consumes research evidence, benchmark consumes dataset rows and the
 same evaluation contract, analysis consumes immutable benchmark/evidence
 artifacts, and export consumes analysis. Invalid, missing, reordered, or
 identity-mismatched upstream artifacts fail before provider construction.
+Each consumed artifact must carry the exact complete-application schema and the
+current implementation digest; matching media type alone is insufficient.
 
 ## Claude Code restriction boundary
 
@@ -51,6 +53,13 @@ identity, tool names, turn/operation counts, cancellation/deadline status, and
 artifact references without prompts, answers, tool bodies, credentials, or
 private paths.
 
+Private policy evidence also records the resolved runtime working directory.
+The independent auditor requires it to equal the separately supplied resolved
+corpus root before resolving relative tool arguments. The runtime owns the child
+process after start: cancellation terminates and reaps it, deadlines cannot
+leave provider work running, and a nonzero process exit always fails even if a
+syntactically successful result event was emitted.
+
 ## Shared agent configuration
 
 Runtime selection and model-provider selection are separate. The application or
@@ -69,6 +78,13 @@ Claude model aliases exist only at the subprocess boundary and are never persist
 An unsupported provider/runtime combination or a missing credential fails
 before Claude starts. Judge selection remains independently configured through
 `DCI_EVAL_JUDGE_*` because evaluation is a distinct role, not an agent runtime.
+
+The restricted child environment is rebuilt from a small operational allowlist
+(executable lookup, home/temp/locale, certificate, and proxy settings) plus the
+adapter-derived provider values. It does not inherit Judge credentials,
+arbitrary caller secrets, stored-OAuth selectors, or competing Claude auth
+modes. Provider and Judge role separation is therefore enforced, not merely
+documented.
 
 ## Pi restriction boundary
 
@@ -92,6 +108,14 @@ unmodified.
 - Fixture-only Claude evidence cannot close AF-330. No full dataset runs.
 - One MiniMax provider/model/key configuration selects the same agent backend
   through either runtime without user-authored `ANTHROPIC_*` duplication.
+- Terminal acceptance reruns the auditor against retained private evidence and
+  verifies its report, implementation, source, and tracked-record digests; a
+  counter-only tracked assertion cannot close the package.
+
+Original DCI durable resume remains exposed through the native DCI run and
+`asterion-dci resume` path. The generic five-stage composer is deliberately one
+invocation and does not add a second persistent workflow control plane; a failed
+generic invocation is retried under a fresh run identity.
 
 ## Rejected shortcuts
 
