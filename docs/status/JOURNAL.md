@@ -805,3 +805,4 @@
 - 08:15 Final r9 ran against a separate clean clone at the locked Pi revision while leaving original `pi/` untouched. Exactly two bounded Pi operations passed: L3 compacted once with twelve observed preserved turns and no summary; L4 compacted once with one successful unsuppressed summary. No Judge or full dataset ran.
 - 08:16 Climb evidence `65c43d4fecdacc296dfc1997ae49f5ec870e22e6a1b78f70c8a134f955f28e15` rehashes the private r9 report/artifacts and clean Pi identity; identical rebinding is byte-stable, while dirty Pi, symlink, mode, digest, and conflict cases fail closed.
 - 08:18 AF-310 final closure passes 1288 Python, 11 TypeScript, Ruff, compile, product 8/8, delegated 533/533, launchers 12/12, extras 6/6, bounded 7/7, installed application, scope, and diff gates. Governance transitions to complete before AF-320 design activation.
+- 08:20 AF-310 closes exact L0–L4 runtime context management with clean bound evidence. [95deae8]
