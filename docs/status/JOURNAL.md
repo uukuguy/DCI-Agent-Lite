@@ -827,3 +827,6 @@
 - 12:20 Matrix checkpoint moves the recovery boundary to AF-320 product parity. [ff5ae84]
 - 13:07 Paper contracts, safe export, bounded selection, fingerprints, and isolated-wheel parity close Task 7. [5b21aef]
 - 13:42 AF-320 Task 8 adds exact bounded verification and immutable terminal evidence binding. [59c4064]
+- 13:44 Evidence-preflight checkpoint preserves the zero-operation boundary before live acceptance. [205a9af]
+- 13:48 Provider preflight rejected dirty Pi and non-GPT-4.1 Judge configuration before creating output or external operations.
+- 14:02 Bounded agents now externalize tool results so retained evidence covers paper analysis inputs. [94f01b5]
