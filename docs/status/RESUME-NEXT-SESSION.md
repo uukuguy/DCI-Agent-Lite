@@ -6,7 +6,7 @@ Active work package: AF-330
 
 Package: AF-330 complete application and dual-runtime exposure
 
-Currently running: no process. AF-330 governance, design, plan, and four package-parented Climb hypotheses are active; H001 composition RED tests are next.
+Currently running: no process. AF-330-H-001 is confirmed 4/4; H002 production implementations and product/application identity are next.
 
 ## TL;DR
 
@@ -27,8 +27,8 @@ Currently running: no process. AF-330 governance, design, plan, and four package
 
 ## Next concrete action
 
-1. Write `tests.test_dci_complete_application` RED coverage for five exact stages and declared event/artifact edges.
-2. Add missing manifests/assemblies and production stage implementations with shared identity.
+1. Write H002 RED tests for five executable bindings and shared CLI/application artifact identity.
+2. Implement evaluation, benchmark, analysis, and export adapters over existing Asterion DCI domain modules.
 3. Advance through restricted real Pi and Claude Code evidence without full datasets.
 
 ## Boundaries

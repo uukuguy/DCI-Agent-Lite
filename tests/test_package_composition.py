@@ -225,7 +225,7 @@ class DciReferencePackageTests(unittest.TestCase):
 
     def test_reference_graph_rejects_a_runtime_without_required_capabilities(self) -> None:
         with self.assertRaises(PackageCompositionError):
-            self.compose_for({"filesystem.read"})
+            self.compose_for(set())
 
 
 class ControlledCodePackageTests(unittest.TestCase):

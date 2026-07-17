@@ -65,6 +65,7 @@
 - AF-320-H-002 is confirmed 4/4: exact parameterized coverage/localization and retained-evidence primitives, matched-gold/query aggregation, unavailable-value handling, and batch analysis pass deterministic acceptance.
 - AF-320-H-003 is confirmed 4/4: conservative native observation alignment, byte-exact recorder/context/payload/input identity, cache invalidation, and strict body-free projections pass deterministic acceptance and independent review.
 - AF-320-H-004 is confirmed 4/4: deterministic paper/bounded matrices, product commands, benchmark/export/verification exposure, cache identity, documentation, isolated-wheel parity, and terminal three-operation evidence binding all pass.
+- AF-330-H-001 is confirmed 4/4: Pi and Claude resolve one exact five-stage research/evaluation/benchmark/analysis/export graph with closed sequential event/artifact edges and no shell, web, or subagent requirement.
 
 - AF-310-H-001 is confirmed 4/4: the closed schema-backed L0–L4 profile names, exact thresholds, stable identity, and configuration/request validation pass.
 - AF-310-H-002 is confirmed 4/4: the dependency-free Asterion Pi extension implements exact tool-result caps, L3 live-turn retention/compaction, L4 recent-context targeting, and three-failure summary suppression that falls back to L3 compaction. Fake-Pi tests prove model-visible hooks and body-free durable state.

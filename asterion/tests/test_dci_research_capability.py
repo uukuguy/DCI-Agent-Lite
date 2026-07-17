@@ -106,7 +106,7 @@ class DciResearchCapabilityTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(runtime.requests[0].input_text, "SECRET-APPLICATION-INPUT")
         self.assertEqual(
             runtime.requests[0].requested_capabilities,
-            ("filesystem.read", "shell"),
+            ("filesystem.read",),
         )
         self.assertIs(runtime.signals[0], signal)
         self.assertEqual(result.events[0]["type"], "research.completed")

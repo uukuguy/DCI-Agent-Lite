@@ -2191,45 +2191,64 @@ hypotheses:
       report_sha256: 1b4d71388169a4fe126793cba11c7eb91b73644dffa417744f4e357a68dc2b75
 - id: AF-330-H-001
   work_package_id: AF-330
-  description: Prove the five-stage research, evaluation, benchmark, analysis, and export composition contract with exact event and artifact edges.
+  description: Prove the five-stage research, evaluation, benchmark, analysis, and
+    export composition contract with exact event and artifact edges.
   parent_paradigm: dci-complete-application-composition
   expected_lift: +1 complete executable application graph
   cost_h: 1.5
   ranking: 1.0
-  status: proposed
+  status: confirmed
   created_at: '2026-07-17T12:49:00+08:00'
   verification_command: uv run --project asterion python -m unittest -v tests.test_dci_complete_application
-  results: []
+  results:
+  - session: 2026-07-17-af-330-complete-application-dual-runtime
+    cycle: 96
+    run: 20260717-130305-dci-climb-af330h001
+    local: 4
+    local_per_task:
+      exact_stage_graph: 1
+      declared_edges: 1
+      restricted_capabilities: 1
+      checked_in_assemblies: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-330-H-002
   work_package_id: AF-330
-  description: Prove product CLI, generic application, installed application, and isolated wheel share implementation and artifact identity.
+  description: Prove product CLI, generic application, installed application, and
+    isolated wheel share implementation and artifact identity.
   parent_paradigm: dci-application-product-identity
   expected_lift: +1 source-to-wheel application parity
   cost_h: 1.5
   ranking: 0.9
-  status: proposed
+  status: pending
   created_at: '2026-07-17T12:49:00+08:00'
-  verification_command: uv run --project asterion python -m unittest -v tests.test_dci_complete_application tests.test_asterion_cli tests.test_asterion_distribution
+  verification_command: uv run --project asterion python -m unittest -v tests.test_dci_complete_application
+    tests.test_asterion_cli tests.test_asterion_distribution
   results: []
 - id: AF-330-H-003
   work_package_id: AF-330
-  description: Prove a bounded real Pi complete-application run is confined to an attempt-local corpus with dedicated read and grep operations.
+  description: Prove a bounded real Pi complete-application run is confined to an
+    attempt-local corpus with dedicated read and grep operations.
   parent_paradigm: dci-restricted-pi-application
   expected_lift: +1 bound native semantic application path
   cost_h: 1.5
   ranking: 0.8
-  status: proposed
+  status: pending
   created_at: '2026-07-17T12:49:00+08:00'
-  verification_command: uv run --project asterion python -m unittest -v tests.test_dci_dual_runtime_acceptance tests.test_asterion_dci_security
+  verification_command: uv run --project asterion python -m unittest -v tests.test_dci_dual_runtime_acceptance
+    tests.test_asterion_dci_security
   results: []
 - id: AF-330-H-004
   work_package_id: AF-330
-  description: Prove a bounded real Claude Code run uses a fail-closed Read/Grep/Glob-only local-corpus boundary and body-free evidence binding.
+  description: Prove a bounded real Claude Code run uses a fail-closed Read/Grep/Glob-only
+    local-corpus boundary and body-free evidence binding.
   parent_paradigm: dci-restricted-claude-application
   expected_lift: +1 bound Claude semantic application path
   cost_h: 2.0
   ranking: 0.7
-  status: proposed
+  status: pending
   created_at: '2026-07-17T12:49:00+08:00'
-  verification_command: uv run --project asterion python -m unittest -v tests.test_claude_code_runtime tests.test_dci_dual_runtime_acceptance
+  verification_command: uv run --project asterion python -m unittest -v tests.test_claude_code_runtime
+    tests.test_dci_dual_runtime_acceptance
   results: []

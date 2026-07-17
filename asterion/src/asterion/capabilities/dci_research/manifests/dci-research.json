@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "kind": "capability",
   "provides_capabilities": ["research.local-corpus"],
-  "requires_capabilities": ["filesystem.read", "shell"],
+  "requires_capabilities": ["filesystem.read"],
   "requires_policies": ["policy.local-corpus"],
   "emits_events": ["research.completed"],
   "consumes_events": ["run.started", "tool.result"],

@@ -226,7 +226,7 @@ class PackageSelectionTests(unittest.TestCase):
 
         selected = catalog.select(reversed(self.controlled_refs))
 
-        self.assertEqual(len(catalog.entries), 8)
+        self.assertEqual(len(catalog.entries), 11)
         self.assertEqual(
             tuple(manifest["package_id"] for manifest in selected),
             tuple(ref.package_id for ref in self.controlled_refs),

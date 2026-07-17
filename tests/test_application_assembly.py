@@ -266,6 +266,8 @@ class ReferenceAssemblyTests(unittest.TestCase):
             names,
             {
                 "controlled-code-validation.json",
+                "dci-complete-application-claude.json",
+                "dci-complete-application-pi.json",
                 "dci-local-research.json",
                 "dci-research-capability.json",
                 "dci-research-capability-claude.json",
