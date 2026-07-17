@@ -1,19 +1,20 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-17 15:23 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-17 15:59 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-330
 
 Package: AF-330 complete application and dual-runtime exposure
 
-Currently running: no process. AF-330-H-001 through H003 are confirmed 4/4. H004 implementation is committed; real Claude evidence is blocked only by `loggedIn=false`.
+Currently running: no process. AF-330-H-001 through H003 are confirmed 4/4. H004 implementation and shared MiniMax translation are committed; real Claude evidence awaits one valid three-line MiniMax agent configuration.
 
 ## TL;DR
 
 - AF-320 is complete; AF-330 now owns five-stage application composition and bounded real Pi/Claude semantics.
 - AF-330 uses exact Read/Grep/Glob visibility plus fail-closed sandbox/settings identity for Claude; prompt-only restriction is rejected.
 - Commit `86363de` completes the restricted Claude application, private evidence, direct Judge evaluation, and independent body-free auditor in both original/Asterion runtime surfaces.
-- The bounded real attempt failed at Claude authentication before DeepSeek was called; this is not H004 evidence and H004 remains pending.
+- Commit `6387f42` makes Pi/Claude share `DCI_PROVIDER`, `DCI_MODEL`, and one provider key; the adapter privately derives official Claude Code MiniMax variables and rejects unsupported combinations before construction.
+- The earlier bounded attempt failed at Claude authentication before DeepSeek was called. The repository `.env` still selects `openai-codex` and has no MiniMax key, so this is not H004 evidence and H004 remains pending.
 - Bounded acceptance now uses the configured supported Judge and binds its endpoint/API/model/request-shaping identity plus prompt-contract digest; GPT-4.1 is not a functional gate.
 - Final evidence SHA is `0d48c9f24a6a54335c8e80d4569ddb0e8ad6635c10c4849e6ec1cb3f171ccd55`; it binds a clean locked Pi runtime, DeepSeek Judge identity, two agents, one Judge, and no full dataset.
 - `paper-full` rows remain unconditionally non-executable; AF-340 remains the only package that may add full-run authorization and budget.
@@ -29,7 +30,7 @@ Currently running: no process. AF-330-H-001 through H003 are confirmed 4/4. H004
 
 ## Next concrete action
 
-1. Restore an operator-owned Claude login with `claude auth login`, then confirm `claude auth status` reports `loggedIn=true`.
+1. Put one MiniMax choice in the private `.env`: international `DCI_PROVIDER=minimax`, `DCI_MODEL=MiniMax-M2.7`, `MINIMAX_API_KEY=...`; or China `DCI_PROVIDER=minimax-cn`, the same model, and `MINIMAX_CN_API_KEY=...`. Do not add `ANTHROPIC_*`.
 2. Run one new bounded complete application with a fresh run ID and the ignored `outputs/af330-claude-corpus` corpus.
 3. Audit its private directory, write body-free tracked H004 evidence, run Climb, and close AF-330 only if all four H004 checks pass.
 
@@ -46,6 +47,5 @@ Currently running: no process. AF-330-H-001 through H003 are confirmed 4/4. H004
 ```bash
 git status --short
 python3 tools/project_scope_check.py
-claude auth status
 ASTERION_RUNTIME_CWD=outputs/af330-claude-corpus ASTERION_CLAUDE_OUTPUT_ROOT=outputs/af330-claude-runs uv run asterion run --provider dci-agent-lite --application dci.complete-application@1.0.0 --runtime claude-code.reference --run-id af330-claude-bounded-r2 --input '{"protocol":"asterion.dci.complete-input/v1","question":"Read the local corpus and report only the four-digit number paired with the bounded verification phrase silver compass.","gold_answer":"8426"}'
 ```

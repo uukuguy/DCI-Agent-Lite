@@ -857,3 +857,4 @@
 - 15:28 Climb routes H004 through restricted Claude checks and requires real tracked evidence. [6caba1a]
 - 15:46 D-049 makes agent provider/model shared while runtime adapters own native translation. [79bb6ad]
 - 15:48 Shared provider translation plan defines MiniMax mapping and TDD closure. [84bb22b]
+- 15:59 Shared provider config now drives Claude MiniMax safely, enabling H004 without OAuth. [6387f42]
