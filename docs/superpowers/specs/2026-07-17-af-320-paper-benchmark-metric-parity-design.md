@@ -1,6 +1,7 @@
 # AF-320 Paper Benchmark and Metric Parity Design
 
-> Status: draft for independent review. This design implements the AF-320 slice
+> Status: approved; corrected for functional-level reproduction. This design
+> implements the AF-320 slice
 > approved by the paper-aligned DCI milestone. It does not authorize full
 > datasets or published-score reproduction.
 
@@ -72,8 +73,24 @@ source-split count before use. The paper does not publish seeds or selected IDs
 for the three sampled BrowseComp analysis scopes. AF-320 therefore does not
 label locally selected IDs as paper-published: those scopes use explicit
 Asterion-defined reproducible seeds, algorithms, and selected-ID digests. The
-all-830 scope records its sorted-ID manifest SHA-256. QA and BrowseComp correctness records the
-GPT-4.1 model/API/prompt identity in both result and Judge cache identity.
+all-830 scope records its sorted-ID manifest SHA-256. QA and BrowseComp
+correctness records the effective Judge model/API/prompt identity in both result
+and Judge cache identity. The paper's GPT-4.1 setting remains experiment
+provenance, not a functional implementation prerequisite.
+
+## Functional Reproduction Boundary
+
+AF-320 reproduces DCI capabilities and observable behavior, not literal paper
+configuration values. The bounded QA path executes the same agent → Judge
+contract with a configured, authenticated Judge and binds its effective provider,
+model, API, endpoint, request shaping, and prompt fingerprint. DeepSeek, GPT-4.1,
+or another supported Judge may satisfy functional acceptance when reported
+truthfully and validated through the production evaluator.
+
+AF-340 owns score reproduction and comparison. A claim that a run reproduces or
+compares a paper number must match the paper-declared Judge model and all other
+material experiment identities. AF-320 never relabels a configured Judge as the
+paper Judge and never infers score comparability from functional acceptance.
 
 The paper uses all 125 Bamboogle test questions, while the existing migrated
 profile/launcher names and local file contain a 50-row sample. The paper-full
@@ -207,7 +224,7 @@ identity, corpus manifest digest, max turns, provider/model placeholders,
 analysis configuration, expected artifact schemas, and declared cost class.
 Generation is deterministic and duplicate-free. Local acceptance executes
 model-free fixtures only. The bounded provider verifier may run one QA agent
-row, its exact GPT-4.1 Judge operation, and one IR/BEIR agent row; it never
+row, one configured Judge operation, and one IR/BEIR agent row; it never
 expands a matrix or selects a full dataset implicitly.
 
 ## Product Surface
@@ -222,8 +239,10 @@ Batch reuse rehashes and validates the complete dataset/profile/corpus/analysis
 identity plus the exact protocol stream, every consumed external tool blob,
 final context artifact, gold manifest, and each opened corpus/gold file before
 reusing metrics. Existing Judge cache identity remains independent but includes
-the exact GPT-4.1 model/API/prompt identity and every result field that affects
-evaluation request shaping.
+the effective model/API/endpoint/prompt identity and every result field that
+affects evaluation request shaping. The bounded evidence binder validates those
+effective values against the private evaluation artifact without imposing a
+specific provider or model.
 
 ## Security and Failure Semantics
 
@@ -252,9 +271,10 @@ Model-free acceptance must prove:
 - zero provider/Judge operations and no full dataset in the default verifier.
 
 Bounded acceptance requires exactly three declared external operations: one tiny
-QA agent fixture, one exact GPT-4.1 Judge operation for that fixture, and one
-tiny BEIR agent fixture. It records external runtime/model/Judge and artifact
-identities without bodies and does not claim score reproduction.
+QA agent fixture, one configured Judge operation for that fixture, and one tiny
+BEIR agent fixture. It records effective external runtime/model/Judge and
+artifact identities without bodies and does not claim score reproduction or
+paper-score comparability.
 
 AF-320 closes only after scope preflight, all local gates, bounded evidence,
 independent review, documentation truth, and unchanged external `pi/` pass.

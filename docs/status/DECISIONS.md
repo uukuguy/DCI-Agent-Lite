@@ -455,3 +455,12 @@
 - Decision: the paper declares random FineWeb distractor injection and the 100K/200K/400K corpus targets, but does not publish a FineWeb revision, seed, selection algorithm, selected IDs, or manifest digest. AF-320 records those fields as `paper-unreported` and null instead of manufacturing an identity.
 - Execution boundary: every affected corpus-scale row remains `paper-full` and unconditionally non-executable. A bounded analogue binds only packaged synthetic distractor fixtures and is never described as the paper selection.
 - Revalidation trigger: AF-340 may bind a FineWeb selection only from a reviewed primary artifact that makes the complete source and selected-document identity reproducible.
+
+## D-048 — Separate functional reproduction from literal experiment configuration
+
+- Status: ✅ accepted design correction
+- Decided: 2026-07-17
+- Decision: paper-aligned implementation means reproducing capabilities, contracts, execution paths, evidence, and verifiable behavior. A model, endpoint, sample count, seed, or published number is not an implementation prerequisite merely because the paper used it.
+- Judge boundary: AF-320 bounded acceptance may use any configured supported Judge, including DeepSeek, when the production evaluator executes and evidence truthfully binds the effective provider/model/API/endpoint/request-shaping identity. It may not relabel that evidence as GPT-4.1 or paper-score comparable.
+- Experiment boundary: AF-340 owns claims that reproduce or directly compare paper scores; those claims must bind every material paper experiment identity, including the paper-declared Judge model where applicable.
+- Revalidation trigger: make a literal experiment value an implementation gate only when it changes the capability contract itself, not solely the reported experimental outcome.

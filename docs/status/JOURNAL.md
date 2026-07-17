@@ -830,3 +830,5 @@
 - 13:44 Evidence-preflight checkpoint preserves the zero-operation boundary before live acceptance. [205a9af]
 - 13:48 Provider preflight rejected dirty Pi and non-GPT-4.1 Judge configuration before creating output or external operations.
 - 14:02 Bounded agents now externalize tool results so retained evidence covers paper analysis inputs. [94f01b5]
+- 14:05 Credential-boundary checkpoint records the rejected literal-model gate for correction. [27f7f88]
+- 14:12 D-048 separates functional reproduction from literal paper experiment configuration.
