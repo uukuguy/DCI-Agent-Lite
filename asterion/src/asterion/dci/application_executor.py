@@ -60,8 +60,7 @@ class EnvironmentDciRunExecutor:
             conversation_features=request.conversation_features,
             tools=request.tools if self._honor_request_tools else options.tools,
         )
-        return self._run_native(
-            resolve_dci_paths(root),
-            mapped,
-            _cancel_event=cancel_event,
-        )
+        paths = resolve_dci_paths(root)
+        if cancel_event is None:
+            return self._run_native(paths, mapped)
+        return self._run_native(paths, mapped, _cancel_event=cancel_event)

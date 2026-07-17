@@ -883,3 +883,5 @@
 - 17:44 Fresh r8 completed MiniMax-M3 Claude, one Grep, five stages, and one DeepSeek Judge with exact CWD/corpus binding; no full dataset ran.
 - 17:44 Terminal verifier bound report `2abfdd27…eae44`, record `df56c32b…ab34b`, implementation `613578bd…6477`, and reviewed source `c5a0411`.
 - 17:45 Climb cycle 100 reconfirmed AF-330-H-004 4/4 by invoking the retained-evidence terminal verifier.
+- 17:52 Full root verification found 16 downstream failures from one compatibility regression: cancel-aware executor always passed a new keyword to legacy injected two-argument callables.
+- 17:54 Native executor now passes cancellation only when present, preserving the historical injection seam while complete Pi runs remain cancel-aware.
