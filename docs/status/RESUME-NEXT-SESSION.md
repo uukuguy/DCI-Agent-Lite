@@ -1,43 +1,57 @@
-# Live Session Checkpoint
+# Next-Session Handoff
 
-> Updated: 2026-07-17 18:58 +0800. **Session remains active — not a final handoff.**
+> Finalized: 2026-07-17 19:05 +0800. This is the reviewed session-closeout baton.
 
 Active work package: none
 
 Package: none — project lifecycle complete
 
-Currently running: no process.
+Currently running: no repository-owned process.
 
 ## TL;DR
 
-- H001–H004 are confirmed 4/4 under the final descendant-safe cancellation and raw-replay contract.
-- Commits `9b6a1f6`, `c5a0411`, and compatibility repair `1951d12` bind runtime authority and independently re-audit retained evidence.
-- Fresh r12 completed MiniMax-M3 through Claude Code 2.1.212, one corpus-contained Grep, all five stages, and one correct configured DeepSeek evaluation without a full dataset.
-- Terminal replay binds report `07a69074…bce2`, tracked record `a62e62cd…ae89`, implementation `613578bd…6477`, and descendant-safe source `f3e2528`.
-- Climb cycle 103 invokes the final verifier and confirms H004 4/4; r7–r11 are diagnostic or rejected history.
-- Commit `ffca6ae` passes 122/122 Asterion tests and closes the task-cancellation/raw-replay implementation gaps.
-- Post-repair full closure passes 1396 root Python, 123 Asterion, 11 TypeScript, 19 Rust, product 8/8, delegated 533/533, launchers 12/12, extras 6/6, bounded 7/7, zero provider requests, fresh isolated wheel, static, scope, diff, and actual-key scans.
-- Final review found one Important descendant-held-pipe cleanup defect. A real RED reproduced it; bounded group SIGKILL escalation now passes 123/123 Asterion tests, and r12 rebinds the repaired source.
-- Terminal re-review reports no Critical, Important, or Minor findings and marks the implementation ready.
-- AF-330 is completed; every worklist package is completed and the project lifecycle is `complete`.
-- `.env` is privately configured for the international MiniMax Claude API and DeepSeek Judge; never print or commit it. External `pi/` remains untouched.
+- The paper-aligned functional DCI implementation is complete through AF-330; every package in `docs/status/WORKLIST.md` is completed and lifecycle is `complete`.
+- Context Management Strategies, paper benchmark/metric contracts, complete five-stage application execution, native resume, Pi, Claude Code, DeepSeek Judge, CLI, installed application, and isolated wheel surfaces are implemented and verified.
+- Final r12 completed MiniMax-M3 through Claude Code 2.1.212, one corpus-contained Grep, all five stages, and one correct configured DeepSeek evaluation without a full dataset.
+- Terminal replay binds report `07a69074…bce2`, tracked record `a62e62cd…ae89`, implementation `613578bd…6477`, and descendant-safe source `f3e2528`; Climb cycle 103 confirms H004 4/4.
+- Post-repair closure passes 1396 root Python, 123 Asterion, 11 TypeScript, 19 Rust, product 8/8, delegated 533/533, launchers 12/12, extras 6/6, bounded 7/7, zero provider requests, fresh isolated wheel, static, scope, diff, and actual-key scans.
+- Terminal independent review reports no Critical, Important, or Minor findings.
+- `.env` is mode 0600 and privately configured for international MiniMax plus DeepSeek Judge. Never print or commit it. External `pi/` remains untouched.
 
-## Next concrete action
+## Git boundary
 
-1. No active implementation. Reopen governance explicitly before new work; AF-340 requires separate budget authorization.
+- Branch: `main`.
+- Last completed implementation/state commit before this handoff: `87bf0bb` (`docs(status): record AF-330 closure commit`).
+- `main` was seven commits ahead of `origin/main` and zero behind before the final handoff commit; nothing was pushed during this session.
+- The working tree was clean before handoff synthesis. The three stale ignored `planning-with-files` files were removed.
+- No repository-owned process remains. Long-lived MCP/npm processes observed during closeout belong to external user sessions and were not stopped.
 
-## Boundaries
+## First resume action
 
-- No full datasets or paper-score comparison before AF-340 receives explicit budget authorization.
-- DeepSeek is a valid configured Judge for functional reproduction; it must not be relabeled as GPT-4.1 or paper-score comparable.
-- Original durable resume remains `asterion-dci resume`; the generic five-stage composer does not add a second workflow persistence control plane.
+1. Run `project-state resume`; it should recover lifecycle `complete` and no active package.
+2. Do not implement or launch Climb until governance is explicitly reopened with a named package.
+3. If the user authorizes AF-340, first define its budget, experiment identities, data availability, and score-comparability boundary in design/worklist/decisions, then run the scope preflight.
+
+## Open questions
+
+- Whether to push the local commits to `origin/main`.
+- Whether to authorize and budget AF-340 full-dataset/paper-score reproduction. It is not an implementation gap in the completed functional lifecycle.
+
+## Ruled-out paths
+
+- Do not equate functional paper capability reproduction with literal provider/model/number matching.
+- Do not call full datasets or paper scores reproduced; no full dataset ran.
+- Do not use r7–r11 as terminal Claude evidence. r12 is authoritative; r10 was explicitly rejected for making no tool call.
+- Do not duplicate Pi and Claude Code runtime/provider configuration in `.env`; `DCI_PROVIDER` and `DCI_MODEL` select the agent while adapters perform native translation.
+- Do not relabel DeepSeek Judge as GPT-4.1 or claim paper-score comparability.
 - Do not modify, clean, or commit the external `pi/` checkout.
+- Do not create another workflow persistence control plane; `asterion-dci resume` remains authoritative.
 
 ## Ready commands
 
 ```bash
-python3 tools/project_scope_check.py
 git status --short
-cd asterion && uv run python -m unittest discover -v
+git log --oneline origin/main..HEAD
+python3 tools/project_scope_check.py
 uv run --project asterion python tools/verify_af330_claude_evidence.py --repo-root . --run-dir outputs/af330-claude-runs/b97d0ec61ccbbf73cbf66b299e9cc5718721cb5093b05f896bac46d19583c809 --corpus-dir outputs/af330-claude-corpus --report outputs/af330-claude-evidence/r12-report.json --record docs/status/climb/provider-evidence/af-330-h-004.json
 ```
