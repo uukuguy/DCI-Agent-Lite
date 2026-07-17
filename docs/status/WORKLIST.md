@@ -356,7 +356,7 @@
 - Parent objective: Paper-aligned complete DCI implementation in Asterion
 - Scope: make research, evaluation, benchmark, analysis, and export distinct executable capability/application units with exact event/artifact edges, then prove the restricted local-corpus application with bounded real Pi and Claude Code runs.
 - Dependencies: AF-320
-- Acceptance: product CLI, generic application, installed application, and isolated wheel share implementation/artifact identity; Pi and Claude Code share domain contracts; both real bounded runtimes prove attempt-local corpus access without web, subagents, Bash, outside answer-bearing access, or public body/path leakage; cancellation, deadline, failure, resume, privacy, and evidence binding pass; fixture-only Claude evidence and full datasets cannot close the package.
+- Acceptance: product CLI, generic application, installed application, and isolated wheel share implementation/artifact identity; Pi and Claude Code share domain contracts and one `DCI_PROVIDER`/`DCI_MODEL` agent selection with adapter-owned provider translation; both real bounded runtimes prove attempt-local corpus access without web, subagents, Bash, outside answer-bearing access, or public body/path leakage; cancellation, deadline, failure, resume, privacy, configuration redaction, and evidence binding pass; fixture-only Claude evidence and full datasets cannot close the package.
 - Design: `docs/superpowers/specs/2026-07-17-af-330-complete-application-dual-runtime-design.md`
 - Plan: `docs/superpowers/plans/2026-07-17-af-330-complete-application-dual-runtime.md`
 

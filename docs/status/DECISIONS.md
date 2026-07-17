@@ -464,3 +464,13 @@
 - Judge boundary: AF-320 bounded acceptance may use any configured supported Judge, including DeepSeek, when the production evaluator executes and evidence truthfully binds the effective provider/model/API/endpoint/request-shaping identity. It may not relabel that evidence as GPT-4.1 or paper-score comparable.
 - Experiment boundary: AF-340 owns claims that reproduce or directly compare paper scores; those claims must bind every material paper experiment identity, including the paper-declared Judge model where applicable.
 - Revalidation trigger: make a literal experiment value an implementation gate only when it changes the capability contract itself, not solely the reported experimental outcome.
+
+## D-049 — Keep agent selection shared and translate it inside runtime adapters
+
+- Status: ✅ accepted design correction
+- Decided: 2026-07-17
+- Decision: `DCI_PROVIDER` and `DCI_MODEL` select the agent backend independently of the application-selected Pi or Claude Code runtime. Runtime-native environment names are adapter internals, not required user configuration.
+- MiniMax boundary: `minimax` and `minimax-cn` reuse Pi's existing provider IDs and single provider credential variables. The Claude adapter derives its Anthropic-compatible URL, token, model, and aliases only in the private subprocess environment; it never persists the derived token.
+- Failure boundary: a runtime/provider pair without an explicit adapter mapping fails before provider construction. Asterion does not guess that an OpenAI-compatible provider is Claude-compatible and does not silently fall back to stored OAuth.
+- Judge boundary: `DCI_EVAL_JUDGE_*` remains independent because Judge evaluation is a separate role and operation from the selected agent runtime.
+- Revalidation trigger: add another shared provider only after both runtime adapters have an explicit tested mapping and credential-redaction coverage.

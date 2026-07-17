@@ -51,6 +51,23 @@ identity, tool names, turn/operation counts, cancellation/deadline status, and
 artifact references without prompts, answers, tool bodies, credentials, or
 private paths.
 
+## Shared agent configuration
+
+Runtime selection and model-provider selection are separate. The application or
+CLI selects `pi.reference` or `claude-code.reference`; both adapters consume the
+same `DCI_PROVIDER` and `DCI_MODEL` agent selection. Users do not duplicate a
+logical provider, model, or credential into Claude-native configuration.
+
+Each adapter translates only providers it actually supports. Pi continues to
+use its provider registry. For `minimax` and `minimax-cn`, the Claude adapter
+derives its private Anthropic-compatible subprocess environment from the same
+provider/model and the provider's existing `MINIMAX_API_KEY` or
+`MINIMAX_CN_API_KEY`. The derived base URL, auth token, primary model, and Claude
+model aliases exist only at the subprocess boundary and are never persisted.
+An unsupported provider/runtime combination or a missing credential fails
+before Claude starts. Judge selection remains independently configured through
+`DCI_EVAL_JUDGE_*` because evaluation is a distinct role, not an agent runtime.
+
 ## Pi restriction boundary
 
 Pi continues to use the Asterion-owned extension and native recorder. AF-330's
@@ -71,6 +88,8 @@ unmodified.
   selected local corpus, use no web/subagent/outside answer-bearing source, and
   produce independently rebound private evidence plus a body-free public record.
 - Fixture-only Claude evidence cannot close AF-330. No full dataset runs.
+- One MiniMax provider/model/key configuration selects the same agent backend
+  through either runtime without user-authored `ANTHROPIC_*` duplication.
 
 ## Rejected shortcuts
 
@@ -79,3 +98,4 @@ unmodified.
 - Relying on prompts to prohibit web, subagents, or outside-file access.
 - Retaining Bash with command-string filtering as the Claude corpus boundary.
 - Claiming paper experiment reproduction from bounded application acceptance.
+- Exposing runtime-native credential aliases as required project configuration.
