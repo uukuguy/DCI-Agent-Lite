@@ -865,3 +865,5 @@
 - 16:51 D-049 now distinguishes MiniMax Token Plan bearer credentials from ordinary API-key authentication.
 - 16:51 MiniMax credential-scheme design correction preserves one shared key variable. [5f27777]
 - 16:54 Claude now maps ordinary MiniMax API keys like locked Pi while retaining Token Plan bearer support. [993f2a8]
+- 16:59 H004 r5 inherited a stale exported key and returned 401; Judge did not run.
+- 16:59 The new international `.env` key passed authentication but returned HTTP 402; no response body was retained.
