@@ -1,11 +1,11 @@
 {
-  "session": "2026-07-17-af-320-paper-benchmark-metric-parity",
-  "phase": "completed",
-  "work_package_id": "AF-320",
+  "session": "2026-07-17-af-330-complete-application-dual-runtime",
+  "phase": "running",
+  "work_package_id": "AF-330",
   "last_cycle": 95,
-  "next_hypothesis": null,
+  "next_hypothesis": "AF-330-H-001",
   "in_flight": null,
-  "next_action": "Activate AF-330 governance from the approved paper-aligned DCI package sequence.",
+  "next_action": "Write RED composition-contract tests for AF-330-H-001.",
   "falsified_routes": [
     "duplicate the authoritative Pi commit across setup.sh and .env.template",
     "convert the independent Pi checkout to vendored or submodule ownership",

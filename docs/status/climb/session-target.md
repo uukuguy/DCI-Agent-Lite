@@ -1,10 +1,9 @@
 # Climb Session Target
 
-AF-320 owns paper benchmark and metric parity. Four fresh hypotheses cover the
-closed dataset/experiment-scope inventory and BEIR path, exact trajectory and
-retained-evidence metrics, conservative native observation alignment, and
-deterministic paper-declared plus bounded product closure. Paper-full rows remain
-non-executable and no full dataset run is authorized.
+AF-330 owns complete application composition and bounded dual-runtime semantics.
+Four fresh hypotheses cover the five-stage package graph, product/application
+identity, restricted Pi execution, and fail-closed Claude Code execution. Real
+bounded Pi and Claude evidence is required; no full dataset run is authorized.
 
 <!-- TARGET-BEGIN (machine-readable, check-target.py reads) -->
 target_metric: local

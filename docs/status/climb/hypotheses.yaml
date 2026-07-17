@@ -2189,3 +2189,47 @@ hypotheses:
       path: provider-evidence/af-320-h-004.json
       sha256: 0d48c9f24a6a54335c8e80d4569ddb0e8ad6635c10c4849e6ec1cb3f171ccd55
       report_sha256: 1b4d71388169a4fe126793cba11c7eb91b73644dffa417744f4e357a68dc2b75
+- id: AF-330-H-001
+  work_package_id: AF-330
+  description: Prove the five-stage research, evaluation, benchmark, analysis, and export composition contract with exact event and artifact edges.
+  parent_paradigm: dci-complete-application-composition
+  expected_lift: +1 complete executable application graph
+  cost_h: 1.5
+  ranking: 1.0
+  status: proposed
+  created_at: '2026-07-17T12:49:00+08:00'
+  verification_command: uv run --project asterion python -m unittest -v tests.test_dci_complete_application
+  results: []
+- id: AF-330-H-002
+  work_package_id: AF-330
+  description: Prove product CLI, generic application, installed application, and isolated wheel share implementation and artifact identity.
+  parent_paradigm: dci-application-product-identity
+  expected_lift: +1 source-to-wheel application parity
+  cost_h: 1.5
+  ranking: 0.9
+  status: proposed
+  created_at: '2026-07-17T12:49:00+08:00'
+  verification_command: uv run --project asterion python -m unittest -v tests.test_dci_complete_application tests.test_asterion_cli tests.test_asterion_distribution
+  results: []
+- id: AF-330-H-003
+  work_package_id: AF-330
+  description: Prove a bounded real Pi complete-application run is confined to an attempt-local corpus with dedicated read and grep operations.
+  parent_paradigm: dci-restricted-pi-application
+  expected_lift: +1 bound native semantic application path
+  cost_h: 1.5
+  ranking: 0.8
+  status: proposed
+  created_at: '2026-07-17T12:49:00+08:00'
+  verification_command: uv run --project asterion python -m unittest -v tests.test_dci_dual_runtime_acceptance tests.test_asterion_dci_security
+  results: []
+- id: AF-330-H-004
+  work_package_id: AF-330
+  description: Prove a bounded real Claude Code run uses a fail-closed Read/Grep/Glob-only local-corpus boundary and body-free evidence binding.
+  parent_paradigm: dci-restricted-claude-application
+  expected_lift: +1 bound Claude semantic application path
+  cost_h: 2.0
+  ranking: 0.7
+  status: proposed
+  created_at: '2026-07-17T12:49:00+08:00'
+  verification_command: uv run --project asterion python -m unittest -v tests.test_claude_code_runtime tests.test_dci_dual_runtime_acceptance
+  results: []

@@ -1,16 +1,17 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-17 12:27 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-17 12:49 +0800. **Session remains active — not a final handoff.**
 
-Active work package: none
+Active work package: AF-330
 
-Package: AF-320 complete; AF-330 is the next approved package
+Package: AF-330 complete application and dual-runtime exposure
 
-Currently running: no process. AF-320 H-001 through H-004 are confirmed 4/4 and package closure is complete. The next approved package is AF-330; it is not active yet.
+Currently running: no process. AF-330 governance, design, plan, and four package-parented Climb hypotheses are active; H001 composition RED tests are next.
 
 ## TL;DR
 
-- AF-320 is complete; all inventory, metric, trajectory, matrix, product, CLI, wheel, model-free, and bounded provider evidence work passed.
+- AF-320 is complete; AF-330 now owns five-stage application composition and bounded real Pi/Claude semantics.
+- AF-330 uses exact Read/Grep/Glob visibility plus fail-closed sandbox/settings identity for Claude; prompt-only restriction is rejected.
 - Bounded acceptance now uses the configured supported Judge and binds its endpoint/API/model/request-shaping identity plus prompt-contract digest; GPT-4.1 is not a functional gate.
 - Final evidence SHA is `0d48c9f24a6a54335c8e80d4569ddb0e8ad6635c10c4849e6ec1cb3f171ccd55`; it binds a clean locked Pi runtime, DeepSeek Judge identity, two agents, one Judge, and no full dataset.
 - `paper-full` rows remain unconditionally non-executable; AF-340 remains the only package that may add full-run authorization and budget.
@@ -26,9 +27,9 @@ Currently running: no process. AF-320 H-001 through H-004 are confirmed 4/4 and 
 
 ## Next concrete action
 
-1. Add and activate AF-330 in `docs/status/WORKLIST.md` from the already approved paper-aligned DCI sequence.
-2. Run scope preflight and create a fresh AF-330-parented Climb session/hypothesis pool.
-3. Refine the AF-330 package plan before implementation: complete application units plus bounded Pi and Claude Code semantic acceptance.
+1. Write `tests.test_dci_complete_application` RED coverage for five exact stages and declared event/artifact edges.
+2. Add missing manifests/assemblies and production stage implementations with shared identity.
+3. Advance through restricted real Pi and Claude Code evidence without full datasets.
 
 ## Boundaries
 

@@ -5,11 +5,11 @@
 
 ## In-flight / session state
 
-- Phase: completed
+- Phase: running
 - Last cycle: 95
-- Next hypothesis: None
+- Next hypothesis: AF-330-H-001
 - In flight: none
-- Next action: Activate AF-330 governance from the approved paper-aligned DCI package sequence.
+- Next action: Write RED composition-contract tests for AF-330-H-001.
 
 ## Active hypotheses
 

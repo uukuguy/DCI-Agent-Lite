@@ -1,10 +1,10 @@
-score_name: asterion_dci_paper_benchmark_metric_parity_acceptance
+score_name: asterion_dci_complete_application_dual_runtime_acceptance
 score_direction: max
 subscores:
-  - inventory_beir
-  - resolution_metrics
-  - evidence_alignment
-  - bounded_product
+  - composition_contract
+  - product_identity
+  - restricted_pi
+  - restricted_claude
 push_mode: manual-csv
 state_dir: docs/status/climb
 artifact_dir: runs/climb

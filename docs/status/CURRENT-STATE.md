@@ -4,11 +4,11 @@
 
 - Project: Asterion framework under development in the DCI-Agent-Lite repository; DCI remains the first capability and reference application.
 - Current branch: `main`
-- Theme-level focus: AF-320 paper benchmark/metric parity is complete; the next approved sequence item is AF-330 complete application and dual-runtime exposure.
+- Theme-level focus: AF-330 complete application and dual-runtime exposure is active after AF-320 closure.
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `asterion/docs/architecture/agent-framework.md`
-- Active work package: none; activate AF-330 governance before further implementation.
+- Active work package: AF-330 — complete application and dual-runtime exposure.
 
 ## Current Architecture
 

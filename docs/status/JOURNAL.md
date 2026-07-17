@@ -840,3 +840,5 @@
 - 12:34 H004 evidence `0d48c9f24a6a54335c8e80d4569ddb0e8ad6635c10c4849e6ec1cb3f171ccd55` binds the clean runtime, Judge identity, and private artifacts.
 - 12:35 AF-320-H-004 confirmed 4/4; package acceptance recorded.
 - 12:41 AF-320 closure passes 1394 Python, 246 final selectors, wheel/product/static/privacy/scope gates and independent acceptance review.
+- 12:49 AF-320 paper benchmark parity closes with configured-Judge evidence. [a45e5f1]
+- 12:49 AF-330 activates complete application composition and bounded Pi/Claude semantic acceptance.
