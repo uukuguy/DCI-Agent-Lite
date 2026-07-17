@@ -43,6 +43,7 @@ from asterion.dci.config import (
     resolve_dci_runtime_options,
 )
 from asterion.dci.evaluation import evaluate_run_directory
+from asterion.dci.artifacts import DciConversationFeatures
 from asterion.dci.judge import JudgeConfig, build_judge_request
 from asterion.dci.context_profiles import context_profile_names
 from asterion.dci.paper_benchmarks import (
@@ -650,7 +651,14 @@ def _paper_default_operation_runner(
         keep_session=True,
         stream_text=False,
     )
-    result = run_pi_research(readiness.paths, request, output_dir=output_dir)
+    result = run_pi_research(
+        readiness.paths,
+        request,
+        output_dir=output_dir,
+        conversation_features=DciConversationFeatures(
+            externalize_tool_results=True
+        ),
+    )
     if result.status != "completed" or (
         operation_id == "ir-agent" and "doc.txt" not in result.final_text
     ):

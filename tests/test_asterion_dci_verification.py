@@ -12,11 +12,14 @@ import asterion.dci.verification as verification_module
 
 from asterion.applications.product import VerificationRequest
 from asterion.dci.run import DciRunResult
+from asterion.dci.config import DciRuntimeOptions, resolve_dci_paths
+from asterion.dci.judge import JudgeConfig
 from asterion.dci.verification import (
     BASIC_CASES,
     DciProductVerifier,
     PaperBenchmarkOperationEvidence,
     PaperBenchmarkReadiness,
+    _paper_default_operation_runner,
     _load_product_acceptance_runner,
     create_dci_product,
     paper_benchmark_acceptance_main,
@@ -560,6 +563,49 @@ class DciAcceptanceVerificationTests(unittest.TestCase):
 
 
 class PaperBenchmarkVerifierTests(unittest.TestCase):
+    def test_agent_operation_externalizes_tool_results_for_private_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            corpus = root / "corpus"
+            corpus.mkdir()
+            readiness = PaperBenchmarkReadiness(
+                output_root=root / "output",
+                provider="fixture-provider",
+                model="fixture-model",
+                judge_model="gpt-4.1",
+                pi_revision="a" * 40,
+                pi_tracked_status_sha256="b" * 64,
+                resource_digests=(("resource", "c" * 64),),
+                paths=resolve_dci_paths(root),
+                runtime_options=DciRuntimeOptions(
+                    provider="fixture-provider", model="fixture-model"
+                ),
+                judge_config=JudgeConfig(model="gpt-4.1"),
+                corpus_dir=corpus,
+            )
+
+            def run(_paths, request, *, output_dir, conversation_features):
+                output_dir.mkdir(parents=True)
+                artifact = output_dir / "events.jsonl"
+                artifact.write_text("{}\n")
+                artifact.chmod(0o600)
+                self.assertEqual(request.tools, "read,grep")
+                self.assertTrue(conversation_features.externalize_tool_results)
+                return DciRunResult(
+                    output_dir=output_dir,
+                    final_text="fixture answer from doc.txt",
+                    events=(),
+                    status="completed",
+                )
+
+            with patch(
+                "asterion.dci.verification.run_pi_research", side_effect=run
+            ):
+                evidence = _paper_default_operation_runner(readiness, "qa-agent")
+
+        self.assertEqual(evidence.operation_id, "qa-agent")
+        self.assertEqual(evidence.artifact_digests[0][0], "events.jsonl")
+
     def test_default_mode_is_model_free_and_declares_exact_cost(self) -> None:
         calls: list[str] = []
         stdout = io.StringIO()
