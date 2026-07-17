@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.resources
 import json
 import os
 import tempfile
@@ -39,6 +40,27 @@ def _protocol_event(sequence: int, event_type: str, payload: dict[str, object]) 
 
 
 class TrajectoryResolutionTest(unittest.TestCase):
+    def test_resolution_schemas_are_packaged_with_exact_ids(self) -> None:
+        resources = importlib.resources.files("asterion.dci.resources")
+        expected = {
+            "trajectory-resolution.schema.json": "dci.trajectory-resolution/v1",
+            "gold-document-manifest.schema.json": "dci.gold-document-manifest/v1",
+            "gold-document-registry.schema.json": "dci.gold-document-registry/v1",
+        }
+        for name, schema_id in expected.items():
+            with self.subTest(name=name):
+                document = json.loads(resources.joinpath(name).read_text())
+                self.assertEqual(document["$id"], schema_id)
+                self.assertFalse(document["additionalProperties"])
+                if name == "trajectory-resolution.schema.json":
+                    identity = document["properties"]["identity"]
+                    self.assertFalse(
+                        identity["properties"]["inputs"]["additionalProperties"]
+                    )
+                    self.assertFalse(
+                        document["properties"]["private"]["additionalProperties"]
+                    )
+
     def _fixture(
         self,
         root: Path,
@@ -127,6 +149,21 @@ class TrajectoryResolutionTest(unittest.TestCase):
             "".join(json.dumps(event, sort_keys=True) + "\n" for event in events),
             encoding="utf-8",
         )
+        (run_dir / "events.jsonl").write_text(
+            json.dumps(
+                {
+                    "type": "provider_request_context",
+                    "requestIndex": 1,
+                    "model": "fixture",
+                    "messages": [],
+                    "payload": {},
+                    "runtimeContextManagement": None,
+                },
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
         _write_json(
             run_dir / "state.json",
             {
@@ -137,6 +174,7 @@ class TrajectoryResolutionTest(unittest.TestCase):
                 "provider": None,
                 "model": None,
                 "tools": "",
+                "tool_calls": [],
                 "conversation_features": DciConversationFeatures().to_mapping(),
                 "notes": [],
                 "pi_source_attempts": [{"fixture": True}],
@@ -169,7 +207,15 @@ class TrajectoryResolutionTest(unittest.TestCase):
                 "conversation_features": DciConversationFeatures().to_mapping(),
                 "request_count": 1,
                 "runtime_context_management": None,
-                "latest": {"messages": []},
+                "latest": {
+                    "captured_at": "2026-07-17T00:00:00+00:00",
+                    "request_index": 1,
+                    "model": "fixture",
+                    "runtime_context_management": None,
+                    "message_count": 0,
+                    "messages": [],
+                    "payload": {},
+                },
                 "notes": [],
                 "pi_source_attempts": [{"fixture": True}],
             },
@@ -281,6 +327,47 @@ class TrajectoryResolutionTest(unittest.TestCase):
 
             self.assertEqual(evidence["run"], {"run_id": "run-native", "attempt": 1})
             self.assertEqual(evidence["metrics"]["coverage"]["all"], 1.0)
+            self.assertEqual(
+                evidence["metrics"]["retained_coverage"],
+                {"value": 1.0, "unavailable_reason": None},
+            )
+
+    def test_processed_view_cannot_substitute_for_missing_final_context(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            secret = "gold evidence"
+            run_dir, corpus_dir, manifest = self._fixture(
+                root,
+                documents={"a.txt": f"{secret}\n"},
+                gold=(("a.txt", ((0, len(secret)),)),),
+                calls=(("read-1", "read", {"path": "a.txt"}, secret),),
+            )
+            latest_path = run_dir / "latest_model_context.json"
+            latest = json.loads(latest_path.read_text())
+            latest["request_count"] = 0
+            latest["latest"] = None
+            _write_json(latest_path, latest)
+            (run_dir / "events.jsonl").write_text(
+                json.dumps({"type": "message_end", "message": {}}) + "\n"
+            )
+            _write_json(
+                run_dir / "conversation.json",
+                {"messages": [{"role": "toolResult", "content": [{"type": "text", "text": secret}]}]},
+            )
+
+            evidence = analyze_trajectory_resolution(
+                run_dir=run_dir,
+                attempt=1,
+                corpus_dir=corpus_dir,
+                gold_manifest_path=manifest,
+                config=TrajectoryAnalysisConfig(segment_characters=8),
+            )
+
+            self.assertEqual(
+                evidence["metrics"]["retained_coverage"],
+                {"value": None, "unavailable_reason": "final-context-unavailable"},
+            )
+            self.assertEqual(evidence["private"]["retained_alignments"], [])
 
     def test_grep_output_aligns_each_exact_matched_line_and_multiple_gold_documents(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -427,6 +514,22 @@ class TrajectoryResolutionTest(unittest.TestCase):
                 )
 
             latest["question"] = "fixture question"
+            latest["latest"]["messages"] = [
+                {"role": "toolResult", "content": "gold evidence"}
+            ]
+            latest["latest"]["message_count"] = 1
+            _write_json(latest_path, latest)
+            with self.assertRaises(TrajectoryResolutionError):
+                analyze_trajectory_resolution(
+                    run_dir=run_dir,
+                    attempt=1,
+                    corpus_dir=corpus_dir,
+                    gold_manifest_path=manifest,
+                    config=TrajectoryAnalysisConfig(segment_characters=8),
+                )
+
+            latest["latest"]["messages"] = []
+            latest["latest"]["message_count"] = 0
             _write_json(latest_path, latest)
             request_path = run_dir / "protocol/attempt-0001.request.json"
             request_document = json.loads(request_path.read_text())
@@ -604,6 +707,14 @@ class TrajectoryResolutionTest(unittest.TestCase):
             self.assertNotIn("private", public)
             self.assertEqual(public["schema"], "dci.trajectory-resolution-summary/v1")
             self.assertEqual(len(evidence["identity"]["sha256"]), 64)
+
+            tampered = json.loads(json.dumps(evidence))
+            tampered["metrics"]["retained_coverage"] = {
+                "value": 1.0,
+                "unavailable_reason": None,
+            }
+            with self.assertRaises(TrajectoryResolutionError):
+                public_resolution_projection(tampered)
 
             evidence["metrics"]["coverage"]["leaked_body"] = secret
             evidence["counts"]["leaked_path"] = str(root)

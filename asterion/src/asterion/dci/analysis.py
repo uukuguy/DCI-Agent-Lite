@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import io
+import json
+import math
 from collections.abc import Mapping, Sequence
 from datetime import datetime
 from typing import Any
@@ -121,7 +123,19 @@ def gather_query_metrics(
     launcher_returncode: int | None = None,
     launcher_started_at: str | None = None,
     launcher_finished_at: str | None = None,
+    resolution_summary: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    validated_resolution: dict[str, Any] | None = None
+    if resolution_summary is not None:
+        from asterion.dci.trajectory_resolution import (
+            validate_public_resolution_summary,
+        )
+
+        validated_resolution = validate_public_resolution_summary(
+            dict(resolution_summary)
+        )
+        if validated_resolution["query_id"] != str(row["query_id"]):
+            raise ValueError("resolution summary query identity mismatch")
     available = state is not None
     state = state or {}
     agent_usage: dict[str, Any] = extract_agent_usage_metrics(state) if available else {
@@ -184,6 +198,10 @@ def gather_query_metrics(
         "conversation_features": state.get("conversation_features"),
         "request_count": latest_model_context.get("request_count"),
         "stderr_tail": stderr_text[-4000:],
+        "resolution_status": (
+            "available" if validated_resolution is not None else "not-available"
+        ),
+        "resolution": validated_resolution,
     }
 
 
@@ -241,11 +259,66 @@ def aggregate_results(results: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     totals = {name: _sum(results, path) for name, path in paths.items()}
     totals["overall_cost_total"] = totals["agent_cost_total"] + totals["judge_cost_total"]
     ndcg = [float(value) for result in results if (value := _number(result.get("ndcg_at_10"))) is not None]
+    resolution_rows = [
+        value
+        for result in results
+        if isinstance((value := result.get("resolution")), Mapping)
+    ]
+    coverage_values: dict[str, list[float]] = {
+        name: [] for name in ("any", "mean", "all")
+    }
+    localization_numerator = 0.0
+    localization_denominator = 0
+    retained_values: list[float] = []
+    for resolution in resolution_rows:
+        resolution_metrics = resolution.get("metrics")
+        if not isinstance(resolution_metrics, Mapping):
+            continue
+        coverage = resolution_metrics.get("coverage")
+        if isinstance(coverage, Mapping):
+            for name in coverage_values:
+                if (number := _number(coverage.get(name))) is not None:
+                    coverage_values[name].append(number)
+        localization = resolution_metrics.get("localization")
+        if isinstance(localization, Mapping):
+            value = _number(localization.get("value"))
+            matched = localization.get("matched_gold_count")
+            if (
+                value is not None
+                and isinstance(matched, int)
+                and not isinstance(matched, bool)
+                and matched > 0
+            ):
+                localization_numerator += value * matched
+                localization_denominator += matched
+        retained = resolution_metrics.get("retained_coverage")
+        if isinstance(retained, Mapping):
+            if (number := _number(retained.get("value"))) is not None:
+                retained_values.append(number)
     return {
         "schema": "asterion.dci.batch-summary/v1",
         "counts": {"total": total, "judged": judged, "correct": correct, "incorrect_or_unjudged": total - correct, "failed_runs": failed},
         "accuracy": {"over_total": correct / total if total else 0.0, "over_judged": correct / judged if judged else 0.0},
         "ndcg_at_10": sum(ndcg) / len(ndcg) if ndcg else None,
+        "resolution": {
+            "available_queries": len(resolution_rows),
+            "coverage": {
+                name: sum(values) / len(values) if values else None
+                for name, values in coverage_values.items()
+            },
+            "localization": (
+                localization_numerator / localization_denominator
+                if localization_denominator
+                else None
+            ),
+            "matched_gold_count": localization_denominator,
+            "retained_coverage": (
+                sum(retained_values) / len(retained_values)
+                if retained_values
+                else None
+            ),
+            "retained_available_queries": len(retained_values),
+        },
         "timing": compute_run_batch_timing(results),
         "totals": totals,
         "averages": {
@@ -305,6 +378,31 @@ def _enrich(results: Sequence[Mapping[str, Any]], rows: Sequence[Mapping[str, An
             if agent_cost is not None or judge_cost_total is not None
             else None
         )
+        resolution = (
+            result.get("resolution")
+            if isinstance(result.get("resolution"), Mapping)
+            else {}
+        )
+        resolution_metrics = (
+            resolution.get("metrics")
+            if isinstance(resolution.get("metrics"), Mapping)
+            else {}
+        )
+        coverage = (
+            resolution_metrics.get("coverage")
+            if isinstance(resolution_metrics.get("coverage"), Mapping)
+            else {}
+        )
+        localization = (
+            resolution_metrics.get("localization")
+            if isinstance(resolution_metrics.get("localization"), Mapping)
+            else {}
+        )
+        retained = (
+            resolution_metrics.get("retained_coverage")
+            if isinstance(resolution_metrics.get("retained_coverage"), Mapping)
+            else {}
+        )
         records.append({
             "query_id": query_id, "query": question,
             "gold_answer": str(result.get("gold_answer") or row.get("answer") or ""),
@@ -329,6 +427,16 @@ def _enrich(results: Sequence[Mapping[str, Any]], rows: Sequence[Mapping[str, An
             "agent_cost_total": agent_cost,
             "judge_total_tokens": _number(judge.get("total_tokens")),
             "judge_cost_total": judge_cost_total, "overall_cost_total": overall_cost,
+            "resolution_status": result.get("resolution_status") or "not-available",
+            "resolution_identity_sha256": resolution.get("identity_sha256"),
+            "coverage_any": coverage.get("any"),
+            "coverage_mean": coverage.get("mean"),
+            "coverage_all": coverage.get("all"),
+            "localization": localization.get("value"),
+            "localization_matched_gold_count": localization.get(
+                "matched_gold_count"
+            ),
+            "retained_coverage": retained.get("value"),
         })
     return records, sorted(tools)
 
@@ -340,7 +448,10 @@ def enrich_results(
 
 
 def _slice(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
-    names = ("wall_time_seconds", "tool_time_seconds", "tool_time_share", "turn_count", "tool_call_count", "tool_error_count", "agent_total_tokens", "overall_cost_total", "question_word_count")
+    names = ["wall_time_seconds", "tool_time_seconds", "tool_time_share", "turn_count", "tool_call_count", "tool_error_count", "agent_total_tokens", "overall_cost_total", "question_word_count"]
+    for name in ("coverage_any", "coverage_mean", "coverage_all", "localization", "retained_coverage"):
+        if any(_number(row.get(name)) is not None for row in records):
+            names.append(name)
     return {name: summarize_numeric([value for row in records if (value := _number(row.get(name))) is not None]) for name in names}
 
 
@@ -439,6 +550,7 @@ def write_markdown_report(
     correct_wall = ((slices.get("correct") or {}).get("wall_time_seconds") or {})
     incorrect_wall = ((slices.get("incorrect") or {}).get("wall_time_seconds") or {})
     ndcg = summary.get("ndcg_at_10")
+    resolution = summary.get("resolution") or {}
     headline = f"- NDCG@10: {ndcg:.4f}" if _number(ndcg) is not None else f"- Accuracy: {float(accuracy.get('over_total', 0)):.2%} ({counts.get('correct', 0)}/{counts.get('total', 0)})"
     lines = [
         "# BrowseComp Eval Analysis", "", "## Headline", "", headline,
@@ -448,11 +560,20 @@ def write_markdown_report(
         f"- Avg wall time: {_seconds(averages.get('wall_time_seconds'))}",
         f"- Avg tool calls: {_format(averages.get('tool_call_count'))}",
         f"- Avg agent tokens: {_format(averages.get('agent_total_tokens'))}",
+    ]
+    if int(_number(resolution.get("available_queries")) or 0) > 0:
+        lines.extend([
+            "", "## Paper Resolution", "",
+            f"- Coverage any/mean/all: {_format((resolution.get('coverage') or {}).get('any'), 4)} / {_format((resolution.get('coverage') or {}).get('mean'), 4)} / {_format((resolution.get('coverage') or {}).get('all'), 4)}",
+            f"- Localization: {_format(resolution.get('localization'), 4)} (matched gold: {resolution.get('matched_gold_count', 0)})",
+            f"- Retained coverage: {_format(resolution.get('retained_coverage'), 4)}",
+        ])
+    lines.extend([
         "", "## Outcome Slices", "",
         f"- Correct median wall time: {_seconds(correct_wall.get('median'))}",
         f"- Incorrect median wall time: {_seconds(incorrect_wall.get('median'))}",
         "", "## Figures", "",
-    ]
+    ])
     if include_figures:
         lines.extend([
             "- `analysis_figures/scatter_overview.png`",
@@ -460,6 +581,8 @@ def write_markdown_report(
             "- `analysis_figures/metric_distributions.png`",
             "- `analysis_figures/tool_summary.png`",
         ])
+        if int(_number(resolution.get("available_queries")) or 0) > 0:
+            lines.append("- `analysis_figures/resolution_metrics.png`")
     else:
         lines.append("- Figures disabled by configuration.")
     lines.extend([
@@ -655,6 +778,46 @@ def render_figures(analysis: Mapping[str, Any]) -> dict[str, bytes]:
     axes[1].set(title="Measured Tool Time by Tool", xlabel="Seconds")
     figures["tool_summary.png"] = fig
 
+    resolution_records = [
+        row
+        for row in records
+        if row.get("resolution_status") == "available"
+        and _number(row.get("coverage_mean")) is not None
+    ]
+    if resolution_records:
+        ordered = sorted(resolution_records, key=lambda row: str(row.get("query_id")))
+        labels = [str(row.get("query_id")) for row in ordered]
+        positions = list(range(len(ordered)))
+        width = 0.24
+        fig, ax = plt.subplots(figsize=(max(10, len(ordered) * 0.55), 6))
+        for offset, key, label, color in (
+            (-width, "coverage_mean", "Coverage mean", "#4C78A8"),
+            (0.0, "localization", "Localization", "#F58518"),
+            (width, "retained_coverage", "Retained coverage", "#54A24B"),
+        ):
+            values = [
+                float(value)
+                if (value := _number(row.get(key))) is not None
+                else math.nan
+                for row in ordered
+            ]
+            ax.bar(
+                [position + offset for position in positions],
+                values,
+                width=width,
+                label=label,
+                color=color,
+            )
+        ax.set_xticks(positions)
+        ax.set_xticklabels(labels, rotation=60, ha="right")
+        ax.set_ylim(0.0, 1.0)
+        ax.set_xlabel("Query ID")
+        ax.set_ylabel("Score")
+        ax.set_title("Paper Resolution Metrics")
+        ax.legend(frameon=False)
+        ax.grid(axis="y", alpha=0.2)
+        figures["resolution_metrics.png"] = fig
+
     result: dict[str, bytes] = {}
     for name, figure in figures.items():
         figure.tight_layout()
@@ -666,7 +829,6 @@ def render_figures(analysis: Mapping[str, Any]) -> dict[str, bytes]:
 
 
 def write_analysis_artifacts(*, results: Sequence[Mapping[str, Any]], rows: Sequence[Mapping[str, Any]], summary: Mapping[str, Any], include_figures: bool) -> dict[str, bytes]:
-    import json
     analysis = compute_detailed_analysis(results=results, rows=rows, summary=summary)
     artifacts = {
         "analysis.json": (json.dumps(analysis, ensure_ascii=False, indent=2) + "\n").encode(),

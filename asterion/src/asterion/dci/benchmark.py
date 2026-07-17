@@ -13,7 +13,7 @@ import threading
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from collections.abc import Mapping
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from asterion.dci.artifacts import (
@@ -59,6 +59,13 @@ from asterion.dci.analysis import (
     write_analysis_artifacts,
 )
 from asterion.dci.metrics import compute_ir_ndcg
+from asterion.dci.trajectory_resolution import (
+    TrajectoryAnalysisConfig,
+    TrajectoryResolutionError,
+    analyze_trajectory_resolution,
+    public_resolution_projection,
+    validate_gold_manifest_bytes,
+)
 from asterion.dci.run import (
     DciRunError,
     DciRunResult,
@@ -105,6 +112,8 @@ class BenchmarkRequest:
     resume_policy: str = "compatible"
     analysis: bool = True
     figures: bool = True
+    resolution_registry: Path | None = None
+    resolution_segment_characters: int | None = None
 
 
 @dataclass(frozen=True)
@@ -200,11 +209,16 @@ async def run_benchmark_async(
                 paths=paths,
                 rows=rows,
                 authorities=row_authorities,
+                input_snapshots=snapshots,
+                resolution_config=config.get("resolution"),
             )
         counts = _counts(results)
         _publish_aggregates(
             lock, results, request=request, paths=paths, rows=rows,
-            authorities=row_authorities, include_analysis=True
+            authorities=row_authorities,
+            include_analysis=True,
+            input_snapshots=snapshots,
+            resolution_config=config.get("resolution"),
         )
         _publish_batch_state(lock, "completed", results)
         return BenchmarkResult(output_root=output_root, counts=counts)
@@ -225,7 +239,10 @@ async def run_benchmark_async(
         )
         _publish_aggregates(
             lock, results, request=request, paths=paths, rows=rows,
-            authorities=row_authorities, include_analysis=True
+            authorities=row_authorities,
+            include_analysis=True,
+            input_snapshots=snapshots,
+            resolution_config=config.get("resolution"),
         )
         _publish_batch_state(lock, "cancelled", results)
         raise
@@ -246,7 +263,10 @@ async def run_benchmark_async(
         )
         _publish_aggregates(
             lock, results, request=request, paths=paths, rows=rows,
-            authorities=row_authorities, include_analysis=True
+            authorities=row_authorities,
+            include_analysis=True,
+            input_snapshots=snapshots,
+            resolution_config=config.get("resolution"),
         )
         _publish_batch_state(lock, "failed", results)
         raise
@@ -266,6 +286,152 @@ def run_benchmark(request: BenchmarkRequest, *, paths: DciPaths) -> BenchmarkRes
     except RuntimeError:
         return asyncio.run(run_benchmark_async(request, paths=paths))
     raise DciBenchmarkError("DCI benchmark sync API cannot run inside an event loop")
+
+
+def _scan_corpus_content(corpus: Path) -> list[dict[str, object]]:
+    root = corpus.absolute()
+    _reject_symlink_components(root)
+    pending = [root]
+    records: list[dict[str, object]] = []
+    try:
+        while pending:
+            directory = pending.pop()
+            with os.scandir(directory) as entries:
+                for entry in entries:
+                    path = Path(entry.path)
+                    if entry.is_symlink():
+                        raise DciBenchmarkError(
+                            "DCI benchmark resolution corpus is invalid"
+                        )
+                    if entry.is_dir(follow_symlinks=False):
+                        pending.append(path)
+                        continue
+                    if not entry.is_file(follow_symlinks=False):
+                        raise DciBenchmarkError(
+                            "DCI benchmark resolution corpus is invalid"
+                        )
+                    raw = _read_input_snapshot(path)
+                    records.append(
+                        {
+                            "path": path.relative_to(root).as_posix(),
+                            "sha256": hashlib.sha256(raw).hexdigest(),
+                            "size": len(raw),
+                        }
+                    )
+    except DciBenchmarkError:
+        raise
+    except OSError as error:
+        raise DciBenchmarkError(
+            "DCI benchmark resolution corpus is invalid"
+        ) from error
+    return sorted(records, key=lambda item: str(item["path"]))
+
+
+def _corpus_content_identity(corpus: Path) -> dict[str, object]:
+    first = _scan_corpus_content(corpus)
+    second = _scan_corpus_content(corpus)
+    if first != second:
+        raise DciBenchmarkError("DCI benchmark resolution corpus changed")
+    return {"sha256": _fingerprint(first), "file_count": len(first)}
+
+
+def _resolution_manifest_paths(
+    request: BenchmarkRequest, rows: tuple[BenchmarkRow, ...]
+) -> tuple[dict[str, Path], dict[str, object], dict[str, bytes]]:
+    registry_path = request.resolution_registry
+    segment_characters = request.resolution_segment_characters
+    if registry_path is None and segment_characters is None:
+        return {}, {}, {}
+    features = request.conversation_features or DciConversationFeatures()
+    if (
+        registry_path is None
+        or type(segment_characters) is not int
+        or segment_characters <= 0
+        or request.corpus is None
+        or not features.externalize_tool_results
+    ):
+        raise DciBenchmarkError("DCI benchmark resolution configuration is invalid")
+    _reject_symlink_components(registry_path)
+    registry_raw = _read_input_snapshot(registry_path)
+    try:
+        registry = json.loads(registry_raw)
+    except (UnicodeError, ValueError) as error:
+        raise DciBenchmarkError("DCI benchmark resolution registry is invalid") from error
+    if (
+        not isinstance(registry, dict)
+        or set(registry) != {"schema", "dataset_id", "manifests"}
+        or registry.get("schema") != "dci.gold-document-registry/v1"
+        or not isinstance(registry.get("dataset_id"), str)
+        or not registry["dataset_id"]
+        or not isinstance(registry.get("manifests"), list)
+    ):
+        raise DciBenchmarkError("DCI benchmark resolution registry is invalid")
+    expected_ids = {row.query_id for row in rows}
+    paths: dict[str, Path] = {}
+    identities: dict[str, object] = {}
+    snapshots = {"resolution_registry": registry_raw}
+    for index, entry in enumerate(registry["manifests"]):
+        if (
+            not isinstance(entry, dict)
+            or set(entry) != {"query_id", "path", "sha256"}
+            or not isinstance(entry.get("query_id"), str)
+            or entry["query_id"] not in expected_ids
+            or entry["query_id"] in paths
+            or not isinstance(entry.get("path"), str)
+            or not isinstance(entry.get("sha256"), str)
+        ):
+            raise DciBenchmarkError("DCI benchmark resolution registry is invalid")
+        relative = PurePosixPath(entry["path"])
+        if (
+            relative.is_absolute()
+            or entry["path"] != relative.as_posix()
+            or any(part in {"", ".", ".."} for part in relative.parts)
+        ):
+            raise DciBenchmarkError("DCI benchmark resolution registry is invalid")
+        manifest_path = registry_path.parent.joinpath(*relative.parts)
+        _reject_symlink_components(manifest_path)
+        manifest_raw = _read_input_snapshot(manifest_path)
+        digest = hashlib.sha256(manifest_raw).hexdigest()
+        if digest != entry["sha256"]:
+            raise DciBenchmarkError("DCI benchmark resolution registry is stale")
+        try:
+            dataset_id, manifest_query_id, gold_ids = validate_gold_manifest_bytes(
+                manifest_raw, corpus_dir=request.corpus
+            )
+        except TrajectoryResolutionError as error:
+            raise DciBenchmarkError("DCI benchmark resolution manifest is invalid") from error
+        row = next(row for row in rows if row.query_id == entry["query_id"])
+        if dataset_id != registry["dataset_id"] or manifest_query_id != row.query_id or (
+            row.gold_ids is not None and set(gold_ids) != set(row.gold_ids)
+        ):
+            raise DciBenchmarkError("DCI benchmark resolution manifest is incompatible")
+        paths[row.query_id] = manifest_path
+        snapshot_key = f"resolution_manifest_{index:04d}"
+        identities[row.query_id] = {
+            "identity": str(canonical_input_identity(manifest_path)),
+            "sha256": digest,
+            "snapshot_key": snapshot_key,
+        }
+        snapshots[snapshot_key] = manifest_raw
+    if set(paths) != expected_ids:
+        raise DciBenchmarkError("DCI benchmark resolution registry is incomplete")
+    return (
+        paths,
+        {
+            "schema": "dci.trajectory-analysis-config/v1",
+            "dataset_id": registry["dataset_id"],
+            "corpus": _corpus_content_identity(request.corpus),
+            "segment_characters": segment_characters,
+            "alignment_version": "dci.paper-alignment/v1",
+            "read_minimum_evidence_overlap": 0.5,
+            "registry": {
+                "identity": str(canonical_input_identity(registry_path)),
+                "sha256": hashlib.sha256(registry_raw).hexdigest(),
+            },
+            "manifests": identities,
+        },
+        snapshots,
+    )
 
 
 def _prepare(
@@ -331,6 +497,9 @@ def _prepare(
         _reject_af320_paper_rows(rows)
     if any((row.is_ir if request.mode == "qa" else not row.is_ir) for row in rows):
         raise DciBenchmarkError("DCI benchmark dataset does not match its mode")
+    _resolution_paths, resolution_config, resolution_snapshots = (
+        _resolution_manifest_paths(request, rows)
+    )
     output_root = Path(os.path.abspath(os.path.normpath(request.output_root)))
     _reject_symlink_components(output_root)
     corpus_identity = (
@@ -342,6 +511,7 @@ def _prepare(
     dataset_identity = canonical_input_identity(request.dataset)
     dataset_digest = hashlib.sha256(dataset_raw).hexdigest()
     snapshots: dict[str, bytes] = {}
+    snapshots.update(resolution_snapshots)
     prompt_resources: dict[str, object] = {}
     for name in ("system_prompt_file", "append_system_prompt_file"):
         path = getattr(request, name)
@@ -376,6 +546,8 @@ def _prepare(
         "judge_configuration_fingerprint": judge_fingerprint,
         "prompt_resources": prompt_resources,
     }
+    if resolution_config:
+        config["resolution"] = resolution_config
     config["run_fingerprint"] = _fingerprint(
         {key: value for key, value in config.items() if key not in {"judge", "judge_configuration_fingerprint"}}
     )
@@ -383,7 +555,7 @@ def _prepare(
     documents: list[dict[str, object]] = []
     for row in rows:
         prompt = _prompt(request, row)
-        identity = {
+        identity: dict[str, object] = {
             "schema": "asterion.dci.batch-row/v1",
             "row": row.as_dict(),
             "mode": request.mode,
@@ -397,6 +569,10 @@ def _prepare(
             "max_turns": request.max_turns,
             "prompt_resources": config["prompt_resources"],
         }
+        if resolution_config:
+            identity["resolution"] = resolution_config.get("manifests", {}).get(
+                row.query_id
+            )
         documents.append(
             {
                 "schema": "asterion.dci.batch-item/v1",
@@ -739,7 +915,11 @@ def _validate_config_document(value: dict[str, Any]) -> None:
         "analysis", "figures", "judge", "judge_configuration_fingerprint",
         "prompt_resources", "run_fingerprint", "batch_fingerprint",
     }
-    if set(value) != expected or value.get("schema") != "asterion.dci.batch/v1":
+    if (
+        frozenset(value)
+        not in {frozenset(expected), frozenset(expected | {"resolution"})}
+        or value.get("schema") != "asterion.dci.batch/v1"
+    ):
         raise DciBenchmarkError("DCI benchmark configuration evidence is invalid")
     batch_payload = dict(value)
     batch_fingerprint = batch_payload.pop("batch_fingerprint", None)
@@ -1226,12 +1406,21 @@ def _publish_aggregates(
     paths: DciPaths,
     rows: tuple[BenchmarkRow, ...],
     authorities: dict[int, _RowAuthority],
+    input_snapshots: Mapping[str, bytes],
+    resolution_config: object,
     include_analysis: bool = False,
 ) -> None:
     ordered = [results[index] for index in sorted(results)]
     lock.write_text("results.jsonl", "".join(json.dumps(value, ensure_ascii=False, sort_keys=True) + "\n" for value in ordered))
     metrics = _analysis_results(
-        lock, ordered, rows, request, paths=paths, authorities=authorities
+        lock,
+        ordered,
+        rows,
+        request,
+        paths=paths,
+        authorities=authorities,
+        input_snapshots=input_snapshots,
+        resolution_config=resolution_config if include_analysis else None,
     )
     summary = aggregate_results(metrics)
     lock.write_json("summary.json", summary)
@@ -1262,11 +1451,29 @@ def _analysis_results(
     *,
     paths: DciPaths,
     authorities: dict[int, _RowAuthority],
+    input_snapshots: Mapping[str, bytes],
+    resolution_config: object,
 ) -> list[dict[str, Any]]:
     row_by_id = {row.query_id: row for row in rows}
     authority_by_id = {
         rows[index].query_id: authority for index, authority in authorities.items()
     }
+    if resolution_config is not None and not isinstance(resolution_config, Mapping):
+        raise DciBenchmarkError("DCI benchmark resolution evidence is invalid")
+    resolution_manifests = (
+        resolution_config.get("manifests", {})
+        if isinstance(resolution_config, Mapping)
+        else {}
+    )
+    if not isinstance(resolution_manifests, Mapping):
+        raise DciBenchmarkError("DCI benchmark resolution evidence is invalid")
+    if isinstance(resolution_config, Mapping):
+        if (
+            request.corpus is None
+            or resolution_config.get("corpus")
+            != _corpus_content_identity(request.corpus)
+        ):
+            raise DciBenchmarkError("DCI benchmark resolution corpus changed")
     metrics: list[dict[str, Any]] = []
     for result in results:
         query_id = str(result["query_id"])
@@ -1275,6 +1482,7 @@ def _analysis_results(
         context: dict[str, Any] = {}
         final_text = stderr_text = ""
         judge_result: dict[str, Any] | None = None
+        resolution_summary: dict[str, Any] | None = None
         authority = authority_by_id[query_id]
         _validate_bound_directory(lock, query_id, authority.query)
         timing = _validate_timing(authority.query.read_optional_json("timing.json"))
@@ -1351,6 +1559,50 @@ def _analysis_results(
             if request.mode == "ir" and result.get("status") == "completed"
             else None
         )
+        if (
+            query_id in resolution_manifests
+            and result.get("status") == "completed"
+            and state is not None
+            and isinstance(generation, str)
+            and request.corpus is not None
+            and request.resolution_segment_characters is not None
+        ):
+            attempts = state.get("attempts")
+            if not isinstance(attempts, list) or not attempts:
+                raise DciBenchmarkError("DCI benchmark resolution evidence is invalid")
+            try:
+                manifest_identity = resolution_manifests[query_id]
+                if not isinstance(manifest_identity, Mapping):
+                    raise DciBenchmarkError(
+                        "DCI benchmark resolution evidence is invalid"
+                    )
+                snapshot_key = manifest_identity.get("snapshot_key")
+                manifest_bytes = input_snapshots.get(str(snapshot_key))
+                if (
+                    not isinstance(snapshot_key, str)
+                    or manifest_bytes is None
+                    or hashlib.sha256(manifest_bytes).hexdigest()
+                    != manifest_identity.get("sha256")
+                ):
+                    raise DciBenchmarkError(
+                        "DCI benchmark resolution evidence is invalid"
+                    )
+                evidence = analyze_trajectory_resolution(
+                    run_dir=lock.path / query_id / generation,
+                    attempt=len(attempts),
+                    corpus_dir=request.corpus,
+                    config=TrajectoryAnalysisConfig(
+                        segment_characters=request.resolution_segment_characters
+                    ),
+                    gold_manifest_bytes=manifest_bytes,
+                )
+                _validate_bound_directory(authority.query, generation, native)
+                native.write_json("trajectory-resolution.json", evidence)
+                resolution_summary = public_resolution_projection(evidence)
+            except (OSError, TrajectoryResolutionError, ValueError) as error:
+                raise DciBenchmarkError(
+                    "DCI benchmark resolution evidence is invalid"
+                ) from error
         metrics.append(
             gather_query_metrics(
                 row=row.as_dict(),
@@ -1365,6 +1617,7 @@ def _analysis_results(
                 launcher_returncode=(
                     0 if result.get("status") == "completed" else None
                 ),
+                resolution_summary=resolution_summary,
             )
         )
     return metrics

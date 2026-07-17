@@ -230,6 +230,14 @@ limit, concurrency, prompt, Judge, reuse, analysis, and figure options override
 the profile. Use `--limit 1` for a bounded check. Omitting `--limit` is a
 deliberate full-dataset run and can incur substantial Pi and Judge usage.
 
+Paper-aligned trajectory resolution is opt-in: pass `--resolution-registry`
+with `--resolution-segment-characters`, `--corpus`, and
+`--conversation-externalize-tool-results`. It emits private
+per-query alignment evidence plus body-free coverage, localization, retained
+coverage, analysis, and figures. The registry/manifest schemas, identity and
+reuse rules, and a runnable command are documented in the
+[complete Asterion DCI product reference](asterion/docs/guides/asterion-dci-complete-reference.md#benchmark-dci-agent-lite).
+
 The one-to-one Pi-default wrappers under `asterion/scripts/{bcplus_eval,qa,bright}`
 load the shared repository `.env`, preflight their dataset and corpus, and call
 only `asterion-dci benchmark`. For example:

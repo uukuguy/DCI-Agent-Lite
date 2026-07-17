@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
 import tempfile
@@ -24,6 +25,7 @@ from asterion.dci.benchmark import (
     BenchmarkRequest,
     DciBenchmarkError,
     _Directory,
+    _corpus_content_identity as _real_corpus_content_identity,
     _next_generation,
     _prepare,
     _run_pi_async as _real_run_pi_async,
@@ -1585,6 +1587,185 @@ class AsterionDciBatchValidationTests(unittest.TestCase):
             request.dataset.write_text("\n".join(lines) + "\n")
             with self.assertRaisesRegex(DciBenchmarkError, "configuration is incompatible"):
                 asyncio.run(run_benchmark_async(request, paths=Mock()))
+
+    def test_paper_resolution_evidence_flows_to_batch_analysis_and_reuse_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            request = _request(root)
+            corpus = root / "corpus"
+            corpus.mkdir()
+            body = "gold evidence\n"
+            document = corpus / "a.txt"
+            document.write_text(body)
+            manifest = root / "q-0.gold.json"
+            manifest.write_text(
+                json.dumps(
+                    {
+                        "schema": "dci.gold-document-manifest/v1",
+                        "dataset_id": "fixture.qa",
+                        "query_id": "q-0",
+                        "documents": [
+                            {
+                                "id": "a.txt",
+                                "path": "a.txt",
+                                "sha256": hashlib.sha256(body.encode()).hexdigest(),
+                                "evidence_spans": [{"start": 0, "end": 13}],
+                            }
+                        ],
+                    }
+                )
+                + "\n"
+            )
+            original_manifest_digest = hashlib.sha256(manifest.read_bytes()).hexdigest()
+            registry = root / "resolution-registry.json"
+            registry.write_text(
+                json.dumps(
+                    {
+                        "schema": "dci.gold-document-registry/v1",
+                        "dataset_id": "fixture.qa",
+                        "manifests": [
+                            {
+                                "query_id": "q-0",
+                                "path": manifest.name,
+                                "sha256": original_manifest_digest,
+                            }
+                        ],
+                    }
+                )
+                + "\n"
+            )
+            request = replace(
+                request,
+                corpus=corpus,
+                resolution_registry=registry,
+                resolution_segment_characters=8,
+                conversation_features=DciConversationFeatures(
+                    externalize_tool_results=True
+                ),
+                figures=False,
+            )
+
+            async def run_then_replace_inputs(
+                *args: object, **kwargs: object
+            ) -> DciRunResult:
+                result = await _recorded_fixture_run(*args, **kwargs)
+                changed_manifest = json.loads(manifest.read_text())
+                changed_manifest["documents"][0]["evidence_spans"] = [
+                    {"start": 1, "end": 13}
+                ]
+                manifest.write_text(json.dumps(changed_manifest) + "\n")
+                changed_registry = json.loads(registry.read_text())
+                changed_registry["manifests"][0]["sha256"] = hashlib.sha256(
+                    manifest.read_bytes()
+                ).hexdigest()
+                registry.write_text(json.dumps(changed_registry) + "\n")
+                return result
+
+            with patch(
+                "asterion.dci.benchmark._run_pi_async",
+                side_effect=run_then_replace_inputs,
+            ), patch(
+                "asterion.dci.benchmark.evaluate_run_directory_async",
+                side_effect=_recorded_fixture_evaluate,
+            ), patch(
+                "asterion.dci.benchmark._corpus_content_identity",
+                wraps=_real_corpus_content_identity,
+            ) as corpus_identity:
+                asyncio.run(
+                    run_benchmark_async(request, paths=resolve_dci_paths(root))
+                )
+            self.assertEqual(corpus_identity.call_count, 2)
+
+            summary = json.loads((request.output_root / "summary.json").read_text())
+            analysis_rows = [
+                json.loads(line)
+                for line in (request.output_root / "analysis.jsonl").read_text().splitlines()
+            ]
+            native = next((request.output_root / "q-0").glob("native-generation-*"))
+            private = json.loads((native / "trajectory-resolution.json").read_text())
+            self.assertEqual(
+                private["identity"]["inputs"]["gold_manifest"]["sha256"],
+                original_manifest_digest,
+            )
+            self.assertEqual(summary["resolution"]["coverage"]["any"], 0.0)
+            self.assertEqual(analysis_rows[0]["coverage_mean"], 0.0)
+            self.assertEqual(
+                private["metrics"]["retained_coverage"]["unavailable_reason"],
+                "final-context-unavailable",
+            )
+
+            # Restore the immutable configured inputs, then prove an unrelated
+            # corpus byte invalidates compatible reuse before provider work.
+            changed_manifest = json.loads(manifest.read_text())
+            changed_manifest["documents"][0]["evidence_spans"] = [
+                {"start": 0, "end": 13}
+            ]
+            manifest.write_text(json.dumps(changed_manifest) + "\n")
+            changed_registry = json.loads(registry.read_text())
+            changed_registry["manifests"][0]["sha256"] = original_manifest_digest
+            registry.write_text(json.dumps(changed_registry) + "\n")
+            distractor = corpus / "distractor.txt"
+            distractor.write_text("new corpus byte\n")
+            with patch("asterion.dci.benchmark._run_pi_async") as run, self.assertRaisesRegex(
+                DciBenchmarkError, "configuration"
+            ):
+                asyncio.run(
+                    run_benchmark_async(request, paths=resolve_dci_paths(root))
+                )
+            run.assert_not_called()
+            distractor.unlink()
+
+            changed = replace(request, resolution_segment_characters=16)
+            with patch("asterion.dci.benchmark._run_pi_async") as run, self.assertRaisesRegex(
+                DciBenchmarkError, "configuration"
+            ):
+                asyncio.run(
+                    run_benchmark_async(changed, paths=resolve_dci_paths(root))
+                )
+            run.assert_not_called()
+
+    def test_invalid_resolution_manifest_fails_before_provider(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            request = _request(root)
+            corpus = root / "corpus"
+            corpus.mkdir()
+            manifest = root / "manifest.json"
+            manifest.write_text("{}\n")
+            registry = root / "registry.json"
+            registry.write_text(
+                json.dumps(
+                    {
+                        "schema": "dci.gold-document-registry/v1",
+                        "dataset_id": "fixture.qa",
+                        "manifests": [
+                            {
+                                "query_id": "q-0",
+                                "path": manifest.name,
+                                "sha256": hashlib.sha256(
+                                    manifest.read_bytes()
+                                ).hexdigest(),
+                            }
+                        ],
+                    }
+                )
+            )
+            request = replace(
+                request,
+                corpus=corpus,
+                resolution_registry=registry,
+                resolution_segment_characters=8,
+                conversation_features=DciConversationFeatures(
+                    externalize_tool_results=True
+                ),
+            )
+            with patch("asterion.dci.benchmark._run_pi_async") as run, self.assertRaisesRegex(
+                DciBenchmarkError, "resolution manifest is invalid"
+            ):
+                asyncio.run(
+                    run_benchmark_async(request, paths=resolve_dci_paths(root))
+                )
+            run.assert_not_called()
 
 
 def _request(root: Path, *, rows: int = 1, max_concurrency: int = 1, mode: str = "qa", ir: bool = False, extra_args: tuple[str, ...] = ()) -> BenchmarkRequest:

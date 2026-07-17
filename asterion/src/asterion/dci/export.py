@@ -59,6 +59,38 @@ class DciExportError(RuntimeError):
     """A content-free public export failure."""
 
 
+def export_resolution_summary(
+    *,
+    run_dir: Path,
+    attempt: int,
+    corpus_dir: Path,
+    gold_manifest_path: Path,
+    segment_characters: int,
+) -> dict[str, object]:
+    """Reanalyze exact inputs before exporting one body-free summary."""
+
+    from asterion.dci.trajectory_resolution import (
+        TrajectoryAnalysisConfig,
+        TrajectoryResolutionError,
+        analyze_trajectory_resolution,
+        public_resolution_projection,
+    )
+
+    try:
+        evidence = analyze_trajectory_resolution(
+            run_dir=run_dir,
+            attempt=attempt,
+            corpus_dir=corpus_dir,
+            gold_manifest_path=gold_manifest_path,
+            config=TrajectoryAnalysisConfig(
+                segment_characters=segment_characters
+            ),
+        )
+        return public_resolution_projection(evidence)
+    except TrajectoryResolutionError as error:
+        raise DciExportError("invalid trajectory resolution evidence") from error
+
+
 def _derive_key(password: str, length: int) -> bytes:
     key = hashlib.sha256(password.encode("utf-8")).digest()
     return (key * (length // len(key))) + key[: length % len(key)]

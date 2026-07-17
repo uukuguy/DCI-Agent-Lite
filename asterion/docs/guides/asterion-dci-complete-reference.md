@@ -205,7 +205,36 @@ asterion-dci benchmark \
 - QA Judge 与 IR ranking metric；
 - 已完成运行和 Judge 结果的精确复用；
 - batch state、results、summary、analysis 和 figures 的原子发布；
+- 可选的论文口径 trajectory resolution：每题 coverage（any/mean/all）、
+  surfaced-gold localization、最终模型上下文 retained coverage；
 - 失败、取消和部分结果的真实状态，不把不可用值伪造成 0。
+
+要启用 resolution 分析，benchmark 必须同时提供语料根、完整 registry 和正整数
+segment 宽度，并保持 tool-result externalization 开启：
+
+```bash
+asterion-dci benchmark \
+  --dataset dataset.jsonl \
+  --corpus corpus \
+  --output-root outputs/eval \
+  --resolution-registry gold/registry.json \
+  --resolution-segment-characters 20000 \
+  --conversation-externalize-tool-results
+```
+
+registry 使用闭合的 `dci.gold-document-registry/v1` schema，声明唯一
+`dataset_id`，并为本次选中的每个 `query_id` 精确列出 manifest 相对路径和
+SHA-256。所有 manifest 的 dataset identity 必须与 registry 相同。manifest 使用
+`dci.gold-document-manifest/v1`，记录 dataset/query identity，以及相对语料根的
+gold document 路径、SHA-256 和半开区间 evidence spans。缺项、额外字段、符号链接、
+digest/identity 不匹配或 IR gold IDs 不一致都会在 provider 启动前失败。
+
+每个完成题目的完整对齐证据保存在该题原生运行目录的私有
+`trajectory-resolution.json`；`summary.json`、`analysis.json[l]`、Markdown 和
+`analysis_figures/resolution_metrics.png` 仅接收经过严格校验的 body-free 汇总。
+segment、registry/manifest、语料、原生轨迹、最终上下文或对齐策略变化都会改变
+identity 或使旧证据失效。这里的“论文口径”指指标定义和可执行证据链已经实现，
+不代表完整数据集或论文历史分数已经重跑。
 
 完整实现的模型外验收包括 533/533 个细粒度 selector、6/6 个额外 batch 语义和 12/12 个原始/Asterion launcher 对。迁移期间还运行过一条有界 Pi+Judge batch 及精确 reuse 证明。
 

@@ -15,9 +15,14 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from asterion.adapters.pi import map_pi_capabilities
+from asterion.dci.artifacts import (
+    DciArtifactError,
+    validate_latest_context_evidence,
+)
 from asterion.dci.resolution_metrics import (
     best_document_localization,
     compute_query_coverage,
+    compute_retained_coverage,
     gold_document_set,
     query_localization,
     surfaced_gold_set,
@@ -74,6 +79,13 @@ class _Snapshot:
     device: int
     inode: int
     modified_ns: int
+
+
+@dataclass(frozen=True, slots=True)
+class _ImmutableSnapshot:
+    label: str
+    sha256: str
+    size: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -330,6 +342,7 @@ def _validate_native_identity(
     attempts = state.get("attempts")
     tools = state.get("tools")
     question = state.get("question")
+    latest_capture = latest.get("latest")
     if (
         set(latest) != latest_keys
         or any(latest.get(name) != state.get(name) for name in shared)
@@ -343,13 +356,32 @@ def _validate_native_identity(
         or type(state.get("pi_source_attempts")) is not list
         or type(latest.get("request_count")) is not int
         or latest["request_count"] < 0
-        or (latest.get("latest") is not None and type(latest["latest"]) is not dict)
+        or (latest_capture is not None and type(latest_capture) is not dict)
         or type(attempts) is not list
         or not attempts
         or attempt != len(attempts)
         or state.get("resume_count") != len(attempts) - 1
     ):
         raise TrajectoryResolutionError("DCI native artifact identity is invalid")
+    if latest_capture is not None:
+        if (
+            set(latest_capture)
+            != {
+                "captured_at",
+                "request_index",
+                "model",
+                "runtime_context_management",
+                "message_count",
+                "messages",
+                "payload",
+            }
+            or type(latest_capture.get("messages")) is not list
+            or type(latest_capture.get("message_count")) is not int
+            or latest_capture["message_count"] != len(latest_capture["messages"])
+            or latest_capture.get("runtime_context_management")
+            != latest.get("runtime_context_management")
+        ):
+            raise TrajectoryResolutionError("DCI final model context is invalid")
     selected = attempts[attempt - 1]
     if (
         type(selected) is not dict
@@ -488,6 +520,20 @@ def _parse_gold_manifest(
         )
         snapshots.append(snapshot)
     return dataset_id, query_id, tuple(documents), tuple(snapshots)
+
+
+def validate_gold_manifest_bytes(
+    data: bytes, *, corpus_dir: Path
+) -> tuple[str, str, tuple[str, ...]]:
+    """Preflight one manifest and every referenced corpus file without a run."""
+
+    if type(data) is not bytes:
+        raise TrajectoryResolutionError("DCI gold manifest bytes are invalid")
+    dataset_id, query_id, documents, snapshots = _parse_gold_manifest(
+        data, Path(corpus_dir)
+    )
+    _revalidate(snapshots)
+    return dataset_id, query_id, tuple(document.document_id for document in documents)
 
 
 def _externalized_observations(
@@ -742,7 +788,107 @@ def _align(
     return tuple(alignments)
 
 
-def _snapshot_identity(snapshot: _Snapshot) -> dict[str, object]:
+def _context_text_blocks(latest: dict[str, Any]) -> tuple[str, ...] | None:
+    capture = latest.get("latest")
+    if capture is None:
+        return None
+    if type(capture) is not dict or type(capture.get("messages")) is not list:
+        raise TrajectoryResolutionError("DCI final model context is invalid")
+    texts: list[str] = []
+    for message in capture["messages"]:
+        if type(message) is not dict:
+            raise TrajectoryResolutionError("DCI final model context is invalid")
+        content = message.get("content")
+        if content is None:
+            continue
+        if type(content) is str:
+            texts.append(content)
+            continue
+        if type(content) is not list:
+            raise TrajectoryResolutionError("DCI final model context is invalid")
+        for part in content:
+            if type(part) is not dict:
+                raise TrajectoryResolutionError("DCI final model context is invalid")
+            text = part.get("text")
+            if part.get("type") == "text" and type(text) is str:
+                texts.append(text)
+    return tuple(texts)
+
+
+def _contains_exact_path(text: str, path: str) -> bool:
+    boundary = r"A-Za-z0-9._/\-"
+    return (
+        re.search(
+            rf"(?<![{boundary}]){re.escape(path)}(?![{boundary}])",
+            text,
+        )
+        is not None
+    )
+
+
+def _retained_alignments(
+    latest: dict[str, Any], documents: tuple[_GoldDocument, ...]
+) -> tuple[dict[str, object], ...] | None:
+    texts = _context_text_blocks(latest)
+    if texts is None:
+        return None
+    evidence_owners: dict[str, set[str]] = {}
+    for document in documents:
+        for start, end in document.evidence_spans:
+            evidence_owners.setdefault(document.body[start:end], set()).add(
+                document.document_id
+            )
+    alignments: list[dict[str, object]] = []
+    for document in documents:
+        matched_path = next(
+            (
+                text
+                for text in texts
+                if any(
+                    _contains_exact_path(text, path)
+                    for path in {document.document_id, document.relative_path}
+                )
+            ),
+            None,
+        )
+        if matched_path is not None:
+            alignments.append(
+                {
+                    "document_id": document.document_id,
+                    "rule": "final-context-path",
+                    "snippet_characters": len(document.body),
+                    "observation": matched_path,
+                }
+            )
+            continue
+        candidates = [
+            document.body[start:end]
+            for start, end in document.evidence_spans
+            if evidence_owners.get(document.body[start:end]) == {document.document_id}
+        ]
+        match = next(
+            (
+                candidate
+                for candidate in candidates
+                if any(candidate in text for text in texts)
+            ),
+            None,
+        )
+        if match is not None:
+            alignments.append(
+                {
+                    "document_id": document.document_id,
+                    "rule": "final-context-evidence",
+                    "snippet_characters": len(match),
+                    "observation": match,
+                }
+            )
+    return tuple(alignments)
+
+
+def _snapshot_identity(
+    snapshot: _Snapshot | _ImmutableSnapshot,
+) -> dict[str, object]:
     return {"label": snapshot.label, "sha256": snapshot.sha256, "size": snapshot.size}
 
 
@@ -814,8 +960,9 @@ def analyze_trajectory_resolution(
     run_dir: Path,
     attempt: int,
     corpus_dir: Path,
-    gold_manifest_path: Path,
     config: TrajectoryAnalysisConfig,
+    gold_manifest_path: Path | None = None,
+    gold_manifest_bytes: bytes | None = None,
     output_path: Path | None = None,
 ) -> dict[str, Any]:
     """Derive private, digest-bound paper resolution evidence from one attempt."""
@@ -824,7 +971,11 @@ def analyze_trajectory_resolution(
         raise TrajectoryResolutionError("DCI trajectory analysis configuration is invalid")
     run_dir = Path(run_dir)
     corpus_dir = Path(corpus_dir)
-    gold_manifest_path = Path(gold_manifest_path)
+    if (gold_manifest_path is None) == (gold_manifest_bytes is None):
+        raise TrajectoryResolutionError("DCI gold manifest authority is invalid")
+    gold_manifest_path = (
+        None if gold_manifest_path is None else Path(gold_manifest_path)
+    )
     state_data, state_snapshot = _read_regular_at(run_dir, "state.json", label="state")
     protocol_relative = f"protocol/attempt-{attempt:04d}.events.jsonl"
     request_relative = f"protocol/attempt-{attempt:04d}.request.json"
@@ -834,21 +985,46 @@ def analyze_trajectory_resolution(
     protocol_data, protocol_snapshot = _read_regular_at(
         run_dir, protocol_relative, label="protocol"
     )
+    raw_events_data, raw_events_snapshot = _read_regular_at(
+        run_dir, "events.jsonl", label="recorder-events"
+    )
     latest_data, latest_snapshot = _read_regular_at(
         run_dir, "latest_model_context.json", label="final-context"
     )
-    manifest_data, manifest_snapshot = _read_path(gold_manifest_path, label="gold-manifest")
+    if gold_manifest_bytes is not None:
+        if type(gold_manifest_bytes) is not bytes:
+            raise TrajectoryResolutionError("DCI gold manifest authority is invalid")
+        manifest_data = gold_manifest_bytes
+        manifest_snapshot: _Snapshot | _ImmutableSnapshot = _ImmutableSnapshot(
+            label="gold-manifest",
+            sha256=_sha256(manifest_data),
+            size=len(manifest_data),
+        )
+    else:
+        assert gold_manifest_path is not None
+        manifest_data, manifest_snapshot = _read_path(
+            gold_manifest_path, label="gold-manifest"
+        )
     state = _json_object(state_data, label="state")
     latest = _json_object(latest_data, label="final context")
     protocol_request = _json_object(request_data, label="protocol request")
     events = _jsonl(protocol_data)
+    raw_events = _jsonl(raw_events_data)
     run_id = _validate_completed_attempt(state, events, attempt)
     _validate_native_identity(state, latest, protocol_request, attempt=attempt)
+    tool_calls = state.get("tool_calls")
+    if type(tool_calls) is not list:
+        raise TrajectoryResolutionError("DCI native tool-call evidence is invalid")
+    try:
+        validate_latest_context_evidence(list(raw_events), latest, tool_calls)
+    except DciArtifactError as error:
+        raise TrajectoryResolutionError("DCI final model context is invalid") from error
     dataset_id, query_id, documents, corpus_snapshots = _parse_gold_manifest(
         manifest_data, corpus_dir
     )
     observations, tool_snapshots = _externalized_observations(run_dir, events)
     alignments = _align(observations, documents, config)
+    retained_alignments = _retained_alignments(latest, documents)
     surfaced_ids = sorted({str(item["document_id"]) for item in alignments})
     gold = gold_document_set(tuple(document.document_id for document in documents))
     surfaced = surfaced_gold_set(gold, surfaced_ids)
@@ -870,50 +1046,26 @@ def analyze_trajectory_resolution(
                 )
             )
     localization = query_localization(localizations)
+    retained_ids = (
+        None
+        if retained_alignments is None
+        else sorted({str(item["document_id"]) for item in retained_alignments})
+    )
+    retained = compute_retained_coverage(
+        gold,
+        None if retained_ids is None else surfaced_gold_set(gold, retained_ids),
+    )
     snapshots = (
         state_snapshot,
         request_snapshot,
         protocol_snapshot,
+        raw_events_snapshot,
         latest_snapshot,
-        manifest_snapshot,
+        *((manifest_snapshot,) if isinstance(manifest_snapshot, _Snapshot) else ()),
         *tool_snapshots,
         *corpus_snapshots,
     )
-    identity_inputs = {
-        "analysis_configuration": config.to_mapping(),
-        "analysis_configuration_sha256": _sha256(
-            _canonical_json_bytes(config.to_mapping())
-        ),
-        "attempt": attempt,
-        "completed_run_state": _snapshot_identity(state_snapshot),
-        "corpus": [_snapshot_identity(value) for value in corpus_snapshots],
-        "corpus_sha256": _sha256(
-            _canonical_json_bytes(
-                [_snapshot_identity(value) for value in corpus_snapshots]
-            )
-        ),
-        "externalized_tool_results": [
-            _snapshot_identity(value) for value in tool_snapshots
-        ],
-        "final_model_context": _snapshot_identity(latest_snapshot),
-        "gold_manifest": _snapshot_identity(manifest_snapshot),
-        "dataset_query_sha256": _sha256(
-            _canonical_json_bytes(
-                {
-                    "dataset_id": dataset_id,
-                    "gold_manifest_sha256": manifest_snapshot.sha256,
-                    "query_id": query_id,
-                }
-            )
-        ),
-        "protocol_event_stream": _snapshot_identity(protocol_snapshot),
-        "protocol_request": _snapshot_identity(request_snapshot),
-        "run_id": run_id,
-    }
-    identity_sha256 = _sha256(_canonical_json_bytes(identity_inputs))
-    evidence: dict[str, Any] = {
-        "schema": "dci.trajectory-resolution/v1",
-        "identity": {"sha256": identity_sha256, "inputs": identity_inputs},
+    resolution_payload: dict[str, Any] = {
         "run": {"run_id": run_id, "attempt": attempt},
         "dataset": {"dataset_id": dataset_id, "query_id": query_id},
         "configuration": config.to_mapping(),
@@ -944,6 +1096,14 @@ def analyze_trajectory_resolution(
                     for item in localization.per_document
                 ],
             },
+            "retained_coverage": {
+                "value": retained.value,
+                "unavailable_reason": (
+                    retained.unavailable_reason.value
+                    if retained.unavailable_reason is not None
+                    else None
+                ),
+            },
         },
         "counts": {
             "gold_documents": len(documents),
@@ -951,7 +1111,53 @@ def analyze_trajectory_resolution(
             "tool_observations": len(observations),
             "alignments": len(alignments),
         },
-        "private": {"alignments": list(alignments)},
+        "private": {
+            "alignments": list(alignments),
+            "retained_alignments": (
+                [] if retained_alignments is None else list(retained_alignments)
+            ),
+        },
+    }
+    identity_inputs = {
+        "analysis_configuration": config.to_mapping(),
+        "analysis_configuration_sha256": _sha256(
+            _canonical_json_bytes(config.to_mapping())
+        ),
+        "attempt": attempt,
+        "completed_run_state": _snapshot_identity(state_snapshot),
+        "corpus": [_snapshot_identity(value) for value in corpus_snapshots],
+        "corpus_sha256": _sha256(
+            _canonical_json_bytes(
+                [_snapshot_identity(value) for value in corpus_snapshots]
+            )
+        ),
+        "externalized_tool_results": [
+            _snapshot_identity(value) for value in tool_snapshots
+        ],
+        "final_model_context": _snapshot_identity(latest_snapshot),
+        "gold_manifest": _snapshot_identity(manifest_snapshot),
+        "dataset_query_sha256": _sha256(
+            _canonical_json_bytes(
+                {
+                    "dataset_id": dataset_id,
+                    "gold_manifest_sha256": manifest_snapshot.sha256,
+                    "query_id": query_id,
+                }
+            )
+        ),
+        "derived_resolution_sha256": _sha256(
+            _canonical_json_bytes(resolution_payload)
+        ),
+        "protocol_event_stream": _snapshot_identity(protocol_snapshot),
+        "recorder_event_stream": _snapshot_identity(raw_events_snapshot),
+        "protocol_request": _snapshot_identity(request_snapshot),
+        "run_id": run_id,
+    }
+    identity_sha256 = _sha256(_canonical_json_bytes(identity_inputs))
+    evidence: dict[str, Any] = {
+        "schema": "dci.trajectory-resolution/v1",
+        "identity": {"sha256": identity_sha256, "inputs": identity_inputs},
+        **resolution_payload,
     }
     _revalidate(snapshots)
     if output_path is not None:
@@ -1022,7 +1228,7 @@ def _validated_public_fields(
         or set(dataset) != {"dataset_id", "query_id"}
         or type(configuration) is not dict
         or type(metrics) is not dict
-        or set(metrics) != {"coverage", "localization"}
+        or set(metrics) != {"coverage", "localization", "retained_coverage"}
         or type(counts) is not dict
         or set(counts)
         != {
@@ -1045,8 +1251,10 @@ def _validated_public_fields(
         "final_model_context",
         "gold_manifest",
         "dataset_query_sha256",
+        "derived_resolution_sha256",
         "protocol_event_stream",
         "protocol_request",
+        "recorder_event_stream",
         "run_id",
     }
     dataset_id = _safe_public_id(dataset.get("dataset_id"))
@@ -1075,16 +1283,36 @@ def _validated_public_fields(
                 }
             )
         )
+        or inputs.get("derived_resolution_sha256")
+        != _sha256(
+            _canonical_json_bytes(
+                {
+                    key: evidence[key]
+                    for key in (
+                        "run",
+                        "dataset",
+                        "configuration",
+                        "documents",
+                        "metrics",
+                        "counts",
+                        "private",
+                    )
+                }
+            )
+        )
     ):
         raise TrajectoryResolutionError("DCI public resolution identity is invalid")
     coverage = metrics.get("coverage")
     localization = metrics.get("localization")
+    retained = metrics.get("retained_coverage")
     if (
         type(coverage) is not dict
         or set(coverage) != {"any", "mean", "all"}
         or type(localization) is not dict
         or set(localization)
         != {"value", "matched_gold_count", "unavailable_reason", "per_document"}
+        or type(retained) is not dict
+        or set(retained) != {"value", "unavailable_reason"}
     ):
         raise TrajectoryResolutionError("DCI trajectory resolution evidence is invalid")
     any_value = _finite_unit_float(coverage.get("any"))
@@ -1133,6 +1361,18 @@ def _validated_public_fields(
             raise TrajectoryResolutionError("DCI public localization evidence is invalid")
     elif value is not None or reason != "no-surfaced-gold" or surfaced_count != 0:
         raise TrajectoryResolutionError("DCI public localization evidence is invalid")
+    retained_value = retained.get("value")
+    retained_reason = retained.get("unavailable_reason")
+    if retained_value is None:
+        if retained_reason != "final-context-unavailable":
+            raise TrajectoryResolutionError("DCI retained coverage evidence is invalid")
+    elif (
+        type(retained_value) is not float
+        or not math.isfinite(retained_value)
+        or not 0.0 <= retained_value <= 1.0
+        or retained_reason is not None
+    ):
+        raise TrajectoryResolutionError("DCI retained coverage evidence is invalid")
     return identity, dataset, metrics, counts
 
 
@@ -1142,6 +1382,7 @@ def public_resolution_projection(evidence: object) -> dict[str, Any]:
     identity, dataset, metrics, counts = _validated_public_fields(evidence)
     coverage = metrics["coverage"]
     localization = metrics["localization"]
+    retained = metrics["retained_coverage"]
     public_metrics = {
         "coverage": {
             "any": coverage.get("any"),
@@ -1152,6 +1393,10 @@ def public_resolution_projection(evidence: object) -> dict[str, Any]:
             "value": localization.get("value"),
             "matched_gold_count": localization.get("matched_gold_count"),
             "unavailable_reason": localization.get("unavailable_reason"),
+        },
+        "retained_coverage": {
+            "value": retained.get("value"),
+            "unavailable_reason": retained.get("unavailable_reason"),
         },
     }
     return {
@@ -1165,5 +1410,113 @@ def public_resolution_projection(evidence: object) -> dict[str, Any]:
             "surfaced_gold_documents": counts.get("surfaced_gold_documents"),
             "tool_observations": counts.get("tool_observations"),
             "alignments": counts.get("alignments"),
+        },
+    }
+
+
+def validate_public_resolution_summary(summary: object) -> dict[str, Any]:
+    """Validate and copy the closed, body-free public summary shape."""
+
+    if (
+        type(summary) is not dict
+        or set(summary)
+        != {"schema", "identity_sha256", "dataset_id", "query_id", "metrics", "counts"}
+        or summary.get("schema") != "dci.trajectory-resolution-summary/v1"
+        or type(summary.get("identity_sha256")) is not str
+        or _SHA256.fullmatch(summary["identity_sha256"]) is None
+    ):
+        raise TrajectoryResolutionError("DCI public resolution summary is invalid")
+    dataset_id = _safe_public_id(summary.get("dataset_id"))
+    query_id = _safe_public_id(summary.get("query_id"))
+    metrics = summary.get("metrics")
+    counts = summary.get("counts")
+    if (
+        type(metrics) is not dict
+        or set(metrics) != {"coverage", "localization", "retained_coverage"}
+        or type(counts) is not dict
+        or set(counts)
+        != {
+            "gold_documents",
+            "surfaced_gold_documents",
+            "tool_observations",
+            "alignments",
+        }
+    ):
+        raise TrajectoryResolutionError("DCI public resolution summary is invalid")
+    coverage = metrics.get("coverage")
+    localization = metrics.get("localization")
+    retained = metrics.get("retained_coverage")
+    if (
+        type(coverage) is not dict
+        or set(coverage) != {"any", "mean", "all"}
+        or type(localization) is not dict
+        or set(localization)
+        != {"value", "matched_gold_count", "unavailable_reason"}
+        or type(retained) is not dict
+        or set(retained) != {"value", "unavailable_reason"}
+    ):
+        raise TrajectoryResolutionError("DCI public resolution summary is invalid")
+    any_value = _finite_unit_float(coverage.get("any"))
+    mean_value = _finite_unit_float(coverage.get("mean"))
+    all_value = _finite_unit_float(coverage.get("all"))
+    gold_count = _non_negative_int(counts.get("gold_documents"))
+    surfaced_count = _non_negative_int(counts.get("surfaced_gold_documents"))
+    tool_count = _non_negative_int(counts.get("tool_observations"))
+    alignment_count = _non_negative_int(counts.get("alignments"))
+    if (
+        gold_count <= 0
+        or surfaced_count > gold_count
+        or alignment_count < surfaced_count
+        or any_value != float(surfaced_count > 0)
+        or not math.isclose(
+            mean_value, surfaced_count / gold_count, rel_tol=0.0, abs_tol=1e-15
+        )
+        or all_value != float(surfaced_count == gold_count)
+    ):
+        raise TrajectoryResolutionError("DCI public resolution summary is invalid")
+    matched_count = _non_negative_int(localization.get("matched_gold_count"))
+    localization_value = localization.get("value")
+    localization_reason = localization.get("unavailable_reason")
+    if matched_count:
+        _finite_unit_float(localization_value)
+        if matched_count != surfaced_count or localization_reason is not None:
+            raise TrajectoryResolutionError("DCI public resolution summary is invalid")
+    elif (
+        localization_value is not None
+        or localization_reason != "no-surfaced-gold"
+        or surfaced_count != 0
+    ):
+        raise TrajectoryResolutionError("DCI public resolution summary is invalid")
+    retained_value = retained.get("value")
+    retained_reason = retained.get("unavailable_reason")
+    if retained_value is None:
+        if retained_reason != "final-context-unavailable":
+            raise TrajectoryResolutionError("DCI public resolution summary is invalid")
+    else:
+        _finite_unit_float(retained_value)
+        if retained_reason is not None:
+            raise TrajectoryResolutionError("DCI public resolution summary is invalid")
+    return {
+        "schema": "dci.trajectory-resolution-summary/v1",
+        "identity_sha256": summary["identity_sha256"],
+        "dataset_id": dataset_id,
+        "query_id": query_id,
+        "metrics": {
+            "coverage": {"any": any_value, "mean": mean_value, "all": all_value},
+            "localization": {
+                "value": localization_value,
+                "matched_gold_count": matched_count,
+                "unavailable_reason": localization_reason,
+            },
+            "retained_coverage": {
+                "value": retained_value,
+                "unavailable_reason": retained_reason,
+            },
+        },
+        "counts": {
+            "gold_documents": gold_count,
+            "surfaced_gold_documents": surfaced_count,
+            "tool_observations": tool_count,
+            "alignments": alignment_count,
         },
     }

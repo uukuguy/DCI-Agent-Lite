@@ -101,6 +101,8 @@ def _parser() -> argparse.ArgumentParser:
     benchmark.add_argument("--profile")
     benchmark.add_argument("--corpus", "--corpus-dir", dest="corpus", type=Path)
     benchmark.add_argument("--corpus-hint")
+    benchmark.add_argument("--resolution-registry", type=Path)
+    benchmark.add_argument("--resolution-segment-characters", type=int)
     benchmark.add_argument("--max-concurrency", type=int)
     benchmark.add_argument("--max-turns", type=int)
     benchmark.add_argument(
@@ -294,6 +296,11 @@ def main(
                 invocation_cwd=invocation_cwd,
                 repo_root=root,
             )
+            benchmark_resolution_registry = _resolve_resource(
+                args.resolution_registry,
+                invocation_cwd=invocation_cwd,
+                repo_root=root,
+            )
             result = run_benchmark(
                 BenchmarkRequest(
                     dataset=args.dataset,
@@ -311,6 +318,8 @@ def main(
                     resume_policy=args.resume_policy,
                     analysis=not args.no_analysis,
                     figures=not args.no_figures,
+                    resolution_registry=benchmark_resolution_registry,
+                    resolution_segment_characters=args.resolution_segment_characters,
                     system_prompt_file=benchmark_system_prompt,
                     append_system_prompt_file=benchmark_append_prompt,
                     conversation_features=DciConversationFeatures(

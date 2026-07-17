@@ -1562,6 +1562,25 @@ def _validate_latest_context_projection(
         raise DciArtifactError("DCI completed run evidence is invalid")
 
 
+def validate_latest_context_evidence(
+    raw_events: list[dict[str, Any]],
+    latest_context: dict[str, Any],
+    tool_calls: list[dict[str, Any]],
+) -> None:
+    """Bind a final model-context projection to recorder-owned raw events."""
+
+    if (
+        not isinstance(raw_events, list)
+        or any(not isinstance(event, dict) for event in raw_events)
+        or not isinstance(latest_context, dict)
+        or not isinstance(tool_calls, list)
+        or any(not isinstance(call, dict) for call in tool_calls)
+    ):
+        raise DciArtifactError("DCI completed run evidence is invalid")
+    timings = _tool_timing_projection(raw_events, tool_calls)
+    _validate_latest_context_projection(raw_events, latest_context, timings)
+
+
 def _valid_timestamp(value: object) -> bool:
     if not isinstance(value, str):
         return False
