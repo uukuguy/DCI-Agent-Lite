@@ -428,3 +428,13 @@
 - Compatibility boundary: D-039 remains valid when no exact Asterion paper profile is selected. Explicit `level0` through `level4` now select the Asterion-owned implementation; legacy, level5, and unknown values fail closed.
 - Sequencing: AF-310 may not absorb BEIR/metrics, Claude semantic acceptance, full datasets, or score reproduction. Each successor requires its own governed plan and fresh Climb session.
 - Revalidation trigger: change extension ownership or the four-layer evidence model only if the selected runtime exposes an equally exact, versioned, integrity-bound native contract with executable semantic evidence.
+
+## D-045 — Separate paper benchmark identity from executable authorization
+
+- Status: ✅ accepted design decision
+- Decided: 2026-07-17
+- Decision: AF-320 owns schema-closed dataset and experiment-scope registries, exact evidence-derived coverage/localization metrics, corrected bounded NDCG@10, and paper-declared ablation rows. Dataset identity and experiment selection identity are separate contracts.
+- Paper boundary: BrowseComp main all-830, its distinct analysis/context n=100 scopes, Appendix random-50, full BRIGHT/Bamboogle, and applicable random-50 selections retain separate seed/algorithm/selected-ID identities. Parameterized localization never invents an undocumented universal segment width.
+- Execution boundary: `paper-full` rows may be listed, validated, rendered, and packaged but cannot execute in AF-320 under any generic option or environment value. AF-340 alone may add a separately reviewed authorization and budget surface.
+- Evidence boundary: analysis identity rehashes the exact protocol stream, every consumed external tool blob, final model-visible context, gold manifest, and opened corpus/gold files. Public projections remain body-free.
+- Revalidation trigger: change selection scopes, aggregation, evidence identity, or full-run authority only after reconciling the paper version, design, worklist, cache migration, and security review.

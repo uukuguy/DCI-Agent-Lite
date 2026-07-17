@@ -2,7 +2,7 @@
 
 > Canonical work-package ledger. An `active` lifecycle requires exactly one `in_progress` package; a `complete` lifecycle permits none and forbids autonomous dispatch.
 
-> Project lifecycle: complete
+> Project lifecycle: active
 
 ## AF-000 — Framework control plane
 
@@ -338,6 +338,16 @@
 - Design: `docs/superpowers/specs/2026-07-16-paper-aligned-dci-complete-implementation-design.md`
 - Plan: `docs/superpowers/plans/2026-07-16-af-310-paper-aligned-runtime-context-management.md`
 - Closure evidence: AF-310-H-001 through H-005 are confirmed 4/4. The shipped dependency-free extension and Python consumers use closed telemetry/state/public-evidence v2 schemas, expose identical digest-bound L0–L4 policy through CLI, benchmark, resume, installed application, and isolated wheel, and preserve cancellation/deadline boundaries. Final clean-checkout r9 forced one L3 compaction with twelve observed preserved user turns and no summary plus one L4 compaction with one successful unsuppressed summary in exactly two bounded Pi operations and thirteen user turns per case. The 0600 body-free report and six private artifact digests are rehashed into immutable Climb evidence; the external `pi/` was not modified, no Judge or full dataset ran. Closure passes 1288 Python and 11 TypeScript tests, Ruff, compile, product 8/8, 533/533 delegated selectors, 12/12 launcher pairs, 6/6 extras, installed application/wheel, scope, and diff gates.
+
+## AF-320 — Paper benchmark and metric parity
+
+- Status: in_progress
+- Parent objective: Paper-aligned complete DCI implementation in Asterion
+- Scope: ship the paper's exact thirteen-dataset inventory and experiment-specific selection identities, correct BEIR NDCG@10, trajectory coverage/localization/retained-evidence analysis, and deterministic paper-declared plus bounded ablation surfaces through the existing Asterion DCI product.
+- Dependencies: AF-310
+- Acceptance: schema-closed dataset/scope resources and product surfaces pass source/installed/wheel parity; native immutable evidence produces exact coverage and matched-gold localization metrics; full paper rows remain unconditionally non-executable before AF-340; bounded acceptance uses exactly two Pi agent operations and one exact GPT-4.1 Judge operation without a full dataset or score-reproduction claim.
+- Design: `docs/superpowers/specs/2026-07-17-af-320-paper-benchmark-metric-parity-design.md`
+- Plan: `docs/superpowers/plans/2026-07-17-af-320-paper-benchmark-metric-parity.md`
 
 ## AF-095 — Asterion framework identity and extraction
 

@@ -5,14 +5,18 @@
 
 ## In-flight / session state
 
-- Phase: implementation
+- Phase: active
 - Last cycle: 91
-- Next hypothesis: None
+- Next hypothesis: AF-320-H-001
 - In flight: none
-- Next action: Trigger Knowledge Layer.
+- Next action: Run AF-320-H-001 Task 1 inventory and experiment-scope RED tests.
 
 ## Active hypotheses
 
+- **AF-320-H-001** (pending, rank 1.00): Prove the exact dataset and experiment-scope registries, bounded NDCG@10, and strict ArguAna/SciFact adapter/profile path.
+- **AF-320-H-002** (pending, rank 0.90): Prove paper-exact parameterized coverage/localization and retained-evidence primitives with query and matched-gold aggregation.
+- **AF-320-H-003** (pending, rank 0.80): Prove conservative native observation alignment, byte-exact evidence identity, cache invalidation, and body-free projections.
+- **AF-320-H-004** (pending, rank 0.70): Prove non-executable paper matrices, deterministic bounded analogues, complete product parity, and terminal three-operation evidence binding.
 
 ## Run ladder
 
@@ -125,3 +129,5 @@
 - treat generic Pi compaction defaults as exact paper L0-L4 evidence
 - modify the external pi checkout instead of using Asterion's extension boundary
 - reuse the completed AF-250 session or its hypotheses under AF-310
+- collapse BrowseComp all-830, analysis n=100, context-ablation n=100, and Appendix random-50 into one dataset default
+- make paper-full profiles executable before AF-340 authorization

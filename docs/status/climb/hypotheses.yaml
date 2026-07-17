@@ -2085,3 +2085,55 @@ hypotheses:
       path: provider-evidence/af-310-h-005.json
       sha256: 65c43d4fecdacc296dfc1997ae49f5ec870e22e6a1b78f70c8a134f955f28e15
       report_sha256: 6003346ffc4e8e4e07663747fd1d235f050ad03fa32cceb04358645e3638cd7b
+- id: AF-320-H-001
+  work_package_id: AF-320
+  description: Prove the exact dataset and experiment-scope registries, bounded NDCG@10,
+    and strict ArguAna/SciFact adapter/profile path.
+  parent_paradigm: dci-paper-benchmark-inventory
+  expected_lift: +1 exact paper inventory and BEIR path
+  cost_h: 1.4
+  ranking: 1.0
+  status: pending
+  created_at: '2026-07-17T08:36:00+08:00'
+  verification_command: uv run --project asterion python -m unittest -v tests.test_asterion_dci_paper_benchmarks
+    tests.test_asterion_dci_metrics tests.test_asterion_dci_datasets tests.test_asterion_dci_batch_launchers
+  results: []
+- id: AF-320-H-002
+  work_package_id: AF-320
+  description: Prove paper-exact parameterized coverage/localization and retained-evidence
+    primitives with query and matched-gold aggregation.
+  parent_paradigm: dci-paper-resolution-metrics
+  expected_lift: +1 exact evidence-derived metric contract
+  cost_h: 1.2
+  ranking: 0.9
+  status: pending
+  created_at: '2026-07-17T08:36:00+08:00'
+  verification_command: uv run --project asterion python -m unittest -v tests.test_asterion_dci_resolution_metrics
+    tests.test_asterion_dci_analysis tests.test_asterion_dci_export
+  results: []
+- id: AF-320-H-003
+  work_package_id: AF-320
+  description: Prove conservative native observation alignment, byte-exact evidence identity,
+    cache invalidation, and body-free projections.
+  parent_paradigm: dci-paper-trajectory-evidence
+  expected_lift: +1 safe immutable trajectory evidence path
+  cost_h: 1.8
+  ranking: 0.8
+  status: pending
+  created_at: '2026-07-17T08:36:00+08:00'
+  verification_command: uv run --project asterion python -m unittest -v tests.test_asterion_dci_trajectory_resolution
+    tests.test_asterion_dci_artifacts tests.test_asterion_dci_batch
+  results: []
+- id: AF-320-H-004
+  work_package_id: AF-320
+  description: Prove non-executable paper matrices, deterministic bounded analogues,
+    complete product parity, and terminal three-operation evidence binding.
+  parent_paradigm: dci-paper-ablation-product
+  expected_lift: +1 bounded paper-product closure
+  cost_h: 2.0
+  ranking: 0.7
+  status: pending
+  created_at: '2026-07-17T08:36:00+08:00'
+  verification_command: uv run --project asterion python -m unittest -v tests.test_asterion_dci_ablation
+    tests.test_asterion_dci_product_parity tests.test_asterion_dci_verification tests.test_asterion_dci_product_acceptance
+  results: []

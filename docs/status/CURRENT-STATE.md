@@ -4,11 +4,11 @@
 
 - Project: Asterion framework under development in the DCI-Agent-Lite repository; DCI remains the first capability and reference application.
 - Current branch: `main`
-- Theme-level focus: AF-310 exact paper-aligned DCI L0–L4 live context management is closed; prepare governed AF-320 benchmark-completeness design without running full datasets.
+- Theme-level focus: AF-320 paper benchmark/metric parity is active; implement exact dataset/scope contracts, evidence metrics, and bounded ablations without full datasets.
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `asterion/docs/architecture/agent-framework.md`
-- Active work package: none; project lifecycle is complete pending explicit AF-320 governance activation.
+- Active work package: AF-320 — Paper benchmark and metric parity.
 
 ## Current Architecture
 
@@ -60,6 +60,11 @@
 
 ## Open Problems (theme-level)
 
+- AF-320-H-001 is pending: prove the exact dataset/experiment-scope inventory, repair NDCG@10, and add strict ArguAna/SciFact adapters and profiles.
+- AF-320-H-002 is pending: prove paper-exact parameterized coverage/localization and retained-evidence metric primitives and aggregation.
+- AF-320-H-003 is pending: prove conservative native observation alignment, complete evidence hashing, cache invalidation, and body-free projections.
+- AF-320-H-004 is pending: prove deterministic non-executable paper matrices, bounded product parity, and terminal three-operation evidence binding.
+
 - AF-310-H-001 is confirmed 4/4: the closed schema-backed L0–L4 profile names, exact thresholds, stable identity, and configuration/request validation pass.
 - AF-310-H-002 is confirmed 4/4: the dependency-free Asterion Pi extension implements exact tool-result caps, L3 live-turn retention/compaction, L4 recent-context targeting, and three-failure summary suppression that falls back to L3 compaction. Fake-Pi tests prove model-visible hooks and body-free durable state.
 - AF-310-H-003 is confirmed 4/4 at the final implementation: source and isolated wheel resolve the same digest-bound extension; literal Pi argv loads it through the real external loader without checkout writes; closed RPC entries become 0600 attempt-scoped policy evidence and body-free summaries; resume binds the original Pi session file/id plus an entry cursor and rejects profile, threshold, extension, artifact, or session mismatch before a provider request.
@@ -85,6 +90,9 @@
 - `docs/status/climb/research-tree.md` — generated summary of legacy or parented autonomous research state.
 
 ### Implementation entry points
+
+- `docs/superpowers/specs/2026-07-17-af-320-paper-benchmark-metric-parity-design.md` — approved AF-320 paper identities, formulas, evidence, execution gate, and acceptance contract.
+- `docs/superpowers/plans/2026-07-17-af-320-paper-benchmark-metric-parity.md` — reviewed AF-320 TDD task map and hypothesis binding points.
 
 - `src/dci/benchmark/pi_rpc_runner.py` — existing Pi RPC reference runtime.
 - `src/dci/benchmark/pi_system_prompt.py` — Pi-owned system-prompt bridge.

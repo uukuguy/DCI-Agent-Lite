@@ -1,10 +1,10 @@
-score_name: asterion_dci_paper_context_management_acceptance
+score_name: asterion_dci_paper_benchmark_metric_parity_acceptance
 score_direction: max
 subscores:
-  - profile_contract
-  - live_transformation
-  - packaging_resume
-  - bounded_runtime
+  - inventory_beir
+  - resolution_metrics
+  - evidence_alignment
+  - bounded_product
 push_mode: manual-csv
 state_dir: docs/status/climb
 artifact_dir: runs/climb
