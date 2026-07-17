@@ -79,12 +79,14 @@ The mapping is closed:
 }
 ```
 
-For MiniMax, the helper derives `ANTHROPIC_BASE_URL`,
-`ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_MODEL`, and all three Claude default model
-aliases from `DCI_MODEL`; existing conflicting native values are replaced in the
-copy. For official Anthropic, it derives the model aliases and retains the
-single `ANTHROPIC_API_KEY`. Missing provider/model/key or an unmapped provider
-raises a safe `RuntimeFactoryError` without values.
+For MiniMax, the helper derives `ANTHROPIC_BASE_URL`, `ANTHROPIC_MODEL`, and all
+three Claude default model aliases from `DCI_MODEL`. It maps Token Plan
+credentials with the documented `sk-cp-` prefix to `ANTHROPIC_AUTH_TOKEN`, and
+ordinary API keys to `ANTHROPIC_API_KEY`, matching the locked Pi provider's
+header behavior; existing conflicting native values are replaced in the copy.
+For official Anthropic, it derives the model aliases and retains the single
+`ANTHROPIC_API_KEY`. Missing provider/model/key or an unmapped provider raises a
+safe `RuntimeFactoryError` without values.
 
 - [ ] Add failing factory tests for `minimax` and `minimax-cn` translation.
 - [ ] Run `cd asterion && uv run python -m unittest -v tests.test_default_runtime_factory` and confirm missing derived values fail.

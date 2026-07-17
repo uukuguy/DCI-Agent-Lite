@@ -62,8 +62,10 @@ Each adapter translates only providers it actually supports. Pi continues to
 use its provider registry. For `minimax` and `minimax-cn`, the Claude adapter
 derives its private Anthropic-compatible subprocess environment from the same
 provider/model and the provider's existing `MINIMAX_API_KEY` or
-`MINIMAX_CN_API_KEY`. The derived base URL, auth token, primary model, and Claude
-model aliases exist only at the subprocess boundary and are never persisted.
+`MINIMAX_CN_API_KEY`. Token Plan credentials (`sk-cp-`) derive Claude's bearer
+auth token; ordinary MiniMax API keys derive Claude's API-key header, matching
+the locked Pi provider. The derived base URL, credential, primary model, and
+Claude model aliases exist only at the subprocess boundary and are never persisted.
 An unsupported provider/runtime combination or a missing credential fails
 before Claude starts. Judge selection remains independently configured through
 `DCI_EVAL_JUDGE_*` because evaluation is a distinct role, not an agent runtime.
