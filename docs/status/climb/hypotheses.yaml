@@ -2221,11 +2221,23 @@ hypotheses:
   expected_lift: +1 source-to-wheel application parity
   cost_h: 1.5
   ranking: 0.9
-  status: pending
+  status: confirmed
   created_at: '2026-07-17T12:49:00+08:00'
   verification_command: uv run --project asterion python -m unittest -v tests.test_dci_complete_application
     tests.test_asterion_cli tests.test_asterion_distribution
-  results: []
+  results:
+  - session: 2026-07-17-af-330-complete-application-dual-runtime
+    cycle: 97
+    run: 20260717-144035-dci-climb-af330h002
+    local: 4
+    local_per_task:
+      exact_bindings: 1
+      five_stage_execution: 1
+      implementation_identity: 1
+      wheel_resources: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-330-H-003
   work_package_id: AF-330
   description: Prove a bounded real Pi complete-application run is confined to an

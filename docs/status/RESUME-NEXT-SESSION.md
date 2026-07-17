@@ -6,7 +6,7 @@ Active work package: AF-330
 
 Package: AF-330 complete application and dual-runtime exposure
 
-Currently running: no process. AF-330-H-001 is confirmed 4/4; H002 production implementations and product/application identity are next.
+Currently running: no process. AF-330-H-001 and H002 are confirmed 4/4; H003 restricted real Pi application acceptance is next.
 
 ## TL;DR
 
@@ -27,9 +27,9 @@ Currently running: no process. AF-330-H-001 is confirmed 4/4; H002 production im
 
 ## Next concrete action
 
-1. Write H002 RED tests for five executable bindings and shared CLI/application artifact identity.
-2. Implement evaluation, benchmark, analysis, and export adapters over existing Asterion DCI domain modules.
-3. Advance through restricted real Pi and Claude Code evidence without full datasets.
+1. Add H003 model-free preflight/report/binder tests for attempt-local Pi read/grep-only execution.
+2. Run one bounded real Pi complete application over a tiny corpus and bind private evidence.
+3. Advance to fail-closed Claude Code execution without full datasets.
 
 ## Boundaries
 

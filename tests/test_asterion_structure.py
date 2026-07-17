@@ -156,7 +156,10 @@ class AsterionStructureTests(unittest.TestCase):
         self.assertEqual(
             package_ids,
             {
+                "dci.analysis",
+                "dci.benchmark",
                 "dci.evaluation",
+                "dci.export",
                 "dci.research",
                 "evaluation.code-quality",
                 "observability.execution-audit",

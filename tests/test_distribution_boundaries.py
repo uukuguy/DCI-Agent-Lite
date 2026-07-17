@@ -382,7 +382,7 @@ class BuiltDistributionBoundaryTests(unittest.TestCase):
                     for name in archive.namelist()
                     if "/assemblies/" in name
                 ]
-            self.assertEqual(len(manifests), 4)
+            self.assertEqual(len(manifests), 7)
             self.assertEqual(len(manifests), len(set(manifests)))
             self.assertEqual(len(controlled_manifests), 4)
             self.assertEqual(len(controlled_manifests), len(set(controlled_manifests)))
@@ -390,6 +390,8 @@ class BuiltDistributionBoundaryTests(unittest.TestCase):
                 {Path(name).name for name in assemblies},
                 {
                     "controlled-code-validation.json",
+                    "dci-complete-application-claude.json",
+                    "dci-complete-application-pi.json",
                     "dci-local-research.json",
                     "dci-research-capability-claude.json",
                     "dci-research-capability.json",

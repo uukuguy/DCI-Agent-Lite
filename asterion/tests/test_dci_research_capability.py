@@ -203,7 +203,7 @@ class DciResearchCapabilityTests(unittest.IsolatedAsyncioTestCase):
 
 
 class DciResearchCapabilityBoundaryTests(unittest.TestCase):
-    def test_application_and_capability_sources_do_not_import_dci_benchmark(self) -> None:
+    def test_application_and_capability_sources_do_not_import_batch_orchestration(self) -> None:
         roots = (
             SOURCE / "applications",
             SOURCE / "capabilities",
@@ -214,7 +214,7 @@ class DciResearchCapabilityBoundaryTests(unittest.TestCase):
             if root.exists()
             for path in root.rglob("*.py")
         )
-        self.assertNotIn("dci.benchmark", source)
+        self.assertNotIn("from asterion.dci.benchmark import", source)
 
 
 if __name__ == "__main__":

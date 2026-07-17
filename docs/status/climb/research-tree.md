@@ -1,19 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (95 runs).
+> Deterministic summary generated from tracked state (96 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 96
-- Next hypothesis: AF-330-H-002
+- Last cycle: 97
+- Next hypothesis: AF-330-H-003
 - In flight: none
-- Next action: Start AF-330-H-002.
+- Next action: Start AF-330-H-003.
 
 ## Active hypotheses
 
-- **AF-330-H-002** (pending, rank 0.90): Prove product CLI, generic application, installed application, and isolated wheel share implementation and artifact identity.
 - **AF-330-H-003** (pending, rank 0.80): Prove a bounded real Pi complete-application run is confined to an attempt-local corpus with dedicated read and grep operations.
 - **AF-330-H-004** (pending, rank 0.70): Prove a bounded real Claude Code run uses a fail-closed Read/Grep/Glob-only local-corpus boundary and body-free evidence binding.
 
@@ -116,6 +115,7 @@
 | 20260717-104602-dci-climb-af320h003 | AF-320-H-003 | 4 | confirmed 4/4 |
 | af320-paper-benchmark-acceptance | AF-320-H-004 | 4 | confirmed 4/4 |
 | 20260717-130305-dci-climb-af330h001 | AF-330-H-001 | 4 | confirmed 4/4 |
+| 20260717-144035-dci-climb-af330h002 | AF-330-H-002 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

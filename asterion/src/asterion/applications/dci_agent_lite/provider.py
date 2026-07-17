@@ -11,6 +11,7 @@ from asterion.applications.provider import (
     InstalledApplicationProvider,
 )
 from asterion.capabilities.dci_research import DciLocalResearchImplementation
+from asterion.capabilities.dci_research.complete import complete_dci_bindings
 from asterion.dci.application_executor import EnvironmentDciRunExecutor
 from asterion.dci.bridge import DciRunExecutor
 from asterion.dci.verification import create_dci_product
@@ -46,6 +47,17 @@ def create_provider(
                         DciLocalResearchImplementation(native_executor=executor),
                     ),
                 ),
+                runtime_ids=("claude-code.reference", "pi.reference"),
+            ),
+            InstalledApplication(
+                application_id="dci.complete-application",
+                version="1.0.0",
+                assembly_paths=(
+                    application_root / "assemblies/dci-complete-application-claude.json",
+                    application_root / "assemblies/dci-complete-application-pi.json",
+                ),
+                catalog_roots=(capability_root / "manifests",),
+                implementations=complete_dci_bindings(native_executor=executor),
                 runtime_ids=("claude-code.reference", "pi.reference"),
             ),
         ),
