@@ -301,5 +301,19 @@ class DciRestrictedPiEvidenceTests(unittest.TestCase):
             with self.assertRaises(DciDualRuntimeVerificationError):
                 audit_restricted_pi_application(run_dir=run, corpus_dir=corpus)
 
+    def test_tracked_pi_evidence_is_body_free_and_bounded(self) -> None:
+        record = json.loads(
+            (
+                PROJECT.parent
+                / "docs/status/climb/provider-evidence/af-330-h-003.json"
+            ).read_text()
+        )
+        self.assertEqual(record["agent_operations"], 1)
+        self.assertEqual(record["judge_operations"], 1)
+        self.assertEqual(record["tools"], {"grep": 1, "read": 2})
+        self.assertTrue(record["corpus_contained"])
+        self.assertFalse(record["full_dataset"])
+        self.assertNotIn("cobalt lantern", repr(record))
+
 if __name__ == "__main__":
     unittest.main()

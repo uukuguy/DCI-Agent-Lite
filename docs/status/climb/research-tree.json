@@ -1,13 +1,13 @@
 {
-  "run_count": 96,
+  "run_count": 97,
   "session": {
     "session": "2026-07-17-af-330-complete-application-dual-runtime",
     "phase": "implementation",
     "work_package_id": "AF-330",
-    "last_cycle": 97,
-    "next_hypothesis": "AF-330-H-003",
+    "last_cycle": 98,
+    "next_hypothesis": "AF-330-H-004",
     "in_flight": null,
-    "next_action": "Start AF-330-H-003.",
+    "next_action": "Start AF-330-H-004.",
     "falsified_routes": [
       "duplicate the authoritative Pi commit across setup.sh and .env.template",
       "convert the independent Pi checkout to vendored or submodule ownership",
@@ -28,19 +28,6 @@
     ]
   },
   "active": [
-    {
-      "id": "AF-330-H-003",
-      "work_package_id": "AF-330",
-      "description": "Prove a bounded real Pi complete-application run is confined to an attempt-local corpus with dedicated read and grep operations.",
-      "parent_paradigm": "dci-restricted-pi-application",
-      "expected_lift": "+1 bound native semantic application path",
-      "cost_h": 1.5,
-      "ranking": 0.8,
-      "status": "pending",
-      "created_at": "2026-07-17T12:49:00+08:00",
-      "verification_command": "uv run --project asterion python -m unittest -v tests.test_dci_dual_runtime_acceptance tests.test_asterion_dci_security",
-      "results": []
-    },
     {
       "id": "AF-330-H-004",
       "work_package_id": "AF-330",
@@ -2731,6 +2718,40 @@
           "decision_reason": "deterministic local package acceptance"
         }
       ]
+    },
+    {
+      "id": "AF-330-H-003",
+      "work_package_id": "AF-330",
+      "description": "Prove a bounded real Pi complete-application run is confined to an attempt-local corpus with dedicated read and grep operations.",
+      "parent_paradigm": "dci-restricted-pi-application",
+      "expected_lift": "+1 bound native semantic application path",
+      "cost_h": 1.5,
+      "ranking": 0.8,
+      "status": "confirmed",
+      "created_at": "2026-07-17T12:49:00+08:00",
+      "verification_command": "uv run --project asterion python -m unittest -v tests.test_dci_dual_runtime_acceptance tests.test_asterion_dci_security",
+      "results": [
+        {
+          "session": "2026-07-17-af-330-complete-application-dual-runtime",
+          "cycle": 98,
+          "run": "20260717-145028-dci-climb-af330h003",
+          "local": 4,
+          "local_per_task": {
+            "request_tool_surface": 1,
+            "corpus_containment": 1,
+            "outside_path_rejection": 1,
+            "provider_evidence": 1
+          },
+          "online": null,
+          "verdict": "confirmed 4/4",
+          "decision_reason": "deterministic local package acceptance",
+          "provider_evidence": {
+            "path": "provider-evidence/af-330-h-003.json",
+            "sha256": "80aa116a02807a11ab4701d1d66af567f1c69dfb7d11165e486ce0245f69252d",
+            "report_sha256": "72c76603e03fc1e2f028c9e0aee60bcda08e1bc02029e9370fea654e6be00af4"
+          }
+        }
+      ]
     }
   ],
   "falsified": [],
@@ -4846,6 +4867,28 @@
       "verdict": "confirmed 4/4",
       "train_cost_h": "0.01",
       "manifest_path": "runs/climb/20260717-144035-dci-climb-af330h002/manifest.json"
+    },
+    {
+      "run_id": "20260717-145028-dci-climb-af330h003",
+      "cycle": "98",
+      "session": "2026-07-17-af-330-complete-application-dual-runtime",
+      "hypothesis_id": "AF-330-H-003",
+      "paradigm": "dci-restricted-pi-application",
+      "parent_run": "",
+      "pushed_at": "2026-07-17T14:50:29+08:00",
+      "lb_landed_at": "",
+      "local_score": "4",
+      "immutable_resolution": "",
+      "repeat_validation": "",
+      "dirty_checkout_safety": "",
+      "override_compatibility": "",
+      "online_score": "",
+      "gap": "",
+      "push_decision": "PUSH",
+      "decision_reason": "deterministic local package acceptance",
+      "verdict": "confirmed 4/4",
+      "train_cost_h": "0.01",
+      "manifest_path": "runs/climb/20260717-145028-dci-climb-af330h003/manifest.json"
     }
   ],
   "calibration": {

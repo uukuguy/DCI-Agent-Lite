@@ -1,0 +1,28 @@
+{
+  "schema": "asterion.dci.climb-provider-evidence/v1",
+  "work_package_id": "AF-330",
+  "hypothesis_id": "AF-330-H-003",
+  "runtime_id": "pi.reference",
+  "source_commit": "d0920f7",
+  "report_sha256": "72c76603e03fc1e2f028c9e0aee60bcda08e1bc02029e9370fea654e6be00af4",
+  "implementation_sha256": "fa2cff8b33906aa00952c1e3fffb455bae3f556008ec76b7d31ad96a11ac7c7c",
+  "status": "completed",
+  "agent_operations": 1,
+  "judge_operations": 1,
+  "tool_call_count": 3,
+  "tool_error_count": 2,
+  "tools": {
+    "grep": 1,
+    "read": 2
+  },
+  "corpus_contained": true,
+  "web_calls": 0,
+  "subagent_calls": 0,
+  "full_dataset": false,
+  "private_artifacts": {
+    "attempt-0001.events.jsonl": "f90bbb736b4601ebbd4aab456d5e10368f705622a74174d48fefd699d07faa25",
+    "attempt-0001.request.json": "76a022b8508ddf23d795c8925330dda05ae1fd6c33c2e81195e86eb93260b5a0",
+    "eval_result.json": "81eb99b7518225680b9ddbe7832aff9e519f9765fca30e997232baa50b0e0598",
+    "state.json": "242b9909fea6bf8ed8aa4f4eb9c1715414fb5a63e9d81eeebff521df3e691afa"
+  }
+}

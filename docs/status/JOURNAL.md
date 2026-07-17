@@ -848,3 +848,6 @@
 - 14:40 AF-330-H-002 confirmed 4/4; package acceptance recorded.
 - 14:41 Five executable stages and source/wheel identity close H002. [d221c25]
 - 14:55 Bounded Pi complete application passed with read/grep-only corpus-contained evidence and configured DeepSeek Judge.
+- 14:57 Restricted Pi application enforcement and private evidence auditor landed. [d0920f7]
+- 14:50 AF-330-H-003 confirmed 4/4 with digest-bound real Pi and DeepSeek evidence.
+- 14:50 AF-330-H-003 confirmed 4/4; package acceptance recorded.

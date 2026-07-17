@@ -6,7 +6,7 @@ Active work package: AF-330
 
 Package: AF-330 complete application and dual-runtime exposure
 
-Currently running: no process. AF-330-H-001 and H002 are confirmed 4/4; H003 restricted real Pi application acceptance is next.
+Currently running: no process. AF-330-H-001 through H003 are confirmed 4/4; H004 fail-closed real Claude Code application acceptance is next.
 
 ## TL;DR
 
@@ -27,9 +27,9 @@ Currently running: no process. AF-330-H-001 and H002 are confirmed 4/4; H003 res
 
 ## Next concrete action
 
-1. Add H003 model-free preflight/report/binder tests for attempt-local Pi read/grep-only execution.
-2. Run one bounded real Pi complete application over a tiny corpus and bind private evidence.
-3. Advance to fail-closed Claude Code execution without full datasets.
+1. Replace Claude's current Read/Bash command with exact Read/Grep/Glob, `dontAsk`, strict MCP, and fail-closed sandbox settings.
+2. Persist attempt-scoped private Claude artifacts so evaluation and the terminal binder can revalidate them.
+3. Run and bind one real bounded Claude Code complete application without a full dataset.
 
 ## Boundaries
 
