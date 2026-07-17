@@ -1,0 +1,86 @@
+{
+  "agent_operations": 2,
+  "api_request_multiplicity": "externally ambiguous",
+  "external_operations": 3,
+  "full_dataset_ran": false,
+  "hypothesis_id": "AF-320-H-004",
+  "judge": {
+    "judge_api": "chat-completions",
+    "judge_api_key_env": "DEEPSEEK_API_KEY",
+    "judge_base_url": "https://api.deepseek.com/v1",
+    "judge_cached_input_price_per_1m": 0.02,
+    "judge_input_price_per_1m": 0.2,
+    "judge_json_mode": true,
+    "judge_max_output_tokens": 1024,
+    "judge_model": "deepseek-v4-flash",
+    "judge_output_price_per_1m": 1.25,
+    "judge_responses_store": false,
+    "judge_strict_json_schema": false,
+    "judge_thinking": "disabled",
+    "judge_timeout_seconds": 120,
+    "prompt_contract_sha256": "eb40f64072362168ea8a808578dcede18bedb15505d16e4c8eb346827b99ce00"
+  },
+  "judge_operations": 1,
+  "operation_order": [
+    "qa-agent",
+    "qa-judge",
+    "ir-agent"
+  ],
+  "operations": [
+    {
+      "accepted": true,
+      "artifact_digests": {
+        "context-policy.json": "8e03acce406f106947ee273385a9d898daf97b124904b28bcb5389d3794b3666",
+        "conversation.json": "fdb3f0832f7ddda84cda44fd810bfbc20f61e61067a88b69996a16c650985cd4",
+        "conversation_full.json": "3c269822a08b51853b96535557d3c17143c39d59736db3736108bb08f70f1948",
+        "events.jsonl": "d3a9fbfccdcc34d8d87c6bfe18d6e6e0ec42e17f5da0af0530a9db04457164d9",
+        "final.txt": "f0a4ea8f28a4ad18ea30334eca50051384c9489d9b2b0692ea17f675d1b4d4ad",
+        "latest_model_context.json": "c30e59d1973ee9954b6237a32185c03d82ff19c45ad055f6cfe3b716494b40fc",
+        "protocol/attempt-0001.events.jsonl": "2c6751f086a130c1f54f824de0295422e291055c04a22bdde5bf0b3d25b33305",
+        "protocol/attempt-0001.request.json": "20a311b83f5bc44caa86597b350f123f1b7bd9b8c2b089c33c1f5a200ae027e0",
+        "question.txt": "a67fbad731b273d0693700d4399a4b596a283d9461cad0783301f800ba2e04eb",
+        "stderr.txt": "0cfb26733a28891cf2504b4ab6ce5eb0ad5ada27005fe0d33dc7fdb1471f0b46",
+        "tool_results/call_kHTKtBmUVeLFW9iVp7aVnUkj-fc_0db1c106fd7db6e8016a59b089313c8191b898f642cea6f.json": "108a2bfe2d7f0eb03f893dbd4859c47038bcc13b6eb73be08825adf86a153f82"
+      },
+      "kind": "agent",
+      "operation_id": "qa-agent"
+    },
+    {
+      "accepted": true,
+      "artifact_digests": {
+        "evaluation-evidence.json": "9fa359b571bdfbf3a729322c4419bad1cae9851ae03cb5a642cd02e063f175c4"
+      },
+      "kind": "judge",
+      "operation_id": "qa-judge"
+    },
+    {
+      "accepted": true,
+      "artifact_digests": {
+        "context-policy.json": "d97eb5c25ac2f4f309516bce85c4e608af9ef45e06277f321f42c0ebcc6e6d37",
+        "conversation.json": "ac0ee0e2d27b3e25d62b806d6964a3413b4c41901b294c491e970f580bb34201",
+        "conversation_full.json": "5fd2269a833b97ca7784059f48de0507bd7fe4797d307e09e5616dd07c9aff83",
+        "events.jsonl": "5255600817af337a17829221127ce55b5d89bf8b69333f2ec27a0756324f57b1",
+        "final.txt": "469aec0f19f4261160b6211132e590a2a4f1f71b323e86ac5a39ac1d84da9e87",
+        "latest_model_context.json": "28303e2c2927b185bd79478b7e4e060274265fc49723d6a8662912c24add9b51",
+        "protocol/attempt-0001.events.jsonl": "0241080e8efa403afe3f068c37cedb6d356a6a3afca2742f51f9d3657791ea5f",
+        "protocol/attempt-0001.request.json": "236ed0be36eba20a46723fda64cd95739fea4627638a196d6ec6d54168cd2fdb",
+        "question.txt": "1f9710dd608140d460468b90a23e442d48c06b8a1b171048c18c70caf12b3db4",
+        "stderr.txt": "0cfb26733a28891cf2504b4ab6ce5eb0ad5ada27005fe0d33dc7fdb1471f0b46",
+        "tool_results/call_4RUNJngx3NgGpC7G2NS33QFM-fc_031238ec89f46863016a59b090e9cc81918042d8883b1cd.json": "3b3dc5510bfbbae06f1925baf1605148082711606f29925348fa39b36d082b5c"
+      },
+      "kind": "agent",
+      "operation_id": "ir-agent"
+    }
+  ],
+  "pi_revision": "8479bd84743e8889f728acb21a62794102db0529",
+  "pi_tracked_status_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "pi_worktree_clean": true,
+  "report_sha256": "1b4d71388169a4fe126793cba11c7eb91b73644dffa417744f4e357a68dc2b75",
+  "resources": {
+    "ablation_matrix": "462cdec409e51c2d9bf0909d378f41e243582943ee099a93bf5cec1e05cc57e8",
+    "corpus_manifest": "e4e46fbefcbe493881da40fd707d45d73fc232f097319b398741caeb64279602",
+    "ir_fixture": "456d7e702c827c5a46d678eff528189b14e8ccc0f5ce5ca2d7609bcf12f73035",
+    "qa_fixture": "e34e72aa9536a96d19805438c5e08343da28259a0435815a09fe264ddc107943"
+  },
+  "schema": "dci.climb.paper-benchmark-evidence/v2"
+}

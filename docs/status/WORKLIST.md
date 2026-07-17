@@ -2,7 +2,7 @@
 
 > Canonical work-package ledger. An `active` lifecycle requires exactly one `in_progress` package; a `complete` lifecycle permits none and forbids autonomous dispatch.
 
-> Project lifecycle: active
+> Project lifecycle: complete
 
 ## AF-000 — Framework control plane
 
@@ -341,13 +341,14 @@
 
 ## AF-320 — Paper benchmark and metric parity
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Paper-aligned complete DCI implementation in Asterion
 - Scope: ship the paper's exact thirteen-dataset inventory and experiment-specific selection identities, correct BEIR NDCG@10, trajectory coverage/localization/retained-evidence analysis, and deterministic paper-declared plus bounded ablation surfaces through the existing Asterion DCI product.
 - Dependencies: AF-310
 - Acceptance: schema-closed dataset/scope resources and product surfaces pass source/installed/wheel parity; unpublished BrowseComp samples remain explicitly Asterion-defined, unpublished FineWeb distractor selections remain explicitly unbound, and Bamboogle full-125 remains distinct from the migrated sample-50 profile; native immutable evidence produces exact coverage and matched-gold localization metrics; full paper rows remain unconditionally non-executable before AF-340; bounded functional acceptance uses exactly two Pi agent operations and one configured Judge operation, binds the effective Judge identity without a full dataset or score-reproduction claim, and reserves paper-model/score comparability for AF-340.
 - Design: `docs/superpowers/specs/2026-07-17-af-320-paper-benchmark-metric-parity-design.md`
 - Plan: `docs/superpowers/plans/2026-07-17-af-320-paper-benchmark-metric-parity.md`
+- Closure evidence: AF-320-H-001 through H-004 are confirmed 4/4. Asterion ships the exact thirteen-dataset and sixteen-scope inventory, corrected BEIR NDCG@10, exact coverage/localization/retained-evidence metrics, conservative native trajectory alignment, a closed deterministic paper/bounded ablation matrix, product/CLI/export/installed-wheel parity, and a model-free default verifier. Final bounded evidence ran exactly two Pi agent operations and one configured DeepSeek Judge operation against a clean checkout at the locked revision; no full dataset ran. The v2 report binds safe Judge request identity and private artifact digests, and the terminal binder rehashes them into tracked evidence `0d48c9f24a6a54335c8e80d4569ddb0e8ad6635c10c4849e6ec1cb3f171ccd55`. Closure passes 1394 full Python tests, 246 final selectors, product 8/8, 533/533 delegated selectors, 12/12 launcher pairs, 6/6 extras, 7/7 retained bounded cases, isolated wheel, compile, Ruff, scope, diff, clean-runtime, idempotence, and credential/body-free gates. GPT-4.1 and published-score comparability remain AF-340 experiment provenance, not AF-320 functional acceptance.
 
 ## AF-095 — Asterion framework identity and extraction
 

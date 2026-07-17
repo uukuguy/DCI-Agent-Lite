@@ -834,3 +834,9 @@
 - 14:12 D-048 separates functional reproduction from literal paper experiment configuration. [a08b80d]
 - 14:18 D-048 implementation plan replaces the literal GPT gate with configured-Judge identity binding. [389a798]
 - 12:27 Configured-Judge evidence replaces the GPT gate so DeepSeek can prove AF-320 functionality. [cd504bd]
+- 12:28 Recovery checkpoint leaves only clean-checkout DeepSeek evidence and H004 binding. [7855464]
+- 12:31 First live attempt stopped before IR because a stale process DeepSeek key shadowed `.env` and returned 401.
+- 12:33 Clean-environment r2 passed exactly two Pi agents and one DeepSeek Judge; no full dataset ran.
+- 12:34 H004 evidence `0d48c9f24a6a54335c8e80d4569ddb0e8ad6635c10c4849e6ec1cb3f171ccd55` binds the clean runtime, Judge identity, and private artifacts.
+- 12:35 AF-320-H-004 confirmed 4/4; package acceptance recorded.
+- 12:41 AF-320 closure passes 1394 Python, 246 final selectors, wheel/product/static/privacy/scope gates and independent acceptance review.

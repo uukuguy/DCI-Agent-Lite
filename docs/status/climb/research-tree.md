@@ -1,19 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (93 runs).
+> Deterministic summary generated from tracked state (94 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
-- Phase: implementation
-- Last cycle: 94
-- Next hypothesis: AF-320-H-004
+- Phase: completed
+- Last cycle: 95
+- Next hypothesis: None
 - In flight: none
-- Next action: Start AF-320-H-004.
+- Next action: Activate AF-330 governance from the approved paper-aligned DCI package sequence.
 
 ## Active hypotheses
 
-- **AF-320-H-004** (pending, rank 0.70): Prove non-executable paper matrices, deterministic bounded analogues, complete product parity, and terminal three-operation evidence binding.
 
 ## Run ladder
 
@@ -112,6 +111,7 @@
 | 20260717-092832-dci-climb-af320h001 | AF-320-H-001 | 4 | confirmed 4/4 |
 | 20260717-104543-dci-climb-af320h002 | AF-320-H-002 | 4 | confirmed 4/4 |
 | 20260717-104602-dci-climb-af320h003 | AF-320-H-003 | 4 | confirmed 4/4 |
+| af320-paper-benchmark-acceptance | AF-320-H-004 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

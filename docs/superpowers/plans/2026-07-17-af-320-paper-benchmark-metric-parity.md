@@ -264,7 +264,7 @@ Run Ruff and compilation for touched Python, the Task 7/8 selectors, model-free 
 
 Commit: `fix(dci): accept configured judge evidence`
 
-- [ ] **Step 9: Run bounded DeepSeek evidence and bind H004**
+- [x] **Step 9: Run bounded DeepSeek evidence and bind H004**
 
 Use a disposable clean checkout at `pi-revision.txt`, reuse only the existing private Pi auth directory, and invoke:
 
@@ -278,6 +278,9 @@ asterion-dci paper verify \
 Require exactly `Agent operations: 2`, `Judge operations: 1`, `External operations: 3`, and `Full dataset ran: no`; then run `tools/climb/bind-paper-benchmark-evidence.py` against the successful report and the same clean Pi checkout.
 
 ## Task 9 — Independent review and package closure
+
+> Closure complete: final bounded DeepSeek evidence, independent acceptance
+> review, Climb cycle 95, and all package gates passed on 2026-07-17.
 
 Run:
 

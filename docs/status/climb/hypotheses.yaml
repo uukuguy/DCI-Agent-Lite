@@ -2168,8 +2168,24 @@ hypotheses:
   expected_lift: +1 bounded paper-product closure
   cost_h: 2.0
   ranking: 0.7
-  status: pending
+  status: confirmed
   created_at: '2026-07-17T08:36:00+08:00'
   verification_command: uv run --project asterion python -m unittest -v tests.test_asterion_dci_ablation
     tests.test_asterion_dci_product_parity tests.test_asterion_dci_verification tests.test_asterion_dci_product_acceptance
-  results: []
+  results:
+  - session: 2026-07-17-af-320-paper-benchmark-metric-parity
+    cycle: 95
+    run: af320-paper-benchmark-acceptance
+    local: 4
+    local_per_task:
+      deterministic_matrix: 1
+      product_parity: 1
+      exact_operation_bound: 1
+      immutable_evidence: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: digest-bound bounded provider acceptance
+    provider_evidence:
+      path: provider-evidence/af-320-h-004.json
+      sha256: 0d48c9f24a6a54335c8e80d4569ddb0e8ad6635c10c4849e6ec1cb3f171ccd55
+      report_sha256: 1b4d71388169a4fe126793cba11c7eb91b73644dffa417744f4e357a68dc2b75
