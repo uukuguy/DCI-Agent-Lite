@@ -14,15 +14,14 @@ Currently running: no process.
 - Real r7 completed MiniMax-M3 Claude Code, one Grep, all five stages, and one configured DeepSeek Judge without a full dataset.
 - r7 is now diagnostic rather than terminal: its old private `runtime-policy.json` does not record the actual runtime CWD, so its corpus-containment claim cannot satisfy D-050.
 - The active repair binds runtime CWD to the audited corpus, limits the Claude child to operational/provider variables, rejects nonzero exits, validates every upstream schema/implementation digest, and propagates in-flight cancellation through Claude, native Pi, and Judge work.
-- The repair passes 119/119 Asterion tests plus compile, Ruff, and diff checks. It still needs a cohesive commit, an independent terminal verifier, and a fresh real provider run.
+- Commit `9b6a1f6` implements the repair and passes 119/119 Asterion tests plus compile, Ruff, scope, and diff checks. The independent terminal verifier is implemented and focused-green; it still needs its commit and a fresh real provider run.
 - `.env` is privately configured for the international MiniMax Claude API and DeepSeek Judge; never print or commit it. External `pi/` remains untouched.
 
 ## Next concrete action
 
-1. Commit the verified D-050 implementation repair and journal its hash.
-2. Add a terminal verifier that reruns the private auditor and binds report, tracked record, source commit, implementation digest, modes, paths, and artifact hashes.
-3. Commit the verifier, then run a fresh bounded Claude application under a new run ID with exported `MINIMAX_API_KEY` and `DEEPSEEK_API_KEY` explicitly unset so `.env` is authoritative.
-4. Re-audit and rebind fresh evidence, rerun Climb and full repository gates, then close AF-330 only if independent review has no Critical/Important findings.
+1. Commit the terminal verifier that reruns the private auditor and binds report, tracked record, source commit, implementation digest, modes, paths, and artifact hashes.
+2. Run a fresh bounded Claude application under a new run ID with exported `MINIMAX_API_KEY` and `DEEPSEEK_API_KEY` explicitly unset so `.env` is authoritative.
+3. Re-audit and rebind fresh evidence, rerun Climb and full repository gates, then close AF-330 only if independent review has no Critical/Important findings.
 
 ## Boundaries
 

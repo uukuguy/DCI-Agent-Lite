@@ -26,6 +26,9 @@ from asterion.dci.dual_runtime_verification import (
     DciDualRuntimeVerificationError,
     audit_restricted_claude_application,
     audit_restricted_pi_application,
+    build_restricted_claude_record,
+    verify_restricted_claude_binding,
+    write_private_report,
 )
 from asterion.packages.catalog import PackageRef
 from asterion.packages.catalog import discover_packages
@@ -569,6 +572,39 @@ class DciRestrictedClaudeEvidenceTests(unittest.TestCase):
             path.chmod(0o600)
             with self.assertRaises(DciDualRuntimeVerificationError):
                 audit_restricted_claude_application(run_dir=run, corpus_dir=corpus)
+
+    def test_terminal_binding_rejects_tracked_digest_substitution(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            run, corpus = self._fixture(root)
+            report = audit_restricted_claude_application(
+                run_dir=run, corpus_dir=corpus
+            )
+            report_path = root / "report.json"
+            report_sha256 = write_private_report(report_path, report)
+            record = build_restricted_claude_record(
+                report,
+                report_sha256=report_sha256,
+                source_commit="1" * 40,
+                source_sha256="2" * 64,
+            )
+            record["report_sha256"] = "3" * 64
+            record_path = root / "record.json"
+            record_path.write_text(json.dumps(record))
+
+            with self.assertRaises(DciDualRuntimeVerificationError):
+                verify_restricted_claude_binding(
+                    repo_root=PROJECT.parent,
+                    run_dir=run,
+                    corpus_dir=corpus,
+                    report_path=report_path,
+                    record_path=record_path,
+                )
+
+        self.assertEqual(
+            record["schema"], "asterion.dci.climb-provider-evidence/v2"
+        )
+        self.assertNotIn("cobalt lantern", repr(record))
 
     def test_tracked_claude_evidence_is_body_free_and_bounded(self) -> None:
         record = json.loads(

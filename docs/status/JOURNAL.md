@@ -876,3 +876,5 @@
 - 17:25 AF-330 synchronizes TypeScript/Climb inventories so complete manifests and H004 digests stay executable. [0772ffb]
 - 17:31 D-050 accepts end-to-end restricted authority after review found CWD, environment, cancellation, artifact, and evidence-binding gaps.
 - 17:32 Restricted execution repairs bind CWD/corpus, isolate provider credentials, reject nonzero exits and forged stage identity, and cancel/reap Claude plus native Pi/Judge work; 119/119 Asterion tests pass.
+- 17:33 D-050 runtime authority repair closes the review's execution-side gaps before fresh evidence. [9b6a1f6]
+- 17:40 Terminal verification now re-audits private artifacts and binds report, tracked record, reviewed source commit, and implementation identities.

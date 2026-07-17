@@ -7,13 +7,25 @@ import json
 import os
 import re
 import stat
+import subprocess
 from pathlib import Path
+from collections.abc import Mapping
 
 from asterion.capabilities.dci_research.complete import complete_application_identity
 
 
 class DciDualRuntimeVerificationError(RuntimeError):
     """Safe failure for invalid private dual-runtime evidence."""
+
+
+_AF330_SOURCE_PATHS = (
+    "asterion/src/asterion/capabilities/dci_research/complete.py",
+    "asterion/src/asterion/dci/application_executor.py",
+    "asterion/src/asterion/dci/bridge.py",
+    "asterion/src/asterion/dci/dual_runtime_verification.py",
+    "asterion/src/asterion/runtime/defaults.py",
+    "asterion/src/asterion/runtimes/claude_code.py",
+)
 
 
 def _private_file(path: Path) -> bytes:
@@ -229,3 +241,142 @@ def write_private_report(path: Path, report: dict[str, object]) -> str:
         os.close(descriptor)
     os.replace(temporary, target)
     return hashlib.sha256(raw).hexdigest()
+
+
+def af330_source_identity(repo_root: Path) -> str:
+    """Digest the reviewed AF-330 execution and verification source boundary."""
+
+    root = Path(repo_root).resolve()
+    digest = hashlib.sha256()
+    for relative in _AF330_SOURCE_PATHS:
+        path = root / relative
+        try:
+            metadata = path.lstat()
+            raw = path.read_bytes()
+        except OSError:
+            raise DciDualRuntimeVerificationError("AF-330 source evidence is unavailable") from None
+        if path.is_symlink() or not stat.S_ISREG(metadata.st_mode):
+            raise DciDualRuntimeVerificationError("AF-330 source evidence is unsafe")
+        name = relative.encode()
+        digest.update(len(name).to_bytes(4, "big"))
+        digest.update(name)
+        digest.update(len(raw).to_bytes(8, "big"))
+        digest.update(raw)
+    return digest.hexdigest()
+
+
+def build_restricted_claude_record(
+    report: Mapping[str, object],
+    *,
+    report_sha256: str,
+    source_commit: str,
+    source_sha256: str,
+) -> dict[str, object]:
+    """Build the closed body-free Climb record from one audited report."""
+
+    if any(
+        re.fullmatch(r"[0-9a-f]{64}", value) is None
+        for value in (report_sha256, source_sha256)
+    ) or re.fullmatch(r"[0-9a-f]{7,40}", source_commit) is None:
+        raise DciDualRuntimeVerificationError("AF-330 binding identity is invalid")
+    copied = {
+        key: report.get(key)
+        for key in (
+            "runtime_id",
+            "status",
+            "implementation_sha256",
+            "tool_call_count",
+            "tools",
+            "corpus_contained",
+            "web_calls",
+            "subagent_calls",
+            "judge_request_fingerprint",
+            "full_dataset",
+            "private_artifacts",
+        )
+    }
+    return {
+        "schema": "asterion.dci.climb-provider-evidence/v2",
+        "work_package_id": "AF-330",
+        "hypothesis_id": "AF-330-H-004",
+        "source_commit": source_commit,
+        "source_sha256": source_sha256,
+        "report_sha256": report_sha256,
+        "agent_operations": 1,
+        "judge_operations": 1,
+        **copied,
+    }
+
+
+def verify_restricted_claude_binding(
+    *,
+    repo_root: Path,
+    run_dir: Path,
+    corpus_dir: Path,
+    report_path: Path,
+    record_path: Path,
+) -> dict[str, object]:
+    """Re-audit retained evidence and bind it to reviewed source plus public record."""
+
+    report, report_raw = _document(Path(report_path))
+    audited = audit_restricted_claude_application(
+        run_dir=Path(run_dir), corpus_dir=Path(corpus_dir)
+    )
+    if report != audited:
+        raise DciDualRuntimeVerificationError("AF-330 private report does not match runtime evidence")
+    report_sha256 = hashlib.sha256(report_raw).hexdigest()
+    record, record_raw = _tracked_document(Path(record_path))
+    source_commit = record.get("source_commit")
+    if not isinstance(source_commit, str):
+        raise DciDualRuntimeVerificationError("AF-330 tracked evidence is invalid")
+    source_sha256 = af330_source_identity(repo_root)
+    expected = build_restricted_claude_record(
+        audited,
+        report_sha256=report_sha256,
+        source_commit=source_commit,
+        source_sha256=source_sha256,
+    )
+    if record != expected:
+        raise DciDualRuntimeVerificationError("AF-330 tracked evidence does not match private evidence")
+    _verify_source_commit(Path(repo_root), source_commit)
+    return {
+        "schema": "asterion.dci.claude-terminal-binding/v1",
+        "status": "verified",
+        "source_commit": source_commit,
+        "source_sha256": source_sha256,
+        "implementation_sha256": audited["implementation_sha256"],
+        "report_sha256": report_sha256,
+        "record_sha256": hashlib.sha256(record_raw).hexdigest(),
+    }
+
+
+def _tracked_document(path: Path) -> tuple[dict[str, object], bytes]:
+    try:
+        metadata = path.lstat()
+        raw = path.read_bytes()
+        value = json.loads(raw)
+    except (OSError, TypeError, ValueError):
+        raise DciDualRuntimeVerificationError("AF-330 tracked evidence is unavailable") from None
+    if path.is_symlink() or not stat.S_ISREG(metadata.st_mode) or not isinstance(value, dict):
+        raise DciDualRuntimeVerificationError("AF-330 tracked evidence is unsafe")
+    return value, raw
+
+
+def _verify_source_commit(repo_root: Path, source_commit: str) -> None:
+    root = repo_root.resolve()
+    revision = subprocess.run(
+        ["git", "rev-parse", "--verify", f"{source_commit}^{{commit}}"],
+        cwd=root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    unchanged = subprocess.run(
+        ["git", "diff", "--quiet", source_commit, "--", *_AF330_SOURCE_PATHS],
+        cwd=root,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if revision.returncode != 0 or unchanged.returncode != 0:
+        raise DciDualRuntimeVerificationError("AF-330 source commit does not match reviewed execution")
