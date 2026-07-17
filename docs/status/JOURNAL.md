@@ -826,3 +826,4 @@
 - 12:18 Deterministic paper/bounded matrices add safe model-free ablation inspection. [44448e6]
 - 12:20 Matrix checkpoint moves the recovery boundary to AF-320 product parity. [ff5ae84]
 - 13:07 Paper contracts, safe export, bounded selection, fingerprints, and isolated-wheel parity close Task 7. [5b21aef]
+- 13:42 AF-320 Task 8 adds exact bounded verification and immutable terminal evidence binding. [59c4064]
