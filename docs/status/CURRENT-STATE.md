@@ -68,6 +68,7 @@
 - AF-330-H-001 is confirmed 4/4: Pi and Claude resolve one exact five-stage research/evaluation/benchmark/analysis/export graph with closed sequential event/artifact edges and no shell, web, or subagent requirement.
 - AF-330-H-002 is confirmed 4/4: the installed provider binds all five production stages; native research feeds real evaluation, single-query benchmark, existing aggregate analysis, and body-free export with one source/wheel-stable implementation digest.
 - AF-330-H-003 is confirmed 4/4: one bounded real complete Pi application used only two read attempts and one grep within an attempt-local corpus, completed one configured DeepSeek evaluation, exposed five body-free artifacts, and bound 0600 private evidence without Bash, web, subagents, or a full dataset.
+- AF-330-H-004 implementation checkpoint: `86363de` gives original DCI and Asterion the same nonpersistent `Read,Grep,Glob`-only Claude command, `dontAsk`, strict empty MCP, fail-closed native sandbox settings, private persistent evidence, deadline/failure redaction, direct DeepSeek evaluation, five-stage execution, and an independent body-free auditor. Root focused tests and all 104 Asterion tests pass. The first real attempt reached Claude but failed authentication before any Judge request because `claude auth status` reports `loggedIn=false`; H004 remains pending until a working Claude login produces real bound evidence.
 
 - AF-310-H-001 is confirmed 4/4: the closed schema-backed L0–L4 profile names, exact thresholds, stable identity, and configuration/request validation pass.
 - AF-310-H-002 is confirmed 4/4: the dependency-free Asterion Pi extension implements exact tool-result caps, L3 live-turn retention/compaction, L4 recent-context targeting, and three-failure summary suppression that falls back to L3 compaction. Fake-Pi tests prove model-visible hooks and body-free durable state.
@@ -97,6 +98,8 @@
 
 - `docs/superpowers/specs/2026-07-17-af-320-paper-benchmark-metric-parity-design.md` — approved AF-320 paper identities, formulas, evidence, execution gate, and acceptance contract.
 - `docs/superpowers/plans/2026-07-17-af-320-paper-benchmark-metric-parity.md` — reviewed AF-320 TDD task map and hypothesis binding points.
+- `docs/superpowers/specs/2026-07-17-af-330-complete-application-dual-runtime-design.md` — approved complete application and restricted dual-runtime contract.
+- `docs/superpowers/plans/2026-07-17-af-330-complete-application-dual-runtime.md` — active AF-330 TDD and bounded-provider acceptance map.
 
 - `src/dci/benchmark/pi_rpc_runner.py` — existing Pi RPC reference runtime.
 - `src/dci/benchmark/pi_system_prompt.py` — Pi-owned system-prompt bridge.

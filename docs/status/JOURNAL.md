@@ -851,3 +851,5 @@
 - 14:57 Restricted Pi application enforcement and private evidence auditor landed. [d0920f7]
 - 14:50 AF-330-H-003 confirmed 4/4 with digest-bound real Pi and DeepSeek evidence.
 - 14:50 AF-330-H-003 confirmed 4/4; package acceptance recorded.
+- 15:23 Restricted Claude application adds private evidence and DeepSeek evaluation for H004. [86363de]
+- 15:23 Real Claude acceptance failed before Judge because local OAuth is logged out; H004 remains pending.

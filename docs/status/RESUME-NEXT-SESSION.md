@@ -1,17 +1,19 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-17 12:49 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-17 15:23 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-330
 
 Package: AF-330 complete application and dual-runtime exposure
 
-Currently running: no process. AF-330-H-001 through H003 are confirmed 4/4; H004 fail-closed real Claude Code application acceptance is next.
+Currently running: no process. AF-330-H-001 through H003 are confirmed 4/4. H004 implementation is committed; real Claude evidence is blocked only by `loggedIn=false`.
 
 ## TL;DR
 
 - AF-320 is complete; AF-330 now owns five-stage application composition and bounded real Pi/Claude semantics.
 - AF-330 uses exact Read/Grep/Glob visibility plus fail-closed sandbox/settings identity for Claude; prompt-only restriction is rejected.
+- Commit `86363de` completes the restricted Claude application, private evidence, direct Judge evaluation, and independent body-free auditor in both original/Asterion runtime surfaces.
+- The bounded real attempt failed at Claude authentication before DeepSeek was called; this is not H004 evidence and H004 remains pending.
 - Bounded acceptance now uses the configured supported Judge and binds its endpoint/API/model/request-shaping identity plus prompt-contract digest; GPT-4.1 is not a functional gate.
 - Final evidence SHA is `0d48c9f24a6a54335c8e80d4569ddb0e8ad6635c10c4849e6ec1cb3f171ccd55`; it binds a clean locked Pi runtime, DeepSeek Judge identity, two agents, one Judge, and no full dataset.
 - `paper-full` rows remain unconditionally non-executable; AF-340 remains the only package that may add full-run authorization and budget.
@@ -27,9 +29,9 @@ Currently running: no process. AF-330-H-001 through H003 are confirmed 4/4; H004
 
 ## Next concrete action
 
-1. Replace Claude's current Read/Bash command with exact Read/Grep/Glob, `dontAsk`, strict MCP, and fail-closed sandbox settings.
-2. Persist attempt-scoped private Claude artifacts so evaluation and the terminal binder can revalidate them.
-3. Run and bind one real bounded Claude Code complete application without a full dataset.
+1. Restore an operator-owned Claude login with `claude auth login`, then confirm `claude auth status` reports `loggedIn=true`.
+2. Run one new bounded complete application with a fresh run ID and the ignored `outputs/af330-claude-corpus` corpus.
+3. Audit its private directory, write body-free tracked H004 evidence, run Climb, and close AF-330 only if all four H004 checks pass.
 
 ## Boundaries
 
@@ -44,7 +46,6 @@ Currently running: no process. AF-330-H-001 through H003 are confirmed 4/4; H004
 ```bash
 git status --short
 python3 tools/project_scope_check.py
-git -C pi rev-parse HEAD
-git -C pi status --short
-sed -n '175,310p' docs/superpowers/specs/2026-07-16-paper-aligned-dci-complete-implementation-design.md
+claude auth status
+ASTERION_RUNTIME_CWD=outputs/af330-claude-corpus ASTERION_CLAUDE_OUTPUT_ROOT=outputs/af330-claude-runs uv run asterion run --provider dci-agent-lite --application dci.complete-application@1.0.0 --runtime claude-code.reference --run-id af330-claude-bounded-r2 --input '{"protocol":"asterion.dci.complete-input/v1","question":"Read the local corpus and report only the four-digit number paired with the bounded verification phrase silver compass.","gold_answer":"8426"}'
 ```
