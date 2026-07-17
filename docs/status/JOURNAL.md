@@ -855,3 +855,4 @@
 - 15:23 Real Claude acceptance failed before Judge because local OAuth is logged out; H004 remains pending.
 - 15:23 Recovery checkpoint preserves implemented H004 and the external Claude-login acceptance boundary. [66f8fbe]
 - 15:28 Climb routes H004 through restricted Claude checks and requires real tracked evidence. [6caba1a]
+- 15:46 D-049 makes agent provider/model shared while runtime adapters own native translation. [79bb6ad]

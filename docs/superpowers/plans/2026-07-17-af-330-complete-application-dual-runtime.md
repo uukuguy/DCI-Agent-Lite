@@ -45,7 +45,58 @@ Pi/Claude semantic acceptance.
 - Run one bounded real Claude execution and independently bind it. Close H004
   only with real semantic evidence.
 
-## Task 5 — Terminal closure
+## Task 5 — Shared agent provider configuration
+
+**Goal:** Make one `DCI_PROVIDER`/`DCI_MODEL`/provider-key selection work through
+Pi or Claude Code without user-authored Claude-native aliases.
+
+**Files:**
+
+- Modify `asterion/src/asterion/runtime/defaults.py` to translate supported
+  shared providers into a private Claude subprocess environment.
+- Modify `asterion/tests/test_default_runtime_factory.py` to prove MiniMax
+  international/China mappings, stale native-variable replacement, missing-key
+  failure, and unsupported-provider failure before process construction.
+- Modify `.env.template` and `README.md` to document only the shared agent
+  selection plus the independent Judge role.
+
+**Interface:**
+
+```python
+def _claude_provider_environment(
+    environment: Mapping[str, str],
+) -> dict[str, str]:
+    """Return a copied environment with derived Claude-native provider values."""
+```
+
+The mapping is closed:
+
+```python
+{
+    "anthropic": ("https://api.anthropic.com", "ANTHROPIC_API_KEY"),
+    "minimax": ("https://api.minimax.io/anthropic", "MINIMAX_API_KEY"),
+    "minimax-cn": ("https://api.minimaxi.com/anthropic", "MINIMAX_CN_API_KEY"),
+}
+```
+
+For MiniMax, the helper derives `ANTHROPIC_BASE_URL`,
+`ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_MODEL`, and all three Claude default model
+aliases from `DCI_MODEL`; existing conflicting native values are replaced in the
+copy. For official Anthropic, it derives the model aliases and retains the
+single `ANTHROPIC_API_KEY`. Missing provider/model/key or an unmapped provider
+raises a safe `RuntimeFactoryError` without values.
+
+- [ ] Add failing factory tests for `minimax` and `minimax-cn` translation.
+- [ ] Run `cd asterion && uv run python -m unittest -v tests.test_default_runtime_factory` and confirm missing derived values fail.
+- [ ] Implement the closed mapping and pass the derived copy to `ClaudeCodeRuntimeClient`.
+- [ ] Run the focused factory/runtime/complete-application tests until green.
+- [ ] Add failing documentation assertions that required configuration names only the shared selection and provider key.
+- [ ] Update `.env.template` and `README.md`; rerun documentation/distribution tests.
+- [ ] Run all Asterion tests, root focused tests, compile, Ruff, `bash -n`, scope, and diff gates.
+- [ ] Commit the verified implementation and journal it.
+- [ ] With a configured MiniMax key, run one bounded Claude application plus DeepSeek Judge, bind body-free evidence, and execute AF-330-H-004 Climb 4/4.
+
+## Task 6 — Terminal closure
 
 - Run focused and full Python suites, compile, Ruff, shell syntax, product/static
   verifier, source/install/wheel checks, privacy/credential scan, scope preflight,
