@@ -861,3 +861,4 @@
 - 16:00 Recovery checkpoint replaces the stale OAuth blocker with the exact MiniMax configuration boundary. [234a41d]
 - 16:22 H004 MiniMax-M3 r3 hit the hardcoded 30-second Claude timeout before events; Judge did not run.
 - 16:26 Claude now reuses the shared agent timeout so real bounded runs can finish. [5de6bb8]
+- 16:31 H004 r4 reached MiniMax-M3 but wrong international routing caused ten 401 retries; Judge did not run.
