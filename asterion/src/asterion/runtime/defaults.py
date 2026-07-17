@@ -19,6 +19,7 @@ from asterion.runtimes.pi import PiRuntimeClient
 
 
 PI_CAPABILITIES = ("filesystem.read", "shell")
+CLAUDE_CAPABILITIES = ("claude.tool.glob", "claude.tool.grep", "filesystem.read")
 
 
 def default_runtime_factory_registry() -> RuntimeFactoryRegistry:
@@ -34,7 +35,7 @@ def default_runtime_factory_registry() -> RuntimeFactoryRegistry:
             ),
             RuntimeFactoryBinding(
                 runtime_id="claude-code.reference",
-                capabilities=PI_CAPABILITIES,
+                capabilities=CLAUDE_CAPABILITIES,
                 factory=_create_claude_code_runtime,
             ),
         )
@@ -82,12 +83,18 @@ def _create_claude_code_runtime(
         raise RuntimeFactoryError("runtime factory context is invalid")
     executable = _configured_executable("ASTERION_CLAUDE_EXECUTABLE", "claude")
     runtime_cwd = _configured_path("ASTERION_RUNTIME_CWD", Path.cwd(), root=Path.cwd())
+    evidence_root = _configured_path(
+        "ASTERION_CLAUDE_OUTPUT_ROOT",
+        Path.cwd() / "outputs/asterion-claude-runs",
+        root=Path.cwd(),
+    )
     if executable is None or not runtime_cwd.is_dir():
         raise RuntimeFactoryError("Claude Code runtime is unavailable")
     return ClaudeCodeRuntimeClient(
         executable=executable,
         cwd=runtime_cwd,
         environment=os.environ.copy(),
+        evidence_root=evidence_root,
     )
 
 

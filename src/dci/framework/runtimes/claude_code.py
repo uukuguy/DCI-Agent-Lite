@@ -22,6 +22,7 @@ from dci.framework.protocol import (
 
 
 def build_claude_command(*, executable: str, tools: list[str]) -> list[str]:
+    settings = _restricted_settings()
     command = [
         executable,
         "-p",
@@ -31,6 +32,17 @@ def build_claude_command(*, executable: str, tools: list[str]) -> list[str]:
         "stream-json",
         "--include-partial-messages",
         "--verbose",
+        "--permission-mode",
+        "dontAsk",
+        "--strict-mcp-config",
+        "--mcp-config",
+        '{"mcpServers":{}}',
+        "--disable-slash-commands",
+        "--no-chrome",
+        "--max-turns",
+        "4",
+        "--settings",
+        json.dumps(settings, sort_keys=True, separators=(",", ":")),
     ]
     if tools:
         joined = ",".join(tools)
@@ -40,8 +52,32 @@ def build_claude_command(*, executable: str, tools: list[str]) -> list[str]:
     return command
 
 
+def _restricted_settings() -> dict[str, object]:
+    return {
+        "permissions": {
+            "defaultMode": "dontAsk",
+            "deny": ["Read(/**)", "Grep(/**)", "Glob(/**)"],
+        },
+        "sandbox": {
+            "enabled": True,
+            "failIfUnavailable": True,
+            "allowUnsandboxedCommands": False,
+            "filesystem": {"denyRead": ["~/"], "allowRead": ["."]},
+        },
+    }
+
+
+def _write_private(path: Path, value: str) -> None:
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        os.write(descriptor, value.encode())
+    finally:
+        os.close(descriptor)
+    path.chmod(0o600)
+
+
 def _write_json(path: Path, payload: object) -> None:
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+    _write_private(path, json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
 
 
 def run_claude_code(
@@ -62,7 +98,8 @@ def run_claude_code(
     protocol request, normalized events, or returned status.
     """
 
-    output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+    output_dir.chmod(0o700)
     run_id = f"claude-{output_dir.name or 'run'}"
     request: dict[str, object] = {
         "protocol": PROTOCOL_VERSION,
@@ -74,6 +111,21 @@ def run_claude_code(
         request["deadline_ms"] = max(1, int(round(timeout_seconds * 1000)))
     validate_run_request(request)
     _write_json(output_dir / "request.json", request)
+    _write_json(
+        output_dir / "runtime-policy.json",
+        {
+            "schema": "asterion.claude-code.restricted-policy/v1",
+            "tools": tools,
+            "allowed_tools": tools,
+            "max_turns": 4,
+            "permission_mode": "dontAsk",
+            "strict_mcp": True,
+            "mcp_servers": {},
+            "safe_mode": True,
+            "no_session_persistence": True,
+            "settings": _restricted_settings(),
+        },
+    )
 
     process_environment = dict(os.environ if environment is None else environment)
     completed = run_process(
@@ -86,18 +138,21 @@ def run_claude_code(
         timeout=timeout_seconds,
         check=False,
     )
-    (output_dir / "raw-events.jsonl").write_text(completed.stdout)
-    (output_dir / "stderr.txt").write_text(completed.stderr)
+    _write_private(output_dir / "raw-events.jsonl", completed.stdout)
+    _write_private(output_dir / "stderr.txt", completed.stderr)
 
     events: list[dict[str, object]] = []
     events_path = output_dir / "events.jsonl"
 
     def emit(event: dict[str, object]) -> None:
         events.append(event)
-        with events_path.open("a") as handle:
-            handle.write(json.dumps(event, ensure_ascii=False) + "\n")
+        descriptor = os.open(events_path, os.O_WRONLY | os.O_APPEND)
+        try:
+            os.write(descriptor, (json.dumps(event, ensure_ascii=False) + "\n").encode())
+        finally:
+            os.close(descriptor)
 
-    events_path.write_text("")
+    _write_private(events_path, "")
     adapter = ClaudeCodeProtocolAdapter(run_id=run_id, emit=emit)
     final_text = ""
     try:
@@ -124,7 +179,7 @@ def run_claude_code(
 
     validate_event_stream(events)
     if events[-1]["type"] == "run.completed":
-        (output_dir / "final.txt").write_text(final_text + ("\n" if final_text else ""))
+        _write_private(output_dir / "final.txt", final_text + ("\n" if final_text else ""))
         status = "completed"
     else:
         final_text = ""

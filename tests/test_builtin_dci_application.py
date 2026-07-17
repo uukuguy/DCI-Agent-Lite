@@ -37,8 +37,13 @@ class BuiltinDciApplicationTests(unittest.TestCase):
     def test_selected_provider_uses_one_asterion_resource_root(self) -> None:
         provider = load_application_provider("dci-agent-lite")
         self.assertEqual(provider.resource_root, ASTERION.resolve())
-        self.assertEqual(len(provider.applications), 1)
-        application = provider.applications[0]
+        self.assertEqual(len(provider.applications), 2)
+        applications = {item.application_id: item for item in provider.applications}
+        self.assertEqual(
+            set(applications),
+            {"dci.research-capability", "dci.complete-application"},
+        )
+        application = applications["dci.research-capability"]
         self.assertEqual(
             (application.application_id, application.version),
             ("dci.research-capability", "1.0.0"),
@@ -58,8 +63,13 @@ class BuiltinDciApplicationTests(unittest.TestCase):
             tuple(ref for ref, _ in application.implementations),
             (PackageRef("dci.research", "1.0.0"),),
         )
-        for path in application.assembly_paths + application.catalog_roots:
-            self.assertTrue(path.is_relative_to(provider.resource_root))
+        for installed in provider.applications:
+            self.assertEqual(
+                installed.runtime_ids,
+                ("claude-code.reference", "pi.reference"),
+            )
+            for path in installed.assembly_paths + installed.catalog_roots:
+                self.assertTrue(path.is_relative_to(provider.resource_root))
 
     def test_generic_application_modules_do_not_name_dci(self) -> None:
         generic_files = [

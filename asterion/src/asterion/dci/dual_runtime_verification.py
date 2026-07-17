@@ -49,9 +49,13 @@ def _contained_path(value: object, corpus: Path) -> bool:
 def audit_restricted_pi_application(*, run_dir: Path, corpus_dir: Path) -> dict[str, object]:
     """Rehash and validate one real read/grep-only Pi complete-application run."""
 
-    run = Path(run_dir).resolve()
-    corpus = Path(corpus_dir).resolve()
-    if not run.is_dir() or not corpus.is_dir() or run.is_symlink() or corpus.is_symlink():
+    run_path = Path(run_dir)
+    corpus_path = Path(corpus_dir)
+    if run_path.is_symlink() or corpus_path.is_symlink():
+        raise DciDualRuntimeVerificationError("runtime evidence boundary is invalid")
+    run = run_path.resolve()
+    corpus = corpus_path.resolve()
+    if not run.is_dir() or not corpus.is_dir():
         raise DciDualRuntimeVerificationError("runtime evidence boundary is invalid")
     state, state_raw = _document(run / "state.json")
     request, request_raw = _document(run / "protocol/attempt-0001.request.json")
@@ -111,6 +115,104 @@ def audit_restricted_pi_application(*, run_dir: Path, corpus_dir: Path) -> dict[
     }
 
 
+def audit_restricted_claude_application(
+    *, run_dir: Path, corpus_dir: Path
+) -> dict[str, object]:
+    """Rehash and validate one real Read/Grep/Glob-only Claude application run."""
+
+    run_path = Path(run_dir)
+    corpus_path = Path(corpus_dir)
+    if run_path.is_symlink() or corpus_path.is_symlink():
+        raise DciDualRuntimeVerificationError("runtime evidence boundary is invalid")
+    run = run_path.resolve()
+    corpus = corpus_path.resolve()
+    if not run.is_dir() or not corpus.is_dir():
+        raise DciDualRuntimeVerificationError("runtime evidence boundary is invalid")
+    if stat.S_IMODE(run.stat().st_mode) != 0o700:
+        raise DciDualRuntimeVerificationError("private runtime evidence is unsafe")
+    request, request_raw = _document(run / "request.json")
+    policy, policy_raw = _document(run / "runtime-policy.json")
+    evaluation, evaluation_raw = _document(run / "eval_result.json")
+    events_raw = _private_file(run / "events.jsonl")
+    raw_events_raw = _private_file(run / "raw-events.jsonl")
+    final_raw = _private_file(run / "final.txt")
+    try:
+        events = [json.loads(line) for line in events_raw.splitlines() if line]
+    except (TypeError, ValueError):
+        raise DciDualRuntimeVerificationError("private runtime evidence is invalid") from None
+    request_capabilities = ["filesystem.read", "claude.tool.grep", "claude.tool.glob"]
+    started_capabilities = ["claude.tool.glob", "claude.tool.grep", "filesystem.read"]
+    tools = ["Read", "Grep", "Glob"]
+    if (
+        request.get("requested_capabilities") != request_capabilities
+        or policy.get("tools") != tools
+        or policy.get("allowed_tools") != tools
+        or policy.get("max_turns") != 4
+        or policy.get("permission_mode") != "dontAsk"
+        or policy.get("strict_mcp") is not True
+        or policy.get("mcp_servers") != {}
+        or policy.get("safe_mode") is not True
+        or policy.get("no_session_persistence") is not True
+        or evaluation.get("is_correct") is not True
+        or not events
+        or events[-1].get("type") != "run.completed"
+    ):
+        raise DciDualRuntimeVerificationError("restricted Claude contract did not complete")
+    settings = policy.get("settings")
+    sandbox = settings.get("sandbox") if isinstance(settings, dict) else None
+    if (
+        not isinstance(sandbox, dict)
+        or sandbox.get("enabled") is not True
+        or sandbox.get("failIfUnavailable") is not True
+        or sandbox.get("allowUnsandboxedCommands") is not False
+    ):
+        raise DciDualRuntimeVerificationError("restricted Claude sandbox was not enforced")
+    started = [event for event in events if event.get("type") == "run.started"]
+    if (
+        len(started) != 1
+        or started[0].get("payload", {}).get("capabilities") != started_capabilities
+    ):
+        raise DciDualRuntimeVerificationError("restricted Claude tool declaration is invalid")
+    calls = [event for event in events if event.get("type") == "tool.call"]
+    if not calls:
+        raise DciDualRuntimeVerificationError("restricted Claude tool evidence is unavailable")
+    tool_counts = {tool: 0 for tool in tools}
+    for event in calls:
+        payload = event.get("payload")
+        if not isinstance(payload, dict) or payload.get("name") not in tool_counts:
+            raise DciDualRuntimeVerificationError("restricted Claude tool surface was violated")
+        arguments = payload.get("arguments")
+        name = str(payload["name"])
+        path_key = "file_path" if name == "Read" else "path"
+        candidate = arguments.get(path_key, ".") if isinstance(arguments, dict) else None
+        if not _contained_path(candidate, corpus):
+            raise DciDualRuntimeVerificationError("restricted Claude corpus boundary was violated")
+        tool_counts[name] += 1
+    fingerprint = evaluation.get("judge_request_fingerprint")
+    if not isinstance(fingerprint, str) or re.fullmatch(r"[0-9a-f]{64}", fingerprint) is None:
+        raise DciDualRuntimeVerificationError("restricted Claude evaluation identity is invalid")
+    artifacts = {
+        "request.json": hashlib.sha256(request_raw).hexdigest(),
+        "runtime-policy.json": hashlib.sha256(policy_raw).hexdigest(),
+        "events.jsonl": hashlib.sha256(events_raw).hexdigest(),
+        "raw-events.jsonl": hashlib.sha256(raw_events_raw).hexdigest(),
+        "final.txt": hashlib.sha256(final_raw).hexdigest(),
+        "eval_result.json": hashlib.sha256(evaluation_raw).hexdigest(),
+    }
+    return {
+        "schema": "asterion.dci.dual-runtime-acceptance/v1",
+        "runtime_id": "claude-code.reference",
+        "status": "completed",
+        "implementation_sha256": complete_application_identity(),
+        "tools": tool_counts,
+        "tool_call_count": sum(tool_counts.values()),
+        "corpus_contained": True,
+        "web_calls": 0,
+        "subagent_calls": 0,
+        "judge_request_fingerprint": fingerprint,
+        "private_artifacts": artifacts,
+        "full_dataset": False,
+    }
 def write_private_report(path: Path, report: dict[str, object]) -> str:
     """Atomically write one private report and return its digest."""
 

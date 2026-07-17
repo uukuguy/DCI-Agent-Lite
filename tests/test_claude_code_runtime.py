@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import stat
 import tempfile
 import unittest
 from pathlib import Path
@@ -20,7 +21,7 @@ class ClaudeCodeRuntimeTests(unittest.TestCase):
     def test_command_is_nonpersistent_restricted_and_never_bypasses_permissions(self) -> None:
         command = build_claude_command(
             executable="claude",
-            tools=["Read", "Bash"],
+            tools=["Read", "Grep", "Glob"],
         )
 
         self.assertIn("--no-session-persistence", command)
@@ -28,6 +29,16 @@ class ClaudeCodeRuntimeTests(unittest.TestCase):
         self.assertIn("stream-json", command)
         self.assertIn("--verbose", command)
         self.assertIn("--allowedTools", command)
+        self.assertIn("dontAsk", command)
+        self.assertIn("--strict-mcp-config", command)
+        self.assertIn("--disable-slash-commands", command)
+        self.assertNotIn("Bash", command)
+        settings = json.loads(command[command.index("--settings") + 1])
+        self.assertTrue(settings["sandbox"]["enabled"])
+        self.assertTrue(settings["sandbox"]["failIfUnavailable"])
+        self.assertFalse(settings["sandbox"]["allowUnsandboxedCommands"])
+        self.assertEqual(settings["sandbox"]["filesystem"]["denyRead"], ["~/"])
+        self.assertEqual(settings["sandbox"]["filesystem"]["allowRead"], ["."])
         self.assertNotIn("--dangerously-skip-permissions", command)
 
     def test_runtime_persists_raw_and_conformant_normalized_artifacts(self) -> None:
@@ -54,11 +65,15 @@ class ClaudeCodeRuntimeTests(unittest.TestCase):
                 json.loads(line)
                 for line in (output_dir / "events.jsonl").read_text().splitlines()
             ]
+            policy = json.loads((output_dir / "runtime-policy.json").read_text())
+            modes = [stat.S_IMODE(path.stat().st_mode) for path in output_dir.iterdir()]
 
         validate_run_request(request)
         validate_event_stream(events)
         self.assertEqual(result["status"], "completed")
         self.assertEqual(result["final_text"], "OK")
+        self.assertEqual(policy["permission_mode"], "dontAsk")
+        self.assertTrue(all(mode == 0o600 for mode in modes))
         self.assertEqual(process.call_args.kwargs["input"], "Reply exactly OK.")
 
     def test_runtime_passes_anthropic_gateway_environment_without_persisting_it(

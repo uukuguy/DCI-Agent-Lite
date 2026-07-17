@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import stat
 from dataclasses import dataclass
 from importlib import resources
 from pathlib import Path
@@ -13,7 +15,7 @@ from typing import Awaitable, Callable
 from asterion.dci.analysis import aggregate_results
 from asterion.dci.bridge import DciRunExecutor, project_dci_run
 from asterion.dci.evaluation import evaluate_run_directory_async
-from asterion.dci.judge import JudgeConfig
+from asterion.dci.judge import JudgeConfig, judge_answer_async
 from asterion.dci.run import DciRunRequest
 from asterion.packages.execution import (
     PackageExecutionError,
@@ -58,6 +60,7 @@ class _Attempt:
     question: str
     gold_answer: str
     output_dir: Path | None
+    predicted_answer: str | None = None
 
 
 class DciCompleteAttemptStore:
@@ -67,11 +70,19 @@ class DciCompleteAttemptStore:
         self._attempts: dict[str, _Attempt] = {}
 
     def start(
-        self, run_id: str, *, question: str, gold_answer: str, output_dir: Path | None
+        self,
+        run_id: str,
+        *,
+        question: str,
+        gold_answer: str,
+        output_dir: Path | None,
+        predicted_answer: str | None = None,
     ) -> None:
         if run_id in self._attempts:
             raise PackageExecutionError("complete application run is duplicated")
-        self._attempts[run_id] = _Attempt(question, gold_answer, output_dir)
+        self._attempts[run_id] = _Attempt(
+            question, gold_answer, output_dir, predicted_answer
+        )
 
     def require(self, run_id: str) -> _Attempt:
         try:
@@ -197,18 +208,21 @@ class DciCompleteResearchImplementation:
             request = RunRequest(
                 run_id=invocation.run_id,
                 input_text=question,
-                requested_capabilities=("filesystem.read",),
+                requested_capabilities=(
+                    "claude.tool.glob",
+                    "claude.tool.grep",
+                    "filesystem.read",
+                ),
             )
-            events = tuple(
+            events = [
                 event.to_mapping()
-                async for event in invocation.runtime.run(request, signal=invocation.signal)
-            )
+                async for event in invocation.runtime.run(
+                    request, signal=invocation.signal
+                )
+            ]
             validate_event_stream(events)
         except (ProtocolError, RuntimeError, TypeError, ValueError):
             raise PackageExecutionError("complete research execution failed") from None
-        self._store.start(
-            invocation.run_id, question=question, gold_answer=gold, output_dir=None
-        )
         answer = next(
             (
                 event["payload"]["artifact"]["uri"]
@@ -218,8 +232,37 @@ class DciCompleteResearchImplementation:
             ),
             None,
         )
-        if not isinstance(answer, str):
+        if answer != "final.txt":
             raise PackageExecutionError("complete research evidence is unavailable")
+        completed_run_dir = getattr(invocation.runtime, "completed_run_dir", None)
+        output_dir = (
+            completed_run_dir(invocation.run_id)
+            if callable(completed_run_dir)
+            else None
+        )
+        if not isinstance(output_dir, Path):
+            raise PackageExecutionError("complete research evidence is unavailable")
+        try:
+            final_path = output_dir / answer
+            metadata = final_path.lstat()
+            if (
+                final_path.is_symlink()
+                or not stat.S_ISREG(metadata.st_mode)
+                or stat.S_IMODE(metadata.st_mode) != 0o600
+            ):
+                raise OSError
+            predicted_answer = final_path.read_text(encoding="utf-8").rstrip("\n")
+        except OSError:
+            raise PackageExecutionError("complete research evidence is unavailable") from None
+        if not predicted_answer:
+            raise PackageExecutionError("complete research evidence is unavailable")
+        self._store.start(
+            invocation.run_id,
+            question=question,
+            gold_answer=gold,
+            output_dir=output_dir,
+            predicted_answer=predicted_answer,
+        )
         return _result(
             stage="research",
             media_type="application/vnd.dci.research+json",
@@ -228,6 +271,17 @@ class DciCompleteResearchImplementation:
 
 
 Evaluator = Callable[..., Awaitable[dict[str, object]]]
+AnswerEvaluator = Callable[..., Awaitable[dict[str, object]]]
+
+
+def _write_private_json(path: Path, payload: Mapping[str, object]) -> None:
+    raw = json.dumps(_plain(payload), ensure_ascii=False, indent=2).encode() + b"\n"
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    try:
+        os.write(descriptor, raw)
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
 
 
 class DciCompleteEvaluationImplementation:
@@ -236,10 +290,12 @@ class DciCompleteEvaluationImplementation:
         *,
         store: DciCompleteAttemptStore,
         evaluator: Evaluator = evaluate_run_directory_async,
+        answer_evaluator: AnswerEvaluator = judge_answer_async,
         judge_config: Callable[[], JudgeConfig] = JudgeConfig.from_env,
     ) -> None:
         self._store = store
         self._evaluator = evaluator
+        self._answer_evaluator = answer_evaluator
         self._judge_config = judge_config
 
     async def execute(self, invocation: PackageInvocation) -> PackageExecutionResult:
@@ -248,11 +304,21 @@ class DciCompleteEvaluationImplementation:
         if attempt.output_dir is None:
             raise PackageExecutionError("complete evaluation evidence is unavailable")
         try:
-            verdict = await self._evaluator(
-                attempt.output_dir,
-                gold_answer=attempt.gold_answer,
-                judge_config=self._judge_config(),
-            )
+            config = self._judge_config()
+            if attempt.predicted_answer is None:
+                verdict = await self._evaluator(
+                    attempt.output_dir,
+                    gold_answer=attempt.gold_answer,
+                    judge_config=config,
+                )
+            else:
+                verdict = await self._answer_evaluator(
+                    config=config,
+                    question=attempt.question,
+                    gold_answer=attempt.gold_answer,
+                    predicted_answer=attempt.predicted_answer,
+                )
+                _write_private_json(attempt.output_dir / "eval_result.json", verdict)
         except Exception:
             raise PackageExecutionError("complete evaluation failed") from None
         is_correct = verdict.get("is_correct")

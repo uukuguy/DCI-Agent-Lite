@@ -21,6 +21,7 @@ from asterion.capabilities.dci_research.complete import (
 from asterion.dci.run import DciRunResult
 from asterion.dci.dual_runtime_verification import (
     DciDualRuntimeVerificationError,
+    audit_restricted_claude_application,
     audit_restricted_pi_application,
 )
 from asterion.packages.catalog import PackageRef
@@ -201,7 +202,64 @@ class _NativeExecutor:
         )
 
 
+class _ClaudeRuntime:
+    manifest = RuntimeManifest(
+        "claude-code.reference",
+        ("claude.tool.glob", "claude.tool.grep", "filesystem.read"),
+    )
+
+    def __init__(self, output_dir: Path) -> None:
+        self.output_dir = output_dir
+        self.requests = []
+
+    async def run(self, request: RunRequest, *, signal=None):
+        del signal
+        self.requests.append(request)
+        self.output_dir.mkdir(mode=0o700)
+        final_path = self.output_dir / "final.txt"
+        final_path.write_text("PRIVATE ANSWER\n")
+        final_path.chmod(0o600)
+        yield RunEvent(request.run_id, 1, "run.started", {"capabilities": list(request.requested_capabilities)})
+        yield RunEvent(request.run_id, 2, "artifact.created", {"artifact": {"artifact_id": "answer", "kind": "answer", "media_type": "text/plain", "uri": "final.txt"}})
+        yield RunEvent(request.run_id, 3, "run.completed", {"status": "completed"})
+
+    def completed_run_dir(self, run_id: str) -> Path:
+        del run_id
+        return self.output_dir
+
+
 class DciCompleteApplicationExecutionTests(unittest.IsolatedAsyncioTestCase):
+    async def test_claude_run_is_judged_and_exports_without_private_bodies(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = DciCompleteAttemptStore()
+            runtime = _ClaudeRuntime(Path(directory) / "claude-run")
+            judge_calls = []
+
+            async def answer_evaluator(**kwargs):
+                judge_calls.append(kwargs)
+                return {"is_correct": True, "judge_request_fingerprint": "b" * 64}
+
+            bindings = (
+                (PackageRef("dci.research", "1.0.0"), DciCompleteResearchImplementation(store=store, native_executor=_NativeExecutor(Path(directory) / "unused"))),
+                (PackageRef("dci.evaluation", "1.0.0"), DciCompleteEvaluationImplementation(store=store, answer_evaluator=answer_evaluator, judge_config=lambda: object())),
+                (PackageRef("dci.benchmark", "1.0.0"), DciCompleteBenchmarkImplementation()),
+                (PackageRef("dci.analysis", "1.0.0"), DciCompleteAnalysisImplementation()),
+                (PackageRef("dci.export", "1.0.0"), DciCompleteExportImplementation(store=store)),
+            )
+            result = await run_composed_application(
+                plan("claude-code.reference"),
+                implementations=bindings,
+                runtime=runtime,
+                run_id="claude-complete",
+                input_text=json.dumps({"protocol": INPUT_PROTOCOL, "question": "PRIVATE QUESTION", "gold_answer": "PRIVATE GOLD"}),
+                host_services={},
+            )
+
+        self.assertEqual(runtime.requests[0].requested_capabilities, ("claude.tool.glob", "claude.tool.grep", "filesystem.read"))
+        self.assertEqual(judge_calls[0]["predicted_answer"], "PRIVATE ANSWER")
+        self.assertEqual(tuple(event["type"] for event in result.events), EVENTS)
+        self.assertNotIn("PRIVATE", repr(result))
+
     async def test_native_run_evaluates_aggregates_and_exports_without_bodies(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             store = DciCompleteAttemptStore()
@@ -314,6 +372,60 @@ class DciRestrictedPiEvidenceTests(unittest.TestCase):
         self.assertTrue(record["corpus_contained"])
         self.assertFalse(record["full_dataset"])
         self.assertNotIn("cobalt lantern", repr(record))
+
+
+class DciRestrictedClaudeEvidenceTests(unittest.TestCase):
+    def _fixture(self, root: Path) -> tuple[Path, Path]:
+        run = root / "run"
+        corpus = root / "corpus"
+        run.mkdir(mode=0o700)
+        corpus.mkdir()
+        documents = {
+            "request.json": {"requested_capabilities": ["filesystem.read", "claude.tool.grep", "claude.tool.glob"]},
+            "runtime-policy.json": {
+                "tools": ["Read", "Grep", "Glob"], "allowed_tools": ["Read", "Grep", "Glob"],
+                "max_turns": 4, "permission_mode": "dontAsk", "strict_mcp": True,
+                "mcp_servers": {}, "safe_mode": True, "no_session_persistence": True,
+                "settings": {"sandbox": {"enabled": True, "failIfUnavailable": True, "allowUnsandboxedCommands": False}},
+            },
+            "eval_result.json": {"is_correct": True, "judge_request_fingerprint": "c" * 64},
+        }
+        for name, value in documents.items():
+            path = run / name
+            path.write_text(json.dumps(value))
+            path.chmod(0o600)
+        events = (
+            {"type": "run.started", "payload": {"capabilities": ["claude.tool.glob", "claude.tool.grep", "filesystem.read"]}},
+            {"type": "tool.call", "payload": {"name": "Grep", "arguments": {"path": "."}}},
+            {"type": "run.completed", "payload": {"status": "completed"}},
+        )
+        for name, value in {
+            "events.jsonl": "".join(json.dumps(event) + "\n" for event in events),
+            "raw-events.jsonl": "private raw stream\n",
+            "final.txt": "cobalt lantern\n",
+        }.items():
+            path = run / name
+            path.write_text(value)
+            path.chmod(0o600)
+        return run, corpus
+
+    def test_private_evidence_is_body_free_and_corpus_contained(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            run, corpus = self._fixture(Path(directory))
+            report = audit_restricted_claude_application(run_dir=run, corpus_dir=corpus)
+        self.assertEqual(report["tools"], {"Read": 0, "Grep": 1, "Glob": 0})
+        self.assertNotIn("cobalt lantern", repr(report))
+
+    def test_outside_path_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            run, corpus = self._fixture(Path(directory))
+            path = run / "events.jsonl"
+            events = [json.loads(line) for line in path.read_text().splitlines()]
+            events[1]["payload"]["arguments"]["path"] = "/outside"
+            path.write_text("".join(json.dumps(event) + "\n" for event in events))
+            path.chmod(0o600)
+            with self.assertRaises(DciDualRuntimeVerificationError):
+                audit_restricted_claude_application(run_dir=run, corpus_dir=corpus)
 
 if __name__ == "__main__":
     unittest.main()

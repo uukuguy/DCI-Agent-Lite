@@ -40,8 +40,12 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
                     )
                 )
 
-        self.assertEqual(binding.capabilities, ("filesystem.read", "shell"))
+        self.assertEqual(
+            binding.capabilities,
+            ("claude.tool.glob", "claude.tool.grep", "filesystem.read"),
+        )
         self.assertEqual(runtime.manifest.runtime_id, "claude-code.reference")
+        self.assertEqual(runtime.manifest.capabilities, binding.capabilities)
 
     def test_missing_claude_executable_fails_without_echoing_the_path(self) -> None:
         from asterion.runtime.defaults import default_runtime_factory_registry
