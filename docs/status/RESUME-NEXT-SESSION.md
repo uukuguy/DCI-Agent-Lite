@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-17 18:26 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-17 18:31 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-330
 
@@ -16,11 +16,12 @@ Currently running: no process.
 - Terminal replay binds report `9e929881…8736`, tracked record `81137f4c…075`, implementation `613578bd…6477`, and reviewed source `ffca6ae`.
 - Climb cycle 102 invokes the strengthened verifier and confirms H004 4/4; r7–r10 are diagnostic or rejected history.
 - Commit `ffca6ae` passes 122/122 Asterion tests and closes the task-cancellation/raw-replay implementation gaps.
+- Full closure passes 1396 root Python, 122 Asterion, 11 TypeScript, 19 Rust, product 8/8, delegated 533/533, launchers 12/12, extras 6/6, bounded 7/7, zero provider requests, fresh isolated wheel, static, scope, diff, and actual-key scans.
 - `.env` is privately configured for the international MiniMax Claude API and DeepSeek Judge; never print or commit it. External `pi/` remains untouched.
 
 ## Next concrete action
 
-1. Rerun closure gates and final independent review; close AF-330 only if no Critical/Important findings remain.
+1. Obtain final independent review; close AF-330 only if no Critical/Important findings remain.
 
 ## Boundaries
 
