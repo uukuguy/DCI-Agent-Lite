@@ -115,6 +115,20 @@ class PaperBenchmarkCliTests(unittest.TestCase):
         for forbidden in ("query", "answer", "snippet", "tool_output", "api_key"):
             self.assertNotIn(f'"{forbidden}"', rendered)
 
+    def test_paper_verification_defaults_to_zero_external_operations(self) -> None:
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+
+        self.assertEqual(
+            main(["paper", "verify"], stdout=stdout, stderr=stderr),
+            0,
+            stderr.getvalue(),
+        )
+        self.assertIn("Agent operations: 0", stdout.getvalue())
+        self.assertIn("Judge operations: 0", stdout.getvalue())
+        self.assertIn("Planned external operations: 3", stdout.getvalue())
+        self.assertIn("Full dataset ran: no", stdout.getvalue())
+
     def test_resolution_export_cli_reanalyzes_authoritative_inputs(self) -> None:
         projection = {
             "schema": "dci.trajectory-resolution-summary/v1",

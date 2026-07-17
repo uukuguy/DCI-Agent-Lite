@@ -2,19 +2,28 @@
 
 from __future__ import annotations
 
+import argparse
+import hashlib
+import json
 import os
 import re
 import secrets
+import stat
 import subprocess
 import importlib.util
 import sys
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from importlib import resources
 from pathlib import Path
-from typing import Callable, Protocol
+from typing import Protocol, TextIO
 
 from asterion.dci.ablation import (
+    bounded_ablation_input_paths,
     paper_ablation_matrix_sha256,
     paper_ablation_row_ids,
+    resolve_bounded_corpus_manifest,
+    validate_paper_ablation_matrix,
 )
 from asterion.applications.product import (
     CapabilityFunction,
@@ -34,7 +43,7 @@ from asterion.dci.config import (
     resolve_dci_runtime_options,
 )
 from asterion.dci.evaluation import evaluate_run_directory
-from asterion.dci.judge import JudgeConfig
+from asterion.dci.judge import JudgeConfig, build_judge_request
 from asterion.dci.context_profiles import context_profile_names
 from asterion.dci.paper_benchmarks import (
     paper_benchmark_ids,
@@ -44,6 +53,13 @@ from asterion.dci.paper_benchmarks import (
     resolve_paper_benchmark,
 )
 from asterion.dci.run import DciRunRequest, DciRunResult, run_pi_research
+
+
+PAPER_BENCHMARK_REPORT_SCHEMA = "asterion.dci.paper-benchmark-acceptance/v1"
+_PAPER_OPERATION_PLAN = ("qa-agent", "qa-judge", "ir-agent")
+_SHA256 = re.compile(r"[0-9a-f]{64}")
+_REVISION = re.compile(r"[0-9a-f]{40,64}")
+_PUBLIC_IDENTITY = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:/+-]*")
 
 
 @dataclass(frozen=True)
@@ -298,6 +314,478 @@ def paper_product_contract() -> dict[str, object]:
         },
         "paper_full_executable": False,
     }
+
+
+@dataclass(frozen=True)
+class PaperBenchmarkReadiness:
+    """Body-free identities established before any bounded external operation."""
+
+    output_root: Path
+    provider: str
+    model: str
+    judge_model: str
+    pi_revision: str
+    pi_tracked_status_sha256: str
+    resource_digests: tuple[tuple[str, str], ...]
+    paths: DciPaths | None = None
+    runtime_options: DciRuntimeOptions | None = None
+    judge_config: JudgeConfig | None = None
+    corpus_dir: Path | None = None
+
+
+@dataclass(frozen=True)
+class PaperBenchmarkOperationEvidence:
+    """One body-free operation result whose private files remain digest-bound."""
+
+    operation_id: str
+    kind: str
+    artifact_digests: tuple[tuple[str, str], ...]
+    accepted: bool
+
+    def validate(self) -> None:
+        expected_kind = {
+            "qa-agent": "agent",
+            "qa-judge": "judge",
+            "ir-agent": "agent",
+        }.get(self.operation_id)
+        names = [name for name, _digest in self.artifact_digests]
+        if (
+            self.kind != expected_kind
+            or type(self.accepted) is not bool
+            or not self.accepted
+            or not self.artifact_digests
+            or len(names) != len(set(names))
+            or any(
+                not _safe_relative_artifact_name(name)
+                or _SHA256.fullmatch(digest) is None
+                for name, digest in self.artifact_digests
+            )
+        ):
+            raise ValueError("DCI paper benchmark evidence is invalid")
+
+
+PaperReadinessChecker = Callable[[argparse.Namespace, Path], PaperBenchmarkReadiness]
+PaperOperationRunner = Callable[
+    [PaperBenchmarkReadiness, str], PaperBenchmarkOperationEvidence | None
+]
+
+
+def _safe_relative_artifact_name(value: object) -> bool:
+    if type(value) is not str or not value:
+        return False
+    path = Path(value)
+    return not path.is_absolute() and ".." not in path.parts and path.name != ""
+
+
+def paper_benchmark_resource_digests() -> tuple[tuple[str, str], ...]:
+    """Return the closed installed resource identity used by bounded acceptance."""
+
+    validate_paper_ablation_matrix()
+    root = resources.files("asterion.dci.resources")
+    values: list[tuple[str, str]] = [
+        ("ablation_matrix", paper_ablation_matrix_sha256()),
+    ]
+    for identity, relative in (
+        ("qa_fixture", "paper-fixtures/qa.jsonl"),
+        ("ir_fixture", "paper-fixtures/ir.jsonl"),
+    ):
+        raw = root.joinpath(relative).read_bytes()
+        values.append((identity, hashlib.sha256(raw).hexdigest()))
+    manifest = resolve_bounded_corpus_manifest("tiny.base/v1")
+    values.append(("corpus_manifest", manifest.identity_sha256))
+    judge = JudgeConfig(model="gpt-4.1")
+    judge_contract = {
+        "contract": "dci.paper-answer-judge/gpt-4.1/v1",
+        "api": judge.api,
+        "base_url": judge.base_url,
+        "model": judge.model,
+        "request": build_judge_request(
+            judge,
+            question="[question]",
+            gold_answer="[gold-answer]",
+            predicted_answer="[predicted-answer]",
+        ),
+    }
+    values.append(
+        (
+            "judge_contract",
+            hashlib.sha256(
+                (
+                    json.dumps(
+                        judge_contract,
+                        ensure_ascii=False,
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    )
+                    + "\n"
+                ).encode()
+            ).hexdigest(),
+        )
+    )
+    return tuple(values)
+
+
+def _paper_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="asterion-dci paper verify", exit_on_error=False
+    )
+    parser.add_argument("--provider-backed", action="store_true")
+    parser.add_argument("--env-file", type=Path)
+    parser.add_argument("--output-root", type=Path)
+    return parser
+
+
+def _private_regular(path: Path) -> bool:
+    try:
+        metadata = path.lstat()
+    except OSError:
+        return False
+    return (
+        not path.is_symlink()
+        and stat.S_ISREG(metadata.st_mode)
+        and metadata.st_mode & 0o077 == 0
+    )
+
+
+def _prepare_private_output(path: Path) -> Path:
+    output = Path(os.path.abspath(os.path.normpath(path)))
+    current = Path(output.anchor)
+    for part in output.parts[1:]:
+        current /= part
+        if current.is_symlink():
+            raise ValueError("DCI paper benchmark output is invalid")
+    if output.exists():
+        if not output.is_dir() or any(output.iterdir()):
+            raise ValueError("DCI paper benchmark output is invalid")
+    else:
+        output.mkdir(parents=True, mode=0o700)
+    output.chmod(0o700)
+    return output
+
+
+def _clean_pi_identity(pi_dir: Path) -> tuple[str, str]:
+    revision = subprocess.run(
+        ["git", "-C", str(pi_dir), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    status = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(pi_dir),
+            "status",
+            "--porcelain=v1",
+            "--untracked-files=normal",
+        ],
+        check=True,
+        capture_output=True,
+    ).stdout
+    if status:
+        raise ValueError("DCI paper benchmark Pi runtime is not clean")
+    return revision, hashlib.sha256(status.encode()).hexdigest()
+
+
+def _paper_default_readiness(
+    args: argparse.Namespace, repo_root: Path
+) -> PaperBenchmarkReadiness:
+    if args.env_file is None or args.output_root is None:
+        raise ValueError("DCI paper benchmark preflight failed")
+    env_file = Path(args.env_file).expanduser().resolve()
+    if not _private_regular(env_file):
+        raise ValueError("DCI paper benchmark preflight failed")
+    if load_asterion_dci_env(repo_root, env_file=env_file) is None:
+        raise ValueError("DCI paper benchmark preflight failed")
+    paths = resolve_dci_paths(repo_root)
+    options = resolve_dci_runtime_options()
+    judge = JudgeConfig.from_env()
+    if (
+        _PUBLIC_IDENTITY.fullmatch(options.provider) is None
+        or _PUBLIC_IDENTITY.fullmatch(options.model) is None
+        or judge.model != "gpt-4.1"
+        or judge.api != "responses"
+        or judge.base_url != "https://api.openai.com/v1"
+        or judge.max_output_tokens != 1024
+        or judge.json_mode is not True
+        or judge.strict_json_schema is not False
+        or judge.responses_store is not False
+        or judge.effective_thinking is not None
+        or not judge.api_key
+        or not (paths.pi.package_dir / "package.json").is_file()
+        or not paths.pi.agent_dir.is_dir()
+    ):
+        raise ValueError("DCI paper benchmark preflight failed")
+    provider_key = _provider_key_name(options.provider)
+    pi_auth = paths.pi.agent_dir / "auth.json"
+    if not (
+        provider_key
+        and os.environ.get(provider_key, "").strip()
+        or _private_regular(pi_auth)
+    ):
+        raise ValueError("DCI paper benchmark preflight failed")
+    revision, status_sha256 = _clean_pi_identity(paths.pi.repo_dir)
+    try:
+        locked_revision = (repo_root / "pi-revision.txt").read_text().strip()
+    except OSError:
+        raise ValueError("DCI paper benchmark preflight failed") from None
+    if revision != locked_revision or _REVISION.fullmatch(revision) is None:
+        raise ValueError("DCI paper benchmark preflight failed")
+    _dataset, corpus = bounded_ablation_input_paths("bounded.tools.read-grep")
+    return PaperBenchmarkReadiness(
+        output_root=_prepare_private_output(args.output_root),
+        provider=options.provider,
+        model=options.model,
+        judge_model=judge.model,
+        pi_revision=revision,
+        pi_tracked_status_sha256=status_sha256,
+        resource_digests=paper_benchmark_resource_digests(),
+        paths=paths,
+        runtime_options=options,
+        judge_config=judge,
+        corpus_dir=corpus,
+    )
+
+
+def _private_artifact_digests(
+    directory: Path, *, exclude: frozenset[str] = frozenset()
+) -> tuple[tuple[str, str], ...]:
+    values: list[tuple[str, str]] = []
+    for path in sorted(directory.rglob("*")):
+        if path.is_dir():
+            if path.is_symlink():
+                raise ValueError("DCI paper benchmark evidence is invalid")
+            continue
+        if not _private_regular(path):
+            raise ValueError("DCI paper benchmark evidence is invalid")
+        relative = path.relative_to(directory).as_posix()
+        if relative in exclude:
+            continue
+        values.append((relative, hashlib.sha256(path.read_bytes()).hexdigest()))
+    if not values:
+        raise ValueError("DCI paper benchmark evidence is invalid")
+    return tuple(values)
+
+
+def _write_private_json(path: Path, value: dict[str, object]) -> None:
+    raw = (json.dumps(value, sort_keys=True, indent=2) + "\n").encode()
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, "wb") as stream:
+        stream.write(raw)
+
+
+def _fixture_question(name: str) -> tuple[str, str]:
+    resource = resources.files("asterion.dci.resources").joinpath(
+        f"paper-fixtures/{name}.jsonl"
+    )
+    row = json.loads(resource.read_text(encoding="utf-8"))
+    if not isinstance(row, dict) or not isinstance(row.get("query"), str):
+        raise ValueError("DCI paper benchmark fixture is invalid")
+    answer = row.get("answer", "")
+    if not isinstance(answer, str):
+        raise ValueError("DCI paper benchmark fixture is invalid")
+    return row["query"], answer
+
+
+def _paper_default_operation_runner(
+    readiness: PaperBenchmarkReadiness, operation_id: str
+) -> PaperBenchmarkOperationEvidence:
+    if (
+        readiness.paths is None
+        or readiness.runtime_options is None
+        or readiness.judge_config is None
+        or readiness.corpus_dir is None
+    ):
+        raise ValueError("DCI paper benchmark preflight failed")
+    if operation_id == "qa-judge":
+        qa_dir = readiness.output_root / "qa-agent"
+        accepted = evaluate_run_directory(
+            qa_dir,
+            gold_answer=_fixture_question("qa")[1],
+            judge_config=readiness.judge_config,
+        ).get("is_correct") is True
+        evaluation = qa_dir / "eval_result.json"
+        if not accepted or not _private_regular(evaluation):
+            raise ValueError("DCI paper benchmark Judge evidence is invalid")
+        directory = readiness.output_root / operation_id
+        directory.mkdir(mode=0o700)
+        _write_private_json(
+            directory / "evaluation-evidence.json",
+            {
+                "schema": "asterion.dci.paper-judge-evidence/v1",
+                "accepted": True,
+                "evaluation_sha256": hashlib.sha256(evaluation.read_bytes()).hexdigest(),
+            },
+        )
+        evidence = PaperBenchmarkOperationEvidence(
+            operation_id=operation_id,
+            kind="judge",
+            artifact_digests=_private_artifact_digests(directory),
+            accepted=True,
+        )
+        evidence.validate()
+        return evidence
+
+    fixture = "qa" if operation_id == "qa-agent" else "ir"
+    if operation_id not in {"qa-agent", "ir-agent"}:
+        raise ValueError("DCI paper benchmark operation is invalid")
+    question, _answer = _fixture_question(fixture)
+    options = readiness.runtime_options
+    output_dir = readiness.output_root / operation_id
+    request = DciRunRequest(
+        run_id=f"paper-benchmark-{fixture}",
+        question=(
+            "Use only files in the current directory. Do not use web search. "
+            "Use the read and grep tools and cite the matching file name. " + question
+        ),
+        cwd=readiness.corpus_dir,
+        provider=options.provider,
+        model=options.model,
+        tools="read,grep",
+        max_turns=8,
+        timeout_seconds=options.timeout_seconds,
+        runtime_context_level="level4",
+        thinking_level=options.thinking_level,
+        node_max_old_space_size_mb=options.node_max_old_space_size_mb,
+        keep_session=True,
+        stream_text=False,
+    )
+    result = run_pi_research(readiness.paths, request, output_dir=output_dir)
+    if result.status != "completed" or (
+        operation_id == "ir-agent" and "doc.txt" not in result.final_text
+    ):
+        raise ValueError("DCI paper benchmark agent evidence is invalid")
+    evidence = PaperBenchmarkOperationEvidence(
+        operation_id=operation_id,
+        kind="agent",
+        artifact_digests=_private_artifact_digests(
+            output_dir,
+            exclude=frozenset(
+                {".dci-run.lock", "eval_result.json", "evaluation.json", "state.json"}
+            ),
+        ),
+        accepted=True,
+    )
+    evidence.validate()
+    return evidence
+
+
+def _paper_report(
+    readiness: PaperBenchmarkReadiness,
+    operations: Sequence[PaperBenchmarkOperationEvidence],
+) -> dict[str, object]:
+    if (
+        _PUBLIC_IDENTITY.fullmatch(readiness.provider) is None
+        or _PUBLIC_IDENTITY.fullmatch(readiness.model) is None
+        or readiness.judge_model != "gpt-4.1"
+        or _REVISION.fullmatch(readiness.pi_revision) is None
+        or _SHA256.fullmatch(readiness.pi_tracked_status_sha256) is None
+        or [item.operation_id for item in operations] != list(_PAPER_OPERATION_PLAN)
+        or len(dict(readiness.resource_digests)) != len(readiness.resource_digests)
+        or any(_SHA256.fullmatch(value) is None for _name, value in readiness.resource_digests)
+    ):
+        raise ValueError("DCI paper benchmark evidence is invalid")
+    for operation in operations:
+        operation.validate()
+    return {
+        "schema": PAPER_BENCHMARK_REPORT_SCHEMA,
+        "mode": "bounded-provider-backed",
+        "provider": readiness.provider,
+        "model": readiness.model,
+        "judge_model": readiness.judge_model,
+        "pi_revision": readiness.pi_revision,
+        "pi_tracked_status_sha256": readiness.pi_tracked_status_sha256,
+        "agent_operations": 2,
+        "judge_operations": 1,
+        "external_operations": 3,
+        "api_request_multiplicity": "externally ambiguous",
+        "operation_order": list(_PAPER_OPERATION_PLAN),
+        "full_dataset_ran": False,
+        "resources": dict(readiness.resource_digests),
+        "operations": [
+            {
+                "operation_id": item.operation_id,
+                "kind": item.kind,
+                "accepted": item.accepted,
+                "artifact_digests": dict(item.artifact_digests),
+            }
+            for item in operations
+        ],
+    }
+
+
+def paper_benchmark_acceptance_main(
+    argv: Sequence[str] | None = None,
+    *,
+    stdout: TextIO | None = None,
+    stderr: TextIO | None = None,
+    repo_root: Path | None = None,
+    readiness_checker: PaperReadinessChecker | None = None,
+    operation_runner: PaperOperationRunner | None = None,
+) -> int:
+    """Verify local contracts or run exactly two agents and one GPT-4.1 Judge."""
+
+    stdout = sys.stdout if stdout is None else stdout
+    stderr = sys.stderr if stderr is None else stderr
+    try:
+        args = _paper_parser().parse_args(argv)
+        paper_product_contract()
+        paper_benchmark_resource_digests()
+    except (argparse.ArgumentError, OSError, RuntimeError, TypeError, ValueError):
+        stderr.write("DCI paper benchmark verification failed\n")
+        return 2
+    if not args.provider_backed:
+        stdout.write("PASS\nAgent operations: 0\nJudge operations: 0\n")
+        stdout.write("Planned external operations: 3\n")
+        stdout.write("API request multiplicity: externally ambiguous\n")
+        stdout.write("Full dataset ran: no\n")
+        return 0
+    root = Path.cwd().resolve() if repo_root is None else Path(repo_root).resolve()
+    checker = _paper_default_readiness if readiness_checker is None else readiness_checker
+    runner = _paper_default_operation_runner if operation_runner is None else operation_runner
+    try:
+        readiness = checker(args, root)
+    except (OSError, RuntimeError, subprocess.SubprocessError, TypeError, ValueError):
+        stderr.write("DCI paper benchmark preflight failed\n")
+        return 2
+    attempted = 0
+    try:
+        accepted: list[PaperBenchmarkOperationEvidence] = []
+        for operation_id in _PAPER_OPERATION_PLAN:
+            attempted += 1
+            evidence = runner(readiness, operation_id)
+            if not isinstance(evidence, PaperBenchmarkOperationEvidence):
+                raise ValueError("DCI paper benchmark evidence is invalid")
+            evidence.validate()
+            accepted.append(evidence)
+        report = _paper_report(readiness, accepted)
+        _write_private_json(
+            readiness.output_root / "paper-benchmark-acceptance.json", report
+        )
+    except (OSError, RuntimeError, TypeError, ValueError):
+        try:
+            readiness.output_root.mkdir(parents=True, exist_ok=True)
+            _write_private_json(
+                readiness.output_root / "paper-benchmark-acceptance-failure.json",
+                {
+                    "schema": "asterion.dci.paper-benchmark-acceptance-failure/v1",
+                    "attempted_external_operations": attempted,
+                    "full_dataset_ran": False,
+                },
+            )
+        except OSError:
+            pass
+        stderr.write(
+            "DCI paper benchmark runtime/evidence failed after "
+            f"{attempted} external operations\n"
+        )
+        return 2
+    stdout.write("PASS\nAgent operations: 2\nJudge operations: 1\n")
+    stdout.write("External operations: 3\n")
+    stdout.write("API request multiplicity: externally ambiguous\n")
+    stdout.write("Full dataset ran: no\n")
+    stdout.write("Report: paper-benchmark-acceptance.json\n")
+    return 0
 
 
 class DciVerificationBackend(Protocol):

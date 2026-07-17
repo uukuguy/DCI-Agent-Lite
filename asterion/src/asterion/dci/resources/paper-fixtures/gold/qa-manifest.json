@@ -6,8 +6,8 @@
     {
       "id": "doc.txt",
       "path": "doc.txt",
-      "sha256": "60e871ee189c12b9ba2b5f4a70d660aa3faf95febc085012efe93eb304c350cb",
-      "evidence_spans": [{"start": 0, "end": 47}]
+      "sha256": "00e2d7d245f21dbac78c921ad4042d57fe5deba7a257f745144c1b1e10cf2584",
+      "evidence_spans": [{"start": 52, "end": 66}]
     }
   ]
 }

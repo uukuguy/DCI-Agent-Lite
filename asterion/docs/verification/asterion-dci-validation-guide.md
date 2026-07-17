@@ -78,6 +78,41 @@ runs intended for resume must preserve the original Pi session with
 
 ### Paper and bounded ablation matrix
 
+Run the paper-product verifier model-free first:
+
+```bash
+uv run --project asterion asterion-dci paper verify
+```
+
+It must report zero agent and Judge operations, a planned bound of three, and
+`Full dataset ran: no`. The cost-bearing terminal command is deliberately
+separate:
+
+```bash
+uv run --project asterion asterion-dci paper verify \
+  --provider-backed \
+  --env-file .env \
+  --output-root outputs/asterion-dci-paper-acceptance
+```
+
+Before starting Pi it requires an empty private output root, a clean checkout at
+the locked Pi revision, hash-valid installed QA/IR/corpus resources, provider
+credentials, and the exact `gpt-4.1` Responses Judge. It then runs only
+`qa-agent`, `qa-judge`, and `ir-agent`, in that order. The 0600 report contains
+identities and digests but no prompt, answer, tool body, credential, or private
+path. Agent API request multiplicity remains externally ambiguous. Bind a
+successful report only after the verifier exits successfully:
+
+```bash
+uv run --project asterion python tools/climb/bind-paper-benchmark-evidence.py \
+  --report outputs/asterion-dci-paper-acceptance/paper-benchmark-acceptance.json \
+  --pi-dir /path/to/clean/locked/pi
+```
+
+The binder rehashes every referenced private artifact and rechecks the clean Pi
+identity before atomically creating the terminal H004 result. Failed attempts
+remain diagnostic and must not be bound.
+
 The packaged matrix keeps ten paper-declared rows separate from ten tiny
 bounded analogues; it never generates a Cartesian product at execution time.
 Validate and inspect it without loading `.env`, Pi, a provider, a Judge, or a

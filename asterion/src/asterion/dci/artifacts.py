@@ -10,6 +10,7 @@ import re
 import secrets
 import socket
 import stat
+import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -39,6 +40,34 @@ try:
     import fcntl
 except ImportError:  # pragma: no cover - exercised only on non-POSIX hosts
     fcntl = None  # type: ignore[assignment]
+
+
+_PAPER_REPORT_KEYS = {
+    "schema",
+    "mode",
+    "provider",
+    "model",
+    "judge_model",
+    "pi_revision",
+    "pi_tracked_status_sha256",
+    "agent_operations",
+    "judge_operations",
+    "external_operations",
+    "api_request_multiplicity",
+    "operation_order",
+    "full_dataset_ran",
+    "resources",
+    "operations",
+}
+_PAPER_OPERATION_KEYS = {
+    "operation_id",
+    "kind",
+    "accepted",
+    "artifact_digests",
+}
+_PAPER_OPERATION_PLAN = ("qa-agent", "qa-judge", "ir-agent")
+_HEX_SHA256 = re.compile(r"[0-9a-f]{64}")
+_PUBLIC_EVIDENCE_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:/+-]*")
 
 
 class DciArtifactError(RuntimeError):
@@ -2966,3 +2995,246 @@ class DciRunRecorder:
             json.dumps(value, ensure_ascii=False) + "\n",
             append=True,
         )
+
+
+def _read_private_evidence(path: Path) -> bytes:
+    if path.is_symlink() or path.parent.is_symlink():
+        raise ValueError("paper benchmark evidence path is invalid")
+    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    try:
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode) or metadata.st_mode & 0o077:
+            raise ValueError("paper benchmark evidence file is invalid")
+        with os.fdopen(descriptor, "rb", closefd=False) as stream:
+            return stream.read()
+    finally:
+        os.close(descriptor)
+
+
+def _paper_clean_pi_identity(pi_dir: Path) -> tuple[str, str]:
+    revision = subprocess.run(
+        ["git", "-C", str(pi_dir), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    status = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(pi_dir),
+            "status",
+            "--porcelain=v1",
+            "--untracked-files=normal",
+        ],
+        check=True,
+        capture_output=True,
+    ).stdout
+    if status:
+        raise ValueError("paper benchmark Pi worktree must be clean")
+    return revision, hashlib.sha256(status).hexdigest()
+
+
+def _atomic_public_bytes(path: Path, raw: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.{secrets.token_hex(4)}.tmp")
+    descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    try:
+        with os.fdopen(descriptor, "wb") as stream:
+            stream.write(raw)
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def bind_paper_benchmark_evidence(
+    report_path: Path,
+    *,
+    state_dir: Path,
+    pi_dir: Path,
+    hypothesis_id: str = "AF-320-H-004",
+) -> str:
+    """Rehash bounded evidence and atomically create the terminal Climb result."""
+
+    from asterion.dci.verification import (
+        PAPER_BENCHMARK_REPORT_SCHEMA,
+        paper_benchmark_resource_digests,
+    )
+
+    report_path = Path(report_path)
+    raw = _read_private_evidence(report_path)
+    try:
+        report = json.loads(raw)
+    except (UnicodeError, json.JSONDecodeError):
+        raise ValueError("paper benchmark evidence report is invalid") from None
+    revision, status_sha256 = _paper_clean_pi_identity(Path(pi_dir))
+    if (
+        not isinstance(report, dict)
+        or set(report) != _PAPER_REPORT_KEYS
+        or report.get("schema") != PAPER_BENCHMARK_REPORT_SCHEMA
+        or report.get("mode") != "bounded-provider-backed"
+        or report.get("judge_model") != "gpt-4.1"
+        or report.get("pi_revision") != revision
+        or report.get("pi_tracked_status_sha256") != status_sha256
+        or report.get("agent_operations") != 2
+        or report.get("judge_operations") != 1
+        or report.get("external_operations") != 3
+        or report.get("api_request_multiplicity") != "externally ambiguous"
+        or report.get("operation_order") != list(_PAPER_OPERATION_PLAN)
+        or report.get("full_dataset_ran") is not False
+        or report.get("resources") != dict(paper_benchmark_resource_digests())
+        or _PUBLIC_EVIDENCE_ID.fullmatch(str(report.get("provider"))) is None
+        or _PUBLIC_EVIDENCE_ID.fullmatch(str(report.get("model"))) is None
+    ):
+        raise ValueError("paper benchmark evidence report is invalid")
+    operations = report.get("operations")
+    if not isinstance(operations, list) or len(operations) != 3:
+        raise ValueError("paper benchmark evidence report is invalid")
+    for index, operation in enumerate(operations):
+        operation_id = _PAPER_OPERATION_PLAN[index]
+        kind = "judge" if operation_id == "qa-judge" else "agent"
+        if (
+            not isinstance(operation, dict)
+            or set(operation) != _PAPER_OPERATION_KEYS
+            or operation.get("operation_id") != operation_id
+            or operation.get("kind") != kind
+            or operation.get("accepted") is not True
+            or not isinstance(operation.get("artifact_digests"), dict)
+            or not operation["artifact_digests"]
+        ):
+            raise ValueError("paper benchmark evidence report is invalid")
+        for name, expected in operation["artifact_digests"].items():
+            path = Path(name) if isinstance(name, str) else Path("/")
+            if (
+                not isinstance(name, str)
+                or not name
+                or path.is_absolute()
+                or ".." in path.parts
+                or _HEX_SHA256.fullmatch(str(expected)) is None
+            ):
+                raise ValueError("paper benchmark evidence report is invalid")
+            operation_root = report_path.parent / operation_id
+            current = operation_root
+            if current.is_symlink():
+                raise ValueError("paper benchmark evidence path is invalid")
+            for part in path.parts:
+                current /= part
+                if current.is_symlink():
+                    raise ValueError("paper benchmark evidence path is invalid")
+            artifact = current
+            actual = hashlib.sha256(_read_private_evidence(artifact)).hexdigest()
+            if actual != expected:
+                raise ValueError("paper benchmark evidence artifact digest is invalid")
+
+    judge_artifacts = operations[1]["artifact_digests"]
+    if set(judge_artifacts) != {"evaluation-evidence.json"}:
+        raise ValueError("paper benchmark Judge evidence is invalid")
+    try:
+        judge_evidence = json.loads(
+            _read_private_evidence(
+                report_path.parent / "qa-judge/evaluation-evidence.json"
+            )
+        )
+        evaluation_raw = _read_private_evidence(
+            report_path.parent / "qa-agent/eval_result.json"
+        )
+        evaluation = json.loads(evaluation_raw)
+    except (UnicodeError, json.JSONDecodeError):
+        raise ValueError("paper benchmark Judge evidence is invalid") from None
+    if (
+        not isinstance(judge_evidence, dict)
+        or set(judge_evidence)
+        != {"schema", "accepted", "evaluation_sha256"}
+        or judge_evidence.get("schema")
+        != "asterion.dci.paper-judge-evidence/v1"
+        or judge_evidence.get("accepted") is not True
+        or judge_evidence.get("evaluation_sha256")
+        != hashlib.sha256(evaluation_raw).hexdigest()
+        or not isinstance(evaluation, dict)
+        or evaluation.get("is_correct") is not True
+        or evaluation.get("judge_model") != "gpt-4.1"
+        or evaluation.get("judge_api") != "responses"
+        or evaluation.get("judge_base_url") != "https://api.openai.com/v1"
+        or evaluation.get("judge_max_output_tokens") != 1024
+        or evaluation.get("judge_json_mode") is not True
+        or evaluation.get("judge_strict_json_schema") is not False
+        or evaluation.get("judge_responses_store") is not False
+        or evaluation.get("judge_thinking") is not None
+        or _HEX_SHA256.fullmatch(
+            str(evaluation.get("judge_request_fingerprint"))
+        )
+        is None
+    ):
+        raise ValueError("paper benchmark Judge evidence is invalid")
+
+    report_sha256 = hashlib.sha256(raw).hexdigest()
+    record = {
+        "schema": "dci.climb.paper-benchmark-evidence/v1",
+        "hypothesis_id": hypothesis_id,
+        "report_sha256": report_sha256,
+        "pi_revision": revision,
+        "pi_worktree_clean": True,
+        "pi_tracked_status_sha256": status_sha256,
+        "agent_operations": 2,
+        "judge_operations": 1,
+        "external_operations": 3,
+        "api_request_multiplicity": "externally ambiguous",
+        "operation_order": list(_PAPER_OPERATION_PLAN),
+        "full_dataset_ran": False,
+        "resources": report["resources"],
+        "operations": operations,
+    }
+    record_raw = (json.dumps(record, sort_keys=True, indent=2) + "\n").encode()
+    record_sha256 = hashlib.sha256(record_raw).hexdigest()
+    relative = f"provider-evidence/{hypothesis_id.lower()}.json"
+    evidence_path = Path(state_dir) / relative
+    hypotheses = Path(state_dir) / "hypotheses.yaml"
+    text = hypotheses.read_text(encoding="utf-8")
+    start = text.index(f"- id: {hypothesis_id}\n")
+    end = text.find("\n- id: ", start + 1)
+    end = len(text) if end < 0 else end
+    section = text[start:end]
+    binding = (
+        "    provider_evidence:\n"
+        f"      path: {relative}\n"
+        f"      sha256: {record_sha256}\n"
+        f"      report_sha256: {report_sha256}"
+    )
+    if "  status: confirmed\n" in section:
+        if binding not in section or not evidence_path.is_file():
+            raise ValueError("paper benchmark evidence is already bound differently")
+        if evidence_path.read_bytes() != record_raw:
+            raise ValueError("bound paper benchmark evidence is invalid")
+        return record_sha256
+    if (
+        section.count("  status: pending\n") != 1
+        or section.count("  results: []") != 1
+        or evidence_path.exists()
+    ):
+        raise ValueError("terminal Climb hypothesis is invalid")
+    result = (
+        "  results:\n"
+        "  - session: 2026-07-17-af-320-paper-benchmark-metric-parity\n"
+        "    cycle: 95\n"
+        "    run: af320-paper-benchmark-acceptance\n"
+        "    local: 4\n"
+        "    local_per_task:\n"
+        "      deterministic_matrix: 1\n"
+        "      product_parity: 1\n"
+        "      exact_operation_bound: 1\n"
+        "      immutable_evidence: 1\n"
+        "    online: null\n"
+        "    verdict: confirmed 4/4\n"
+        "    decision_reason: digest-bound bounded provider acceptance\n"
+        f"{binding}"
+    )
+    section = section.replace("  status: pending\n", "  status: confirmed\n")
+    section = section.replace("  results: []", result)
+    updated = (text[:start] + section + text[end:]).encode()
+    _atomic_public_bytes(evidence_path, record_raw)
+    try:
+        _atomic_public_bytes(hypotheses, updated)
+    except BaseException:
+        evidence_path.unlink(missing_ok=True)
+        raise
+    return record_sha256

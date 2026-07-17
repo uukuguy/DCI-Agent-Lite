@@ -243,6 +243,7 @@ provider, Judge, or dataset operations:
 
 ```bash
 uv run --project asterion asterion-dci paper describe
+uv run --project asterion asterion-dci paper verify
 uv run --project asterion asterion-dci ablation validate
 uv run --project asterion asterion-dci ablation list --execution-class bounded-fixture
 ```
@@ -252,6 +253,15 @@ analogues. A bounded run requires one explicit `--ablation-row` plus the normal
 provider/model and output authorization. `paper-full` rows are unconditionally
 rejected before provider configuration until AF-340; the unpublished FineWeb
 selection fields remain null rather than fabricated.
+
+`paper verify` is model-free by default and reports zero agent/Judge operations.
+Its explicit `--provider-backed --env-file PRIVATE_ENV --output-root PRIVATE_DIR`
+mode preflights a clean locked Pi checkout, installed fixtures, an exact
+`gpt-4.1` Responses Judge, and an empty private output root before running the
+fixed `QA agent → Judge → IR agent` plan. It never expands the matrix or runs a
+full dataset. Successful evidence can be terminally bound with
+`tools/climb/bind-paper-benchmark-evidence.py`; private prompts, answers, tool
+bodies, and credentials must never be committed.
 
 The one-to-one Pi-default wrappers under `asterion/scripts/{bcplus_eval,qa,bright}`
 load the shared repository `.env`, preflight their dataset and corpus, and call

@@ -1296,6 +1296,11 @@ def run_installed_product_proof(root: Path) -> dict[str, object]:
             cwd=outside,
             environment=environment,
         )
+        paper_verify_result = _checked_run(
+            [str(venv / "bin" / "asterion-dci"), "paper", "verify"],
+            cwd=outside,
+            environment=environment,
+        )
         ablation_result = _checked_run(
             [str(venv / "bin" / "asterion-dci"), "ablation", "validate"],
             cwd=outside,
@@ -1342,6 +1347,10 @@ def run_installed_product_proof(root: Path) -> dict[str, object]:
             or ablation_contract.get("matrix_sha256")
             != expected_paper_digests["ablation_matrix_sha256"]
             or "sentinel-cwd-lookalike" in paper_result.stdout
+            or "Agent operations: 0" not in paper_verify_result.stdout
+            or "Judge operations: 0" not in paper_verify_result.stdout
+            or "Full dataset ran: no" not in paper_verify_result.stdout
+            or "sentinel-cwd-lookalike" in paper_verify_result.stdout
             or "sentinel-cwd-lookalike" in ablation_result.stdout
         ):
             raise RuntimeError("installed paper product identity is invalid")
@@ -1368,6 +1377,7 @@ def run_installed_product_proof(root: Path) -> dict[str, object]:
             "asterion_dci_help": help_result.returncode,
             "asterion_list": list_result.returncode,
             "paper_contract": "packaged",
+            "paper_verification": "model-free",
             "paper_dataset_count": len(paper_contract["dataset_ids"]),
             "paper_scope_count": len(paper_contract["experiment_scope_ids"]),
             "paper_ablation_count": ablation_contract["rows"],

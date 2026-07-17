@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import socket
@@ -23,11 +24,13 @@ from asterion.dci.artifacts import (
     DciRunRecorder,
     _bounded_text_tail,
     atomic_write_json,
+    bind_paper_benchmark_evidence,
 )
 from asterion.dci.config import resolve_dci_paths
 from asterion.dci.context_profiles import resolve_context_profile
 from asterion.dci.provenance import collect_pi_provenance, format_pi_revision_warning
 from asterion.dci.run import DciRunRequest
+from asterion.dci.verification import paper_benchmark_resource_digests
 from asterion.runtime.protocol import validate_event_stream
 
 
@@ -1193,6 +1196,172 @@ class AsterionDciArtifactTests(unittest.TestCase):
                 for pointer in pointers
             ]
             self.assertEqual(bodies, ["body-1", "body-2", "body-3"])
+
+
+class PaperBenchmarkEvidenceBinderTests(unittest.TestCase):
+    def _fixture(self, root: Path) -> tuple[Path, Path, Path]:
+        pi_dir = root / "pi-clean"
+        pi_dir.mkdir()
+        subprocess.run(["git", "init", "-q"], cwd=pi_dir, check=True)
+        subprocess.run(["git", "config", "user.email", "fixture@example.invalid"], cwd=pi_dir, check=True)
+        subprocess.run(["git", "config", "user.name", "Fixture"], cwd=pi_dir, check=True)
+        (pi_dir / "tracked.txt").write_text("runtime\n")
+        subprocess.run(["git", "add", "tracked.txt"], cwd=pi_dir, check=True)
+        subprocess.run(["git", "commit", "-qm", "fixture"], cwd=pi_dir, check=True)
+        revision = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=pi_dir, check=True,
+            text=True, capture_output=True,
+        ).stdout.strip()
+
+        output_root = root / "private-output"
+        operations = []
+        for operation_id, kind in (
+            ("qa-agent", "agent"),
+            ("qa-judge", "judge"),
+            ("ir-agent", "agent"),
+        ):
+            directory = output_root / operation_id
+            directory.mkdir(parents=True)
+            if operation_id == "qa-judge":
+                evaluation = output_root / "qa-agent/eval_result.json"
+                evaluation.write_text(
+                    json.dumps(
+                        {
+                            "is_correct": True,
+                            "judge_model": "gpt-4.1",
+                            "judge_api": "responses",
+                            "judge_base_url": "https://api.openai.com/v1",
+                            "judge_max_output_tokens": 1024,
+                            "judge_json_mode": True,
+                            "judge_strict_json_schema": False,
+                            "judge_responses_store": False,
+                            "judge_thinking": None,
+                            "judge_request_fingerprint": "a" * 64,
+                        }
+                    )
+                )
+                evaluation.chmod(0o600)
+                artifact = directory / "evaluation-evidence.json"
+                artifact.write_text(
+                    json.dumps(
+                        {
+                            "schema": "asterion.dci.paper-judge-evidence/v1",
+                            "accepted": True,
+                            "evaluation_sha256": hashlib.sha256(
+                                evaluation.read_bytes()
+                            ).hexdigest(),
+                        }
+                    )
+                )
+            else:
+                artifact = directory / "state.json"
+                artifact.write_text(f"private {operation_id}\n")
+            artifact.chmod(0o600)
+            operations.append(
+                {
+                    "operation_id": operation_id,
+                    "kind": kind,
+                    "accepted": True,
+                    "artifact_digests": {
+                        artifact.name: hashlib.sha256(artifact.read_bytes()).hexdigest()
+                    },
+                }
+            )
+        report = {
+            "schema": "asterion.dci.paper-benchmark-acceptance/v1",
+            "mode": "bounded-provider-backed",
+            "provider": "fixture-provider",
+            "model": "fixture-model",
+            "judge_model": "gpt-4.1",
+            "pi_revision": revision,
+            "pi_tracked_status_sha256": hashlib.sha256(b"").hexdigest(),
+            "agent_operations": 2,
+            "judge_operations": 1,
+            "external_operations": 3,
+            "api_request_multiplicity": "externally ambiguous",
+            "operation_order": ["qa-agent", "qa-judge", "ir-agent"],
+            "full_dataset_ran": False,
+            "resources": dict(paper_benchmark_resource_digests()),
+            "operations": operations,
+        }
+        report_path = output_root / "paper-benchmark-acceptance.json"
+        report_path.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n")
+        report_path.chmod(0o600)
+
+        state_dir = root / "climb"
+        state_dir.mkdir()
+        (state_dir / "hypotheses.yaml").write_text(
+            "- id: AF-320-H-004\n"
+            "  work_package_id: AF-320\n"
+            "  status: pending\n"
+            "  results: []\n"
+        )
+        return report_path, state_dir, pi_dir
+
+    def test_binding_rehashes_private_artifacts_and_confirms_terminal_result(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            report, state_dir, pi_dir = self._fixture(Path(temp_dir))
+
+            digest = bind_paper_benchmark_evidence(
+                report, state_dir=state_dir, pi_dir=pi_dir
+            )
+
+            record = state_dir / "provider-evidence/af-320-h-004.json"
+            self.assertEqual(hashlib.sha256(record.read_bytes()).hexdigest(), digest)
+            hypothesis = (state_dir / "hypotheses.yaml").read_text()
+            self.assertIn("status: confirmed", hypothesis)
+            self.assertIn("verdict: confirmed 4/4", hypothesis)
+            self.assertIn(f"sha256: {digest}", hypothesis)
+            before = (record.read_bytes(), hypothesis)
+            self.assertEqual(
+                bind_paper_benchmark_evidence(report, state_dir=state_dir, pi_dir=pi_dir),
+                digest,
+            )
+            self.assertEqual(before, (record.read_bytes(), (state_dir / "hypotheses.yaml").read_text()))
+
+    def test_mutation_symlink_private_mode_dirty_runtime_and_conflict_fail_without_mutation(self) -> None:
+        for case in (
+            "artifact",
+            "evaluation",
+            "symlink",
+            "mode",
+            "dirty",
+            "conflict",
+        ):
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as temp_dir:
+                report, state_dir, pi_dir = self._fixture(Path(temp_dir))
+                if case == "artifact":
+                    (report.parent / "qa-agent/state.json").write_text("changed\n")
+                    (report.parent / "qa-agent/state.json").chmod(0o600)
+                elif case == "evaluation":
+                    evaluation = report.parent / "qa-agent/eval_result.json"
+                    value = json.loads(evaluation.read_text())
+                    value["judge_model"] = "not-gpt-4.1"
+                    evaluation.write_text(json.dumps(value))
+                    evaluation.chmod(0o600)
+                elif case == "symlink":
+                    artifact = report.parent / "qa-agent/state.json"
+                    target = report.parent / "private-target"
+                    target.write_bytes(artifact.read_bytes())
+                    target.chmod(0o600)
+                    artifact.unlink()
+                    artifact.symlink_to(target)
+                elif case == "mode":
+                    report.chmod(0o644)
+                elif case == "dirty":
+                    (pi_dir / "untracked.txt").write_text("dirty\n")
+                else:
+                    evidence = state_dir / "provider-evidence"
+                    evidence.mkdir()
+                    (evidence / "af-320-h-004.json").write_text("conflict\n")
+                before = (state_dir / "hypotheses.yaml").read_bytes()
+
+                with self.assertRaises((OSError, RuntimeError, ValueError)):
+                    bind_paper_benchmark_evidence(
+                        report, state_dir=state_dir, pi_dir=pi_dir
+                    )
+
+                self.assertEqual((state_dir / "hypotheses.yaml").read_bytes(), before)
 
 
 if __name__ == "__main__":

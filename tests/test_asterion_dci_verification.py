@@ -15,8 +15,11 @@ from asterion.dci.run import DciRunResult
 from asterion.dci.verification import (
     BASIC_CASES,
     DciProductVerifier,
+    PaperBenchmarkOperationEvidence,
+    PaperBenchmarkReadiness,
     _load_product_acceptance_runner,
     create_dci_product,
+    paper_benchmark_acceptance_main,
 )
 from tools.verify_asterion_dci_product import ProductAcceptanceSummary
 from tools.verify_dci_context_acceptance import (
@@ -554,6 +557,144 @@ class DciAcceptanceVerificationTests(unittest.TestCase):
         self.assertFalse(result.full_dataset_ran)
         self.assertEqual([call[0] for call in backend.calls], ["run", "run", "judge"])
         self.assertEqual(calls[0][0], "acceptance")
+
+
+class PaperBenchmarkVerifierTests(unittest.TestCase):
+    def test_default_mode_is_model_free_and_declares_exact_cost(self) -> None:
+        calls: list[str] = []
+        stdout = io.StringIO()
+
+        code = paper_benchmark_acceptance_main(
+            [],
+            stdout=stdout,
+            stderr=io.StringIO(),
+            operation_runner=lambda _readiness, operation: calls.append(operation),
+        )
+
+        self.assertEqual(code, 0)
+        self.assertEqual(calls, [])
+        self.assertIn("Agent operations: 0", stdout.getvalue())
+        self.assertIn("Judge operations: 0", stdout.getvalue())
+        self.assertIn("Planned external operations: 3", stdout.getvalue())
+        self.assertIn("Full dataset ran: no", stdout.getvalue())
+
+    def test_provider_mode_requires_complete_preflight_before_operations(self) -> None:
+        calls: list[str] = []
+        stderr = io.StringIO()
+
+        code = paper_benchmark_acceptance_main(
+            ["--provider-backed"],
+            stdout=io.StringIO(),
+            stderr=stderr,
+            operation_runner=lambda _readiness, operation: calls.append(operation),
+        )
+
+        self.assertEqual(code, 2)
+        self.assertEqual(calls, [])
+        self.assertEqual(stderr.getvalue(), "DCI paper benchmark preflight failed\n")
+
+    def test_provider_report_is_private_body_free_and_exactly_three_operations(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            output_root = root / "private-output"
+            readiness = PaperBenchmarkReadiness(
+                output_root=output_root,
+                provider="fixture-provider",
+                model="fixture-model",
+                judge_model="gpt-4.1",
+                pi_revision="a" * 40,
+                pi_tracked_status_sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                resource_digests=(
+                    ("ablation_matrix", "b" * 64),
+                    ("qa_fixture", "c" * 64),
+                    ("ir_fixture", "d" * 64),
+                    ("corpus_manifest", "e" * 64),
+                ),
+            )
+            calls: list[str] = []
+
+            def run_operation(_readiness, operation: str):
+                calls.append(operation)
+                directory = output_root / operation
+                directory.mkdir(parents=True, mode=0o700)
+                artifact = directory / "state.json"
+                artifact.write_text("SECRET-ARTIFACT-BODY")
+                artifact.chmod(0o600)
+                return PaperBenchmarkOperationEvidence(
+                    operation_id=operation,
+                    kind="judge" if operation == "qa-judge" else "agent",
+                    artifact_digests=(("state.json", "f" * 64),),
+                    accepted=True,
+                )
+
+            stdout = io.StringIO()
+            code = paper_benchmark_acceptance_main(
+                [
+                    "--provider-backed",
+                    "--env-file",
+                    str(root / "SECRET.env"),
+                    "--output-root",
+                    str(output_root),
+                ],
+                stdout=stdout,
+                stderr=io.StringIO(),
+                readiness_checker=lambda *_args: readiness,
+                operation_runner=run_operation,
+            )
+
+            self.assertEqual(code, 0)
+            self.assertEqual(calls, ["qa-agent", "qa-judge", "ir-agent"])
+            report_path = output_root / "paper-benchmark-acceptance.json"
+            report = json.loads(report_path.read_text())
+            self.assertEqual(report["agent_operations"], 2)
+            self.assertEqual(report["judge_operations"], 1)
+            self.assertEqual(report["external_operations"], 3)
+            self.assertEqual(report["operation_order"], calls)
+            self.assertIs(report["full_dataset_ran"], False)
+            self.assertEqual(report_path.stat().st_mode & 0o777, 0o600)
+            public = report_path.read_text() + stdout.getvalue()
+            self.assertNotIn("SECRET-", public)
+            self.assertNotIn(temp_dir, public)
+
+    def test_failure_stops_without_expanding_operation_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_root = Path(temp_dir) / "private-output"
+            readiness = PaperBenchmarkReadiness(
+                output_root=output_root,
+                provider="fixture-provider",
+                model="fixture-model",
+                judge_model="gpt-4.1",
+                pi_revision="a" * 40,
+                pi_tracked_status_sha256="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                resource_digests=(("ablation_matrix", "b" * 64),),
+            )
+            calls: list[str] = []
+
+            def fail_second(_readiness, operation: str):
+                calls.append(operation)
+                if operation == "qa-judge":
+                    raise RuntimeError("SECRET-PROVIDER-BODY")
+                return PaperBenchmarkOperationEvidence(
+                    operation_id=operation,
+                    kind="agent",
+                    artifact_digests=(("state.json", "f" * 64),),
+                    accepted=True,
+                )
+
+            stderr = io.StringIO()
+            code = paper_benchmark_acceptance_main(
+                ["--provider-backed", "--env-file", "private", "--output-root", str(output_root)],
+                stdout=io.StringIO(),
+                stderr=stderr,
+                readiness_checker=lambda *_args: readiness,
+                operation_runner=fail_second,
+            )
+
+            self.assertEqual(code, 2)
+            self.assertEqual(calls, ["qa-agent", "qa-judge"])
+            failure = output_root / "paper-benchmark-acceptance-failure.json"
+            self.assertEqual(json.loads(failure.read_text())["attempted_external_operations"], 2)
+            self.assertNotIn("SECRET-", failure.read_text() + stderr.getvalue())
 
 
 if __name__ == "__main__":

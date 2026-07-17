@@ -169,6 +169,10 @@ def _parser() -> argparse.ArgumentParser:
     paper = commands.add_parser("paper")
     paper_commands = paper.add_subparsers(dest="paper_command", required=True)
     paper_commands.add_parser("describe")
+    paper_verify = paper_commands.add_parser("verify")
+    paper_verify.add_argument("--provider-backed", action="store_true")
+    paper_verify.add_argument("--env-file", type=Path)
+    paper_verify.add_argument("--output-root", type=Path)
     return parser
 
 
@@ -316,15 +320,33 @@ def main(
             return 2
     if args.command == "paper":
         try:
-            from asterion.dci.verification import paper_product_contract
-
-            stdout.write(
-                json.dumps(
-                    paper_product_contract(), ensure_ascii=False, indent=2
-                )
-                + "\n"
+            from asterion.dci.verification import (
+                paper_benchmark_acceptance_main,
+                paper_product_contract,
             )
-            return 0
+
+            if args.paper_command == "describe":
+                stdout.write(
+                    json.dumps(
+                        paper_product_contract(), ensure_ascii=False, indent=2
+                    )
+                    + "\n"
+                )
+                return 0
+            verify_argv = []
+            if args.provider_backed:
+                verify_argv.append("--provider-backed")
+            if args.env_file is not None:
+                verify_argv.extend(("--env-file", str(args.env_file)))
+            if args.output_root is not None:
+                verify_argv.extend(("--output-root", str(args.output_root)))
+            root = Path.cwd().resolve() if repo_root is None else Path(repo_root).resolve()
+            return paper_benchmark_acceptance_main(
+                verify_argv,
+                stdout=stdout,
+                stderr=stderr,
+                repo_root=root,
+            )
         except (RuntimeError, ValueError):
             stderr.write("DCI paper command failed\n")
             return 2

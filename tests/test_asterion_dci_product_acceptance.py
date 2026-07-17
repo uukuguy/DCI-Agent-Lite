@@ -440,6 +440,7 @@ class PaperBenchmarkWheelTests(unittest.TestCase):
     def test_isolated_wheel_uses_packaged_paper_resources_not_cwd_lookalikes(self) -> None:
         evidence = run_installed_product_proof(ROOT)
         self.assertEqual(evidence["paper_contract"], "packaged")
+        self.assertEqual(evidence["paper_verification"], "model-free")
         self.assertEqual(
             (
                 evidence["paper_dataset_count"],
