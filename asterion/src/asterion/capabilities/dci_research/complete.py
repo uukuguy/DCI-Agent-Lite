@@ -175,7 +175,13 @@ class DciCompleteResearchImplementation:
         if invocation.runtime.manifest.runtime_id == "pi.reference":
             try:
                 native = self._native_executor.run(
-                    DciRunRequest(run_id=invocation.run_id, question=question, cwd=Path.cwd())
+                    DciRunRequest(
+                        run_id=invocation.run_id,
+                        question=question,
+                        cwd=Path.cwd(),
+                        tools="read,grep",
+                        max_turns=4,
+                    )
                 )
                 projected = project_dci_run(native)
                 self._store.start(

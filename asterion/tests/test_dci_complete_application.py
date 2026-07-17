@@ -19,6 +19,10 @@ from asterion.capabilities.dci_research.complete import (
     complete_application_identity,
 )
 from asterion.dci.run import DciRunResult
+from asterion.dci.dual_runtime_verification import (
+    DciDualRuntimeVerificationError,
+    audit_restricted_pi_application,
+)
 from asterion.packages.catalog import PackageRef
 from asterion.packages.catalog import discover_packages
 from asterion.runner.composed import run_composed_application
@@ -168,8 +172,10 @@ class _NativeExecutor:
     def __init__(self, output_dir: Path) -> None:
         self.output_dir = output_dir
         self.questions: list[str] = []
+        self.requests = []
 
     def run(self, request) -> DciRunResult:
+        self.requests.append(request)
         self.questions.append(request.question)
         return DciRunResult(
             output_dir=self.output_dir,
@@ -232,6 +238,8 @@ class DciCompleteApplicationExecutionTests(unittest.IsolatedAsyncioTestCase):
             )
 
         self.assertEqual(native.questions, ["PRIVATE QUESTION"])
+        self.assertEqual(native.requests[0].tools, "read,grep")
+        self.assertEqual(native.requests[0].max_turns, 4)
         self.assertEqual(evaluator_calls, [(Path(directory), "PRIVATE GOLD")])
         self.assertEqual(tuple(event["type"] for event in result.events), EVENTS)
         self.assertEqual(tuple(item["media_type"] for item in result.artifacts), ARTIFACTS)
@@ -244,6 +252,54 @@ class DciCompleteApplicationExecutionTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(result.artifacts[-1]["value"]["total"], 1)
         self.assertNotIn("PRIVATE", repr(result))
+
+
+class DciRestrictedPiEvidenceTests(unittest.TestCase):
+    def _fixture(self, root: Path) -> tuple[Path, Path]:
+        run = root / "run"
+        corpus = root / "corpus"
+        (run / "protocol").mkdir(parents=True)
+        corpus.mkdir()
+        documents = {
+            run / "state.json": {"status": "completed", "tools": "read,grep", "max_turns": 4},
+            run / "protocol/attempt-0001.request.json": {"requested_capabilities": ["filesystem.read", "pi.tool.grep"]},
+            run / "eval_result.json": {"is_correct": True, "judge_request_fingerprint": "a" * 64},
+        }
+        for path, value in documents.items():
+            path.write_text(json.dumps(value))
+            path.chmod(0o600)
+        events = (
+            {"type": "tool.call", "payload": {"name": "read", "arguments": {"path": "missing.txt"}}},
+            {"type": "tool.call", "payload": {"name": "read", "arguments": {"path": "document.txt"}}},
+            {"type": "tool.call", "payload": {"name": "grep", "arguments": {"path": "."}}},
+            {"type": "tool.result", "payload": {"is_error": True}},
+            {"type": "tool.result", "payload": {"is_error": True}},
+        )
+        event_path = run / "protocol/attempt-0001.events.jsonl"
+        event_path.write_text("".join(json.dumps(event) + "\n" for event in events))
+        event_path.chmod(0o600)
+        return run, corpus
+
+    def test_bounded_private_evidence_is_body_free_and_corpus_contained(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            run, corpus = self._fixture(Path(directory))
+            report = audit_restricted_pi_application(run_dir=run, corpus_dir=corpus)
+
+        self.assertEqual(report["tools"], {"read": 2, "grep": 1})
+        self.assertEqual(report["tool_error_count"], 2)
+        self.assertTrue(report["corpus_contained"])
+        self.assertNotIn("cobalt lantern", repr(report))
+
+    def test_absolute_outside_path_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            run, corpus = self._fixture(Path(directory))
+            path = run / "protocol/attempt-0001.events.jsonl"
+            events = json.loads(path.read_text().splitlines()[0])
+            events["payload"]["arguments"]["path"] = "/outside/answer.txt"
+            path.write_text(json.dumps(events) + "\n")
+            path.chmod(0o600)
+            with self.assertRaises(DciDualRuntimeVerificationError):
+                audit_restricted_pi_application(run_dir=run, corpus_dir=corpus)
 
 if __name__ == "__main__":
     unittest.main()

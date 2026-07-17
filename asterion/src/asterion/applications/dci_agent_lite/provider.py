@@ -24,6 +24,11 @@ def create_provider(
     """Return the immutable built-in DCI research application binding."""
 
     executor = EnvironmentDciRunExecutor() if native_executor is None else native_executor
+    complete_executor = (
+        EnvironmentDciRunExecutor(honor_request_tools=True)
+        if native_executor is None
+        else native_executor
+    )
     root = Path(str(resources.files("asterion"))).resolve()
     application_root = root / "applications/dci_agent_lite"
     capability_root = root / "capabilities/dci_research"
@@ -57,7 +62,7 @@ def create_provider(
                     application_root / "assemblies/dci-complete-application-pi.json",
                 ),
                 catalog_roots=(capability_root / "manifests",),
-                implementations=complete_dci_bindings(native_executor=executor),
+                implementations=complete_dci_bindings(native_executor=complete_executor),
                 runtime_ids=("claude-code.reference", "pi.reference"),
             ),
         ),

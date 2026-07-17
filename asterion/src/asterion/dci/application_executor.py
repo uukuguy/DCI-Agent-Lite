@@ -29,17 +29,20 @@ class EnvironmentDciRunExecutor:
         *,
         repo_root: Path | None = None,
         run_native: Callable[[DciPaths, DciRunRequest], DciRunResult] = run_pi_research,
+        honor_request_tools: bool = False,
     ) -> None:
         self._repo_root = Path.cwd() if repo_root is None else Path(repo_root)
         self._run_native = run_native
+        self._honor_request_tools = honor_request_tools
 
     def run(self, request: DciRunRequest) -> DciRunResult:
         root = self._repo_root.resolve()
         load_asterion_dci_env(root)
         cwd = Path(os.environ.get("ASTERION_RUNTIME_CWD", root)).resolve()
+        options = resolve_dci_runtime_options()
         mapped = replace(
             request_from_runtime_options(
-                resolve_dci_runtime_options(),
+                options,
                 run_id=request.run_id,
                 question=request.question,
                 cwd=cwd,
@@ -50,6 +53,7 @@ class EnvironmentDciRunExecutor:
             system_prompt_file=request.system_prompt_file,
             append_system_prompt_file=request.append_system_prompt_file,
             conversation_features=request.conversation_features,
+            tools=request.tools if self._honor_request_tools else options.tools,
         )
         return self._run_native(
             resolve_dci_paths(root),

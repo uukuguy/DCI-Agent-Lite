@@ -92,6 +92,26 @@ class AsterionDciApplicationExecutorTests(unittest.TestCase):
         )
         self.assertFalse(mapped.stream_text)
 
+    def test_restricted_executor_honors_closed_request_tool_surface(self) -> None:
+        calls: list[DciRunRequest] = []
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            executor = EnvironmentDciRunExecutor(
+                repo_root=Path(temporary_directory),
+                run_native=lambda _paths, request: calls.append(request),
+                honor_request_tools=True,
+            )
+            with patch.dict(os.environ, {"DCI_TOOLS": "read,bash"}, clear=True):
+                executor.run(
+                    DciRunRequest(
+                        run_id="restricted-run",
+                        question="question",
+                        cwd=Path("ignored"),
+                        tools="read,grep",
+                    )
+                )
+
+        self.assertEqual(calls[0].tools, "read,grep")
+
     def test_application_executor_maps_every_profile_to_the_canonical_identity(
         self,
     ) -> None:
