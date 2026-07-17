@@ -3192,6 +3192,40 @@ class ClimbToolTests(unittest.TestCase):
                 },
             )
 
+    def test_af320_train_registers_paper_inventory_hypothesis(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+
+        self.assertIn("AF-320-H-001", train_script)
+        self.assertIn("tests.test_asterion_dci_paper_benchmarks", train_script)
+
+    def test_af320_h001_eval_reports_four_inventory_dimensions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            env = os.environ.copy()
+            env["DCI_CLIMB_HYPOTHESIS_ID"] = "AF-320-H-001"
+
+            result = subprocess.run(
+                ["bash", "tools/climb/eval-local.sh", str(run_dir)],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            evaluation = json.loads((run_dir / "local-eval.json").read_text())
+            self.assertEqual(evaluation["hypothesis_id"], "AF-320-H-001")
+            self.assertEqual(evaluation["total"], 4)
+            self.assertEqual(
+                set(evaluation["per_task"]),
+                {
+                    "closed_inventory",
+                    "scope_identity",
+                    "bounded_ndcg",
+                    "adapter_gate",
+                },
+            )
+
     def test_af310_h005_provider_binding_is_digest_bound_and_body_free(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

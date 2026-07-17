@@ -17,14 +17,17 @@ canonical dataset IDs and their family/mode/metric/resource contracts, source
 split/count, versioned QA exclusion policy, GPT-4.1 Judge identity, and closed
 execution class. Add a separate schema-closed experiment-scope registry for
 paper selection mode/count, seed provenance/algorithm, and selected-ID identity.
-Never invent a seed: published selections with an unreported seed package and
-hash the exact selected-ID manifest and verify it against the full source ID
-population. Encode
+Never invent a paper seed: published DCI-Bench selections with an unreported
+seed package and hash the exact selected-ID manifest and verify it against the
+full source ID population. BrowseComp sampled analysis IDs are not published,
+so bind explicitly labeled Asterion-defined reproduction seeds/algorithms and
+never call those manifests paper-published. Encode
 BrowseComp all-830 main results, trajectory/tool/corpus `n=100`, context-ablation
 random `n=100`, and Appendix A.1 random-50 as distinct scopes; also encode full
 BRIGHT/Bamboogle versus applicable random-50 selection, including the ArguAna
 1,406 and SciFact 300 source counts. Add cross-checks against batch profiles,
-launchers, documentation, and wheel resources. Activate a fresh AF-320 Climb
+launchers, documentation, and wheel resources. Keep paper-full Bamboogle 125
+explicitly unbound from its existing sample-50 profile/launcher. Activate a fresh AF-320 Climb
 session with four hypotheses:
 
 1. dataset inventory and BEIR adapters;

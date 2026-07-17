@@ -68,10 +68,17 @@ is stored with a fully specified sampling algorithm. When the paper/published
 DCI-Bench selection does not report a seed, AF-320 records no fabricated numeric
 seed: it packages the exact selected-ID manifest, marks the seed
 `paper-unreported`, hashes the sorted IDs, and verifies membership plus exact
-source-split count before use. The two Asterion-defined BrowseComp `n=100`
-scopes use explicit reproducible seeds and algorithms. The all-830 scope records
-its sorted-ID manifest SHA-256. QA and BrowseComp correctness records the
+source-split count before use. The paper does not publish seeds or selected IDs
+for the three sampled BrowseComp analysis scopes. AF-320 therefore does not
+label locally selected IDs as paper-published: those scopes use explicit
+Asterion-defined reproducible seeds, algorithms, and selected-ID digests. The
+all-830 scope records its sorted-ID manifest SHA-256. QA and BrowseComp correctness records the
 GPT-4.1 model/API/prompt identity in both result and Judge cache identity.
+
+The paper uses all 125 Bamboogle test questions, while the existing migrated
+profile/launcher names and local file contain a 50-row sample. The paper-full
+inventory row is intentionally unbound from that sample profile and launcher;
+AF-320 may package and validate its identity but cannot execute it.
 
 ArguAna and SciFact use the existing IR path after repairing its NDCG@10
 implementation to standard binary DCG/IDCG semantics: keep only the first

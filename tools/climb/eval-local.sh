@@ -1049,6 +1049,16 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_asterion_dci_verification.DciContextAcceptanceVerifierTests.test_level4_case_requires_successful_unsuppressed_summary"
         override_test="tests.test_asterion_dci_verification.DciContextAcceptanceVerifierTests.test_provider_report_is_body_free_digest_bound_and_exactly_two_runs"
         ;;
+    AF-320-H-001)
+        first_dimension="closed_inventory"
+        second_dimension="scope_identity"
+        third_dimension="bounded_ndcg"
+        fourth_dimension="adapter_gate"
+        immutable_test="tests.test_asterion_dci_paper_benchmarks.PaperBenchmarkInventoryTests.test_exact_thirteen_dataset_inventory_is_closed_and_sorted"
+        repeat_test="tests.test_asterion_dci_paper_benchmarks.PaperExperimentScopeTests.test_exact_experiment_scopes_preserve_browsecomp_distinctions"
+        dirty_test="tests.test_asterion_dci_metrics.AsterionDciMetricTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_compute_ndcg_at_k"
+        override_test="tests.test_asterion_dci_batch.AsterionDciBatchTests.test_af320_copied_paper_dataset_is_digest_gated_without_profile"
+        ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2
         exit 2

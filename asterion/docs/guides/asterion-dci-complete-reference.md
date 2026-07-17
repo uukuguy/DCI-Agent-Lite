@@ -215,6 +215,11 @@ asterion-dci benchmark \
 
 Bundled profile 定义在 `asterion/dci/resources/batch-profiles.json`：
 
+其中绑定 AF-320 `paper-full` inventory 的 12 个 profile 目前只用于配置、清单和
+模型外验证，执行会在读取数据或启动 provider 前失败关闭。`bcplus.level3` 与
+`qa.bamboogle` 是未绑定的既有迁移 profile；后者明确只是 sample-50，不能代表
+论文的 Bamboogle full-125 scope。
+
 | Profile | 模式 | 数据/语料 |
 |---|---|---|
 | `bcplus.level3` | QA | BrowseComp-Plus / `corpus/bc_plus_docs` |
@@ -229,6 +234,8 @@ Bundled profile 定义在 `asterion/dci/resources/batch-profiles.json`：
 | `bright.earth-science` | IR | BRIGHT Earth Science |
 | `bright.economics` | IR | BRIGHT Economics |
 | `bright.robotics` | IR | BRIGHT Robotics |
+| `beir.arguana` | IR | BEIR ArguAna |
+| `beir.scifact` | IR | BEIR SciFact |
 
 12 个 Asterion launcher：
 
@@ -245,6 +252,15 @@ scripts/qa/run_hotpotqa_dev_sample50.sh
 scripts/qa/run_musique_dev_sample50.sh
 scripts/qa/run_nq_test_sample50.sh
 scripts/qa/run_triviaqa_test_sample50.sh
+```
+
+AF-320 另提供两个 paper-inventory launcher；它们没有原始/Asterion
+一对一迁移计数声明。它们对应 `paper-full` scope，在 AF-320 会于 provider
+启动前失败关闭；只有 AF-340 的独立授权才能执行：
+
+```text
+scripts/beir/benchmark_arguana.sh
+scripts/beir/benchmark_scifact.sh
 ```
 
 Profile 中的 `runtime_context_level=level3` 解析为完整 threshold identity，并与已安装 extension digest 一同进入 batch/run/row fingerprint；profile 或扩展变化会阻止跨策略复用。thinking、max turns、concurrency、dataset/corpus、mode 和 heap 等其余配置正常映射。

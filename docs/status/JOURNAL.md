@@ -808,3 +808,6 @@
 - 08:20 AF-310 closes exact L0–L4 runtime context management with clean bound evidence. [95deae8]
 - 08:36 AF-320 approved design separates paper identities, bounded execution, and evidence-exact metrics. [9de29e3]
 - 08:39 AF-320 governance activates one scoped Climb pool before implementation. [a4d407c]
+- 09:02 AF-320 records unreported paper seeds truthfully and binds published selected-ID manifests. [ec34ebb]
+- 09:26 D-046 separates unpublished BrowseComp reproduction IDs and Bamboogle full-125 from local sample-50 surfaces.
+- 09:28 AF-320-H-001 confirmed 4/4; package acceptance recorded.

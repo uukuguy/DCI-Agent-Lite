@@ -9,6 +9,7 @@ import stat
 import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
+from pathlib import PurePosixPath
 from typing import Any
 
 
@@ -258,6 +259,153 @@ def load_benchmark_rows_bytes(raw: bytes) -> tuple[BenchmarkRow, ...]:
     return tuple(rows)
 
 
+def load_beir_benchmark_rows_bytes(
+    raw: bytes, *, expected_count: int | None = None
+) -> tuple[BenchmarkRow, ...]:
+    """Normalize the published DCI-Bench BEIR JSONL shape into IR rows."""
+
+    if expected_count is not None and (
+        type(expected_count) is not int or expected_count <= 0
+    ):
+        raise DatasetError("DCI BEIR source count must be a positive integer")
+    try:
+        text = raw.decode("utf-8", errors="strict")
+        rows: list[BenchmarkRow] = []
+        identities: set[str] = set()
+        document_identities: dict[str, str] = {}
+        for line_number, line in enumerate(text.split("\n"), start=1):
+            if line.endswith("\r"):
+                line = line[:-1]
+            if not line.strip():
+                continue
+            value = json.loads(line, object_pairs_hook=_object_without_duplicate_keys)
+            if type(value) is not dict or set(value) != {
+                "query_id",
+                "query",
+                "answer",
+                "gold_ids",
+            }:
+                raise DatasetError("DCI BEIR row has invalid fields")
+            query_id = _require_nonempty_string(value["query_id"], field="query ID")
+            query = _require_nonempty_string(value["query"], field="query")
+            if value["answer"] != "":
+                raise DatasetError("DCI BEIR answer placeholder must be empty")
+            gold_ids = _document_list(value["gold_ids"], field="gold_ids")
+            if len(gold_ids) != len(set(gold_ids)):
+                raise DatasetError("DCI BEIR gold document IDs must be unique")
+            for document_id in gold_ids:
+                path = PurePosixPath(document_id)
+                if (
+                    path.is_absolute()
+                    or len(path.parts) != 1
+                    or document_id in {".", ".."}
+                    or not document_id.endswith(".txt")
+                    or _contains_unsafe_scalar(document_id)
+                    or "\\" in document_id
+                ):
+                    raise DatasetError("DCI BEIR gold document ID is invalid")
+                try:
+                    document_identity = portable_query_id_key(document_id)
+                except DatasetError as error:
+                    raise DatasetError("DCI BEIR gold document ID is invalid") from error
+                prior = document_identities.setdefault(document_identity, document_id)
+                if prior != document_id:
+                    raise DatasetError("DCI BEIR gold document IDs collide")
+            identity = portable_query_id_key(query_id)
+            if identity in identities:
+                raise DatasetError("DCI BEIR dataset has colliding query ID")
+            identities.add(identity)
+            rows.append(
+                BenchmarkRow(
+                    query_id=query_id,
+                    query=query,
+                    gold_ids=gold_ids,
+                )
+            )
+    except DatasetError as error:
+        if "BEIR" in str(error):
+            raise
+        raise DatasetError("DCI BEIR dataset is invalid") from error
+    except (json.JSONDecodeError, UnicodeError, TypeError) as error:
+        raise DatasetError("DCI BEIR dataset is invalid") from error
+    if not rows:
+        raise DatasetError("DCI BEIR dataset is empty")
+    if expected_count is not None and len(rows) != expected_count:
+        raise DatasetError("DCI BEIR source count does not match")
+    return tuple(rows)
+
+
+def validate_beir_corpus(corpus: Path, rows: tuple[BenchmarkRow, ...]) -> Path:
+    """Verify a no-follow corpus directory and every referenced regular document."""
+
+    identity = canonical_input_identity(corpus)
+    descriptor = -1
+    try:
+        if stat.S_ISLNK(os.lstat(identity).st_mode):
+            raise DatasetError("DCI BEIR corpus is invalid")
+        resolved = identity.resolve(strict=True)
+        descriptor = os.open(
+            "/", os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+        )
+        for component in resolved.parts[1:]:
+            next_descriptor = os.open(
+                component,
+                os.O_RDONLY
+                | getattr(os, "O_DIRECTORY", 0)
+                | getattr(os, "O_NOFOLLOW", 0),
+                dir_fd=descriptor,
+            )
+            os.close(descriptor)
+            descriptor = next_descriptor
+        referenced = sorted(
+            {document_id for row in rows for document_id in (row.gold_ids or ())}
+        )
+        if not referenced:
+            raise DatasetError("DCI BEIR corpus is invalid")
+        for document_id in referenced:
+            document_descriptor = os.open(
+                document_id,
+                os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+                dir_fd=descriptor,
+            )
+            try:
+                if not stat.S_ISREG(os.fstat(document_descriptor).st_mode):
+                    raise DatasetError("DCI BEIR corpus is invalid")
+            finally:
+                os.close(document_descriptor)
+    except DatasetError:
+        raise
+    except OSError as error:
+        raise DatasetError("DCI BEIR corpus is invalid") from error
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
+    return identity
+
+
+def load_beir_benchmark_rows(
+    path: Path, *, expected_count: int | None = None
+) -> tuple[BenchmarkRow, ...]:
+    """Read one no-follow BEIR source snapshot and normalize it strictly."""
+
+    try:
+        descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+        try:
+            if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+                raise DatasetError("DCI BEIR dataset is invalid")
+            with os.fdopen(descriptor, "rb") as handle:
+                descriptor = -1
+                raw = handle.read()
+        finally:
+            if descriptor >= 0:
+                os.close(descriptor)
+    except DatasetError:
+        raise
+    except OSError as error:
+        raise DatasetError("DCI BEIR dataset is invalid") from error
+    return load_beir_benchmark_rows_bytes(raw, expected_count=expected_count)
+
+
 def read_jsonl(path: Path) -> tuple[BenchmarkRow, ...]:
     """Source-compatible name for the strict Asterion dataset loader."""
 
@@ -378,6 +526,8 @@ __all__ = [
     "canonical_input_identity",
     "load_benchmark_rows",
     "load_benchmark_rows_bytes",
+    "load_beir_benchmark_rows",
+    "load_beir_benchmark_rows_bytes",
     "normalize_retrieved_path",
     "parse_retrieved_docs",
     "parse_retrieved_documents",

@@ -438,3 +438,12 @@
 - Execution boundary: `paper-full` rows may be listed, validated, rendered, and packaged but cannot execute in AF-320 under any generic option or environment value. AF-340 alone may add a separately reviewed authorization and budget surface.
 - Evidence boundary: analysis identity rehashes the exact protocol stream, every consumed external tool blob, final model-visible context, gold manifest, and opened corpus/gold files. Public projections remain body-free.
 - Revalidation trigger: change selection scopes, aggregation, evidence identity, or full-run authority only after reconciling the paper version, design, worklist, cache migration, and security review.
+
+## D-046 — Preserve unavailable paper selection provenance without substitution
+
+- Status: ✅ accepted design decision
+- Decided: 2026-07-17
+- Decision: the paper does not publish selected IDs or seeds for its sampled BrowseComp analysis scopes. AF-320 binds those scopes to explicitly `asterion-defined` reproducible seeds, algorithms, and digests; it does not describe those IDs as paper-published. Published DCI-Bench random-50 files remain `paper-unreported` with exact packaged selected-ID manifests.
+- Bamboogle boundary: the paper-full identity is 125 test rows. The migrated `qa.bamboogle` profile, local file, and launcher are a separate 50-row sample and cannot satisfy or execute that paper-full identity, so the inventory leaves its full row unbound until AF-340 provides a reviewed source/authorization surface.
+- Fixture boundary: bounded-fixture declarations bind hash-verified packaged dataset and corpus artifacts. They do not authorize a paper-full scope or imply score reproduction.
+- Revalidation trigger: replace an Asterion-defined scope only when a primary paper artifact supplies the exact published seed or selected IDs; bind Bamboogle full execution only through AF-340 governance.

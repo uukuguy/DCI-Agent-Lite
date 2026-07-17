@@ -1,11 +1,11 @@
 {
   "session": "2026-07-17-af-320-paper-benchmark-metric-parity",
-  "phase": "active",
+  "phase": "implementation",
   "work_package_id": "AF-320",
-  "last_cycle": 91,
-  "next_hypothesis": "AF-320-H-001",
+  "last_cycle": 92,
+  "next_hypothesis": "AF-320-H-002",
   "in_flight": null,
-  "next_action": "Run AF-320-H-001 Task 1 inventory and experiment-scope RED tests.",
+  "next_action": "Start AF-320-H-002.",
   "falsified_routes": [
     "duplicate the authoritative Pi commit across setup.sh and .env.template",
     "convert the independent Pi checkout to vendored or submodule ownership",

@@ -964,6 +964,108 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(output_root, request.output_root)
         self.assertEqual(rows[0].query_id, "q-0")
 
+    def test_af320_every_bound_paper_profile_fails_before_input_or_provider(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            request = _request(root)
+            profiles = (
+                "beir.arguana",
+                "beir.scifact",
+                "bright.biology",
+                "bright.earth-science",
+                "bright.economics",
+                "bright.robotics",
+                "bcplus.level3",
+                "bcplus.openai",
+                "qa.2wikimultihopqa",
+                "qa.hotpotqa",
+                "qa.musique",
+                "qa.nq",
+                "qa.triviaqa",
+            )
+            for profile in profiles:
+                with self.subTest(profile=profile), patch(
+                    "asterion.dci.benchmark._read_input_snapshot"
+                ) as read_input, patch("asterion.dci.benchmark._run_pi_async") as run:
+                    with self.assertRaisesRegex(
+                        DciBenchmarkError, "not executable in AF-320"
+                    ):
+                        asyncio.run(
+                            run_benchmark_async(
+                                replace(request, profile=profile), paths=Mock()
+                            )
+                        )
+                    read_input.assert_not_called()
+                    run.assert_not_called()
+
+    def test_af320_copied_paper_dataset_is_digest_gated_without_profile(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            request = replace(
+                _request(Path(temporary_directory)),
+                dataset=Path("data/bcplus_qa.jsonl").resolve(),
+                profile=None,
+            )
+            with patch(
+                "asterion.dci.benchmark._run_pi_async"
+            ) as run, self.assertRaisesRegex(
+                DciBenchmarkError, "not executable in AF-320"
+            ):
+                asyncio.run(run_benchmark_async(request, paths=Mock()))
+            run.assert_not_called()
+
+            selected = __import__(
+                "asterion.dci.paper_benchmarks",
+                fromlist=["published_scope_selected_ids"],
+            ).published_scope_selected_ids("beir.arguana.main.random50")
+            beir_dataset = request.cwd / "copied-beir.jsonl"
+            beir_dataset.write_text(
+                "\n".join(
+                    json.dumps(
+                        {
+                            "query_id": query_id,
+                            "query": "query",
+                            "answer": "",
+                            "gold_ids": ["doc.txt"],
+                        }
+                    )
+                    for query_id in selected
+                )
+                + "\n"
+            )
+            with self.assertRaisesRegex(
+                DciBenchmarkError, "not executable in AF-320"
+            ):
+                _prepare(replace(request, dataset=beir_dataset))
+
+            browsecomp_superset = request.cwd / "browsecomp-superset.jsonl"
+            browsecomp_superset.write_bytes(
+                Path("data/bcplus_qa.jsonl").read_bytes()
+                + b'{"query_id":"not-paper","query":"extra","answer":"extra"}\n'
+            )
+            with self.assertRaisesRegex(
+                DciBenchmarkError, "not executable in AF-320"
+            ):
+                _prepare(
+                    replace(request, dataset=browsecomp_superset, limit=830)
+                )
+
+            with beir_dataset.open("a", encoding="utf-8") as handle:
+                handle.write(
+                    json.dumps(
+                        {
+                            "query_id": "not-paper",
+                            "query": "extra",
+                            "answer": "",
+                            "gold_ids": ["doc.txt"],
+                        }
+                    )
+                    + "\n"
+                )
+            with self.assertRaisesRegex(
+                DciBenchmarkError, "not executable in AF-320"
+            ):
+                _prepare(replace(request, dataset=beir_dataset, limit=50))
+
     def test_scripts_bcplus_eval_run_bcplus_eval_py_function_seconds_between(self) -> None:
         self.assertEqual(
             seconds_between(

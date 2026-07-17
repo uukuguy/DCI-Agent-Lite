@@ -57,8 +57,12 @@ class AsterionDciMetricTests(unittest.TestCase):
         self.assertEqual(ndcg_at_k(["x", "a"], {"a"}, 1), 0.0)
         expected = (1 / math.log2(3)) / (1 + 1 / math.log2(3))
         self.assertAlmostEqual(ndcg_at_k(["x", "b"], {"a", "b"}, 2), expected)
-        # Source rank semantics count duplicate relevant documents independently.
-        self.assertGreater(ndcg_at_k(["a", "a"], {"a"}, 2), 1.0)
+        self.assertEqual(ndcg_at_k(["a", "a"], {"a"}, 2), 1.0)
+        self.assertAlmostEqual(
+            ndcg_at_k(["x", "x", "a"], {"a"}, 3), 1 / math.log2(3)
+        )
+        self.assertGreaterEqual(ndcg_at_k(["a", "a"], {"a"}, 2), 0.0)
+        self.assertLessEqual(ndcg_at_k(["a", "a"], {"a"}, 2), 1.0)
         for invalid in (0, -1, True, 1.0, "10"):
             with self.subTest(invalid=invalid), self.assertRaises(MetricError):
                 ndcg_at_k(["a"], {"a"}, invalid)  # type: ignore[arg-type]
@@ -80,8 +84,8 @@ class AsterionDciMetricTests(unittest.TestCase):
             Path("/corpus"),
             k=10,
         )
-        # Self-query is excluded, while source duplicate rank semantics are preserved.
-        self.assertGreater(score, 1.0)
+        # Self-query is excluded and duplicate relevant results count only once.
+        self.assertEqual(score, 1.0)
         self.assertEqual(
             compute_ir_ndcg("Relevant Documents:\n1. x.txt", {"query_id": "q"}, None),
             0.0,

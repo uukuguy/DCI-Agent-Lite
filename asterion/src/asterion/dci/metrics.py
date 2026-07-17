@@ -52,14 +52,21 @@ def ndcg_at_k(retrieved: Sequence[str], gold_set: Set[str], k: int) -> float:
         raise MetricError("DCI NDCG documents must be strings")
     if not gold_set:
         return 0.0
+    unique_retrieved: list[str] = []
+    seen: set[str] = set()
+    for document in retrieved:
+        if document not in seen:
+            seen.add(document)
+            unique_retrieved.append(document)
     dcg = sum(
         1.0 / math.log2(rank + 2)
-        for rank, document in enumerate(retrieved[:k])
+        for rank, document in enumerate(unique_retrieved[:k])
         if document in gold_set
     )
     ideal_k = min(len(gold_set), k)
     idcg = sum(1.0 / math.log2(rank + 2) for rank in range(ideal_k))
-    return dcg / idcg if idcg > 0 else 0.0
+    score = dcg / idcg if idcg > 0 else 0.0
+    return min(max(score, 0.0), 1.0)
 
 
 def compute_ndcg_at_k(retrieved: Sequence[str], gold_set: Set[str], k: int) -> float:

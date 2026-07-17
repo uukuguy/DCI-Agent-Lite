@@ -1379,7 +1379,7 @@ class AsterionDciProductParityTests(unittest.TestCase):
     def test_af250_h003_fresh_installed_product_runs_outside_repository(self) -> None:
         evidence = product_verifier.run_installed_product_proof(ROOT)
         self.assertEqual(evidence["dci_importable"], False)
-        self.assertEqual(evidence["profiles"], 12)
+        self.assertEqual(evidence["profiles"], 14)
         self.assertEqual(evidence["asterion_dci_help"], 0)
         self.assertEqual(evidence["asterion_list"], 0)
         self.assertEqual(evidence["installed_application"], "completed")

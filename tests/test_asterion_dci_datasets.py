@@ -12,9 +12,97 @@ from asterion.dci.datasets import (
     build_ir_prompt,
     build_qa_prompt,
     load_benchmark_rows,
+    load_beir_benchmark_rows_bytes,
     portable_query_id_key,
     read_jsonl,
+    validate_beir_corpus,
 )
+
+
+class PaperBeirDatasetTests(unittest.TestCase):
+    def test_empty_source_answer_normalizes_to_strict_ir_rows(self) -> None:
+        payload = (
+            b'{"query_id":"q-1","query":"find","answer":"","gold_ids":["a.txt","b.txt"]}\n'
+            b'{"query_id":"q-2","query":"find more","answer":"","gold_ids":["c.txt"]}\n'
+        )
+        rows = load_beir_benchmark_rows_bytes(payload, expected_count=2)
+        self.assertEqual(tuple(row.query_id for row in rows), ("q-1", "q-2"))
+        self.assertEqual(rows[0].gold_ids, ("a.txt", "b.txt"))
+        self.assertIsNone(rows[0].answer)
+
+    def test_malformed_beir_rows_and_source_count_fail_closed(self) -> None:
+        invalid = (
+            b'not-json\n',
+            b'{"query_id":"q","query":"x","answer":"nonempty","gold_ids":["a.txt"]}\n',
+            b'{"query_id":"q","query":"x","gold_ids":["a.txt"]}\n',
+            b'{"query_id":"q","query":"x","answer":"","gold_ids":["a.txt"],"grade":1}\n',
+            b'{"query_id":"q","query":"x","answer":"","gold_ids":["a.txt","a.txt"]}\n',
+            b'{"query_id":"q","query":"x","answer":"","gold_ids":["../a.txt"]}\n',
+            b'{"query_id":"q","query":"x","answer":"","gold_ids":["nested/a.txt"]}\n',
+            b'{"query_id":"q","query":"x","answer":"","gold_ids":["a"]}\n',
+            b'{"query_id":"q","query":"x","query":"y","answer":"","gold_ids":["a.txt"]}\n',
+        )
+        for payload in invalid:
+            with self.subTest(payload=payload), self.assertRaisesRegex(
+                DatasetError, "BEIR"
+            ):
+                load_beir_benchmark_rows_bytes(payload)
+        valid = b'{"query_id":"q","query":"x","answer":"","gold_ids":["a.txt"]}\n'
+        with self.assertRaisesRegex(DatasetError, "source count"):
+            load_beir_benchmark_rows_bytes(valid, expected_count=2)
+
+    def test_beir_query_id_collisions_and_count_types_fail_closed(self) -> None:
+        collision = (
+            b'{"query_id":"Q-01","query":"x","answer":"","gold_ids":["a.txt"]}\n'
+            b'{"query_id":"q-1","query":"y","answer":"","gold_ids":["b.txt"]}\n'
+        )
+        with self.assertRaisesRegex(DatasetError, "query ID"):
+            load_beir_benchmark_rows_bytes(collision)
+        for count in (0, -1, True, 1.0, "1"):
+            with self.subTest(count=count), self.assertRaisesRegex(
+                DatasetError, "source count"
+            ):
+                load_beir_benchmark_rows_bytes(b"{}\n", expected_count=count)  # type: ignore[arg-type]
+
+    def test_beir_gold_ids_use_portable_collision_identity(self) -> None:
+        collisions = (("A.txt", "a.txt"), ("doc-1.txt", "doc-01.txt"), ("Ａ.txt", "A.txt"))
+        for left, right in collisions:
+            payload = (
+                json.dumps(
+                    {
+                        "query_id": "q",
+                        "query": "x",
+                        "answer": "",
+                        "gold_ids": [left, right],
+                    }
+                )
+                + "\n"
+            ).encode()
+            with self.subTest(left=left, right=right), self.assertRaisesRegex(
+                DatasetError, "BEIR gold document"
+            ):
+                load_beir_benchmark_rows_bytes(payload)
+
+    def test_beir_corpus_preflight_rejects_symlinks_and_missing_gold(self) -> None:
+        payload = b'{"query_id":"q","query":"x","answer":"","gold_ids":["a.txt"]}\n'
+        rows = load_beir_benchmark_rows_bytes(payload)
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            corpus = root / "corpus"
+            corpus.mkdir()
+            (corpus / "a.txt").write_text("document")
+            validate_beir_corpus(corpus, rows)
+
+            (corpus / "a.txt").unlink()
+            with self.assertRaisesRegex(DatasetError, "BEIR corpus"):
+                validate_beir_corpus(corpus, rows)
+            target = root / "target"
+            target.mkdir()
+            (target / "a.txt").write_text("document")
+            corpus.rmdir()
+            corpus.symlink_to(target, target_is_directory=True)
+            with self.assertRaisesRegex(DatasetError, "BEIR corpus"):
+                validate_beir_corpus(corpus, rows)
 
 
 class AsterionDciDatasetTests(unittest.TestCase):

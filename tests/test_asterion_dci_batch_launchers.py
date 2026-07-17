@@ -45,6 +45,8 @@ PROFILE_NAMES = {
     "bright.earth-science",
     "bright.economics",
     "bright.robotics",
+    "beir.arguana",
+    "beir.scifact",
 }
 
 
@@ -85,6 +87,8 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
             "bright.earth-science": ("data/dci-bench/data/bright_earth_science/bright_earth_science.jsonl", "corpus/bright_corpus/earth_science", "ir", 10, 300),
             "bright.economics": ("data/dci-bench/data/bright_economics/economics_full.jsonl", "corpus/bright_corpus/economics", "ir", 10, 300),
             "bright.robotics": ("data/dci-bench/data/bright_robotics/bright_robotics.jsonl", "corpus/bright_corpus/robotics", "ir", 20, 300),
+            "beir.arguana": ("data/dci-bench/data/beir_arguana/test.jsonl", "corpus/beir/arguana", "ir", 10, 300),
+            "beir.scifact": ("data/dci-bench/data/beir_scifact/test.jsonl", "corpus/beir/scifact", "ir", 10, 300),
         }
         for name, values in expected.items():
             with self.subTest(profile=name):
@@ -112,6 +116,23 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
                 self.assertNotIn("src/dci", text)
                 self.assertNotIn("scripts/bcplus_eval/run_bcplus_eval.py", text)
                 self.assertNotIn("uv run python", text)
+
+    def test_paper_beir_launchers_bind_exact_profiles_without_source_parity_claim(self) -> None:
+        for relative, profile_name in (
+            ("beir/benchmark_arguana.sh", "beir.arguana"),
+            ("beir/benchmark_scifact.sh", "beir.scifact"),
+        ):
+            launcher = ASTERION_LAUNCHER_ROOT / relative
+            text = launcher.read_text(encoding="utf-8")
+            with self.subTest(relative=relative):
+                self.assertIn(f"--profile {profile_name}", text)
+                self.assertIn('source "$REPO_ROOT/.env"', text)
+                self.assertEqual(
+                    subprocess.run(
+                        ["bash", "-n", str(launcher)], capture_output=True, text=True
+                    ).returncode,
+                    0,
+                )
 
     def test_dynamic_launcher_preserves_positional_context_thinking_and_limit(self) -> None:
         text = (
@@ -357,7 +378,7 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
                 [
                     "uv", "run", "--isolated", "--no-project", "--with", str(wheel),
                     "python", "-I", "-c",
-                    "from importlib.resources import files; import json; p=files('asterion.dci.resources').joinpath('batch-profiles.json'); assert len(json.loads(p.read_text())['profiles']) == 12",
+                    "from importlib.resources import files; import json; p=files('asterion.dci.resources').joinpath('batch-profiles.json'); assert len(json.loads(p.read_text())['profiles']) == 14",
                 ],
                 cwd=root,
                 env=env,

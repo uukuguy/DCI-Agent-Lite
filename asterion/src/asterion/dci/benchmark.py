@@ -40,12 +40,19 @@ from asterion.dci.datasets import (
     build_qa_prompt,
     canonical_input_identity,
     load_benchmark_rows_bytes,
+    load_beir_benchmark_rows_bytes,
 )
 from asterion.dci.evaluation import (
     _load_reusable_result,
     evaluate_run_directory_async,
 )
 from asterion.dci.judge import JudgeConfig, judge_request_fingerprint
+from asterion.dci.paper_benchmarks import (
+    paper_scope_for_profile,
+    paper_scope_for_selected_ids,
+    published_scope_selected_ids,
+    require_af320_executable_scope,
+)
 from asterion.dci.analysis import (
     aggregate_results,
     gather_query_metrics,
@@ -290,13 +297,38 @@ def _prepare(
         raise DciBenchmarkError("DCI benchmark resume policy is invalid")
     if request.figures and not request.analysis:
         raise DciBenchmarkError("DCI benchmark figures require analysis")
+    paper_scope = paper_scope_for_profile(request.profile)
+    if paper_scope is not None:
+        try:
+            require_af320_executable_scope(paper_scope)
+        except ValueError as error:
+            raise DciBenchmarkError(str(error)) from error
     try:
         dataset_raw = _read_input_snapshot(request.dataset)
-        rows = load_benchmark_rows_bytes(dataset_raw)
+        beir_scope = {
+            "beir.arguana": "beir.arguana.main.random50",
+            "beir.scifact": "beir.scifact.main.random50",
+        }.get(request.profile)
+        if beir_scope is None:
+            try:
+                rows = load_benchmark_rows_bytes(dataset_raw)
+            except DatasetError as generic_error:
+                try:
+                    rows = load_beir_benchmark_rows_bytes(dataset_raw)
+                except DatasetError:
+                    raise generic_error
+        else:
+            rows = load_beir_benchmark_rows_bytes(dataset_raw, expected_count=50)
+            if tuple(sorted(row.query_id for row in rows)) != published_scope_selected_ids(
+                beir_scope
+            ):
+                raise DatasetError("DCI BEIR selected-ID manifest does not match")
     except DatasetError as error:
         raise DciBenchmarkError("DCI benchmark dataset is invalid") from error
+    _reject_af320_paper_rows(rows)
     if request.limit is not None:
         rows = rows[: request.limit]
+        _reject_af320_paper_rows(rows)
     if any((row.is_ir if request.mode == "qa" else not row.is_ir) for row in rows):
         raise DciBenchmarkError("DCI benchmark dataset does not match its mode")
     output_root = Path(os.path.abspath(os.path.normpath(request.output_root)))
@@ -377,6 +409,18 @@ def _prepare(
             }
         )
     return rows, output_root, config, tuple(documents), snapshots
+
+
+def _reject_af320_paper_rows(rows: tuple[BenchmarkRow, ...]) -> None:
+    selected_scope = paper_scope_for_selected_ids(
+        tuple(row.query_id for row in rows)
+    )
+    if selected_scope is None:
+        return
+    try:
+        require_af320_executable_scope(selected_scope)
+    except ValueError as error:
+        raise DciBenchmarkError(str(error)) from error
 
 
 async def _run_row(
