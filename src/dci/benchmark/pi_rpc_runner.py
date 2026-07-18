@@ -1511,17 +1511,39 @@ class PiRpcClient:
                 break
 
         if agent_settled:
-            probe_timeout_seconds = 10.0
-            if deadline is not None:
-                probe_timeout_seconds = deadline - time.monotonic()
-                if probe_timeout_seconds <= 0:
+            while True:
+                remaining = None if deadline is None else deadline - time.monotonic()
+                if remaining is not None and remaining <= 0:
+                    abort_id = self._next_id()
+                    try:
+                        self._send({"id": abort_id, "type": "abort"})
+                    except (BrokenPipeError, RuntimeError):
+                        pass
                     raise RuntimeError(
                         f"RPC prompt timed out after {timeout_seconds:g} seconds"
                     )
-            state = self.probe_protocol(timeout_seconds=probe_timeout_seconds)
+                try:
+                    state = self.probe_protocol(
+                        timeout_seconds=(
+                            10.0 if remaining is None else min(10.0, remaining)
+                        )
+                    )
+                except RuntimeError:
+                    if deadline is not None and time.monotonic() >= deadline:
+                        abort_id = self._next_id()
+                        try:
+                            self._send({"id": abort_id, "type": "abort"})
+                        except (BrokenPipeError, RuntimeError):
+                            pass
+                        raise RuntimeError(
+                            f"RPC prompt timed out after {timeout_seconds:g} seconds"
+                        ) from None
+                    raise
+                if not state["isCompacting"]:
+                    break
+                time.sleep(0.05)
             if (
                 state["isStreaming"]
-                or state["isCompacting"]
                 or state["pendingMessageCount"] != 0
             ):
                 raise RuntimeError(

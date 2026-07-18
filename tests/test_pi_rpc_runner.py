@@ -431,7 +431,70 @@ class PiRpcLifecycleTests(unittest.TestCase):
 
         probe.assert_called_once()
 
-    def test_agent_settled_rejects_non_idle_state(self) -> None:
+    def test_agent_settled_waits_for_async_extension_compaction(self) -> None:
+        client = make_client()
+        events = [
+            {"type": "response", "id": "py-1", "success": True},
+            {"type": "agent_settled"},
+        ]
+        compacting = {
+            "isStreaming": False,
+            "isCompacting": True,
+            "messageCount": 1,
+            "pendingMessageCount": 0,
+        }
+        idle = {**compacting, "isCompacting": False}
+
+        with (
+            patch.object(client, "_send"),
+            patch.object(client, "_read_json_line", side_effect=events),
+            patch.object(
+                client, "probe_protocol", side_effect=(compacting, idle)
+            ) as probe,
+            patch("dci.benchmark.pi_rpc_runner.time.sleep") as sleep,
+        ):
+            result = client.prompt_and_wait("question", timeout_seconds=30)
+
+        self.assertEqual(result, "")
+        self.assertEqual(
+            probe.call_args_list,
+            [call(timeout_seconds=10.0), call(timeout_seconds=10.0)],
+        )
+        sleep.assert_called_once_with(0.05)
+
+    def test_async_compaction_timeout_sends_abort(self) -> None:
+        client = make_client()
+        events = [
+            {"type": "response", "id": "py-1", "success": True},
+            {"type": "agent_settled"},
+        ]
+        compacting = {
+            "isStreaming": False,
+            "isCompacting": True,
+            "messageCount": 1,
+            "pendingMessageCount": 0,
+        }
+        clock = SimpleNamespace(value=0.0)
+
+        def monotonic() -> float:
+            return clock.value
+
+        def sleep(seconds: float) -> None:
+            clock.value += seconds
+
+        with (
+            patch.object(client, "_send") as send,
+            patch.object(client, "_read_json_line", side_effect=events),
+            patch.object(client, "probe_protocol", return_value=compacting),
+            patch("dci.benchmark.pi_rpc_runner.time.monotonic", side_effect=monotonic),
+            patch("dci.benchmark.pi_rpc_runner.time.sleep", side_effect=sleep),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "timed out after 0.01 seconds"):
+                client.prompt_and_wait("question", timeout_seconds=0.01)
+
+        self.assertEqual(send.call_args_list[-1], call({"id": "py-2", "type": "abort"}))
+
+    def test_agent_settled_rejects_non_compaction_pending_state_without_waiting(self) -> None:
         client = make_client()
         events = [
             {"type": "response", "id": "py-1", "success": True},
@@ -447,10 +510,16 @@ class PiRpcLifecycleTests(unittest.TestCase):
         with (
             patch.object(client, "_send"),
             patch.object(client, "_read_json_line", side_effect=events),
-            patch.object(client, "probe_protocol", return_value=active_state),
+            patch.object(
+                client, "probe_protocol", return_value=active_state
+            ) as probe,
+            patch("dci.benchmark.pi_rpc_runner.time.sleep") as sleep,
         ):
             with self.assertRaisesRegex(RuntimeError, "not idle"):
                 client.prompt_and_wait("question", timeout_seconds=30)
+
+        probe.assert_called_once()
+        sleep.assert_not_called()
 
     def test_retry_discards_failed_run_text(self) -> None:
         client = make_client()
