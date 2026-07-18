@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import NamedTuple, TextIO
 
 
-REPORT_SCHEMA = "dci.af340-reproduction/v1"
+REPORT_SCHEMA = "dci.af340-reproduction/v2"
 FULL_REPORT_SCHEMA = "dci.af340-full-reproduction/v2"
 RETAINED_DIMENSIONS = frozenset(
     {
@@ -398,6 +398,7 @@ def _parser() -> argparse.ArgumentParser:
     full.add_argument("--provider")
     full.add_argument("--model")
     inspect = commands.add_parser("inspect")
+    inspect.add_argument("--resource-root", type=Path, required=True)
     inspect.add_argument("--report", type=Path, action="append", required=True)
     inspect_full = commands.add_parser("inspect-full")
     inspect_full.add_argument("--report", type=Path, required=True)
@@ -423,18 +424,19 @@ def _preflight_env_file(path: Path) -> Path:
 
 def _bounded_resource_root(requested: Path | None, code_root: Path) -> Path:
     candidate = code_root if requested is None else requested.expanduser()
-    if candidate.is_symlink() or not candidate.is_dir():
+    lexical = candidate if candidate.is_absolute() else Path.cwd() / candidate
+    current = Path(lexical.anchor)
+    for component in lexical.parts[1:]:
+        if component == "..":
+            current = current.parent
+            continue
+        current /= component
+        if current.is_symlink():
+            raise ValueError("AF-340 bounded resource root is invalid")
+    normalized = Path(os.path.abspath(os.path.normpath(lexical)))
+    if not normalized.is_dir():
         raise ValueError("AF-340 bounded resource root is invalid")
-    return candidate.resolve()
-
-
-def _resource_root_sha256(resource_root: Path) -> str:
-    return _canonical_sha256(
-        {
-            "schema": "dci.af340-bounded-resource-root/v1",
-            "resolved_path": str(resource_root),
-        }
-    )
+    return normalized.resolve()
 
 
 def _bounded_resource_path(resource_root: Path, relative: str) -> Path:
@@ -444,6 +446,68 @@ def _bounded_resource_path(resource_root: Path, relative: str) -> Path:
         if candidate.is_symlink():
             raise ValueError("AF-340 bounded resource path contains a symlink")
     return candidate
+
+
+def _selected_resource_manifest(
+    resource_root: Path,
+    variant: str,
+    *,
+    corpus_cache: dict[Path, dict[str, object]] | None = None,
+) -> dict[str, object]:
+    if variant not in {"pi", "claude-subscription", "claude-minimax"}:
+        raise ValueError("AF-340 bounded resource variant is invalid")
+    resource_root = resource_root.resolve()
+    from asterion.dci.benchmark import (  # noqa: PLC0415
+        _corpus_content_identity,
+        _read_input_snapshot,
+    )
+
+    datasets = sorted(
+        {dataset for dataset, _corpus in _LAUNCHER_RESOURCES.values()}
+        if variant == "pi"
+        else set()
+    )
+    corpora = sorted(
+        {"corpus/wiki_corpus"}
+        | (
+            {corpus for _dataset, corpus in _LAUNCHER_RESOURCES.values()}
+            if variant == "pi"
+            else set()
+        )
+    )
+    dataset_manifest: list[dict[str, object]] = []
+    for relative in datasets:
+        candidate = _bounded_resource_path(resource_root, relative)
+        if not candidate.is_file():
+            raise ValueError("AF-340 bounded dataset resource is invalid")
+        first = _read_input_snapshot(candidate)
+        second = _read_input_snapshot(candidate)
+        if first != second:
+            raise ValueError("AF-340 bounded dataset resource changed")
+        dataset_manifest.append(
+            {
+                "path": relative,
+                "sha256": hashlib.sha256(first).hexdigest(),
+                "size": len(first),
+            }
+        )
+    cache = {} if corpus_cache is None else corpus_cache
+    corpus_manifest: list[dict[str, object]] = []
+    for relative in corpora:
+        candidate = _bounded_resource_path(resource_root, relative)
+        if not candidate.is_dir():
+            raise ValueError("AF-340 bounded corpus resource is invalid")
+        identity = cache.get(candidate)
+        if identity is None:
+            identity = _corpus_content_identity(candidate)
+            cache[candidate] = identity
+        corpus_manifest.append({"path": relative, **identity})
+    return {
+        "schema": "dci.af340-selected-resources/v1",
+        "variant": variant,
+        "datasets": dataset_manifest,
+        "corpora": corpus_manifest,
+    }
 
 
 def _bounded_environment(path: Path) -> dict[str, str]:
@@ -511,11 +575,11 @@ def _canonical_sha256(value: object) -> str:
 
 
 def _plan_sha256(
-    operations: Sequence[Operation], resource_root_sha256: str
+    operations: Sequence[Operation], resource_manifest_sha256: str
 ) -> str:
     return _canonical_sha256(
         {
-            "resource_root_sha256": resource_root_sha256,
+            "resource_manifest_sha256": resource_manifest_sha256,
             "operations": [
                 {
                     "operation_id": item.operation_id,
@@ -860,7 +924,6 @@ def _run_bounded(
 ) -> int:
     env_file = _preflight_env_file(args.env_file)
     resource_root = _bounded_resource_root(getattr(args, "resource_root", None), root)
-    resource_root_sha256 = _resource_root_sha256(resource_root)
     args.resource_root = resource_root
     plan = bounded_operation_plan(root, args.variant, args.provider, args.model)
     for operation in plan:
@@ -879,6 +942,8 @@ def _run_bounded(
         environment["DCI_PROVIDER"] = args.provider
         environment["DCI_MODEL"] = args.model
     preflight = bounded_preflight(args, root, plan, environment)
+    resource_manifest = _selected_resource_manifest(resource_root, args.variant)
+    resource_manifest_sha256 = _canonical_sha256(resource_manifest)
     output_root = _private_root(args.output_root)
     _write_pressure_corpus(output_root)
     environment = dict(preflight.environment)
@@ -965,14 +1030,14 @@ def _run_bounded(
         "mode": "bounded",
         "status": status_value,
         "variant": args.variant,
-        "resource_root_sha256": resource_root_sha256,
+        "resource_manifest": resource_manifest,
         "evidence_dimensions": _dimensions_for_variant(args.variant),
         "agent_operations": agent_count,
         "judge_operations": judge_count,
         "attempted_operations": len(records),
         "full_dataset_ran": False,
         "operations": records,
-        "plan_sha256": _plan_sha256(plan, resource_root_sha256),
+        "plan_sha256": _plan_sha256(plan, resource_manifest_sha256),
     }
     report["report_sha256"] = _canonical_sha256(report)
     if retainable:
@@ -2373,7 +2438,12 @@ def _run_full(
     return 0
 
 
-def _validate_report(path: Path, root: Path) -> tuple[str, set[str]]:
+def _validate_report(
+    path: Path,
+    root: Path,
+    resource_root: Path,
+    corpus_cache: dict[Path, dict[str, object]],
+) -> tuple[str, set[str]]:
     if path.is_symlink() or not path.is_file() or stat.S_IMODE(path.stat().st_mode) != 0o600:
         raise ValueError("AF-340 retained report permissions are invalid")
     if stat.S_IMODE(path.parent.stat().st_mode) != 0o700:
@@ -2391,7 +2461,7 @@ def _validate_report(path: Path, root: Path) -> tuple[str, set[str]]:
         "full_dataset_ran",
         "operations",
         "variant",
-        "resource_root_sha256",
+        "resource_manifest",
         "plan_sha256",
         "report_sha256",
     }
@@ -2414,12 +2484,15 @@ def _validate_report(path: Path, root: Path) -> tuple[str, set[str]]:
         "minimax" if variant == "claude-minimax" else None,
         "retained-model" if variant == "claude-minimax" else None,
     )
-    resource_root_sha256 = report["resource_root_sha256"]
+    expected_resource_manifest = _selected_resource_manifest(
+        resource_root, variant, corpus_cache=corpus_cache
+    )
+    resource_manifest = report["resource_manifest"]
+    resource_manifest_sha256 = _canonical_sha256(expected_resource_manifest)
     if (
-        not isinstance(resource_root_sha256, str)
-        or _SHA256.fullmatch(resource_root_sha256) is None
+        resource_manifest != expected_resource_manifest
         or report["plan_sha256"]
-        != _plan_sha256(expected_plan, resource_root_sha256)
+        != _plan_sha256(expected_plan, resource_manifest_sha256)
     ):
         raise ValueError("AF-340 retained operation plan drifted")
     unsigned = dict(report)
@@ -2615,8 +2688,12 @@ def _run_inspect(args: argparse.Namespace, root: Path, stdout: TextIO) -> int:
         raise ValueError("AF-340 retained evidence requires exactly three reports")
     dimensions: set[str] = set()
     variants: set[str] = set()
+    resource_root = _bounded_resource_root(args.resource_root, root)
+    corpus_cache: dict[Path, dict[str, object]] = {}
     for report in args.report:
-        variant, retained = _validate_report(report, root)
+        variant, retained = _validate_report(
+            report, root, resource_root, corpus_cache
+        )
         if variant in variants:
             raise ValueError("AF-340 retained evidence variant is duplicated")
         variants.add(variant)

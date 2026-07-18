@@ -391,16 +391,23 @@ uv run python tools/verify_af340_reproduction.py bounded --variant claude-minima
 
 Inspect the three retained 0600 reports without contacting a provider; the
 inspection passes only when original Pi, Asterion Pi, Claude subscription, and
-Claude MiniMax form the exact four-dimensional evidence set. Native request,
-terminal state/event, and Judge artifacts are rehashed from the private tree;
-self-authored report JSON is insufficient:
+Claude MiniMax form the exact four-dimensional evidence set. Inspection
+rebuilds the exact selected dataset/corpus content manifest from the external
+resource root and rehashes native request, terminal state/event, and Judge
+artifacts from the private tree. Self-authored report JSON is insufficient, and
+same-path resource mutation invalidates the evidence:
 
 ```bash
 uv run python tools/verify_af340_reproduction.py inspect \
+  --resource-root "$DCI_RESOURCE_ROOT" \
   --report outputs/verification/af340-bounded-pi/af340-bounded-report.json \
   --report outputs/verification/af340-bounded-claude-subscription/af340-bounded-report.json \
   --report outputs/verification/af340-bounded-claude-minimax/af340-bounded-report.json
 ```
+
+The AF-340 H004 train/evaluation hooks require
+`AF340_RESOURCE_ROOT="$DCI_RESOURCE_ROOT"` alongside the three retained-report
+variables and forward that external anchor to `inspect`.
 
 Print the immutable profile digest, selected-query counts, operation maxima, and
 budget before requesting authority:

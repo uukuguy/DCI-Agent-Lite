@@ -876,12 +876,14 @@ elif [ "$1" = "AF-340-H-003" ]; then
         exit 1
     fi
 elif [ "$1" = "AF-340-H-004" ]; then
+    : "${AF340_RESOURCE_ROOT:?set AF340_RESOURCE_ROOT to the exact bounded resource tree}"
     : "${AF340_PI_REPORT:?set AF340_PI_REPORT to the retained Pi bounded report}"
     : "${AF340_CLAUDE_SUBSCRIPTION_REPORT:?set AF340_CLAUDE_SUBSCRIPTION_REPORT to the retained Claude subscription report}"
     : "${AF340_CLAUDE_MINIMAX_REPORT:?set AF340_CLAUDE_MINIMAX_REPORT to the retained Claude MiniMax report}"
     : "${AF340_FULL_REPORT:?set AF340_FULL_REPORT to the authorized full report}"
     if ! {
         uv run python tools/verify_af340_reproduction.py inspect \
+            --resource-root "$AF340_RESOURCE_ROOT" \
             --report "$AF340_PI_REPORT" \
             --report "$AF340_CLAUDE_SUBSCRIPTION_REPORT" \
             --report "$AF340_CLAUDE_MINIMAX_REPORT"

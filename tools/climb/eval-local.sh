@@ -175,10 +175,12 @@ run_af340_evidence_dimension() {
         fi
         return
     fi
+    : "${AF340_RESOURCE_ROOT:?set AF340_RESOURCE_ROOT to the exact bounded resource tree}"
     : "${AF340_PI_REPORT:?set AF340_PI_REPORT to the retained Pi bounded report}"
     : "${AF340_CLAUDE_SUBSCRIPTION_REPORT:?set AF340_CLAUDE_SUBSCRIPTION_REPORT to the retained Claude subscription report}"
     : "${AF340_CLAUDE_MINIMAX_REPORT:?set AF340_CLAUDE_MINIMAX_REPORT to the retained Claude MiniMax report}"
     if run_python tools/verify_af340_reproduction.py inspect \
+        --resource-root "$AF340_RESOURCE_ROOT" \
         --report "$AF340_PI_REPORT" \
         --report "$AF340_CLAUDE_SUBSCRIPTION_REPORT" \
         --report "$AF340_CLAUDE_MINIMAX_REPORT" \

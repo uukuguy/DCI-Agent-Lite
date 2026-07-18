@@ -190,6 +190,12 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
     ) -> list[str]:
         env_file = root / "operator.env"
         env_file.write_text("PLACEHOLDER=value\n", encoding="utf-8")
+        resource_root = root / "resources"
+        if variant == "pi":
+            self._write_pi_bounded_resources(resource_root)
+        wiki = resource_root / "corpus/wiki_corpus"
+        wiki.mkdir(parents=True, exist_ok=True)
+        (wiki / "wiki.jsonl").write_text('{"text":"fixture"}\n', encoding="utf-8")
         args = [
             "bounded",
             "--variant",
@@ -198,6 +204,8 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             str(env_file),
             "--output-root",
             str(root / "evidence"),
+            "--resource-root",
+            str(resource_root.resolve()),
         ]
         if provider is not None:
             args.extend(("--provider", provider))
@@ -208,13 +216,24 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
     def _retained_report_fixture(
         self, module, root: Path, variant: str, *, provider: str | None = None,
         model: str | None = None, plan=None, fail_at: int | None = None,
-        timeout_at: int | None = None,
+        timeout_at: int | None = None, resource_root: Path | None = None,
     ):
         """Build inspection input through lower-level native projection only."""
 
         operations = tuple(
             plan or module.bounded_operation_plan(ROOT, variant, provider, model)
         )
+        resource_root = root / "resources" if resource_root is None else resource_root
+        if variant == "pi":
+            self._write_pi_bounded_resources(resource_root)
+        wiki = resource_root / "corpus/wiki_corpus"
+        wiki.mkdir(parents=True, exist_ok=True)
+        wiki_document = wiki / "wiki.jsonl"
+        if not wiki_document.exists():
+            wiki_document.write_text('{"text":"fixture"}\n', encoding="utf-8")
+        resource_root = resource_root.resolve()
+        resource_manifest = module._selected_resource_manifest(resource_root, variant)
+        resource_manifest_sha256 = module._canonical_sha256(resource_manifest)
         output_root = module._private_root(root / "evidence")
         environment = {
             "ASTERION_DCI_OUTPUT_ROOT": str(output_root),
@@ -273,7 +292,7 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             "mode": "bounded",
             "status": status_value,
             "variant": variant,
-            "resource_root_sha256": module._resource_root_sha256(ROOT.resolve()),
+            "resource_manifest": resource_manifest,
             "evidence_dimensions": module._dimensions_for_variant(variant),
             "agent_operations": sum(item["agent_operations"] for item in records),
             "judge_operations": sum(item["judge_operations"] for item in records),
@@ -281,7 +300,7 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             "full_dataset_ran": False,
             "operations": records,
             "plan_sha256": module._plan_sha256(
-                operations, module._resource_root_sha256(ROOT.resolve())
+                operations, resource_manifest_sha256
             ),
         }
         report["report_sha256"] = module._canonical_sha256(report)
@@ -385,7 +404,7 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
 
     def test_bounded_resource_root_is_not_inferred_and_rejects_symlinks(self) -> None:
         module = load_verifier()
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
             root = Path(temporary)
             shared = root / "shared"
             shared.mkdir()
@@ -394,6 +413,52 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "resource root"):
                 module._bounded_resource_root(link, ROOT)
             self.assertEqual(module._bounded_resource_root(None, ROOT), ROOT.resolve())
+
+            (shared / "nested").mkdir()
+            nested = link / "nested"
+            with self.assertRaisesRegex(ValueError, "resource root"):
+                module._bounded_resource_root(nested, ROOT)
+            with self.assertRaisesRegex(ValueError, "resource root"):
+                module._bounded_resource_root(link / ".." / "shared", ROOT)
+
+    def test_selected_resource_manifest_binds_exact_variant_content(self) -> None:
+        module = load_verifier()
+        with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
+            resource = Path(temporary) / "resource"
+            wiki = resource / "corpus/wiki_corpus"
+            wiki.mkdir(parents=True)
+            document = wiki / "wiki.jsonl"
+            document.write_text('{"text":"before"}\n', encoding="utf-8")
+
+            before = module._selected_resource_manifest(
+                resource, "claude-subscription"
+            )
+            self.assertEqual(before["schema"], "dci.af340-selected-resources/v1")
+            self.assertEqual(before["variant"], "claude-subscription")
+            self.assertEqual(before["datasets"], [])
+            self.assertEqual(
+                [item["path"] for item in before["corpora"]],
+                ["corpus/wiki_corpus"],
+            )
+
+            document.write_text('{"text":"after"}\n', encoding="utf-8")
+            after = module._selected_resource_manifest(
+                resource, "claude-subscription"
+            )
+            self.assertNotEqual(before, after)
+
+    def test_inspect_cli_requires_external_resource_root(self) -> None:
+        module = load_verifier()
+        parser = module._parser()
+        with self.assertRaises(SystemExit):
+            parser.parse_args(["inspect", "--report", "one.json"])
+        args = parser.parse_args(
+            [
+                "inspect", "--resource-root", "/trusted/resources",
+                "--report", "one.json",
+            ]
+        )
+        self.assertEqual(args.resource_root, Path("/trusted/resources"))
 
     def test_bounded_preflight_requires_only_selected_variant_resources(self) -> None:
         module = load_verifier()
@@ -405,7 +470,7 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             resource = Path(temporary) / "shared"
             wiki = resource / "corpus/wiki_corpus"
             wiki.mkdir(parents=True)
-            args.resource_root = resource
+            args.resource_root = resource.resolve()
             environment = {"DEEPSEEK_API_KEY": "judge-only"}
             with mock.patch(
                 "asterion.dci.paper_benchmarks.paper_benchmark_ids",
@@ -452,7 +517,7 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             root = Path(temporary)
             resource = root / "shared"
             self._write_pi_bounded_resources(resource)
-            args.resource_root = resource
+            args.resource_root = resource.resolve()
             pi_paths = SimpleNamespace(
                 pi=SimpleNamespace(
                     package_dir=root / "pi-package", agent_dir=root / "pi-agent"
@@ -497,7 +562,7 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             (resource / "corpus/wiki_corpus").symlink_to(
                 target, target_is_directory=True
             )
-            args.resource_root = resource
+            args.resource_root = resource.resolve()
             with mock.patch("shutil.which") as which:
                 with self.assertRaisesRegex(ValueError, "corpus resource"):
                     module._default_bounded_preflight(
@@ -510,7 +575,7 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             resource = root / "shared-with-parent-link"
             resource.mkdir()
             (resource / "corpus").symlink_to(redirected, target_is_directory=True)
-            args.resource_root = resource
+            args.resource_root = resource.resolve()
             with mock.patch("shutil.which") as which:
                 with self.assertRaisesRegex(ValueError, "corpus resource"):
                     module._default_bounded_preflight(
@@ -558,11 +623,11 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
                 self.assertIn('dataset="$RESOURCE_ROOT/', body)
                 self.assertIn('corpus="$RESOURCE_ROOT/', body)
 
-    def test_resource_root_identity_is_bound_into_rendered_plan_digest(self) -> None:
+    def test_resource_manifest_identity_is_bound_into_rendered_plan_digest(self) -> None:
         module = load_verifier()
         plan = module.bounded_operation_plan(ROOT, "pi", None, None)
-        first = module._resource_root_sha256(Path("/shared/one"))
-        second = module._resource_root_sha256(Path("/shared/two"))
+        first = module._canonical_sha256({"content": "one"})
+        second = module._canonical_sha256({"content": "two"})
         self.assertRegex(first, r"^[0-9a-f]{64}$")
         self.assertNotEqual(first, second)
         self.assertNotEqual(
@@ -595,7 +660,10 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             report = json.loads(
                 (temporary_root / "evidence/af340-bounded-report.json").read_text()
             )
-            self.assertRegex(report["resource_root_sha256"], r"^[0-9a-f]{64}$")
+            self.assertEqual(
+                report["resource_manifest"]["schema"],
+                "dci.af340-selected-resources/v1",
+            )
             self.assertEqual(report["agent_operations"], 1)
             self.assertEqual(report["judge_operations"], 0)
             config_ref = report["operations"][0]["artifacts"]["effective-config.json"]["ref"]
@@ -637,8 +705,9 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
 
     def test_inspect_rejects_rehashed_report_without_genuine_native_refs(self) -> None:
         module = load_verifier()
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
             root = Path(temporary)
+            resource_root = root / "resources"
             reports = []
             for variant, provider, model in (
                 ("pi", None, None),
@@ -648,7 +717,8 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
                 variant_root = root / variant
                 variant_root.mkdir()
                 report, _executor = self._retained_report_fixture(
-                    module, variant_root, variant, provider=provider, model=model
+                    module, variant_root, variant, provider=provider, model=model,
+                    resource_root=resource_root,
                 )
                 reports.append(report)
             report_path = reports[0]
@@ -665,7 +735,7 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             unsigned.pop("report_sha256")
             report["report_sha256"] = module._canonical_sha256(unsigned)
             report_path.write_text(json.dumps(report) + "\n")
-            args = ["inspect"]
+            args = ["inspect", "--resource-root", str(resource_root)]
             for item in reports:
                 args.extend(("--report", str(item)))
             self.assertEqual(module.verify_af340_reproduction_main(args, repo_root=ROOT), 2)
@@ -779,12 +849,16 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
         train_block = train[train.rindex('elif [ "$1" = "AF-340-H-004" ]; then') :]
         train_block = train_block[: train_block.index("elif ", 10)]
         self.assertIn("verify_af340_reproduction.py inspect", train_block)
+        self.assertIn('AF340_RESOURCE_ROOT', train_block)
+        self.assertIn('--resource-root "$AF340_RESOURCE_ROOT"', train_block)
         self.assertEqual(train_block.count('--report "$AF340_'), 4)
         self.assertIn("verify_af340_reproduction.py inspect-full", train_block)
         self.assertIn('AF340_FULL_REPORT', train_block)
         self.assertNotIn("verify_af340_reproduction.py bounded", train_block)
         evaluation_block = evaluate[evaluate.index("run_af340_evidence_dimension()") : evaluate.index("dimension_runner=", evaluate.index("run_af340_evidence_dimension()"))]
         self.assertIn("verify_af340_reproduction.py inspect", evaluation_block)
+        self.assertIn('AF340_RESOURCE_ROOT', evaluation_block)
+        self.assertIn('--resource-root "$AF340_RESOURCE_ROOT"', evaluation_block)
         self.assertEqual(evaluation_block.count('--report "$AF340_'), 4)
         self.assertIn("verify_af340_reproduction.py inspect-full", evaluation_block)
         self.assertIn('AF340_FULL_REPORT', evaluation_block)
@@ -1579,7 +1653,7 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             root = Path(temporary)
             resource = root / "shared"
             self._write_pi_bounded_resources(resource)
-            args.resource_root = resource
+            args.resource_root = resource.resolve()
             (root / "pi/packages/coding-agent").mkdir(parents=True)
             (root / "pi/.pi/agent").mkdir(parents=True)
             environment = {
@@ -1644,7 +1718,7 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             resource = Path(temporary)
             (resource / "corpus/wiki_corpus").mkdir(parents=True)
-            args.resource_root = resource
+            args.resource_root = resource.resolve()
             with mock.patch("shutil.which", return_value="/tool/claude"), mock.patch(
                 "subprocess.run", side_effect=process
             ):
@@ -1777,7 +1851,7 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             resource = Path(temporary)
             (resource / "corpus/wiki_corpus").mkdir(parents=True)
-            args.resource_root = resource
+            args.resource_root = resource.resolve()
             with mock.patch("shutil.which", return_value="/usr/bin/claude"), mock.patch(
                 "tempfile.mkdtemp", side_effect=RuntimeError("past credential checks")
             ):
@@ -1932,8 +2006,9 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
 
     def test_inspect_requires_four_body_free_retained_dimensions(self) -> None:
         module = load_verifier()
-        with tempfile.TemporaryDirectory() as temporary:
+        with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
             root = Path(temporary)
+            resource_root = root / "resources"
             reports = []
             for variant, provider, model in (
                 ("pi", None, None),
@@ -1943,10 +2018,11 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
                 variant_root = root / variant
                 variant_root.mkdir()
                 report, _executor = self._retained_report_fixture(
-                    module, variant_root, variant, provider=provider, model=model
+                    module, variant_root, variant, provider=provider, model=model,
+                    resource_root=resource_root,
                 )
                 reports.append(report)
-            args = ["inspect"]
+            args = ["inspect", "--resource-root", str(resource_root)]
             for report in reports:
                 args.extend(("--report", str(report)))
             stdout = io.StringIO()
@@ -1960,8 +2036,12 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             self.assertIn("Full dataset ran: no", stdout.getvalue())
 
             bound_report = json.loads(reports[0].read_text(encoding="utf-8"))
-            original_report = dict(bound_report)
-            bound_report["resource_root_sha256"] = "f" * 64
+            original_report = json.loads(json.dumps(bound_report))
+            bound_report["resource_manifest"]["corpora"][0]["sha256"] = "f" * 64
+            bound_report["plan_sha256"] = module._plan_sha256(
+                module.bounded_operation_plan(ROOT, "pi", None, None),
+                module._canonical_sha256(bound_report["resource_manifest"]),
+            )
             unsigned = dict(bound_report)
             unsigned.pop("report_sha256")
             bound_report["report_sha256"] = module._canonical_sha256(unsigned)
@@ -1972,6 +2052,14 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             )
             reports[0].write_text(json.dumps(original_report) + "\n", encoding="utf-8")
             reports[0].chmod(0o600)
+
+            wiki_document = resource_root / "corpus/wiki_corpus/wiki.jsonl"
+            original_wiki = wiki_document.read_bytes()
+            wiki_document.write_bytes(b'{"text":"mutated"}\n')
+            self.assertEqual(
+                module.verify_af340_reproduction_main(args, repo_root=ROOT), 2
+            )
+            wiki_document.write_bytes(original_wiki)
 
             artifact = next((reports[0].parent / "private").rglob("effective-config.json"))
             artifact.write_bytes(b"tampered\n")

@@ -222,12 +222,16 @@ class AsterionDocumentationTests(unittest.TestCase):
             "strict Task 7 manifest",
             "`comparisons/`",
             "tools/verify_af340_reproduction.py inspect",
+            "AF340_RESOURCE_ROOT",
             "credentials live only in `.env` or exported environment variables",
             "full authorization is always an explicit CLI action",
         )
         for document in documents:
             for literal in required:
                 self.assertIn(literal, document)
+            self.assertGreaterEqual(
+                document.count('--resource-root "$DCI_RESOURCE_ROOT"'), 4
+            )
 
     def test_framework_guide_explains_layers_and_complete_integration(self) -> None:
         relative = "asterion/docs/architecture/asterion-framework-capability-integration.md"
