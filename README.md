@@ -497,7 +497,7 @@ More runnable examples for OpenAI, Anthropic and vLLM are available in [`scripts
 
 ## 🚀 Context Management Strategies
 
-DCI-Agent-Lite includes a lightweight runtime context-management layer for long-horizon deep research runs. Asterion ships the closed `dci.context-profile/v1` contract through an Asterion-owned Pi extension loaded by its native runner.
+DCI-Agent-Lite includes a lightweight runtime context-management layer for long-horizon deep research runs. Original DCI ships its own closed `dci.context-profile/v1` resources and integrity-checked Pi extension; its runner loads that implementation directly and does not import or launch Asterion.
 
 It uses three simple strategies:
 
@@ -535,7 +535,7 @@ Evidence labels are intentionally narrow:
 
 - **Implemented**: extension, transport, artifacts, CLI, benchmark, resume, and installed application are present.
 - **Model-free verified**: deterministic hook, failure, privacy, wheel, and surface tests pass with Provider operations: 0 and Full dataset ran: no.
-- **Bounded provider verified**: reserved for retained L3/L4 runs from `tools/verify_dci_context_acceptance.py --provider-backed`; it is not a full benchmark claim.
+- **Bounded provider verified**: reserved for retained Quick Start, L3, and L4 evidence from `tools/verify_original_readme.py --level bounded`; it is not a full benchmark claim.
 - **Experiment reproduced**: not yet claimed; full paper runs require separate AF-340 budget authorization.
 
 Each closed profile is executable through the normal original DCI entry point. These commands use runtime defaults; each is a provider operation when executed:

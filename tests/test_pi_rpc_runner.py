@@ -93,6 +93,43 @@ class PiRpcLifecycleTests(unittest.TestCase):
                     self.assertTrue(path.is_file())
                     self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
 
+    def test_all_run_artifact_files_are_private(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "run"
+            with patch.object(
+                rpc_runner,
+                "collect_pi_source_provenance",
+                return_value={"commit": "abc123", "dirty": False},
+            ):
+                recorder = make_recorder(output_dir)
+            recorder.record_event({"type": "agent_start"})
+            recorder.append_stderr("provider stderr body")
+            recorder.finalize(
+                status="failed",
+                error="provider error body",
+                stderr_text="final provider stderr body",
+            )
+
+            for path in output_dir.rglob("*"):
+                with self.subTest(path=path.relative_to(output_dir)):
+                    expected = 0o700 if path.is_dir() else 0o600
+                    self.assertEqual(stat.S_IMODE(path.stat().st_mode), expected)
+
+    def test_context_profile_uses_original_extension_arguments(self) -> None:
+        args = Namespace(
+            extra_arg=[],
+            pi_thinking_level="high",
+            runtime_context_level="level3",
+        )
+
+        expanded = rpc_runner.resolved_pi_extra_args(args)
+
+        self.assertIn("--extension", expanded)
+        self.assertIn("--dci-context-profile", expanded)
+        self.assertIn("level3", expanded)
+        self.assertIn("--dci-context-contract", expanded)
+        self.assertNotIn("--context-management-level", expanded)
+
     def test_run_recorder_writes_a_conformant_protocol_attempt(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output_dir = Path(temp_dir) / "run"

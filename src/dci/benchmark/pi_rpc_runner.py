@@ -44,6 +44,7 @@ from dci.config import (
     resolve_original_runtime,
     resolve_pi_paths,
 )
+from dci.context_management import resolve_context_extension, resolve_context_profile
 from dci.effective_config import OriginalEffectiveConfig
 from dci.framework.adapters.pi import PiProtocolAdapter, map_pi_capabilities
 from dci.framework.protocol import (
@@ -114,6 +115,14 @@ def write_json(path: Path, payload: Dict[str, Any]) -> None:
 
 def write_private_text(path: Path, text: str) -> None:
     path.write_text(text, encoding="utf-8")
+    path.chmod(0o600)
+
+
+def append_private_text(path: Path, text: str) -> None:
+    if not path.exists():
+        write_private_text(path, "")
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(text)
     path.chmod(0o600)
 
 
@@ -1064,12 +1073,12 @@ class RunRecorder:
     def append_stderr(self, text: str) -> None:
         if not text:
             return
-        with self.stderr_path.open("a", encoding="utf-8") as f:
-            f.write(text)
+        append_private_text(self.stderr_path, text)
 
     def record_event(self, event: Dict[str, Any]) -> None:
-        with self.events_path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(event, ensure_ascii=False) + "\n")
+        append_private_text(
+            self.events_path, json.dumps(event, ensure_ascii=False) + "\n"
+        )
 
         self._protocol_adapter.consume(event)
 
@@ -1180,9 +1189,9 @@ class RunRecorder:
             if self.resume and self.stderr_path.exists():
                 existing_stderr = self.stderr_path.read_text(encoding="utf-8")
                 combined = existing_stderr + ("\n" if existing_stderr and not existing_stderr.endswith("\n") else "") + stderr_text
-                self.stderr_path.write_text(combined, encoding="utf-8")
+                write_private_text(self.stderr_path, combined)
             else:
-                self.stderr_path.write_text(stderr_text, encoding="utf-8")
+                write_private_text(self.stderr_path, stderr_text)
 
         self.conversation_full["status"] = status
         self.conversation_full["finished_at"] = self.state["finished_at"]
@@ -1548,6 +1557,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--question-file", type=Path, help="Read the question from a UTF-8 text file.")
     parser.add_argument(
+        "--prelude-question",
+        action="append",
+        default=[],
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
         "--provider",
         help="Provider passed to pi. Overrides DCI_PROVIDER and the Pi default.",
     )
@@ -1809,11 +1824,14 @@ def effective_config_for_run(
     judge: dict[str, object] = {}
     if judge_config is not None:
         judge = judge_public_identity(judge_config)
+    implementation_sha256: str | None = None
+    if runtime.context_profile is not None:
+        implementation_sha256 = resolve_context_extension().sha256
     return OriginalEffectiveConfig(
         runtime=runtime,
         context={
             "profile": runtime.context_profile,
-            "implementation_sha256": None,
+            "implementation_sha256": implementation_sha256,
         },
         judge=judge,
         experiment={
@@ -1836,7 +1854,18 @@ def resolved_pi_extra_args(args: argparse.Namespace) -> List[str]:
     if args.pi_thinking_level:
         extra_args.extend(["--thinking", args.pi_thinking_level])
     if args.runtime_context_level:
-        extra_args.extend(["--context-management-level", args.runtime_context_level])
+        profile = resolve_context_profile(args.runtime_context_level)
+        extension = resolve_context_extension()
+        extra_args.extend(
+            [
+                "--extension",
+                str(extension.path),
+                "--dci-context-profile",
+                profile.name,
+                "--dci-context-contract",
+                profile.contract_version,
+            ]
+        )
     return extra_args
 
 
@@ -2109,6 +2138,14 @@ def main() -> int:
             recorder.set_command(client.command)
         sys.stderr.write(f"[runner] saving run artifacts under {output_dir}\n")
         sys.stderr.flush()
+
+        for prelude in args.prelude_question:
+            client.prompt_and_wait(
+                prelude,
+                recorder=recorder,
+                max_turns=args.max_turns,
+                timeout_seconds=args.rpc_timeout_seconds,
+            )
 
         final_text = client.prompt_and_wait(
             question,
