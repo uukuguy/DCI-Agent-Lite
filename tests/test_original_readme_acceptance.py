@@ -7,10 +7,15 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
+from dci.context_management import resolve_context_extension
 from tools.verify_original_readme import (
     _bounded_context_evidence,
     _prepare_private_root,
+    _read_context_evidence,
+    _resolve_pi_loader,
     _runner_command,
+    _terminal_preflight,
     validate_readme_contract,
     verify_original_readme_main,
 )
@@ -20,6 +25,69 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 class OriginalReadmeAcceptanceTests(unittest.TestCase):
+    def test_retained_context_evidence_binds_telemetry_and_state_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            session = Path(temp) / "session.jsonl"
+            entries = [
+                {
+                    "type": "custom",
+                    "customType": "dci-context-telemetry",
+                    "data": {
+                        "profile": "level3",
+                        "contractVersion": "dci.context-profile/v1",
+                        "extensionSha256": "a" * 64,
+                        "compactionCount": 1,
+                        "summaryAttempts": 0,
+                        "summarySuccesses": 0,
+                        "summarySuppressed": False,
+                    },
+                },
+                {
+                    "type": "custom",
+                    "customType": "dci-context-state",
+                    "data": {
+                        "profile": "level3",
+                        "contractVersion": "dci.context-profile/v1",
+                        "extensionSha256": "b" * 64,
+                    },
+                },
+            ]
+            session.write_text("\n".join(map(json.dumps, entries)) + "\n")
+
+            with self.assertRaisesRegex(ValueError, "bounded context evidence"):
+                _read_context_evidence(session, "level3")
+
+    def test_loader_resolution_uses_formal_package_override(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            ordinary = root / "pi/packages/coding-agent/dist/core/extensions"
+            override = root / "custom-package/dist/core/extensions"
+            ordinary.mkdir(parents=True)
+            override.mkdir(parents=True)
+            (ordinary / "loader.js").write_text("ordinary")
+            (override / "loader.js").write_text("override")
+
+            loader = _resolve_pi_loader(
+                root,
+                {
+                    "DCI_PI_DIR": "pi",
+                    "DCI_PI_PACKAGE_DIR": "custom-package",
+                },
+            )
+
+        self.assertEqual(loader, override / "loader.js")
+
+    def test_terminal_preflight_builds_literal_command_under_simulated_tty(self) -> None:
+        contract = validate_readme_contract(REPO_ROOT / "README.md")
+
+        preflight = _terminal_preflight(REPO_ROOT, {}, contract["terminal"])
+        command = preflight["argv"]
+
+        self.assertIn("--thinking", command)
+        self.assertIn("high", command)
+        self.assertNotIn("--terminal", command)
+        self.assertEqual(preflight["cwd"], REPO_ROOT / "corpus/wiki_corpus")
+
     def test_bounded_context_command_uses_pressure_preludes_and_bounds(self) -> None:
         command = _runner_command(
             REPO_ROOT,
@@ -64,14 +132,28 @@ class OriginalReadmeAcceptanceTests(unittest.TestCase):
                     "customType": "dci-context-telemetry",
                     "data": {
                         "profile": profile,
+                        "contractVersion": "dci.context-profile/v1",
+                        "extensionSha256": resolve_context_extension().sha256,
                         "compactionCount": 1,
                         "summaryAttempts": 1 if profile == "level4" else 0,
                         "summarySuccesses": 1 if profile == "level4" else 0,
                         "summarySuppressed": False,
                     },
                 }
+                state = {
+                    "type": "custom",
+                    "customType": "dci-context-state",
+                    "data": {
+                        "profile": profile,
+                        "contractVersion": "dci.context-profile/v1",
+                        "extensionSha256": resolve_context_extension().sha256,
+                    },
+                }
                 session = output / "pi-session.jsonl"
-                session.write_text(json.dumps(telemetry) + "\n", encoding="utf-8")
+                session.write_text(
+                    json.dumps(telemetry) + "\n" + json.dumps(state) + "\n",
+                    encoding="utf-8",
+                )
                 session.chmod(0o600)
             return subprocess.CompletedProcess(command, 0, "answer-canary", "stderr-canary")
 

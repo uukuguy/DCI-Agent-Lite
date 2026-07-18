@@ -8,12 +8,14 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import stat
 import subprocess
 import sys
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import TextIO
+from unittest.mock import patch
 
 
 _PROFILES = ("level0", "level1", "level2", "level3", "level4")
@@ -127,33 +129,55 @@ def _model_free_context_contract(repo_root: Path) -> str:
     return extension.sha256
 
 
-def _terminal_preflight(repo_root: Path, environment: Mapping[str, str]) -> None:
-    completed = subprocess.run(
-        [
-            sys.executable,
-            str(repo_root / "src/dci/benchmark/pi_rpc_runner.py"),
-            "--terminal",
-            "--output-dir",
-            str(repo_root / "outputs/terminal-preflight-must-not-run"),
-            "preflight",
-        ],
-        cwd=repo_root,
-        env=dict(environment),
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    if completed.returncode != 2 or "--terminal cannot be combined" not in completed.stderr:
+def _terminal_preflight(
+    repo_root: Path, environment: Mapping[str, str], literal_command: object
+) -> dict[str, object]:
+    if not isinstance(literal_command, str):
         raise ValueError("terminal preflight is invalid")
+    source_root = str(repo_root / "src")
+    if source_root not in sys.path:
+        sys.path.insert(0, source_root)
+    from dci.benchmark import pi_rpc_runner as runner  # noqa: PLC0415
+    from dci.config import ConfigLayers  # noqa: PLC0415
+
+    tokens = shlex.split(literal_command.replace("\\\n", " "))
+    try:
+        script_index = next(
+            index
+            for index, token in enumerate(tokens)
+            if token.endswith("src/dci/benchmark/pi_rpc_runner.py")
+        )
+    except StopIteration as exc:
+        raise ValueError("terminal preflight is invalid") from exc
+    argv = [tokens[script_index], *tokens[script_index + 1 :]]
+    with (
+        patch.object(sys, "argv", argv),
+        patch.dict(os.environ, dict(environment), clear=True),
+        patch("sys.stdin.isatty", return_value=True),
+        patch("sys.stdout.isatty", return_value=True),
+        patch.object(
+            runner,
+            "ensure_built_pi_cli",
+            return_value=repo_root / "pi/packages/coding-agent/dist/cli.js",
+        ),
+        patch.object(runner, "_node_bin", return_value="node"),
+    ):
+        args = runner.parse_args()
+        runner.resolve_runtime_args(args, ConfigLayers(environment, {}))
+        if runner.validate_terminal_mode_args(args) is not None:
+            raise ValueError("terminal preflight is invalid")
+        command = runner.build_terminal_mode_command(args)
+    if "--mode" in command or "--terminal" in command:
+        raise ValueError("terminal preflight is invalid")
+    return {"argv": command, "cwd": args.cwd.resolve()}
 
 
 def _resolve_pi_loader(repo_root: Path, environment: Mapping[str, str]) -> Path:
-    candidates = []
-    configured = environment.get("DCI_PI_DIR")
-    if configured:
-        value = Path(configured).expanduser()
-        candidates.append(value if value.is_absolute() else repo_root / value)
-    candidates.append(repo_root / "pi")
+    _, _, _, _ = _original_context_api(repo_root)
+    from dci.config import resolve_pi_paths  # noqa: PLC0415
+
+    formal = resolve_pi_paths(repo_root, environment)
+    candidates = [formal.package_dir]
     common = subprocess.run(
         ["git", "rev-parse", "--git-common-dir"],
         cwd=repo_root,
@@ -165,9 +189,14 @@ def _resolve_pi_loader(repo_root: Path, environment: Mapping[str, str]) -> Path:
         common_dir = Path(common.stdout.strip())
         if not common_dir.is_absolute():
             common_dir = repo_root / common_dir
-        candidates.append(common_dir.resolve().parent / "pi")
-    for pi_dir in candidates:
-        loader = pi_dir / "packages/coding-agent/dist/core/extensions/loader.js"
+        if not environment.get("DCI_PI_DIR") and not environment.get(
+            "DCI_PI_PACKAGE_DIR"
+        ):
+            candidates.append(
+                resolve_pi_paths(common_dir.resolve().parent, environment).package_dir
+            )
+    for package_dir in candidates:
+        loader = package_dir / "dist/core/extensions/loader.js"
         if loader.is_file():
             return loader
     raise ValueError("installed Pi extension loader is unavailable")
@@ -216,6 +245,13 @@ def _run_extension_fixture(
         or result.get("profiles", {}).get("level4", {}).get("summarySuccesses") != 1
         or result.get("failureSuppression") != {"attempts": 3, "suppressed": True}
         or result.get("resumeEvent") != "resume"
+        or result.get("resumeGuards")
+        != {"profile": True, "contract": True, "digest": True}
+        or result.get("retainedTargetGuard") is not True
+        or result.get("profiles", {}).get("level4", {}).get(
+            "summaryRecentTokenTarget"
+        )
+        != 20_000
         or any(
             value.get("customTypes")
             != ["dci-context-state", "dci-context-telemetry"]
@@ -338,15 +374,31 @@ def _bounded_context_evidence(profile: str, summary: Mapping[str, object]) -> di
     return dict(summary)
 
 
-def _read_context_evidence(session_file: Path, profile: str, extension_sha256: str) -> dict[str, object]:
+def _read_context_evidence(session_file: Path, profile: str) -> dict[str, object]:
     telemetry = []
+    states = []
     for line in session_file.read_text(encoding="utf-8").splitlines():
         entry = json.loads(line)
         if entry.get("type") == "custom" and entry.get("customType") == "dci-context-telemetry":
             telemetry.append(entry.get("data"))
-    if not telemetry or not isinstance(telemetry[-1], dict):
+        if entry.get("type") == "custom" and entry.get("customType") == "dci-context-state":
+            states.append(entry.get("data"))
+    if (
+        not telemetry
+        or not states
+        or not isinstance(telemetry[-1], dict)
+        or not isinstance(states[-1], dict)
+    ):
         raise ValueError("bounded context evidence is invalid")
     latest = telemetry[-1]
+    state = states[-1]
+    if (
+        latest.get("profile") != state.get("profile")
+        or latest.get("contractVersion") != "dci.context-profile/v1"
+        or state.get("contractVersion") != "dci.context-profile/v1"
+        or latest.get("extensionSha256") != state.get("extensionSha256")
+    ):
+        raise ValueError("bounded context evidence is invalid")
     return _bounded_context_evidence(
         profile,
         {
@@ -355,7 +407,7 @@ def _read_context_evidence(session_file: Path, profile: str, extension_sha256: s
             "summary_attempts": latest.get("summaryAttempts"),
             "summary_successes": latest.get("summarySuccesses"),
             "summary_suppressed": latest.get("summarySuppressed"),
-            "extension_sha256": extension_sha256,
+            "extension_sha256": latest.get("extensionSha256"),
         },
     )
 
@@ -406,7 +458,7 @@ def verify_original_readme_main(
     root = Path(__file__).resolve().parents[1] if repo_root is None else Path(repo_root).resolve()
     try:
         args = _parser().parse_args(argv)
-        validate_readme_contract(root / "README.md")
+        readme_contract = validate_readme_contract(root / "README.md")
         environment = _load_env_file(args.env_file.resolve() if args.env_file else None, os.environ)
         environment["PYTHONPATH"] = str(root / "src")
         extension_digest = _model_free_context_contract(root)
@@ -415,7 +467,7 @@ def verify_original_readme_main(
             environment,
             _original_context_api(root)[2]().path,
         )
-        _terminal_preflight(root, environment)
+        _terminal_preflight(root, environment, readme_contract["terminal"])
         if args.level == "local":
             stdout.write("PASS\nAgent operations: 0\nJudge operations: 0\nFull dataset ran: no\n")
             return 0
@@ -445,8 +497,10 @@ def verify_original_readme_main(
                 raise ValueError(f"bounded command failed: {command_id}")
             if profile is not None:
                 evidence = _read_context_evidence(
-                    output_dir / "pi-session.jsonl", profile, extension_digest
+                    output_dir / "pi-session.jsonl", profile
                 )
+                if evidence["extension_sha256"] != extension_digest:
+                    raise ValueError("bounded context evidence is invalid")
                 evidence_path = output_dir / "context-evidence.json"
                 evidence_path.write_text(
                     json.dumps(evidence, sort_keys=True, indent=2) + "\n",

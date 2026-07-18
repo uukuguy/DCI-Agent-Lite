@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import unittest
+from pathlib import Path
 
 from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
 from dci.context_management import (
@@ -10,9 +12,35 @@ from dci.context_management import (
     resolve_context_extension,
     resolve_context_profile,
 )
+from tools.verify_original_readme import _resolve_pi_loader
 
 
 class OriginalContextManagementTests(unittest.TestCase):
+    def test_real_extension_binds_resume_identity_and_l4_target(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        extension = resolve_context_extension()
+        completed = subprocess.run(
+            [
+                "node",
+                str(root / "tools/fixtures/original-context-extension-harness.mjs"),
+                str(_resolve_pi_loader(root, {})),
+                str(extension.path),
+                str(root),
+            ],
+            cwd=root,
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+        result = json.loads(completed.stdout)
+
+        self.assertEqual(
+            result["resumeGuards"],
+            {"profile": True, "contract": True, "digest": True},
+        )
+        self.assertTrue(result["retainedTargetGuard"])
+        self.assertEqual(result["profiles"]["level4"]["summaryRecentTokenTarget"], 20_000)
+
     def test_original_resources_are_independent_and_integrity_checked(self) -> None:
         extension = resolve_context_extension()
 

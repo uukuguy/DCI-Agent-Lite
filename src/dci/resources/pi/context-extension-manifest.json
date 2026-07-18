@@ -3,6 +3,6 @@
   "extension_version": "1.0.0",
   "contract_version": "dci.context-profile/v1",
   "resource": "dci-context-extension.ts",
-  "byte_length": 5110,
-  "sha256": "712a83ad88e742bc03755df5f706129d3667dbe9922db7136e202da23e5ccdae"
+  "byte_length": 6131,
+  "sha256": "5befa6f39852ae0cad3e7c8540434c8f5b7eed6410dfe501c37f28d2af4482bd"
 }

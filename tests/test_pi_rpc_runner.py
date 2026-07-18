@@ -128,6 +128,9 @@ class PiRpcLifecycleTests(unittest.TestCase):
         self.assertIn("--dci-context-profile", expanded)
         self.assertIn("level3", expanded)
         self.assertIn("--dci-context-contract", expanded)
+        self.assertIn("--dci-context-extension-sha256", expanded)
+        digest_index = expanded.index("--dci-context-extension-sha256") + 1
+        self.assertRegex(expanded[digest_index], r"^[0-9a-f]{64}$")
         self.assertNotIn("--context-management-level", expanded)
 
     def test_run_recorder_writes_a_conformant_protocol_attempt(self) -> None:

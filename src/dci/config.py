@@ -223,7 +223,9 @@ def _project_path(repo_root: Path, value: str | Path) -> Path:
     return path.resolve()
 
 
-def resolve_pi_paths(repo_root: Path) -> PiPaths:
+def resolve_pi_paths(
+    repo_root: Path, environment: Mapping[str, str] | None = None
+) -> PiPaths:
     """Resolve Pi paths from `.env`, preferring the new `pi` checkout name.
 
     `DCI_PI_DIR` selects the checkout. Without it, an existing `pi` directory
@@ -231,7 +233,8 @@ def resolve_pi_paths(repo_root: Path) -> PiPaths:
     can be overridden independently for unusual layouts.
     """
 
-    configured_pi_dir = os.environ.get("DCI_PI_DIR", "").strip()
+    values = os.environ if environment is None else environment
+    configured_pi_dir = values.get("DCI_PI_DIR", "").strip()
     if configured_pi_dir:
         pi_dir = _project_path(repo_root, configured_pi_dir)
     else:
@@ -241,13 +244,13 @@ def resolve_pi_paths(repo_root: Path) -> PiPaths:
             candidates[0],
         )
 
-    configured_package_dir = os.environ.get("DCI_PI_PACKAGE_DIR", "").strip()
+    configured_package_dir = values.get("DCI_PI_PACKAGE_DIR", "").strip()
     package_dir = (
         _project_path(repo_root, configured_package_dir)
         if configured_package_dir
         else pi_dir / "packages" / "coding-agent"
     )
-    configured_agent_dir = os.environ.get("DCI_PI_AGENT_DIR", "").strip()
+    configured_agent_dir = values.get("DCI_PI_AGENT_DIR", "").strip()
     agent_dir = (
         _project_path(repo_root, configured_agent_dir)
         if configured_agent_dir

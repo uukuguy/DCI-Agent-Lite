@@ -1864,6 +1864,8 @@ def resolved_pi_extra_args(args: argparse.Namespace) -> List[str]:
                 profile.name,
                 "--dci-context-contract",
                 profile.contract_version,
+                "--dci-context-extension-sha256",
+                extension.sha256,
             ]
         )
     return extra_args
@@ -1966,11 +1968,21 @@ def run_terminal_mode(args: argparse.Namespace) -> int:
         print(error, file=sys.stderr)
         return 2
 
-    system_prompt_file = resolve_repo_relative_path(args.system_prompt_file)
-    append_system_prompt_file = resolve_repo_relative_path(args.append_system_prompt_file)
     env = _node_env(os.environ.copy())
     env["PI_CODING_AGENT_DIR"] = str(args.agent_dir.resolve())
-    cmd = build_pi_command(
+    completed = subprocess.run(
+        build_terminal_mode_command(args),
+        cwd=str(args.cwd.resolve()),
+        env=env,
+        check=False,
+    )
+    return completed.returncode
+
+
+def build_terminal_mode_command(args: argparse.Namespace) -> List[str]:
+    system_prompt_file = resolve_repo_relative_path(args.system_prompt_file)
+    append_system_prompt_file = resolve_repo_relative_path(args.append_system_prompt_file)
+    return build_pi_command(
         package_dir=args.package_dir.resolve(),
         mode=None,
         provider=args.provider,
@@ -1982,13 +1994,6 @@ def run_terminal_mode(args: argparse.Namespace) -> int:
         extra_args=resolved_pi_extra_args(args),
         messages=terminal_initial_messages(args),
     )
-    completed = subprocess.run(
-        cmd,
-        cwd=str(args.cwd.resolve()),
-        env=env,
-        check=False,
-    )
-    return completed.returncode
 
 
 def main() -> int:
