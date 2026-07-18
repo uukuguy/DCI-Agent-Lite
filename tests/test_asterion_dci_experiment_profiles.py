@@ -152,6 +152,55 @@ class ExperimentProfileTests(unittest.TestCase):
 
 
 class FullExecutionAuthorizationTests(unittest.TestCase):
+    def test_registry_snapshot_is_independent_and_rejects_every_field_tamper(self) -> None:
+        import asterion.dci.experiment_profiles as module
+
+        scope = "browsecomp-plus.main.all830"
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            base = Path(temporary_directory)
+            probe = module.authorize_full_execution(
+                "current-default/pi", base / "probe", 1.0, True, **_preflight()
+            )
+            record = module._AUTHORIZATION_REGISTRY[probe._issuance_token]
+            self.assertIsNot(record, probe)
+            self.assertFalse(hasattr(record, "authorization"))
+
+            replacements = {
+                "profile_id": "paper-reference/pi",
+                "profile_sha256": "0" * 64,
+                "dataset_inventory_sha256": "0" * 64,
+                "experiment_scopes_sha256": "0" * 64,
+                "authorized_scope_ids": (scope,),
+                "selected_ids_sha256": ("0" * 64,),
+                "output_root": base / "other",
+                "output_root_device": -1,
+                "output_root_inode": -1,
+                "estimated_budget_usd": 2.0,
+                "invocation_authorized": False,
+                "_issuance_token": "0" * 64,
+            }
+            for index, (field, replacement) in enumerate(replacements.items()):
+                with self.subTest(field=field):
+                    authorization = module.authorize_full_execution(
+                        "current-default/pi",
+                        base / f"tampered-{index}",
+                        1.0,
+                        True,
+                        **_preflight(),
+                    )
+                    original = getattr(authorization, field)
+                    object.__setattr__(authorization, field, replacement)
+                    with self.assertRaisesRegex(ValueError, "authorization"):
+                        module.consume_full_execution_authorization(
+                            authorization, scope
+                        )
+                    object.__setattr__(authorization, field, original)
+                    self.assertIsNone(
+                        module.consume_full_execution_authorization(
+                            authorization, scope
+                        )
+                    )
+
     def test_authorization_cannot_be_manually_constructed_copied_or_replaced(self) -> None:
         from asterion.dci.experiment_profiles import (
             FullExecutionAuthorization,
@@ -230,6 +279,52 @@ class FullExecutionAuthorizationTests(unittest.TestCase):
                         root.mkdir(mode=0o700)
                 with self.assertRaisesRegex(ValueError, "output root"):
                     consume_full_execution_authorization(authorization, scope)
+
+    def test_execution_lock_revalidates_authorized_root_before_any_write(self) -> None:
+        from asterion.dci.benchmark import DciBenchmarkError, _BatchLock
+        from asterion.dci.experiment_profiles import authorize_full_execution
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            base = Path(temporary_directory).resolve()
+            root = base / "issued"
+            authorization = authorize_full_execution(
+                "current-default/pi", root, 1.0, True, **_preflight()
+            )
+            moved = base / "moved"
+            root.rename(moved)
+            root.mkdir(mode=0o755)
+            with self.assertRaisesRegex(DciBenchmarkError, "identity changed"):
+                _BatchLock.acquire(
+                    root,
+                    expected_identity=(
+                        authorization.output_root_device,
+                        authorization.output_root_inode,
+                    ),
+                )
+            self.assertEqual(tuple(root.iterdir()), ())
+            self.assertEqual(stat.S_IMODE(root.stat().st_mode), 0o755)
+            self.assertEqual(tuple(moved.iterdir()), ())
+
+    def test_execution_lock_never_recreates_a_missing_authorized_root(self) -> None:
+        from asterion.dci.benchmark import DciBenchmarkError, _BatchLock
+        from asterion.dci.experiment_profiles import authorize_full_execution
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            base = Path(temporary_directory).resolve()
+            root = base / "issued"
+            authorization = authorize_full_execution(
+                "current-default/pi", root, 1.0, True, **_preflight()
+            )
+            root.rename(base / "moved")
+            with self.assertRaises(DciBenchmarkError):
+                _BatchLock.acquire(
+                    root,
+                    expected_identity=(
+                        authorization.output_root_device,
+                        authorization.output_root_inode,
+                    ),
+                )
+            self.assertFalse(root.exists())
 
     def test_preflight_bindings_are_mandatory_and_exact(self) -> None:
         from asterion.dci.experiment_profiles import authorize_full_execution
@@ -524,6 +619,25 @@ class FullExecutionAuthorizationTests(unittest.TestCase):
             self.assertIn("Full authorization issued: no", stdout.getvalue())
             self.assertNotIn("Full dataset authorized: yes", stdout.getvalue())
             self.assertFalse((base / "authorized-plan").exists())
+            runner.assert_not_called()
+
+            issued_stdout = io.StringIO()
+            issued_root = base / "issued"
+            self.assertEqual(
+                main(
+                    [
+                        "paper", "reproduce", "--profile", "current-default/pi",
+                        "--output-root", str(issued_root),
+                        "--estimated-budget-usd", "12.5", "--authorize-full",
+                    ],
+                    stdout=issued_stdout,
+                    stderr=io.StringIO(),
+                ),
+                0,
+            )
+            self.assertIn("Full authorization issued: yes", issued_stdout.getvalue())
+            self.assertNotIn("Full authorization issued: no", issued_stdout.getvalue())
+            self.assertTrue(issued_root.is_dir())
             runner.assert_not_called()
 
 

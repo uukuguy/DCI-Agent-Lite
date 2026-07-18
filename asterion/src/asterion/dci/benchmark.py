@@ -163,7 +163,19 @@ async def run_benchmark_async(
     """Run one bounded batch while retaining its writer lock until all work drains."""
 
     rows, output_root, config, row_documents, snapshots = _prepare(request)
-    lock = _BatchLock.acquire(output_root)
+    expected_identity = None
+    if request.full_execution_authorization is not None:
+        from asterion.dci.experiment_profiles import (
+            _consumed_authorized_output_identity,
+        )
+
+        authorized_root, device, inode = _consumed_authorized_output_identity(
+            request.full_execution_authorization
+        )
+        if authorized_root != output_root:
+            raise DciBenchmarkError("DCI benchmark authorization root changed")
+        expected_identity = (device, inode)
+    lock = _BatchLock.acquire(output_root, expected_identity=expected_identity)
     tasks: list[asyncio.Task[tuple[int, dict[str, object]]]] = []
     results: dict[int, dict[str, object]] = {}
     snapshot_authority: _SnapshotAuthority | None = None
@@ -1825,7 +1837,9 @@ def _reject_symlink_components(path: Path) -> None:
             raise DciBenchmarkError("DCI benchmark destination is unsafe")
 
 
-def _open_or_create_output_directory(path: Path) -> int:
+def _open_or_create_output_directory(
+    path: Path, *, expected_identity: tuple[int, int] | None = None
+) -> int:
     descriptor = os.open("/", os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
     try:
         for component in path.parts[1:]:
@@ -1838,6 +1852,8 @@ def _open_or_create_output_directory(path: Path) -> int:
                     dir_fd=descriptor,
                 )
             except FileNotFoundError:
+                if expected_identity is not None:
+                    raise
                 os.mkdir(component, 0o700, dir_fd=descriptor)
                 next_descriptor = os.open(
                     component,
@@ -1848,6 +1864,14 @@ def _open_or_create_output_directory(path: Path) -> int:
                 )
             os.close(descriptor)
             descriptor = next_descriptor
+        opened = os.fstat(descriptor)
+        if expected_identity is not None and (
+            opened.st_dev,
+            opened.st_ino,
+        ) != expected_identity:
+            raise DciBenchmarkError(
+                "DCI benchmark authorized output root identity changed"
+            )
         os.fchmod(descriptor, 0o700)
         return descriptor
     except BaseException:
@@ -2002,21 +2026,36 @@ class _BatchLock(_Directory):
         self.lock_fd: int | None = None
 
     @classmethod
-    def acquire(cls, path: Path) -> _BatchLock:
+    def acquire(
+        cls, path: Path, *, expected_identity: tuple[int, int] | None = None
+    ) -> _BatchLock:
         if fcntl is None:
             raise DciBenchmarkError("DCI benchmark locking is unavailable")
         _reject_symlink_components(path)
         try:
-            fd = _open_or_create_output_directory(path)
+            fd = _open_or_create_output_directory(
+                path, expected_identity=expected_identity
+            )
         except OSError as error:
             raise DciBenchmarkError("DCI benchmark destination is unsafe") from error
         lock = cls(path, fd)
         try:
+            opened = os.fstat(fd)
+            if expected_identity is not None and (
+                opened.st_dev,
+                opened.st_ino,
+            ) != expected_identity:
+                raise DciBenchmarkError(
+                    "DCI benchmark authorized output root identity changed"
+                )
             os.fchmod(fd, 0o700)
             lock.lock_fd = os.open(cls.LOCK_NAME, os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600, dir_fd=fd)
             os.fchmod(lock.lock_fd, 0o600)
             fcntl.flock(lock.lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
             return lock
+        except DciBenchmarkError:
+            lock.release()
+            raise
         except (BlockingIOError, OSError) as error:
             lock.release()
             raise DciBenchmarkError("DCI benchmark is already running") from error

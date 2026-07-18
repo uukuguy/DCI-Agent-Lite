@@ -415,10 +415,11 @@ def main(
                     "Full authorization requested: "
                     + ("yes\n" if args.authorize_full else "no\n")
                 )
-                stdout.write("Full authorization issued: no\n")
                 if args.dry_run:
+                    stdout.write("Full authorization issued: no\n")
                     return 0
                 if not args.authorize_full:
+                    stdout.write("Full authorization issued: no\n")
                     return 2
                 authorize_full_execution(
                     args.profile,
@@ -433,6 +434,7 @@ def main(
                     preflight_scope_ids=profile.scope_ids,
                     preflight_selected_ids_sha256=profile.selected_ids_sha256,
                 )
+                stdout.write("Full authorization issued: yes\n")
                 stdout.write("Execution delegated: no\n")
                 return 0
             verify_argv = []

@@ -132,9 +132,27 @@ class FullExecutionAuthorization:
         raise TypeError("FullExecutionAuthorization is issued only by authorize_full_execution")
 
 
+@dataclass(frozen=True, slots=True)
+class _AuthorizationSnapshot:
+    capability_identity: int
+    profile_id: str
+    profile_sha256: str
+    dataset_inventory_sha256: str
+    experiment_scopes_sha256: str
+    authorized_scope_ids: tuple[str, ...]
+    selected_ids_sha256: tuple[str, ...]
+    scope_selections: tuple[tuple[str, str], ...]
+    output_root: Path
+    output_root_device: int
+    output_root_inode: int
+    estimated_budget_usd: float
+    invocation_authorized: bool
+    issuance_token: str
+
+
 @dataclass(slots=True)
 class _AuthorizationRecord:
-    authorization: FullExecutionAuthorization
+    snapshot: _AuthorizationSnapshot
     consumed_scopes: set[str]
 
 
@@ -346,6 +364,36 @@ def _issue_authorization(**values: object) -> FullExecutionAuthorization:
     return authorization
 
 
+def _authorization_matches_snapshot(
+    authorization: FullExecutionAuthorization, snapshot: _AuthorizationSnapshot
+) -> bool:
+    return (
+        id(authorization) == snapshot.capability_identity
+        and authorization.profile_id == snapshot.profile_id
+        and authorization.profile_sha256 == snapshot.profile_sha256
+        and authorization.dataset_inventory_sha256
+        == snapshot.dataset_inventory_sha256
+        and authorization.experiment_scopes_sha256
+        == snapshot.experiment_scopes_sha256
+        and authorization.authorized_scope_ids == snapshot.authorized_scope_ids
+        and authorization.selected_ids_sha256 == snapshot.selected_ids_sha256
+        and tuple(
+            zip(
+                authorization.authorized_scope_ids,
+                authorization.selected_ids_sha256,
+                strict=True,
+            )
+        )
+        == snapshot.scope_selections
+        and authorization.output_root == snapshot.output_root
+        and authorization.output_root_device == snapshot.output_root_device
+        and authorization.output_root_inode == snapshot.output_root_inode
+        and authorization.estimated_budget_usd == snapshot.estimated_budget_usd
+        and authorization.invocation_authorized is snapshot.invocation_authorized
+        and authorization._issuance_token == snapshot.issuance_token
+    )
+
+
 def authorize_full_execution(
     profile_id: str,
     output_root: Path,
@@ -403,8 +451,24 @@ def authorize_full_execution(
         invocation_authorized=True,
         _issuance_token=token,
     )
+    snapshot = _AuthorizationSnapshot(
+        capability_identity=id(authorization),
+        profile_id=profile.profile_id,
+        profile_sha256=profile_sha256,
+        dataset_inventory_sha256=profile.dataset_inventory_sha256,
+        experiment_scopes_sha256=profile.experiment_scopes_sha256,
+        authorized_scope_ids=scope_ids,
+        selected_ids_sha256=selected_digests,
+        scope_selections=tuple(zip(scope_ids, selected_digests, strict=True)),
+        output_root=private_root,
+        output_root_device=device,
+        output_root_inode=inode,
+        estimated_budget_usd=float(estimated_budget_usd),
+        invocation_authorized=True,
+        issuance_token=token,
+    )
     with _AUTHORIZATION_LOCK:
-        _AUTHORIZATION_REGISTRY[token] = _AuthorizationRecord(authorization, set())
+        _AUTHORIZATION_REGISTRY[token] = _AuthorizationRecord(snapshot, set())
     return authorization
 
 
@@ -418,9 +482,11 @@ def consume_full_execution_authorization(
     token = getattr(authorization, "_issuance_token", None)
     with _AUTHORIZATION_LOCK:
         record = _AUTHORIZATION_REGISTRY.get(token)
-        if record is None or record.authorization is not authorization:
+        if record is None or not _authorization_matches_snapshot(
+            authorization, record.snapshot
+        ):
             raise ValueError("DCI full execution authorization is invalid")
-        issued = record.authorization
+        issued = record.snapshot
         if (
             issued.invocation_authorized is not True
             or scope_id not in issued.authorized_scope_ids
@@ -436,3 +502,27 @@ def consume_full_execution_authorization(
         if (device, inode) != (issued.output_root_device, issued.output_root_inode):
             raise ValueError("DCI full execution output root identity changed")
         record.consumed_scopes.add(scope_id)
+
+
+def _consumed_authorized_output_identity(
+    authorization: FullExecutionAuthorization,
+) -> tuple[Path, int, int]:
+    """Return an independent root identity only after exact capability consumption."""
+
+    if not isinstance(authorization, FullExecutionAuthorization):
+        raise ValueError("DCI full execution authorization is invalid")
+    token = getattr(authorization, "_issuance_token", None)
+    with _AUTHORIZATION_LOCK:
+        record = _AUTHORIZATION_REGISTRY.get(token)
+        if (
+            record is None
+            or not record.consumed_scopes
+            or not _authorization_matches_snapshot(authorization, record.snapshot)
+        ):
+            raise ValueError("DCI full execution authorization is invalid")
+        snapshot = record.snapshot
+        return (
+            snapshot.output_root,
+            snapshot.output_root_device,
+            snapshot.output_root_inode,
+        )
