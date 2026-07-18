@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import stat
 import subprocess
 import sys
 import tempfile
@@ -64,6 +65,34 @@ def make_recorder(output_dir: Path, *, resume: bool = False) -> rpc_runner.RunRe
 
 
 class PiRpcLifecycleTests(unittest.TestCase):
+    def test_programmatic_required_artifacts_are_private(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "run"
+            with patch.object(
+                rpc_runner,
+                "collect_pi_source_provenance",
+                return_value={"commit": "abc123", "dirty": False},
+            ):
+                recorder = make_recorder(output_dir)
+            rpc_runner.write_effective_config(
+                output_dir / "effective-config.json", {"schema": "fixture"}
+            )
+            recorder.finalize(status="completed", final_text="answer")
+
+            required = (
+                output_dir / "question.txt",
+                output_dir / "final.txt",
+                output_dir / "conversation_full.json",
+                output_dir / "effective-config.json",
+                output_dir / "protocol/attempt-0001.request.json",
+                output_dir / "protocol/attempt-0001.events.jsonl",
+            )
+            self.assertEqual(stat.S_IMODE(output_dir.stat().st_mode), 0o700)
+            for path in required:
+                with self.subTest(path=path.name):
+                    self.assertTrue(path.is_file())
+                    self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
+
     def test_run_recorder_writes_a_conformant_protocol_attempt(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output_dir = Path(temp_dir) / "run"
@@ -651,7 +680,14 @@ class PiRpcLifecycleTests(unittest.TestCase):
             json_mode=True,
         )
 
-        with self.assertRaisesRegex(ValueError, "unsafe judge endpoint"):
+        with (
+            patch.object(
+                bcplus_runner,
+                "judge_public_identity",
+                return_value={"endpoint": judge.endpoint},
+            ),
+            self.assertRaisesRegex(ValueError, "unsafe judge endpoint"),
+        ):
             bcplus_runner.effective_config_for_batch(
                 runtime=runtime, args=args, judge_config=judge
             )

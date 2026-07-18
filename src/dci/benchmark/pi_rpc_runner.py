@@ -108,7 +108,13 @@ def utc_now() -> str:
 def write_json(path: Path, payload: Dict[str, Any]) -> None:
     tmp_path = path.with_suffix(path.suffix + ".tmp")
     tmp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp_path.chmod(0o600)
     tmp_path.replace(path)
+
+
+def write_private_text(path: Path, text: str) -> None:
+    path.write_text(text, encoding="utf-8")
+    path.chmod(0o600)
 
 
 def read_text_if_exists(path: Optional[Path]) -> Optional[str]:
@@ -494,6 +500,7 @@ class RunRecorder:
             revision_override=os.environ.get("DCI_PI_REVISION") or None,
         )
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.output_dir.chmod(0o700)
         self._pending_tool_call_starts: Dict[str, str] = {}
         self._completed_tool_call_timings: Dict[str, Dict[str, Any]] = {}
 
@@ -527,7 +534,7 @@ class RunRecorder:
                 conversation_features=conversation_features,
                 keep_session=keep_session,
             )
-            self.question_path.write_text(question + "\n", encoding="utf-8")
+            write_private_text(self.question_path, question + "\n")
             self.state["status"] = "running"
             self.state["finished_at"] = None
             self.state["error"] = None
@@ -556,7 +563,7 @@ class RunRecorder:
                     "Resume is reusing the artifact directory only; agent session continuity is not preserved without --keep-session."
                 )
         else:
-            self.question_path.write_text(question + "\n", encoding="utf-8")
+            write_private_text(self.question_path, question + "\n")
             self.state = {
                 "started_at": utc_now(),
                 "finished_at": None,
@@ -658,9 +665,10 @@ class RunRecorder:
         attempt_stem = f"attempt-{attempt:04d}"
         run_id = f"{sanitize_path_component(self.output_dir.name)}-{attempt_stem}"
         self.protocol_dir.mkdir(parents=True, exist_ok=True)
+        self.protocol_dir.chmod(0o700)
         self.protocol_request_path = self.protocol_dir / f"{attempt_stem}.request.json"
         self.protocol_events_path = self.protocol_dir / f"{attempt_stem}.events.jsonl"
-        self.protocol_events_path.write_text("", encoding="utf-8")
+        write_private_text(self.protocol_events_path, "")
         capabilities = map_pi_capabilities(tools)
         request: Dict[str, Any] = {
             "protocol": PROTOCOL_VERSION,
@@ -1167,7 +1175,7 @@ class RunRecorder:
             self.state["error"] = error
 
         if self.state["assistant_text"]:
-            self.final_path.write_text(self.state["assistant_text"] + ("\n" if not self.state["assistant_text"].endswith("\n") else ""), encoding="utf-8")
+            write_private_text(self.final_path, self.state["assistant_text"] + ("\n" if not self.state["assistant_text"].endswith("\n") else ""))
         if stderr_text:
             if self.resume and self.stderr_path.exists():
                 existing_stderr = self.stderr_path.read_text(encoding="utf-8")

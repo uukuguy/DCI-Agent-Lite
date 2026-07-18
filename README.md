@@ -446,21 +446,21 @@ compatible Responses endpoints do not receive the field.
 <a name="quick-start"></a>
 ## ⚡ Quick Start
 
-**Prerequisites**: Install dependencies and configure the agent and judge credentials you plan to use (see [Setup](#setup)).
+**Prerequisites**: Install dependencies and create the repository configuration file. Add only the agent and independent Judge credentials you intend to use (see [Setup](#setup)); exported environment values and explicit CLI values take precedence over `.env`.
+
+```bash
+cp .env.template .env
+```
 
 The example below illustrates DCI-Agent-Lite in action: the deep research agent searches the corpus, inspects relevant documents, and produces evidence-grounded answers entirely within the given wikipedia corpus.
 
 1. **Open the DCI-Agent-Lite TUI**:
 
 ```bash
-# load keys from .env if not already in environment
-set -a; source .env 2>/dev/null; set +a
-
-PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner --terminal \
-  --provider openai \
-  --model gpt-5.4-nano \
+# quick-start-terminal: uses the Pi runtime defaults from the layered configuration
+PYTHONPATH=src uv run python src/dci/benchmark/pi_rpc_runner.py --terminal \
   --cwd "corpus/wiki_corpus" \
-  --extra-arg="--thinking high"
+  --pi-thinking-level high
 ```
 
 2. **Run your first task**. In the TUI, type:
@@ -472,17 +472,25 @@ Answer the following question using only wiki_dump.jsonl in the current director
 3. (Optional) **Run Programmatically from the CLI**. Remove the `--terminal` flag and pass your task as the final argument:
 
 ```bash
-set -a; source .env 2>/dev/null; set +a
-
-PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
-  --provider openai \
-  --model gpt-5.4-nano \
+# quick-start-programmatic: writes the private run artifacts described below
+PYTHONPATH=src uv run python src/dci/benchmark/pi_rpc_runner.py \
   --cwd "corpus/wiki_corpus" \
-  --extra-arg="--thinking high" \
+  --pi-thinking-level high \
   "Answer the following question using only wiki_dump.jsonl in the current directory. Do not use web search. Use rg instead of grep for fast searching. Question: In which street did the Great Fire of London originate?"
 ```
 
-Programmatic runs save artifacts under `outputs/runs/<timestamp>/`. The final answer is in `final.txt`, the original question is in `question.txt`, and the full trajectory is in `conversation_full.json`. To choose a specific location, pass `--output-dir path/to/run`. 
+The same command can override the selected Pi provider and model without changing or bypassing `.env`:
+
+```bash
+# quick-start-override: explicit invocation values have highest precedence
+PYTHONPATH=src uv run python src/dci/benchmark/pi_rpc_runner.py \
+  --provider openai-codex \
+  --model gpt-5.6-luna \
+  --cwd "corpus/wiki_corpus" \
+  "Answer the following question using only wiki_dump.jsonl in the current directory. Question: In which street did the Great Fire of London originate?"
+```
+
+Programmatic runs save private artifacts under `outputs/runs/<timestamp>/`. The original question is in `question.txt`, the final answer in `final.txt`, the full trajectory in `conversation_full.json`, protocol request/event evidence under `protocol/`, and the body-free resolved configuration in `effective-config.json`. The run directory is mode `0700` and these files are mode `0600`. To choose a fresh location, pass `--output-dir path/to/run`.
 
 More runnable examples for OpenAI, Anthropic and vLLM are available in [`scripts/examples/`](scripts/examples/) as `dci_basic_*.sh`. See the [setup guide](assets/docs/setup.md#5-optional-configure-a-local-vllm-provider) for vLLM configuration.
 
@@ -530,26 +538,45 @@ Evidence labels are intentionally narrow:
 - **Bounded provider verified**: reserved for retained L3/L4 runs from `tools/verify_dci_context_acceptance.py --provider-backed`; it is not a full benchmark claim.
 - **Experiment reproduced**: not yet claimed; full paper runs require separate AF-340 budget authorization.
 
-Model-free setup verification is:
+Each closed profile is executable through the normal original DCI entry point. These commands use runtime defaults; each is a provider operation when executed:
 
 ```bash
-uv run --project asterion python tools/verify_dci_context_acceptance.py
+# context-level0
+PYTHONPATH=src uv run python src/dci/benchmark/pi_rpc_runner.py --runtime-context-level level0 --cwd corpus/wiki_corpus "Answer using only wiki_dump.jsonl: Where did the Great Fire of London originate?"
 ```
 
-The bounded provider-backed verifier is cost-bearing and must use a private
-output root; it performs only its declared L3 and L4 cases, never a full dataset.
-
-Set Pi thinking explicitly:
+```bash
+# context-level1
+PYTHONPATH=src uv run python src/dci/benchmark/pi_rpc_runner.py --runtime-context-level level1 --cwd corpus/wiki_corpus "Answer using only wiki_dump.jsonl: Where did the Great Fire of London originate?"
+```
 
 ```bash
-set -a; source .env 2>/dev/null; set +a
+# context-level2
+PYTHONPATH=src uv run python src/dci/benchmark/pi_rpc_runner.py --runtime-context-level level2 --cwd corpus/wiki_corpus "Answer using only wiki_dump.jsonl: Where did the Great Fire of London originate?"
+```
 
-PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
-  --provider openai \
-  --model gpt-5.4-nano \
-  --cwd "corpus/wiki_corpus" \
-  --extra-arg="--thinking high" \
-  "Answer the following question using only wiki_dump.jsonl in the current directory. Do not use web search. Use rg instead of grep for fast searching. Question: In which street did the Great Fire of London originate?"
+```bash
+# context-level3
+PYTHONPATH=src uv run python src/dci/benchmark/pi_rpc_runner.py --runtime-context-level level3 --cwd corpus/wiki_corpus "Answer using only wiki_dump.jsonl: Where did the Great Fire of London originate?"
+```
+
+```bash
+# context-level4
+PYTHONPATH=src uv run python src/dci/benchmark/pi_rpc_runner.py --runtime-context-level level4 --cwd corpus/wiki_corpus "Answer using only wiki_dump.jsonl: Where did the Great Fire of London originate?"
+```
+
+The literal/model-free acceptance checks README commands, installed L0–L4 resources, extension digest, compaction, summary, failure suppression, telemetry, resume, artifact contracts, and terminal preflight without constructing a provider:
+
+```bash
+uv run python tools/verify_original_readme.py --level local
+```
+
+Bounded verification is cost-bearing. It runs the documented programmatic Quick Start plus one forced L3 compaction and one forced L4 summary, while preflighting the interactive terminal path locally. It requires a fresh private output root and does not run a full dataset:
+
+```bash
+uv run python tools/verify_original_readme.py --level bounded \
+  --env-file .env \
+  --output-root outputs/verification/original-readme-bounded
 ```
 
 
