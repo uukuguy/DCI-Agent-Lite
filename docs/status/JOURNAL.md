@@ -928,3 +928,15 @@
 - 17:51 AF-340 实施计划固化配置、验证与 full 授权边界。 [83f424a]
 - 18:16 AF-340 Climb 自主会话启动；四个假设绑定唯一活动包，full 仍需显式 profile/budget 授权。
 - 18:22 AF-340 Climb 四假设与恢复状态落盘，开始隔离分支自主实施。 [93186ab]
+- 18:23 AF-340 Climb/SDD 隔离执行恢复边界已固化。 [e585777]
+- 18:37 Task 1 原 DCI 分层配置与安全投影完成；31 项测试及静态门禁通过。 [c13d947]
+- 18:47 Task 1 修复来源优先级、Judge URL 隐私与 schema 强制校验；37 项测试通过。 [3858d07]
+- 18:54 Task 1 必填配置空值不再遮蔽下层，来源证据保持真实；40 项测试通过。 [6838615]
+- 19:10 Task 2 Asterion 独立 runtime resolver 与 Claude 认证模式完成；119 项测试及静态门禁通过。 [4e5b5c7]
+- 19:19 Task 2 修复显式 optional 空值与 CLI `.env` 安全 materialize；122 项测试通过。 [8505524]
+- 19:39 Task 3 双产品 Judge 缺省切换 DeepSeek V4 并补全 cache/effective identity；299 项受影响测试通过。 [79583ea]
+- 19:39 Task 3 扩展 AF-320 selector 因隔离 worktree 缺 `data/bcplus_qa.jsonl` 在 provider 前失败；非代码回归。
+- 19:53 Task 3 两套 batch cache 绑定完整 Judge identity；旧不完整缓存降级为 Judge-only 重评。 [bc46e0b]
+- 20:03 AF-340 Climb adapter 注册 H001-H004，H001 provider-free 四维评估 4/4。 [5f5b77d]
+- 20:14 Climb H004 收敛为一次 bounded 加四维 provider-free retained-evidence 检查，阻断成本倍增。 [c1c71e9]
+- 20:03 AF-340-H-001 confirmed 4/4; package acceptance recorded.

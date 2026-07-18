@@ -2353,12 +2353,24 @@ hypotheses:
   expected_lift: +1 executable configuration contract
   cost_h: 2.0
   ranking: 1.0
-  status: pending
+  status: confirmed
   created_at: '2026-07-18T18:16:00+08:00'
   verification_command: uv run python -m unittest -v tests.test_config tests.test_effective_config
     tests.test_judge tests.test_asterion_dci_config tests.test_asterion_dci_judge
     asterion.tests.test_default_runtime_factory
-  results: []
+  results:
+  - session: 2026-07-18-af-340-readme-reproduction-runtime-parity
+    cycle: 104
+    run: 20260718-200307-dci-climb-af340h001
+    local: 4
+    local_per_task:
+      layered_precedence: 1
+      runtime_mapping: 1
+      claude_authentication: 1
+      judge_cache_identity: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-340-H-002
   work_package_id: AF-340
   description: Prove the original Quick Start, L0-L4 context paths, eleven benchmark
@@ -2374,8 +2386,8 @@ hypotheses:
   results: []
 - id: AF-340-H-003
   work_package_id: AF-340
-  description: Prove immutable current/paper experiment profiles, invocation-only full
-    authorization, normalized per-query evidence, deterministic confidence intervals,
+  description: Prove immutable current/paper experiment profiles, invocation-only
+    full authorization, normalized per-query evidence, deterministic confidence intervals,
     and provider-free local orchestration.
   parent_paradigm: dci-versioned-reproduction-contract
   expected_lift: +1 reproducible comparison contract
@@ -2389,8 +2401,8 @@ hypotheses:
 - id: AF-340-H-004
   work_package_id: AF-340
   description: Prove bounded real original/Asterion Pi and Asterion Claude subscription
-    and MiniMax paths, then bind separately authorized full-result non-inferiority and
-    paper-target evidence without credential or body leakage.
+    and MiniMax paths, then bind separately authorized full-result non-inferiority
+    and paper-target evidence without credential or body leakage.
   parent_paradigm: dci-measured-runtime-parity
   expected_lift: +1 measured reproduction evidence
   cost_h: 4.0
