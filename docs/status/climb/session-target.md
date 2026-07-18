@@ -1,9 +1,11 @@
 # Climb Session Target
 
-AF-330 owns complete application composition and bounded dual-runtime semantics.
-Four fresh hypotheses cover the five-stage package graph, product/application
-identity, restricted Pi execution, and fail-closed Claude Code execution. Real
-bounded Pi and Claude evidence is required; no full dataset run is authorized.
+AF-340 owns executable original-README reproduction and independent Asterion
+Pi/Claude runtime-result parity. Four fresh hypotheses cover layered runtime and
+Judge configuration, literal documented surfaces, immutable reproduction and
+comparison contracts, and real bounded/full evidence. Local and bounded work is
+authorized autonomously. Full datasets remain behind the explicit profile and
+budget authorization gate defined by AF-340; `.env` cannot provide that authority.
 
 <!-- TARGET-BEGIN (machine-readable, check-target.py reads) -->
 target_metric: local

@@ -1,13 +1,13 @@
 {
   "run_count": 102,
   "session": {
-    "session": "2026-07-17-af-330-complete-application-dual-runtime",
-    "phase": "completed",
-    "work_package_id": "AF-330",
+    "session": "2026-07-18-af-340-readme-reproduction-runtime-parity",
+    "phase": "implementation",
+    "work_package_id": "AF-340",
     "last_cycle": 103,
-    "next_hypothesis": null,
+    "next_hypothesis": "AF-340-H-001",
     "in_flight": null,
-    "next_action": "Project lifecycle complete; await explicit governance reopening.",
+    "next_action": "Implement AF-340 Task 1 test-first, then evaluate AF-340-H-001.",
     "falsified_routes": [
       "duplicate the authoritative Pi commit across setup.sh and .env.template",
       "convert the independent Pi checkout to vendored or submodule ownership",
@@ -27,7 +27,60 @@
       "make paper-full profiles executable before AF-340 authorization"
     ]
   },
-  "active": [],
+  "active": [
+    {
+      "id": "AF-340-H-001",
+      "work_package_id": "AF-340",
+      "description": "Prove independent original/Asterion runtime-first layered configuration, Pi and Claude authentication semantics, DeepSeek Judge defaults, and safe effective configuration identity.",
+      "parent_paradigm": "dci-layered-runtime-configuration",
+      "expected_lift": "+1 executable configuration contract",
+      "cost_h": 2.0,
+      "ranking": 1.0,
+      "status": "pending",
+      "created_at": "2026-07-18T18:16:00+08:00",
+      "verification_command": "uv run python -m unittest -v tests.test_config tests.test_effective_config tests.test_judge tests.test_asterion_dci_config tests.test_asterion_dci_judge asterion.tests.test_default_runtime_factory",
+      "results": []
+    },
+    {
+      "id": "AF-340-H-002",
+      "work_package_id": "AF-340",
+      "description": "Prove the original Quick Start, L0-L4 context paths, eleven benchmark launchers, and one-to-one Asterion operator paths are literal and executable.",
+      "parent_paradigm": "dci-documented-product-surfaces",
+      "expected_lift": "+1 README and launcher acceptance",
+      "cost_h": 2.0,
+      "ranking": 0.9,
+      "status": "pending",
+      "created_at": "2026-07-18T18:16:00+08:00",
+      "verification_command": "uv run python -m unittest -v tests.test_original_readme_acceptance tests.test_asterion_dci_batch_launchers tests.test_asterion_documentation",
+      "results": []
+    },
+    {
+      "id": "AF-340-H-003",
+      "work_package_id": "AF-340",
+      "description": "Prove immutable current/paper experiment profiles, invocation-only full authorization, normalized per-query evidence, deterministic confidence intervals, and provider-free local orchestration.",
+      "parent_paradigm": "dci-versioned-reproduction-contract",
+      "expected_lift": "+1 reproducible comparison contract",
+      "cost_h": 2.5,
+      "ranking": 0.8,
+      "status": "pending",
+      "created_at": "2026-07-18T18:16:00+08:00",
+      "verification_command": "uv run python -m unittest -v tests.test_asterion_dci_experiment_profiles tests.test_asterion_dci_reproduction tests.test_af340_reproduction_verifier",
+      "results": []
+    },
+    {
+      "id": "AF-340-H-004",
+      "work_package_id": "AF-340",
+      "description": "Prove bounded real original/Asterion Pi and Asterion Claude subscription and MiniMax paths, then bind separately authorized full-result non-inferiority and paper-target evidence without credential or body leakage.",
+      "parent_paradigm": "dci-measured-runtime-parity",
+      "expected_lift": "+1 measured reproduction evidence",
+      "cost_h": 4.0,
+      "ranking": 0.7,
+      "status": "pending",
+      "created_at": "2026-07-18T18:16:00+08:00",
+      "verification_command": "uv run python tools/verify_af340_reproduction.py bounded",
+      "results": []
+    }
+  ],
   "confirmed": [
     {
       "id": "H-001",

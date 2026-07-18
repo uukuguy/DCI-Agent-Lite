@@ -5,14 +5,18 @@
 
 ## In-flight / session state
 
-- Phase: completed
+- Phase: implementation
 - Last cycle: 103
-- Next hypothesis: None
+- Next hypothesis: AF-340-H-001
 - In flight: none
-- Next action: Project lifecycle complete; await explicit governance reopening.
+- Next action: Implement AF-340 Task 1 test-first, then evaluate AF-340-H-001.
 
 ## Active hypotheses
 
+- **AF-340-H-001** (pending, rank 1.00): Prove independent original/Asterion runtime-first layered configuration, Pi and Claude authentication semantics, DeepSeek Judge defaults, and safe effective configuration identity.
+- **AF-340-H-002** (pending, rank 0.90): Prove the original Quick Start, L0-L4 context paths, eleven benchmark launchers, and one-to-one Asterion operator paths are literal and executable.
+- **AF-340-H-003** (pending, rank 0.80): Prove immutable current/paper experiment profiles, invocation-only full authorization, normalized per-query evidence, deterministic confidence intervals, and provider-free local orchestration.
+- **AF-340-H-004** (pending, rank 0.70): Prove bounded real original/Asterion Pi and Asterion Claude subscription and MiniMax paths, then bind separately authorized full-result non-inferiority and paper-target evidence without credential or body leakage.
 
 ## Run ladder
 
