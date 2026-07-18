@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import stat
 from dataclasses import dataclass
 from functools import lru_cache
 from importlib import resources
@@ -653,11 +654,29 @@ def published_scope_selected_ids(scope_id: object) -> tuple[str, ...]:
     return selected
 
 
-def require_af320_executable_scope(scope_id: object) -> None:
-    """Reject every paper-full scope before AF-340 authorization exists."""
+def require_af320_executable_scope(scope_id: object, authorization: object = None) -> None:
+    """Require an invocation-authorized AF-340 private output identity."""
 
-    resolve_paper_experiment_scope(scope_id)
-    raise ValueError("DCI paper scope is not executable in AF-320")
+    scope = resolve_paper_experiment_scope(scope_id)
+    if authorization is None:
+        raise ValueError(
+            "DCI paper scope is not executable in AF-320 without AF-340 authorization"
+        )
+    from asterion.dci.experiment_profiles import (
+        FullExecutionAuthorization,
+        experiment_profile_ids,
+    )
+
+    if not isinstance(authorization, FullExecutionAuthorization):
+        raise ValueError("DCI paper scope requires AF-340 authorization")
+    if (
+        authorization.invocation_authorized is not True
+        or authorization.profile_id not in experiment_profile_ids()
+        or scope.scope_id not in paper_experiment_scope_ids()
+        or not authorization.output_root.is_dir()
+        or stat.S_IMODE(authorization.output_root.stat().st_mode) != 0o700
+    ):
+        raise ValueError("DCI paper scope requires AF-340 authorization")
 
 
 def paper_benchmark_inventory_sha256() -> str:

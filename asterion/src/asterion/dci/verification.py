@@ -263,13 +263,20 @@ DCI_PRODUCT_DESCRIPTION = CapabilityProductDescription(
 
 
 def paper_product_contract() -> dict[str, object]:
-    """Return the installed, body-free AF-320 product identity."""
+    """Return the installed, body-free paper and AF-340 profile identity."""
+
+    from asterion.dci.experiment_profiles import experiment_profile_ids
 
     dataset_ids = paper_benchmark_ids()
     scope_ids = paper_experiment_scope_ids()
     matrix_sha256 = paper_ablation_matrix_sha256()
     inventory_sha256 = paper_benchmark_inventory_sha256()
     scopes_sha256 = paper_experiment_scopes_sha256()
+    profile_resource_sha256 = hashlib.sha256(
+        resources.files("asterion.dci.resources")
+        .joinpath("experiment-profiles.json")
+        .read_bytes()
+    ).hexdigest()
     batch_profiles = tuple(
         sorted(
             {
@@ -284,6 +291,7 @@ def paper_product_contract() -> dict[str, object]:
         "schema": "dci.paper-product-contract/v1",
         "dataset_ids": list(dataset_ids),
         "experiment_scope_ids": list(scope_ids),
+        "experiment_profile_ids": list(experiment_profile_ids()),
         "ablation_row_ids": list(paper_ablation_row_ids()),
         "context_profiles": list(context_profile_names()),
         "batch_profiles": list(batch_profiles),
@@ -312,8 +320,10 @@ def paper_product_contract() -> dict[str, object]:
             "paper-ablation-matrix.json": matrix_sha256,
             "paper-benchmarks.json": inventory_sha256,
             "paper-experiment-scopes.json": scopes_sha256,
+            "experiment-profiles.json": profile_resource_sha256,
         },
         "paper_full_executable": False,
+        "paper_full_requires_invocation_authorization": True,
     }
 
 
@@ -386,6 +396,11 @@ def paper_benchmark_resource_digests() -> tuple[tuple[str, str], ...]:
     values: list[tuple[str, str]] = [
         ("ablation_matrix", paper_ablation_matrix_sha256()),
     ]
+    for identity, relative in (
+        ("experiment_profile_schema", "experiment-profile.schema.json"),
+        ("experiment_profiles", "experiment-profiles.json"),
+    ):
+        values.append((identity, hashlib.sha256(root.joinpath(relative).read_bytes()).hexdigest()))
     for identity, relative in (
         ("qa_fixture", "paper-fixtures/qa.jsonl"),
         ("ir_fixture", "paper-fixtures/ir.jsonl"),

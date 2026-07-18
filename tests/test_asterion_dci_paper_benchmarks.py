@@ -300,6 +300,11 @@ class PaperBenchmarkInventoryTests(unittest.TestCase):
 
 
 class PaperExperimentScopeTests(unittest.TestCase):
+    def test_full_scope_requires_an_af340_authorization(self) -> None:
+        module = paper_module(self)
+        with self.assertRaisesRegex(ValueError, "AF-340 authorization"):
+            module.require_af320_executable_scope("browsecomp-plus.main.all830")
+
     def test_exact_experiment_scopes_preserve_browsecomp_distinctions(self) -> None:
         module = paper_module(self)
 
