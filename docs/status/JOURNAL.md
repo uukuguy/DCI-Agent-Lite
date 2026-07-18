@@ -985,3 +985,36 @@
 
 ## 2026-07-19
 - 03:31 AF-340-H-003 confirmed 4/4; package acceptance recorded.
+- 03:34 固化 H003 provider-free 证据与 H004 bounded/full 恢复边界。 [e69d9f3]
+- 03:41 H004 bounded 预检暴露隔离 worktree 资源根缺口：误要求未执行的 paper-full 资产且无法使用共享语料。
+- 03:59 AF-340 bounded 分离代码与资源根，并绑定精确输入预检与证据身份。 [181e80e]
+- 04:07 resource-root 复审拒绝：report 自信任路径哈希，未绑定外部根、内容变异或祖先 symlink。
+- 04:25 外部锚定 AF-340 资源 manifest，拒绝协同 report 重写与同路径内容漂移。 [470ae76]
+- 04:30 修正文档为选中资源内容 manifest，匹配 retained evidence 协议。 [88ad682]
+- 04:34 启动 H004 Pi bounded r1，PID 34686，分支代码使用主仓资源与外部 Pi；full 未授权。
+- 04:36 Pi bounded r1 在 original Quick Start 前置导入失败，Agent 0/Judge 0/full no；缺分支 `src` PYTHONPATH。
+- 04:48 按 operation 隔离 original `src` 导入，修复 Pi 启动且不污染 Asterion 执行。 [8fd9365]
+- 04:51 启动 H004 Pi bounded r2，PID 51440，fresh 输出根；full 未授权。
+- 04:54 Pi bounded r2 完成 Quick Start/L3 后在 L4 异步 compaction settling 失败；Agent 2/Judge 0/full no。
+- 05:02 等待异步 Pi compaction 后再校验 idle，使 original L4 稳定收敛。 [66011ed]
+- 05:05 启动 H004 Pi bounded r3，PID 64893，fresh 全矩阵；full 未授权。
+- 05:08 Pi bounded r3 完成 Quick Start/L3/L4，首个 original launcher 因不支持 `--resume-policy` 拒绝；Agent 3/Judge 0/full no。
+- 05:14 仅向 Asterion launcher 传 `resume-policy`，使 original batch parser 接受 bounded 命令。 [19d9c15]
+- 05:17 启动 H004 Pi bounded r4，PID 74085，fresh 全矩阵；full 未授权。
+- 05:20 Pi bounded r4 完成三条 context 路径，首 batch 将 runtime profile 错传为 Pi 选项；Agent 3/Judge 0/full no。
+- 05:25 经 `pi_rpc_runner` 路由 batch context profile，使 AF-310 extension flags 安全到达外部 Pi。 [4996e71]
+- 05:29 对齐 batch help 与封闭 level0-level4 context profile 契约。 [a00b69b]
+- 05:31 启动 H004 Pi bounded r5，PID 82555，fresh 全矩阵；full 未授权。
+- 05:37 Pi bounded r5 完成 Agent 4，Judge 被导出环境中的冲突 key 以 HTTP 401 拒绝；Judge 0/full no。
+- 05:38 仓库 `.env` Judge 凭据认证探针 HTTP 200；r6 将移除冲突的导出 key 以恢复既定优先级输入。
+- 05:39 启动 H004 Pi bounded r6，PID 1518，使用认证通过的 `.env` Judge key；full 未授权。
+- 05:50 Pi bounded r6 完成 original Agent 14/Judge 7；首 Asterion launcher 因缺全局 `asterion-dci` rc127，full no。
+- 06:00 将 primary Asterion launcher 绑定仓库 source CLI，使 clean-PATH bounded 可可靠启动。 [da41465]
+- 06:03 启动 H004 Pi bounded r7，PID 16131，fresh 全矩阵；full 未授权。
+- 06:21 Pi bounded r7 完成 original Agent 14/Judge 7；首 Asterion `--limit 1` 被旧 AF-320 full gate 拒绝，full no。
+- 06:37 开放精确 limit-one paper-profile 样本，同时保留 full 授权与 non-comparable 证据边界。 [a002388]
+- 06:43 bounded gate 根审拒绝：删除 selection 并重算指纹仍可通过独立 config 验证。
+- 06:55 要求外部锚定 batch execution class，使删除或跨类重写 selection 证据失败关闭。 [a417a85]
+- 07:01 启动 H004 Pi bounded r8，PID 46835，fresh 全矩阵；full 未授权。
+- 07:04 Pi bounded r8 被 openai-codex 用量上限阻断；暴露 provider error 被误记 completed，证据拒收。
+- 07:12 Pi provider 终端错误现在双路径 fail closed，防止空答案进入 Judge。 [9397ed5]
