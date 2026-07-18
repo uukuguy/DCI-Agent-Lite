@@ -355,8 +355,11 @@ def bounded_operation_plan(
                         "1",
                         "--output-root",
                         f"{{OUTPUT_ROOT}}/launchers/{product}/{relative.replace('/', '-')}",
-                        "--resume-policy",
-                        "fresh",
+                        *(
+                            ("--resume-policy", "fresh")
+                            if product == "asterion"
+                            else ()
+                        ),
                         "--dataset",
                         f"{{RESOURCE_ROOT}}/{dataset}",
                         "--corpus-dir",

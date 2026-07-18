@@ -723,6 +723,61 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
         self.assertEqual(original_args.dataset, Path("shared.jsonl"))
         self.assertEqual(original_args.corpus_dir, Path("shared-corpus"))
 
+    def test_all_pi_launcher_commands_are_accepted_by_their_actual_parsers(self) -> None:
+        module = load_verifier()
+        plan = module.bounded_operation_plan(ROOT, "pi", None, None)
+        launchers = [
+            operation
+            for operation in plan
+            if operation.operation_id.startswith("launcher:")
+        ]
+        self.assertEqual(len(launchers), 22)
+
+        spec = importlib.util.spec_from_file_location(
+            "af340_original_batch_compat",
+            ROOT / "scripts/bcplus_eval/run_bcplus_eval.py",
+        )
+        assert spec is not None and spec.loader is not None
+        original = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(original)
+        asterion_parser = __import__(
+            "asterion.dci.cli", fromlist=["_parser"]
+        )._parser()
+
+        original_count = 0
+        asterion_count = 0
+        original_output_roots: set[Path] = set()
+        for operation in launchers:
+            forwarded = list(operation.command[operation.command.index("--limit"):])
+            with self.subTest(operation_id=operation.operation_id):
+                for flag in ("--limit", "--output-root", "--dataset", "--corpus-dir"):
+                    self.assertEqual(forwarded.count(flag), 1)
+                if operation.operation_id.startswith("launcher:original:"):
+                    original_count += 1
+                    self.assertNotIn("--resume-policy", forwarded)
+                    with mock.patch(
+                        "sys.argv", ["run_bcplus_eval.py", *forwarded]
+                    ):
+                        parsed = original.parse_args()
+                    corpus = parsed.corpus_dir
+                    original_output_roots.add(parsed.output_root)
+                else:
+                    asterion_count += 1
+                    self.assertEqual(forwarded.count("--resume-policy"), 1)
+                    parsed = asterion_parser.parse_args(
+                        ["benchmark", *forwarded]
+                    )
+                    corpus = parsed.corpus
+                    self.assertEqual(parsed.resume_policy, "fresh")
+                self.assertEqual(parsed.limit, 1)
+                self.assertIn("/launchers/", str(parsed.output_root))
+                self.assertTrue(str(parsed.dataset).startswith("{RESOURCE_ROOT}/"))
+                self.assertTrue(str(corpus).startswith("{RESOURCE_ROOT}/"))
+
+        self.assertEqual((original_count, asterion_count), (11, 11))
+        self.assertEqual(len(original_output_roots), 11)
+        self.assertEqual(module._operation_counts(plan), (30, 16))
+
     def test_asterion_primary_launchers_honor_explicit_bounded_resource_root(self) -> None:
         for relative in BOUNDED_LAUNCHER_RESOURCES:
             body = (ROOT / "asterion/scripts" / relative).read_text(encoding="utf-8")
