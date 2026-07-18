@@ -412,9 +412,10 @@ def main(
                 stdout.write(f"Estimated budget USD: {args.estimated_budget_usd:g}\n")
                 stdout.write("Agent operations performed: 0\nJudge operations performed: 0\n")
                 stdout.write(
-                    "Full dataset authorized: "
+                    "Full authorization requested: "
                     + ("yes\n" if args.authorize_full else "no\n")
                 )
+                stdout.write("Full authorization issued: no\n")
                 if args.dry_run:
                     return 0
                 if not args.authorize_full:
@@ -424,6 +425,9 @@ def main(
                     args.output_root,
                     args.estimated_budget_usd,
                     args.authorize_full,
+                    preflight_profile_sha256=profile_sha256,
+                    preflight_dataset_inventory_sha256=profile.dataset_inventory_sha256,
+                    preflight_experiment_scopes_sha256=profile.experiment_scopes_sha256,
                     invocation_provider=args.provider,
                     invocation_model=args.model,
                     preflight_scope_ids=profile.scope_ids,

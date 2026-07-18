@@ -5,9 +5,10 @@ import json
 import math
 import os
 import stat
+import copy
 import tempfile
 import unittest
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
 from importlib import resources
 from pathlib import Path
 from unittest import mock
@@ -28,6 +29,22 @@ EXPECTED_PROFILE_IDS = (
     "paper-reference/pi",
     "paper-reference/claude-code",
 )
+
+
+def _preflight(profile_id: str = "current-default/pi") -> dict[str, object]:
+    from asterion.dci.experiment_profiles import (
+        experiment_profile_sha256,
+        resolve_experiment_profile,
+    )
+
+    profile = resolve_experiment_profile(profile_id)
+    return {
+        "preflight_profile_sha256": experiment_profile_sha256(profile_id),
+        "preflight_dataset_inventory_sha256": profile.dataset_inventory_sha256,
+        "preflight_experiment_scopes_sha256": profile.experiment_scopes_sha256,
+        "preflight_scope_ids": profile.scope_ids,
+        "preflight_selected_ids_sha256": profile.selected_ids_sha256,
+    }
 
 
 class ExperimentProfileTests(unittest.TestCase):
@@ -135,6 +152,214 @@ class ExperimentProfileTests(unittest.TestCase):
 
 
 class FullExecutionAuthorizationTests(unittest.TestCase):
+    def test_authorization_cannot_be_manually_constructed_copied_or_replaced(self) -> None:
+        from asterion.dci.experiment_profiles import (
+            FullExecutionAuthorization,
+            authorize_full_execution,
+            consume_full_execution_authorization,
+        )
+
+        with self.assertRaises(TypeError):
+            FullExecutionAuthorization(  # type: ignore[call-arg]
+                "current-default/pi", Path("out"), 1.0, True
+            )
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            authorization = authorize_full_execution(
+                "current-default/pi",
+                Path(temporary_directory) / "issued",
+                1.0,
+                True,
+                **_preflight(),
+            )
+            forged = copy.copy(authorization)
+            with self.assertRaisesRegex(ValueError, "authorization"):
+                consume_full_execution_authorization(
+                    forged, "browsecomp-plus.main.all830"
+                )
+            with self.assertRaises(TypeError):
+                replace(authorization, estimated_budget_usd=2.0)
+
+    def test_authorized_scopes_are_consumed_once_and_cross_scope_fails(self) -> None:
+        from asterion.dci.experiment_profiles import (
+            authorize_full_execution,
+            consume_full_execution_authorization,
+            resolve_experiment_profile,
+        )
+
+        profile = resolve_experiment_profile("current-default/pi")
+        scopes = profile.scope_ids[:2]
+        digests = profile.selected_ids_sha256[:2]
+        preflight = _preflight()
+        preflight["preflight_scope_ids"] = scopes
+        preflight["preflight_selected_ids_sha256"] = digests
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            authorization = authorize_full_execution(
+                "current-default/pi", Path(temporary_directory) / "issued", 1.0, True,
+                **preflight,
+            )
+            self.assertIsNone(consume_full_execution_authorization(authorization, scopes[0]))
+            with self.assertRaisesRegex(ValueError, "replay"):
+                consume_full_execution_authorization(authorization, scopes[0])
+            self.assertIsNone(consume_full_execution_authorization(authorization, scopes[1]))
+            with self.assertRaisesRegex(ValueError, "scope"):
+                consume_full_execution_authorization(authorization, profile.scope_ids[2])
+
+    def test_root_identity_symlink_replacement_recreation_and_mode_drift_fail(self) -> None:
+        from asterion.dci.experiment_profiles import (
+            authorize_full_execution,
+            consume_full_execution_authorization,
+        )
+
+        scope = "browsecomp-plus.main.all830"
+        cases = ("symlink", "recreated", "permissions")
+        for case in cases:
+            with self.subTest(case=case), tempfile.TemporaryDirectory() as temporary_directory:
+                base = Path(temporary_directory)
+                root = base / "issued"
+                authorization = authorize_full_execution(
+                    "current-default/pi", root, 1.0, True, **_preflight()
+                )
+                if case == "permissions":
+                    root.chmod(0o755)
+                else:
+                    moved = base / "moved"
+                    root.rename(moved)
+                    if case == "symlink":
+                        root.symlink_to(moved, target_is_directory=True)
+                    else:
+                        root.mkdir(mode=0o700)
+                with self.assertRaisesRegex(ValueError, "output root"):
+                    consume_full_execution_authorization(authorization, scope)
+
+    def test_preflight_bindings_are_mandatory_and_exact(self) -> None:
+        from asterion.dci.experiment_profiles import authorize_full_execution
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            with self.assertRaises(TypeError):
+                authorize_full_execution(
+                    "current-default/pi", Path(temporary_directory) / "missing", 1.0, True
+                )
+            for field in (
+                "preflight_profile_sha256",
+                "preflight_dataset_inventory_sha256",
+                "preflight_experiment_scopes_sha256",
+                "preflight_selected_ids_sha256",
+            ):
+                values = _preflight()
+                values[field] = ("0" * 64,) if field == "preflight_selected_ids_sha256" else "0" * 64
+                with self.subTest(field=field), self.assertRaisesRegex(ValueError, "preflight"):
+                    authorize_full_execution(
+                        "current-default/pi",
+                        Path(temporary_directory) / field,
+                        1.0,
+                        True,
+                        **values,
+                    )
+
+    def test_profile_schema_and_safe_nested_identity_are_closed(self) -> None:
+        from asterion.dci.experiment_profiles import resolve_experiment_profile
+
+        schema = json.loads(
+            resources.files("asterion.dci.resources")
+            .joinpath("experiment-profile.schema.json")
+            .read_text()
+        )
+        profile_schema = schema["$defs"]["profile"]
+        self.assertFalse(profile_schema["additionalProperties"])
+        self.assertFalse(profile_schema["properties"]["judge"]["additionalProperties"])
+        comparison = profile_schema["properties"]["comparison"]
+        self.assertFalse(comparison["additionalProperties"])
+        self.assertIn("oneOf", comparison)
+
+        for profile_id in EXPECTED_PROFILE_IDS:
+            kwargs = {}
+            if profile_id == "current-default/claude-minimax":
+                kwargs = {"invocation_provider": "minimax", "invocation_model": "MiniMax-M3"}
+            profile = resolve_experiment_profile(profile_id, **kwargs)
+            self.assertEqual(
+                set(profile.judge),
+                {
+                    "base_url", "api", "model", "key_source", "thinking",
+                    "json_object", "request_shape_sha256", "output_shape_identity",
+                    "prompt_contract", "prompt_contract_sha256", "pricing_identity",
+                },
+            )
+            self.assertRegex(str(profile.judge["prompt_contract_sha256"]), r"^[0-9a-f]{64}$")
+            rendered = json.dumps(profile.to_canonical_dict())
+            for forbidden in ("api_key", "credential", "prompt_body", "answer", "private_path"):
+                self.assertNotIn(f'"{forbidden}"', rendered)
+        minimax = resolve_experiment_profile(
+            "current-default/claude-minimax",
+            invocation_provider="minimax-cn",
+            invocation_model="MiniMax-M3",
+        )
+        self.assertEqual(minimax.compatible_config_key, "MINIMAX_CN_API_KEY")
+
+    def test_schema_and_nested_profile_mutations_fail_loader_validation(self) -> None:
+        import asterion.dci.experiment_profiles as module
+
+        package = resources.files("asterion.dci.resources")
+        original_schema = json.loads(
+            package.joinpath("experiment-profile.schema.json").read_text()
+        )
+        original_payload = json.loads(
+            package.joinpath("experiment-profiles.json").read_text()
+        )
+        mutations = (
+            ("schema-comparison-open", lambda schema, _payload: schema["$defs"]["profile"]["properties"]["comparison"].__setitem__("additionalProperties", True)),
+            ("comparison-extra", lambda _schema, payload: payload["profiles"][0]["comparison"].__setitem__("extra", True)),
+            ("judge-key-source", lambda _schema, payload: payload["profiles"][0]["judge"].__setitem__("key_source", "OTHER_KEY")),
+            ("minimax-key-on-base", lambda _schema, payload: payload["profiles"][2].__setitem__("compatible_config_key", "MINIMAX_API_KEY")),
+        )
+        for name, mutate in mutations:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                schema = copy.deepcopy(original_schema)
+                payload = copy.deepcopy(original_payload)
+                mutate(schema, payload)
+                (root / "experiment-profile.schema.json").write_text(json.dumps(schema))
+                (root / "experiment-profiles.json").write_text(json.dumps(payload))
+                with mock.patch.object(module.resources, "files", return_value=root):
+                    module._profiles.cache_clear()
+                    with self.assertRaisesRegex(RuntimeError, "contract is invalid"):
+                        module.experiment_profile_ids()
+        module._profiles.cache_clear()
+
+    def test_benchmark_prepare_consumes_real_scope_authorization_once(self) -> None:
+        from asterion.dci.benchmark import BenchmarkRequest, DciBenchmarkError, _prepare
+        from asterion.dci.config import DciRuntimeOptions
+        from asterion.dci.experiment_profiles import authorize_full_execution, resolve_experiment_profile
+        from asterion.dci.judge import JudgeConfig
+        from asterion.dci.paper_benchmarks import published_scope_selected_ids
+
+        scope = "qa.nq.main.random50"
+        selected = published_scope_selected_ids(scope)
+        profile = resolve_experiment_profile("current-default/pi")
+        index = profile.scope_ids.index(scope)
+        preflight = _preflight()
+        preflight["preflight_scope_ids"] = (scope,)
+        preflight["preflight_selected_ids_sha256"] = (profile.selected_ids_sha256[index],)
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            base = Path(temporary_directory)
+            dataset = base / "dataset.jsonl"
+            dataset.write_text("\n".join(
+                json.dumps({"query_id": query_id, "query": "q", "answer": "a"})
+                for query_id in selected
+            ) + "\n")
+            output = base / "full-output"
+            authorization = authorize_full_execution(
+                "current-default/pi", output, 1.0, True, **preflight
+            )
+            request = BenchmarkRequest(
+                dataset=dataset, output_root=authorization.output_root, cwd=base,
+                judge_config=JudgeConfig(), runtime_options=DciRuntimeOptions(None, None),
+                profile="qa.nq", max_turns=300,
+                full_execution_authorization=authorization,
+            )
+            rows, *_rest = _prepare(request)
+            self.assertEqual(len(rows), 50)
+            with self.assertRaisesRegex(DciBenchmarkError, "replay"):
+                _prepare(request)
     def test_authorization_requires_explicit_boolean_finite_budget_and_fresh_private_root(self) -> None:
         from asterion.dci.experiment_profiles import authorize_full_execution
 
@@ -150,26 +375,37 @@ class FullExecutionAuthorizationTests(unittest.TestCase):
                 for invocation_authorized, budget, output in cases:
                     with self.subTest(budget=budget, invocation_authorized=invocation_authorized):
                         with self.assertRaises(ValueError):
-                            authorize_full_execution("current-default/pi", output, budget, invocation_authorized)
+                            authorize_full_execution(
+                                "current-default/pi", output, budget,
+                                invocation_authorized, **_preflight()
+                            )
 
             nonempty = base / "nonempty"
             nonempty.mkdir()
             (nonempty / "cached.json").write_text("{}")
             with self.assertRaisesRegex(ValueError, "fresh"):
-                authorize_full_execution("current-default/pi", nonempty, 1.0, True)
+                authorize_full_execution(
+                    "current-default/pi", nonempty, 1.0, True, **_preflight()
+                )
             reused_empty = base / "reused-empty"
             reused_empty.mkdir(mode=0o700)
             with self.assertRaisesRegex(ValueError, "fresh"):
-                authorize_full_execution("current-default/pi", reused_empty, 1.0, True)
+                authorize_full_execution(
+                    "current-default/pi", reused_empty, 1.0, True, **_preflight()
+                )
             target = base / "target"
             target.mkdir()
             symlink = base / "symlink"
             symlink.symlink_to(target, target_is_directory=True)
             with self.assertRaisesRegex(ValueError, "symlink"):
-                authorize_full_execution("current-default/pi", symlink, 1.0, True)
+                authorize_full_execution(
+                    "current-default/pi", symlink, 1.0, True, **_preflight()
+                )
 
             output = base / "authorized"
-            authorization = authorize_full_execution("current-default/pi", output, 0.0, True)
+            authorization = authorize_full_execution(
+                "current-default/pi", output, 0.0, True, **_preflight()
+            )
             self.assertTrue(authorization.invocation_authorized)
             self.assertEqual(stat.S_IMODE(output.stat().st_mode), 0o700)
             with self.assertRaises(FrozenInstanceError):
@@ -188,14 +424,20 @@ class FullExecutionAuthorizationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             base = Path(temporary_directory)
             with self.assertRaisesRegex(ValueError, "profile"):
-                authorize_full_execution("unknown", base / "unknown", 1.0, True)
+                authorize_full_execution(
+                    "unknown", base / "unknown", 1.0, True, **_preflight()
+                )
             with self.assertRaisesRegex(ValueError, "preflight"):
                 authorize_full_execution(
                     "current-default/pi",
                     base / "mismatch",
                     1.0,
                     True,
-                    preflight_scope_ids=("wrong",),
+                    **{
+                        **_preflight(),
+                        "preflight_scope_ids": ("wrong",),
+                        "preflight_selected_ids_sha256": ("0" * 64,),
+                    },
                 )
             with self.assertRaisesRegex(ValueError, "preflight"):
                 authorize_full_execution(
@@ -203,11 +445,15 @@ class FullExecutionAuthorizationTests(unittest.TestCase):
                     base / "selection-mismatch",
                     1.0,
                     True,
-                    preflight_selected_ids_sha256=("0" * 64,),
+                    **{
+                        **_preflight(),
+                        "preflight_selected_ids_sha256": ("0" * 64,),
+                    },
                 )
             with self.assertRaisesRegex(ValueError, "cache"):
                 authorize_full_execution(
-                    "current-default/pi", base / "cache", 1.0, True, cache_only=True
+                    "current-default/pi", base / "cache", 1.0, True,
+                    cache_only=True, **_preflight()
                 )
 
     def test_cli_dry_run_is_zero_operation_and_missing_flag_never_authorizes(self) -> None:
@@ -230,7 +476,8 @@ class FullExecutionAuthorizationTests(unittest.TestCase):
             self.assertIn("Profile: current-default/pi", stdout.getvalue())
             self.assertIn("Agent operations performed: 0", stdout.getvalue())
             self.assertIn("Judge operations performed: 0", stdout.getvalue())
-            self.assertIn("Full dataset authorized: no", stdout.getvalue())
+            self.assertIn("Full authorization requested: no", stdout.getvalue())
+            self.assertIn("Full authorization issued: no", stdout.getvalue())
             self.assertFalse((base / "plan-only").exists())
             runner.assert_not_called()
 
@@ -273,7 +520,9 @@ class FullExecutionAuthorizationTests(unittest.TestCase):
                 stderr=io.StringIO(),
             )
             self.assertEqual(result, 0)
-            self.assertIn("Full dataset authorized: yes", stdout.getvalue())
+            self.assertIn("Full authorization requested: yes", stdout.getvalue())
+            self.assertIn("Full authorization issued: no", stdout.getvalue())
+            self.assertNotIn("Full dataset authorized: yes", stdout.getvalue())
             self.assertFalse((base / "authorized-plan").exists())
             runner.assert_not_called()
 

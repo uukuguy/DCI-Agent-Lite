@@ -46,6 +46,7 @@ from asterion.dci.evaluation import (
     _load_reusable_result,
     evaluate_run_directory_async,
 )
+from asterion.dci.experiment_profiles import FullExecutionAuthorization
 from asterion.dci.judge import (
     JudgeConfig,
     judge_public_identity,
@@ -119,6 +120,7 @@ class BenchmarkRequest:
     resolution_registry: Path | None = None
     resolution_segment_characters: int | None = None
     ablation_row: str | None = None
+    full_execution_authorization: FullExecutionAuthorization | None = None
 
 
 @dataclass(frozen=True)
@@ -515,11 +517,10 @@ def _prepare(
             "matrix_sha256": paper_ablation_matrix_sha256(),
         }
     paper_scope = paper_scope_for_profile(request.profile)
-    if paper_scope is not None:
-        try:
-            require_af320_executable_scope(paper_scope)
-        except ValueError as error:
-            raise DciBenchmarkError(str(error)) from error
+    if paper_scope is not None and request.full_execution_authorization is None:
+        raise DciBenchmarkError(
+            "DCI paper scope is not executable in AF-320 without AF-340 authorization"
+        )
     try:
         dataset_raw = _read_input_snapshot(request.dataset)
         beir_scope = {
@@ -542,10 +543,10 @@ def _prepare(
                 raise DatasetError("DCI BEIR selected-ID manifest does not match")
     except DatasetError as error:
         raise DciBenchmarkError("DCI benchmark dataset is invalid") from error
-    _reject_af320_paper_rows(rows)
+    selected_scope = _paper_scope_for_rows(rows)
     if request.limit is not None:
         rows = rows[: request.limit]
-        _reject_af320_paper_rows(rows)
+        selected_scope = _paper_scope_for_rows(rows)
     if any((row.is_ir if request.mode == "qa" else not row.is_ir) for row in rows):
         raise DciBenchmarkError("DCI benchmark dataset does not match its mode")
     _resolution_paths, resolution_config, resolution_snapshots = (
@@ -553,6 +554,9 @@ def _prepare(
     )
     output_root = Path(os.path.abspath(os.path.normpath(request.output_root)))
     _reject_symlink_components(output_root)
+    authorized_scope = paper_scope or selected_scope
+    if paper_scope is not None and selected_scope != paper_scope:
+        raise DciBenchmarkError("DCI benchmark paper scope does not match its profile")
     corpus_identity = (
         str(canonical_input_identity(request.corpus)) if request.corpus else None
     )
@@ -639,19 +643,21 @@ def _prepare(
                 "judge_configuration_fingerprint": judge_fingerprint,
             }
         )
+    if authorized_scope is not None:
+        authorization = request.full_execution_authorization
+        if authorization is None or authorization.output_root != output_root:
+            raise DciBenchmarkError("DCI benchmark requires AF-340 authorization")
+        try:
+            require_af320_executable_scope(authorized_scope, authorization)
+        except ValueError as error:
+            raise DciBenchmarkError(str(error)) from error
     return rows, output_root, config, tuple(documents), snapshots
 
 
-def _reject_af320_paper_rows(rows: tuple[BenchmarkRow, ...]) -> None:
-    selected_scope = paper_scope_for_selected_ids(
+def _paper_scope_for_rows(rows: tuple[BenchmarkRow, ...]) -> str | None:
+    return paper_scope_for_selected_ids(
         tuple(row.query_id for row in rows)
     )
-    if selected_scope is None:
-        return
-    try:
-        require_af320_executable_scope(selected_scope)
-    except ValueError as error:
-        raise DciBenchmarkError(str(error)) from error
 
 
 async def _run_row(
