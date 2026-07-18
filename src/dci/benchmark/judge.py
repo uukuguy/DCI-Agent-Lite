@@ -14,14 +14,17 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 
-DEFAULT_JUDGE_BASE_URL = "https://api.openai.com/v1"
-DEFAULT_JUDGE_API = "responses"
-DEFAULT_JUDGE_MODEL = "gpt-5.4-nano"
+DEFAULT_JUDGE_BASE_URL = "https://api.deepseek.com/v1"
+DEFAULT_JUDGE_API = "chat-completions"
+DEFAULT_JUDGE_MODEL = "deepseek-v4-flash"
+DEFAULT_JUDGE_API_KEY_ENV = "DEEPSEEK_API_KEY"
+DEFAULT_JUDGE_THINKING = "disabled"
+OFFICIAL_OPENAI_BASE_URL = "https://api.openai.com/v1"
 DEFAULT_JUDGE_TIMEOUT_SECONDS = 120
 DEFAULT_JUDGE_MAX_OUTPUT_TOKENS = 1024
-DEFAULT_JUDGE_INPUT_PRICE_PER_1M = 0.20
-DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M = 0.02
-DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M = 1.25
+DEFAULT_JUDGE_INPUT_PRICE_PER_1M = 0.0
+DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M = 0.0
+DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M = 0.0
 JUDGE_ENV_PREFIX = "DCI_EVAL_JUDGE_"
 JUDGE_VERDICT_SCHEMA = {
     "type": "object",
@@ -99,11 +102,11 @@ class JudgeConfig:
     json_mode: bool = True
     strict_json_schema: bool = False
     responses_store: bool = False
-    thinking: str = "auto"
+    thinking: str = DEFAULT_JUDGE_THINKING
     input_price_per_1m: float = DEFAULT_JUDGE_INPUT_PRICE_PER_1M
     cached_input_price_per_1m: float = DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M
     output_price_per_1m: float = DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M
-    api_key_env: str = "OPENAI_API_KEY"
+    api_key_env: str = DEFAULT_JUDGE_API_KEY_ENV
     api_key: str = field(default="", repr=False)
 
     def __post_init__(self) -> None:
@@ -179,20 +182,8 @@ class JudgeConfig:
             if base_url is not None
             else os.environ.get(f"{JUDGE_ENV_PREFIX}BASE_URL", DEFAULT_JUDGE_BASE_URL)
         )
-        uses_official_openai = (
-            resolved_base_url.strip().rstrip("/") == DEFAULT_JUDGE_BASE_URL
-        )
-        default_input_price = (
-            DEFAULT_JUDGE_INPUT_PRICE_PER_1M if uses_official_openai else 0.0
-        )
-        default_cached_input_price = (
-            DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M if uses_official_openai else 0.0
-        )
-        default_output_price = (
-            DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M if uses_official_openai else 0.0
-        )
         resolved_api_key_env = api_key_env or os.environ.get(
-            f"{JUDGE_ENV_PREFIX}API_KEY_ENV", "OPENAI_API_KEY"
+            f"{JUDGE_ENV_PREFIX}API_KEY_ENV", DEFAULT_JUDGE_API_KEY_ENV
         )
         api_key = os.environ.get(f"{JUDGE_ENV_PREFIX}API_KEY", "").strip()
         if not api_key and resolved_api_key_env:
@@ -224,24 +215,26 @@ class JudgeConfig:
             responses_store=responses_store
             if responses_store is not None
             else _env_bool(f"{JUDGE_ENV_PREFIX}RESPONSES_STORE", False),
-            thinking=os.environ.get(f"{JUDGE_ENV_PREFIX}THINKING", "auto"),
+            thinking=os.environ.get(
+                f"{JUDGE_ENV_PREFIX}THINKING", DEFAULT_JUDGE_THINKING
+            ),
             input_price_per_1m=input_price_per_1m
             if input_price_per_1m is not None
             else _env_float(
                 f"{JUDGE_ENV_PREFIX}INPUT_PRICE_PER_1M",
-                default_input_price,
+                DEFAULT_JUDGE_INPUT_PRICE_PER_1M,
             ),
             cached_input_price_per_1m=cached_input_price_per_1m
             if cached_input_price_per_1m is not None
             else _env_float(
                 f"{JUDGE_ENV_PREFIX}CACHED_INPUT_PRICE_PER_1M",
-                default_cached_input_price,
+                DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M,
             ),
             output_price_per_1m=output_price_per_1m
             if output_price_per_1m is not None
             else _env_float(
                 f"{JUDGE_ENV_PREFIX}OUTPUT_PRICE_PER_1M",
-                default_output_price,
+                DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M,
             ),
             api_key_env=resolved_api_key_env,
             api_key=api_key,
@@ -461,7 +454,7 @@ def build_judge_request(
             "max_output_tokens": config.max_output_tokens,
             "input": messages,
         }
-        if config.base_url == DEFAULT_JUDGE_BASE_URL:
+        if config.base_url == OFFICIAL_OPENAI_BASE_URL or config.responses_store:
             payload["store"] = config.responses_store
         if config.strict_json_schema:
             payload["text"] = {
@@ -503,6 +496,61 @@ def judge_request_fingerprint(
     return _judge_request_fingerprint(config=config, request_payload=request_payload)
 
 
+def judge_prompt_contract_sha256(config: JudgeConfig) -> str:
+    """Return the canonical digest of the body-free Judge prompt contract."""
+
+    return _canonical_json_sha256(
+        build_judge_request(
+            config,
+            question="[question]",
+            gold_answer="[gold-answer]",
+            predicted_answer="[predicted-answer]",
+        )
+    )
+
+
+def judge_request_shape_sha256(config: JudgeConfig) -> str:
+    """Return the canonical digest of one sentinel-shaped Judge request."""
+
+    request = build_judge_request(
+        config,
+        question="[question]",
+        gold_answer="[gold-answer]",
+        predicted_answer="[predicted-answer]",
+    )
+    messages_key = "input" if config.api == "responses" else "messages"
+    messages = request.get(messages_key)
+    if isinstance(messages, list):
+        request[messages_key] = [
+            {**message, "content": "[content]"}
+            if isinstance(message, dict) and "content" in message
+            else message
+            for message in messages
+        ]
+    return _canonical_json_sha256(request)
+
+
+def judge_public_identity(config: JudgeConfig) -> Dict[str, Any]:
+    """Return complete credential- and body-free Judge cache evidence."""
+
+    return {
+        **config.public_dict(),
+        "endpoint": config.endpoint,
+        "request_shape_sha256": judge_request_shape_sha256(config),
+        "prompt_contract_sha256": judge_prompt_contract_sha256(config),
+    }
+
+
+def _canonical_json_sha256(value: object) -> str:
+    canonical = json.dumps(
+        value,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
 def _judge_request_fingerprint(
     *, config: JudgeConfig, request_payload: Dict[str, Any]
 ) -> str:
@@ -510,9 +558,8 @@ def _judge_request_fingerprint(
 
     canonical_request = json.dumps(
         {
-            "configuration": config.public_dict(),
-            "endpoint": config.endpoint,
-            "request": request_payload,
+            "configuration": judge_public_identity(config),
+            "request_sha256": _canonical_json_sha256(request_payload),
         },
         ensure_ascii=False,
         separators=(",", ":"),
@@ -560,6 +607,7 @@ def judge_answer_sync(
             ) as response:
                 response_payload = json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
+            exc.close()
             raise RuntimeError(
                 f"Judge request to {config.endpoint} failed with HTTP {exc.code}; "
                 "verify the configured endpoint and credentials"

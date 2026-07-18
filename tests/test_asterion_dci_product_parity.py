@@ -26,6 +26,7 @@ from dci.benchmark.judge import (
     JudgeConfig as SourceJudgeConfig,
     build_judge_request as build_source_judge_request,
     judge_request_fingerprint as source_judge_fingerprint,
+    judge_public_identity as source_judge_public_identity,
 )
 from asterion.dci.benchmark import BenchmarkRequest, run_benchmark
 from asterion.dci.config import (
@@ -38,6 +39,7 @@ from asterion.dci.judge import (
     JudgeConfig as AsterionJudgeConfig,
     build_judge_request as build_asterion_judge_request,
     judge_request_fingerprint as asterion_judge_fingerprint,
+    judge_public_identity as asterion_judge_public_identity,
 )
 from asterion.dci.pi_rpc import build_pi_command as build_asterion_pi_command
 from asterion.dci.export import export_bcplus, export_subset as asterion_bright_export
@@ -306,6 +308,7 @@ class AsterionDciProductParityTests(unittest.TestCase):
             provider="fixture-provider",
             model="fixture-model",
             tools="read,bash",
+            max_turns=100,
             resume=resume,
         )
         with (
@@ -950,7 +953,7 @@ class AsterionDciProductParityTests(unittest.TestCase):
             "provider": "fixture-provider",
             "model": "fixture-model",
             "tools": "read,bash",
-            "max_turns": None,
+            "max_turns": 100,
             "pi_provenance": {"commit": "fixture", "dirty": False},
             "resume_count": 0,
             "protocol_attempt_count": 1,
@@ -1091,10 +1094,14 @@ class AsterionDciProductParityTests(unittest.TestCase):
 
     def test_af250_h002_judge_request_and_cache_invalidation_semantics_match(self) -> None:
         source_config = SourceJudgeConfig(
-            base_url="https://judge.example.test/v1", model="fixture-judge"
+            base_url="https://judge.example.test/v1",
+            api="responses",
+            model="fixture-judge",
         )
         asterion_config = AsterionJudgeConfig(
-            base_url="https://judge.example.test/v1", model="fixture-judge"
+            base_url="https://judge.example.test/v1",
+            api="responses",
+            model="fixture-judge",
         )
         fields = {
             "question": "question",
@@ -1104,6 +1111,10 @@ class AsterionDciProductParityTests(unittest.TestCase):
         source_request = build_source_judge_request(source_config, **fields)
         asterion_request = build_asterion_judge_request(asterion_config, **fields)
         self.assertEqual(source_config.public_dict(), asterion_config.public_dict())
+        self.assertEqual(
+            source_judge_public_identity(source_config),
+            asterion_judge_public_identity(asterion_config),
+        )
         self.assertEqual(source_request["model"], asterion_request["model"])
         self.assertEqual(
             source_request["max_output_tokens"],

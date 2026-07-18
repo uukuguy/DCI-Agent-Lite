@@ -20,6 +20,36 @@ from dci.effective_config import OriginalEffectiveConfig
 
 
 class AsterionDciConfigTests(unittest.TestCase):
+    def test_effective_judge_allows_only_valid_body_free_identity_digests(self) -> None:
+        runtime = resolve_asterion_runtime({}, ConfigLayers({}, {}))
+        judge = {
+            "judge_api_key_env": "DEEPSEEK_API_KEY",
+            "request_shape_sha256": "a" * 64,
+            "prompt_contract_sha256": "b" * 64,
+        }
+
+        projected = AsterionEffectiveConfig(runtime=runtime, judge=judge).to_public_dict()
+
+        self.assertEqual(projected["judge"], judge)
+        for field in ("request_shape_sha256", "prompt_contract_sha256"):
+            for malformed in ("A" * 64, "a" * 63, "not-a-digest"):
+                with self.subTest(field=field, malformed=malformed):
+                    with self.assertRaisesRegex(ValueError, "unsafe"):
+                        AsterionEffectiveConfig(
+                            runtime=runtime,
+                            judge={field: malformed},
+                        ).to_public_dict()
+        with self.assertRaisesRegex(ValueError, "unsafe"):
+            AsterionEffectiveConfig(
+                runtime=runtime,
+                judge={"judge_api_key_env": "unsafe env name"},
+            ).to_public_dict()
+        with self.assertRaisesRegex(ValueError, "unsafe"):
+            AsterionEffectiveConfig(
+                runtime=runtime,
+                judge={"prompt_contract": "private prompt body"},
+            ).to_public_dict()
+
     def test_runtime_resolution_is_runtime_first_and_layered(self) -> None:
         layers = ConfigLayers(
             process={

@@ -15,11 +15,33 @@ from asterion.dci.judge import (
     JudgeConfig,
     judge_answer_sync,
     judge_answer_async,
+    judge_public_identity,
     judge_request_fingerprint,
 )
 
 
 class AsterionDciJudgeTests(unittest.TestCase):
+    def test_zero_argument_defaults_use_independent_deepseek_judge(self) -> None:
+        with patch.dict(os.environ, {}, clear=True):
+            config = JudgeConfig.from_env()
+
+        self.assertEqual(
+            config.endpoint, "https://api.deepseek.com/v1/chat/completions"
+        )
+        self.assertEqual(config.api, "chat-completions")
+        self.assertEqual(config.model, "deepseek-v4-flash")
+        self.assertEqual(config.api_key_env, "DEEPSEEK_API_KEY")
+        self.assertEqual(config.effective_thinking, "disabled")
+        self.assertTrue(config.json_mode)
+        self.assertEqual(
+            (
+                config.input_price_per_1m,
+                config.cached_input_price_per_1m,
+                config.output_price_per_1m,
+            ),
+            (0.0, 0.0, 0.0),
+        )
+
     def test_configuration_is_public_without_api_key(self) -> None:
         config = JudgeConfig(
             base_url="https://judge.example.test/v1",
@@ -134,6 +156,35 @@ class AsterionDciJudgeTests(unittest.TestCase):
                     ),
                 )
 
+        self.assertEqual(
+            baseline,
+            judge_request_fingerprint(
+                config=replace(baseline_config, api_key="credential-only-change"),
+                question="q",
+                gold_answer="g",
+                predicted_answer="p",
+            ),
+        )
+
+    def test_public_identity_contains_only_body_free_canonical_digests(self) -> None:
+        config = JudgeConfig(api_key="credential-canary")
+
+        identity = judge_public_identity(config)
+
+        self.assertRegex(str(identity["request_shape_sha256"]), r"^[0-9a-f]{64}$")
+        self.assertRegex(str(identity["prompt_contract_sha256"]), r"^[0-9a-f]{64}$")
+        self.assertNotIn("credential-canary", repr(identity))
+        changed = judge_public_identity(replace(config, max_output_tokens=2048))
+        self.assertNotEqual(
+            identity["request_shape_sha256"], changed["request_shape_sha256"]
+        )
+        self.assertNotEqual(
+            identity["prompt_contract_sha256"], changed["prompt_contract_sha256"]
+        )
+        self.assertEqual(
+            identity, judge_public_identity(replace(config, api_key="other-canary"))
+        )
+
     def test_responses_and_chat_requests_include_configured_shaping(self) -> None:
         responses = build_judge_request(
             replace(_config(), strict_json_schema=True, responses_store=True),
@@ -168,7 +219,11 @@ class AsterionDciJudgeTests(unittest.TestCase):
         with patch("asterion.dci.judge._open_judge_request", return_value=response):
             result = judge_answer_sync(
                 config=JudgeConfig(
-                    base_url="https://judge.example.test/v1", api_key="secret-key"
+                    base_url="https://judge.example.test/v1",
+                    api="responses",
+                    api_key="secret-key",
+                    input_price_per_1m=1.0,
+                    output_price_per_1m=1.0,
                 ),
                 question="question",
                 gold_answer="gold",
@@ -372,7 +427,12 @@ class _Response:
 
 
 def _config() -> JudgeConfig:
-    return JudgeConfig(base_url="https://judge.example.test/v1", model="fixture")
+    return JudgeConfig(
+        base_url="https://judge.example.test/v1",
+        api="responses",
+        model="fixture",
+        thinking="auto",
+    )
 
 
 if __name__ == "__main__":

@@ -44,7 +44,12 @@ from asterion.dci.export import (
     export_bright,
     export_resolution_summary,
 )
-from asterion.dci.judge import JudgeConfig
+from asterion.dci.judge import (
+    DEFAULT_JUDGE_API,
+    DEFAULT_JUDGE_BASE_URL,
+    DEFAULT_JUDGE_MODEL,
+    JudgeConfig,
+)
 from asterion.dci.pi_rpc import run_pi_terminal, validate_terminal_cwd
 from asterion.dci.run import (
     DciRunError,
@@ -192,9 +197,19 @@ def _add_runtime_option_arguments(parser: argparse.ArgumentParser) -> None:
 
 
 def _add_judge_arguments(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--judge-base-url")
-    parser.add_argument("--judge-api", choices=("responses", "chat-completions"))
-    parser.add_argument("--judge-model")
+    parser.add_argument(
+        "--judge-base-url",
+        help=f"Override DCI_EVAL_JUDGE_BASE_URL (default: {DEFAULT_JUDGE_BASE_URL}).",
+    )
+    parser.add_argument(
+        "--judge-api",
+        choices=("responses", "chat-completions"),
+        help=f"Override DCI_EVAL_JUDGE_API (default: {DEFAULT_JUDGE_API}).",
+    )
+    parser.add_argument(
+        "--judge-model",
+        help=f"Override DCI_EVAL_JUDGE_MODEL (default: {DEFAULT_JUDGE_MODEL}).",
+    )
     parser.add_argument("--judge-api-key-env")
     parser.add_argument("--judge-timeout-seconds", type=int)
     parser.add_argument("--judge-max-output-tokens", type=int)

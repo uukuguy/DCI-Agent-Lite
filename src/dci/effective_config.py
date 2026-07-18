@@ -20,6 +20,9 @@ _UNSAFE_KEY = re.compile(
     r"(^|_)(api_?key|credential|secret|token|password|prompt|answer|body|path|dir)($|_)",
     re.IGNORECASE,
 )
+_BODY_FREE_DIGEST_FIELDS = {"request_shape_sha256", "prompt_contract_sha256"}
+_SHA256 = re.compile(r"[0-9a-f]{64}")
+_ENVIRONMENT_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
 
 def _canonical_bytes(value: object) -> bytes:
@@ -148,7 +151,25 @@ def _safe_mapping(value: Mapping[str, object], *, location: str) -> dict[str, ob
     def validate(item: object, path: str) -> None:
         if isinstance(item, dict):
             for key, nested in item.items():
-                if _UNSAFE_KEY.search(str(key)):
+                if key in _BODY_FREE_DIGEST_FIELDS:
+                    if (
+                        path != "judge"
+                        or not isinstance(nested, str)
+                        or _SHA256.fullmatch(nested) is None
+                    ):
+                        raise ValueError(
+                            f"unsafe effective configuration field at {path}.{key}"
+                        )
+                elif key == "judge_api_key_env":
+                    if (
+                        path != "judge"
+                        or not isinstance(nested, str)
+                        or _ENVIRONMENT_NAME.fullmatch(nested) is None
+                    ):
+                        raise ValueError(
+                            f"unsafe effective configuration field at {path}.{key}"
+                        )
+                elif _UNSAFE_KEY.search(str(key)):
                     raise ValueError(f"unsafe effective configuration field at {path}.{key}")
                 if key == "endpoint" and isinstance(nested, str):
                     _validate_safe_endpoint(nested, path=f"{path}.{key}")

@@ -35,6 +35,7 @@ from dci.benchmark.judge import (
     DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M,
     JudgeConfig,
     judge_answer_sync,
+    judge_public_identity,
     judge_request_fingerprint,
 )
 from dci.config import (
@@ -1799,13 +1800,7 @@ def effective_config_for_run(
 ) -> dict[str, object]:
     judge: dict[str, object] = {}
     if judge_config is not None:
-        judge = {
-            "endpoint": judge_config.endpoint,
-            "api": judge_config.api,
-            "model": judge_config.model,
-            "thinking": judge_config.effective_thinking,
-            "json_mode": judge_config.json_mode,
-        }
+        judge = judge_public_identity(judge_config)
     return OriginalEffectiveConfig(
         runtime=runtime,
         context={

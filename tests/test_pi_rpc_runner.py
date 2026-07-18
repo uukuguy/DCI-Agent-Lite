@@ -13,6 +13,7 @@ from unittest.mock import MagicMock, call, patch
 
 from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
 import dci.benchmark.pi_rpc_runner as rpc_runner
+from dci.benchmark.judge import JudgeConfig, judge_public_identity
 from dci.benchmark.pi_rpc_runner import PiRpcClient, parse_args
 from dci.config import ConfigLayers
 from dci.framework.protocol import validate_event_stream, validate_run_request
@@ -610,10 +611,29 @@ class PiRpcLifecycleTests(unittest.TestCase):
             json_mode=True,
         )
 
-        with self.assertRaisesRegex(ValueError, "unsafe judge endpoint"):
+        with (
+            patch.object(
+                rpc_runner,
+                "judge_public_identity",
+                return_value={"endpoint": judge.endpoint},
+            ),
+            self.assertRaisesRegex(ValueError, "unsafe judge endpoint"),
+        ):
             rpc_runner.effective_config_for_run(
                 runtime=runtime, args=args, judge_config=judge
             )
+
+    def test_runner_effective_config_uses_complete_safe_judge_identity(self) -> None:
+        runtime = rpc_runner.resolve_original_runtime({}, ConfigLayers({}, {}))
+        args = Namespace(cwd=Path("corpus"))
+        judge = JudgeConfig(api_key="credential-canary")
+
+        projected = rpc_runner.effective_config_for_run(
+            runtime=runtime, args=args, judge_config=judge
+        )
+
+        self.assertEqual(projected["judge"], judge_public_identity(judge))
+        self.assertNotIn("credential-canary", repr(projected))
 
     def test_batch_effective_config_rejects_sensitive_judge_endpoint(self) -> None:
         runtime = rpc_runner.resolve_original_runtime({}, ConfigLayers({}, {}))

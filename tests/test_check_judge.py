@@ -300,6 +300,15 @@ class CheckJudgeTests(unittest.TestCase):
         self.assertIn("judge_api_key_source", readme)
         self.assertIn("process environment", template)
 
+    def test_environment_template_uses_runtime_first_agent_defaults(self) -> None:
+        template = (REPO_ROOT / ".env.template").read_text()
+
+        self.assertIn("DCI_RUNTIME=pi", template)
+        self.assertIn("DCI_PROVIDER=openai-codex", template)
+        self.assertIn("DCI_MODEL=gpt-5.6-luna", template)
+        self.assertIn("local subscription login", template)
+        self.assertIn("CLI", template)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -14,6 +14,36 @@ from dci.effective_config import OriginalEffectiveConfig
 
 
 class OriginalEffectiveConfigTests(unittest.TestCase):
+    def test_judge_allows_only_valid_body_free_identity_digests(self) -> None:
+        runtime = resolve_original_runtime({}, ConfigLayers({}, {}))
+        judge = {
+            "judge_api_key_env": "DEEPSEEK_API_KEY",
+            "request_shape_sha256": "a" * 64,
+            "prompt_contract_sha256": "b" * 64,
+        }
+
+        projected = OriginalEffectiveConfig(runtime=runtime, judge=judge).to_public_dict()
+
+        self.assertEqual(projected["judge"], judge)
+        for field in ("request_shape_sha256", "prompt_contract_sha256"):
+            for malformed in ("A" * 64, "a" * 63, "not-a-digest"):
+                with self.subTest(field=field, malformed=malformed):
+                    with self.assertRaisesRegex(ValueError, "unsafe"):
+                        OriginalEffectiveConfig(
+                            runtime=runtime,
+                            judge={field: malformed},
+                        ).to_public_dict()
+        with self.assertRaisesRegex(ValueError, "unsafe"):
+            OriginalEffectiveConfig(
+                runtime=runtime,
+                judge={"judge_api_key_env": "unsafe env name"},
+            ).to_public_dict()
+        with self.assertRaisesRegex(ValueError, "unsafe"):
+            OriginalEffectiveConfig(
+                runtime=runtime,
+                judge={"prompt_contract": "private prompt body"},
+            ).to_public_dict()
+
     def test_public_projection_has_exact_keys_and_canonical_identity(self) -> None:
         runtime = resolve_original_runtime(
             {"provider": "openai-codex", "model": "gpt-5.6-luna"},
