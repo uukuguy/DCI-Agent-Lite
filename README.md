@@ -700,7 +700,9 @@ uv run python tools/verify_af340_reproduction.py bounded --variant claude-minima
 
 Inspect the three retained 0600 reports without contacting a provider; the
 inspection passes only when original Pi, Asterion Pi, Claude subscription, and
-Claude MiniMax form the exact four-dimensional evidence set:
+Claude MiniMax form the exact four-dimensional evidence set. Inspection
+rehashes the retained native request, terminal state/event, and Judge files;
+report JSON and self-authored hashes alone cannot satisfy this gate:
 
 ```bash
 uv run python tools/verify_af340_reproduction.py inspect \
@@ -731,7 +733,16 @@ uv run python tools/verify_af340_reproduction.py full --profile current-default/
 The coordinator writes one strict Task 7 manifest in each product/scope private
 root and immediately performs the matched Pi or target-only Claude comparison.
 Body-free comparison reports are retained under the full root's `comparisons/`
-directory; no separate manual comparison command is required.
+directory; no separate manual comparison command is required. `inspect-full`
+requires consumed Task 6 receipts, every exact product/scope private tree, and
+Task 7 manifest identities bound to the comparison report. Pi credentials or a
+usable saved `auth.json`, and Claude subscription login status, are checked
+before provider-capable execution begins.
+
+The retained gate assumes the private evidence root remains under coordinator
+ownership. It detects report-only fabrication and later artifact mutation; it
+does not claim authenticity against a hostile process running as the same OS
+user without an external signing or registry trust anchor.
 
 Validate that the retained full report was explicitly authorized, covered every
 profile scope, matched the exact operation maxima, and contains no rejected

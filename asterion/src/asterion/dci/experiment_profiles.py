@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import os
@@ -529,3 +530,42 @@ def _consumed_authorized_output_identity(
             snapshot.output_root_device,
             snapshot.output_root_inode,
         )
+
+
+def consumed_full_execution_authorization_snapshot(
+    authorization: FullExecutionAuthorization,
+) -> dict[str, object]:
+    """Return a durable body-free receipt only after every issued scope was consumed."""
+
+    if not isinstance(authorization, FullExecutionAuthorization):
+        raise ValueError("DCI full execution authorization is invalid")
+    token = getattr(authorization, "_issuance_token", None)
+    with _AUTHORIZATION_LOCK:
+        record = _AUTHORIZATION_REGISTRY.get(token)
+        if (
+            record is None
+            or record.issuer is not authorization
+            or not _authorization_matches_snapshot(authorization, record.snapshot)
+            or record.consumed_scopes != set(record.snapshot.authorized_scope_ids)
+        ):
+            raise ValueError("DCI full execution authorization is not fully consumed")
+        snapshot = record.snapshot
+        device, inode = _private_root_identity(snapshot.output_root)
+        if (device, inode) != (snapshot.output_root_device, snapshot.output_root_inode):
+            raise ValueError("DCI full execution output root identity changed")
+        return {
+            "schema": "dci.full-execution-authorization-receipt/v1",
+            "profile_id": snapshot.profile_id,
+            "profile_sha256": snapshot.profile_sha256,
+            "dataset_inventory_sha256": snapshot.dataset_inventory_sha256,
+            "experiment_scopes_sha256": snapshot.experiment_scopes_sha256,
+            "authorized_scope_ids": list(snapshot.authorized_scope_ids),
+            "selected_ids_sha256": list(snapshot.selected_ids_sha256),
+            "output_root_device": snapshot.output_root_device,
+            "output_root_inode": snapshot.output_root_inode,
+            "estimated_budget_usd": snapshot.estimated_budget_usd,
+            "invocation_authorized": snapshot.invocation_authorized,
+            "issuance_token_sha256": hashlib.sha256(
+                snapshot.issuance_token.encode()
+            ).hexdigest(),
+        }

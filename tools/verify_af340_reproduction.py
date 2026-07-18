@@ -14,13 +14,15 @@ import stat
 import subprocess
 import sys
 import tempfile
+import time
 from collections.abc import Callable, Mapping, Sequence
+from io import StringIO
 from pathlib import Path
 from typing import NamedTuple, TextIO
 
 
 REPORT_SCHEMA = "dci.af340-reproduction/v1"
-FULL_REPORT_SCHEMA = "dci.af340-full-reproduction/v1"
+FULL_REPORT_SCHEMA = "dci.af340-full-reproduction/v2"
 RETAINED_DIMENSIONS = frozenset(
     {
         "original-pi",
@@ -53,7 +55,7 @@ _LAUNCHERS = (
 )
 _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 _BOUNDED_NATIVE_NAMES = frozenset(
-    {"state.json", "events.jsonl", "eval_result.json", "effective-config.json", "config.json", "native-config.json"}
+    {"request.json", "state.json", "events.jsonl", "eval_result.json", "effective-config.json", "config.json", "native-config.json"}
 )
 
 
@@ -471,8 +473,11 @@ def _safe_slug(value: str) -> str:
 def _store_private_artifacts(
     root: Path, operation_id: str, artifacts: Mapping[str, bytes]
 ) -> dict[str, dict[str, str]]:
-    operation_root = root / "private" / _safe_slug(operation_id)
-    operation_root.mkdir(parents=True, mode=0o700)
+    private_root = root / "private"
+    private_root.mkdir(mode=0o700, exist_ok=True)
+    private_root.chmod(0o700)
+    operation_root = private_root / _safe_slug(operation_id)
+    operation_root.mkdir(mode=0o700)
     retained: dict[str, dict[str, str]] = {}
     for name, body in sorted(artifacts.items()):
         if not re.fullmatch(r"[a-z][a-z0-9_.-]*", name) or type(body) is not bytes:
@@ -575,26 +580,46 @@ def _bounded_native_operation_result(
     changed = tuple(
         path for path, digest in after.items() if before.get(path) != digest
     )
-    agent_roots: set[Path] = set()
+    pi_request_roots: set[Path] = set()
+    pi_completed_roots: set[Path] = set()
+    claude_request_roots: set[Path] = set()
+    claude_completed_roots: set[Path] = set()
     judge_roots: set[Path] = set()
     native_artifacts: list[dict[str, str]] = []
-    for path in sorted(changed):
+    retained_native: dict[str, bytes] = {}
+    for index, path in enumerate(sorted(changed), start=1):
         document = _read_native_json(path) if path.suffix == ".json" else None
+        run_root = _native_run_root(path)
         if re.fullmatch(r"attempt-[0-9]{4}\.request\.json", path.name):
             if isinstance(document, dict):
-                agent_roots.add(_native_run_root(path))
+                pi_request_roots.add(_native_run_root(path))
         elif path.name == "state.json":
-            if isinstance(document, dict) and document.get("status") in {
-                "running", "completed", "failed", "cancelled", "timed_out"
-            }:
-                agent_roots.add(path.parent)
+            if isinstance(document, dict) and document.get("status") == "completed":
+                pi_completed_roots.add(path.parent)
+        elif path.name == "request.json":
+            if isinstance(document, dict) and isinstance(document.get("run_id"), str):
+                claude_request_roots.add(path.parent)
         elif path.name == "events.jsonl" and _completed_claude_events(path):
-            agent_roots.add(path.parent)
+            claude_completed_roots.add(path.parent)
         elif path.name == "eval_result.json":
             if isinstance(document, dict) and isinstance(document.get("is_correct"), bool):
                 judge_roots.add(path.parent)
-        native_artifacts.append({"kind": path.name, "sha256": after[path]})
+        artifact_name = f"native-{index:04d}-{path.name}"
+        retained_native[artifact_name] = path.read_bytes()
+        native_artifacts.append(
+            {
+                "artifact": artifact_name,
+                "kind": path.name,
+                "root_ref": run_root.relative_to(output_root).as_posix(),
+                "sha256": after[path],
+            }
+        )
 
+    agent_roots = (pi_request_roots & pi_completed_roots) | (
+        claude_request_roots & claude_completed_roots
+    )
+    for native_root in agent_roots | judge_roots:
+        _validate_private_tree(native_root)
     agent_count = len(agent_roots)
     judge_count = len(judge_roots)
     expected_agent = int(operation.kind in {"agent", "agent-and-judge"})
@@ -628,7 +653,10 @@ def _bounded_native_operation_result(
         status_value,
         agent_count,
         judge_count,
-        {"effective-config.json": json.dumps(identity, sort_keys=True).encode() + b"\n"},
+        {
+            "effective-config.json": json.dumps(identity, sort_keys=True).encode() + b"\n",
+            **retained_native,
+        },
     )
 
 
@@ -643,19 +671,9 @@ def _coordinator_bounded_result(
 ) -> OperationResult:
     """Replace injected/private artifacts with one exact body-free projection."""
 
-    current = outcome.artifacts.get("effective-config.json")
-    if type(current) is bytes:
-        try:
-            parsed = json.loads(current)
-        except (UnicodeDecodeError, ValueError):
-            parsed = None
-        if isinstance(parsed, dict) and parsed.get("schema") == "dci.af340-effective-config/v1":
-            return outcome
-    native_artifacts = [
-        {"kind": name, "sha256": hashlib.sha256(body).hexdigest()}
-        for name, body in sorted(outcome.artifacts.items())
-        if type(body) is bytes and name not in {"stdout.txt", "stderr.txt"}
-    ]
+    # Programmatic executor results are useful for orchestration tests, but they
+    # are not native provenance.  Never retain executor-authored evidence bytes.
+    native_artifacts: list[dict[str, str]] = []
     identity = {
         "schema": "dci.af340-effective-config/v1",
         "operation_id": operation.operation_id,
@@ -684,6 +702,38 @@ def _coordinator_bounded_result(
 def _write_report(path: Path, report: Mapping[str, object]) -> None:
     path.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
     path.chmod(0o600)
+
+
+def _validate_private_tree(root: Path) -> None:
+    if root.is_symlink() or not root.is_dir():
+        raise ValueError("AF-340 private tree symlink is invalid")
+    for path in (root, *root.rglob("*")):
+        if path.is_symlink():
+            raise ValueError("AF-340 private tree symlink is invalid")
+        mode = stat.S_IMODE(path.stat().st_mode)
+        if (path.is_dir() and mode != 0o700) or (path.is_file() and mode != 0o600):
+            raise ValueError("AF-340 private tree permissions are invalid")
+        if not path.is_dir() and not path.is_file():
+            raise ValueError("AF-340 private tree type is invalid")
+
+
+def _private_tree_sha256(root: Path) -> str:
+    _validate_private_tree(root)
+    entries: list[dict[str, object]] = []
+    for path in sorted(root.rglob("*")):
+        relative = path.relative_to(root).as_posix()
+        if path.is_dir():
+            entries.append({"path": relative, "type": "directory", "mode": "0700"})
+        else:
+            entries.append(
+                {
+                    "path": relative,
+                    "type": "file",
+                    "mode": "0600",
+                    "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                }
+            )
+    return _canonical_sha256(entries)
 
 
 def _run_local(
@@ -772,14 +822,17 @@ def _run_bounded(
     environment["ASTERION_CLAUDE_OUTPUT_ROOT"] = str(output_root / "claude-native")
     records: list[dict[str, object]] = []
     status_value = "passed"
+    retainable = True
     for operation in plan:
         command = _render_command(operation, output_root, preflight.wheel_asterion)
         native_before = _bounded_native_snapshot(output_root)
+        projected_result = False
         try:
             completed = executor(
                 command,
                 cwd=root,
                 env=environment,
+                umask=0o077,
                 check=False,
                 text=True,
                 capture_output=True,
@@ -789,6 +842,8 @@ def _run_bounded(
                 for name in ("status", "agent_operations", "judge_operations", "artifacts")
             ):
                 outcome = _coerce_operation_result(completed)
+                retainable = False
+                projected_result = True
             else:
                 outcome = _bounded_native_operation_result(
                     completed=completed,
@@ -802,16 +857,19 @@ def _run_bounded(
                 )
         except subprocess.TimeoutExpired:
             outcome = OperationResult("timed_out", 0, 0, {})
+            projected_result = True
         except KeyboardInterrupt:
             outcome = OperationResult("cancelled", 0, 0, {})
-        outcome = _coordinator_bounded_result(
-            outcome,
-            operation=operation,
-            command=command,
-            variant=args.variant,
-            provider=args.provider,
-            model=args.model,
-        )
+            projected_result = True
+        if projected_result:
+            outcome = _coordinator_bounded_result(
+                outcome,
+                operation=operation,
+                command=command,
+                variant=args.variant,
+                provider=args.provider,
+                model=args.model,
+            )
         retained_artifacts = _store_private_artifacts(
             output_root, operation.operation_id, outcome.artifacts
         )
@@ -829,6 +887,9 @@ def _run_bounded(
         if outcome.status != "completed":
             status_value = outcome.status
             break
+        if not retainable:
+            status_value = "non-retainable"
+            break
     agent_count = sum(int(item["agent_operations"]) for item in records)
     judge_count = sum(int(item["judge_operations"]) for item in records)
     report = {
@@ -845,7 +906,8 @@ def _run_bounded(
         "plan_sha256": _plan_sha256(plan),
     }
     report["report_sha256"] = _canonical_sha256(report)
-    _write_report(output_root / "af340-bounded-report.json", report)
+    if retainable:
+        _write_report(output_root / "af340-bounded-report.json", report)
     if preflight.cleanup_root is not None:
         shutil.rmtree(preflight.cleanup_root)
     if status_value != "passed":
@@ -895,12 +957,22 @@ def _default_bounded_preflight(
             raise ValueError("AF-340 MiniMax credential preflight failed")
     if args.variant.startswith("claude") and shutil.which("claude") is None:
         raise ValueError("AF-340 Claude runtime preflight failed")
+    claude_executable = shutil.which("claude") if args.variant.startswith("claude") else None
+    if args.variant == "claude-subscription" and not _claude_login_ready(
+        claude_executable, environment
+    ):
+        raise ValueError("AF-340 Claude authentication preflight failed")
     if args.variant == "pi":
         from asterion.dci.config import resolve_dci_paths  # noqa: PLC0415
 
         paths = resolve_dci_paths(root, environment=environment)
-        if not paths.pi.package_dir.is_dir() or not paths.pi.agent_dir.is_dir():
-            raise ValueError("AF-340 Pi runtime preflight failed")
+        provider = environment.get("DCI_PROVIDER", "openai-codex").strip() or "openai-codex"
+        if (
+            not paths.pi.package_dir.is_dir()
+            or not paths.pi.agent_dir.is_dir()
+            or not _pi_auth_ready(paths.pi.agent_dir, provider, environment)
+        ):
+            raise ValueError("AF-340 Pi authentication preflight failed")
 
     setup = Path(tempfile.mkdtemp(prefix="af340-wheel-"))
     setup.chmod(0o700)
@@ -931,6 +1003,78 @@ def _default_bounded_preflight(
         shutil.rmtree(setup)
         raise ValueError("AF-340 wheel install preflight failed")
     return BoundedPreflight(dict(environment), wheel_cli, setup)
+
+
+def _provider_key_name(provider: str) -> str | None:
+    if re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", provider) is None:
+        return None
+    aliases = {"google": "GOOGLE_API_KEY", "gemini": "GOOGLE_API_KEY"}
+    return aliases.get(provider.lower(), f"{provider.upper().replace('-', '_')}_API_KEY")
+
+
+def _pi_auth_ready(
+    agent_dir: Path, provider: str, environment: Mapping[str, str]
+) -> bool:
+    key_name = _provider_key_name(provider)
+    if key_name is not None and environment.get(key_name, "").strip():
+        return True
+    path = agent_dir / "auth.json"
+    if path.is_symlink() or not path.is_file():
+        return False
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, ValueError):
+        return False
+    if not isinstance(document, dict):
+        return False
+    credential = document.get(provider)
+    if not isinstance(credential, dict):
+        return False
+    credential_type = credential.get("type")
+    if credential_type == "api_key":
+        return isinstance(credential.get("key"), str) and bool(
+            credential["key"].strip()
+        )
+    if credential_type == "oauth":
+        refresh = credential.get("refresh")
+        if isinstance(refresh, str) and refresh.strip():
+            return True
+        access = credential.get("access")
+        if not isinstance(access, str) or not access.strip():
+            return False
+        expires = credential.get("expires")
+        if isinstance(expires, bool) or expires is None:
+            return expires is None
+        if not isinstance(expires, (int, float)):
+            return False
+        now = time.time() * (1000 if expires > 1_000_000_000_000 else 1)
+        return expires > now
+    return False
+
+
+def _claude_login_ready(
+    executable: str | None, environment: Mapping[str, str]
+) -> bool:
+    if executable is None:
+        return False
+    completed = subprocess.run(
+        (executable, "auth", "status", "--json"),
+        env=dict(environment),
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        return False
+    try:
+        document = json.loads(completed.stdout)
+    except (TypeError, ValueError):
+        return False
+    return isinstance(document, dict) and (
+        document.get("loggedIn") is True
+        or document.get("authenticated") is True
+        or document.get("status") in {"logged_in", "authenticated"}
+    )
 
 
 def _asterion_profile_api(root: Path):
@@ -1392,7 +1536,9 @@ def _native_config_document(request: FullScopeRequest) -> tuple[dict[str, object
     return config, raw
 
 
-def normalize_full_scope_manifest(request: FullScopeRequest) -> object:
+def normalize_full_scope_manifest(
+    request: FullScopeRequest, *, write: bool = True
+) -> object:
     """Normalize either product's compatible private native metrics into Task 7."""
 
     source = str(request.repo_root / "asterion/src")
@@ -1406,6 +1552,7 @@ def normalize_full_scope_manifest(request: FullScopeRequest) -> object:
     )
     from asterion.dci.reproduction import (  # noqa: PLC0415
         QueryEvidence,
+        RunManifest,
         _computed_aggregates,
         load_run_manifest,
         reproduction_metric_contract_sha256,
@@ -1476,6 +1623,8 @@ def normalize_full_scope_manifest(request: FullScopeRequest) -> object:
         "aggregates": aggregates.to_dict(),
     }
     values["identity_sha256"] = canonical_sha256(values)
+    if not write:
+        return RunManifest.from_mapping(values)
     manifest_path = request.output_root / "af340-run-manifest.json"
     _write_report(manifest_path, values)
     return load_run_manifest(manifest_path)
@@ -1622,6 +1771,7 @@ def _claude_full_scope_native_analysis(
             command,
             cwd=request.repo_root,
             env=environment,
+            umask=0o077,
             check=False,
             capture_output=True,
             text=True,
@@ -1810,6 +1960,7 @@ def _execute_production_full_scope(
             command,
             cwd=request.repo_root,
             env=process_environment,
+            umask=0o077,
             check=False,
             capture_output=True,
             text=True,
@@ -1841,6 +1992,8 @@ def _execute_production_full_scope(
                 benchmark,
                 process_executor=process_executor,
             )
+            if process_executor is subprocess.run:
+                _validate_private_tree(request.output_root)
             manifest = normalize_full_scope_manifest(request)
             agent = sum(row.operations.agent for row in manifest.queries)
             judge_count = sum(row.operations.judge for row in manifest.queries)
@@ -1883,6 +2036,7 @@ def _execute_production_full_scope(
                     runtime=request.profile.runtime,
                     tools=request.profile.tools,
                     runtime_context_level=request.profile.context_profile,
+                    thinking_level=request.profile.reasoning,
                     authentication_mode=request.profile.authentication_mode,
                 ),
                 mode=benchmark.mode,
@@ -1898,6 +2052,11 @@ def _execute_production_full_scope(
             raise ValueError("AF-340 Asterion full scope output drifted")
     else:
         raise ValueError("AF-340 full product is invalid")
+    if (
+        (request.product == "original-dci" and process_executor is subprocess.run)
+        or (request.product == "asterion-dci" and asterion_runner is None)
+    ):
+        _validate_private_tree(request.output_root)
     manifest = normalize_full_scope_manifest(request)
     agent = sum(row.operations.agent for row in manifest.queries)
     judge_count = sum(row.operations.judge for row in manifest.queries)
@@ -1912,18 +2071,30 @@ def _full_execution_preflight(args: argparse.Namespace, root: Path, profile: obj
     if not environment.get(judge_key):
         raise ValueError("AF-340 full Judge credential preflight failed")
     if profile.runtime == "claude-code":
-        if shutil.which("claude") is None:
+        claude_executable = shutil.which("claude")
+        if claude_executable is None:
             raise ValueError("AF-340 full Claude runtime preflight failed")
-        if profile.compatible_config_key is not None and not environment.get(
-            profile.compatible_config_key
-        ):
-            raise ValueError("AF-340 full Claude credential preflight failed")
+        if profile.compatible_config_key is None:
+            if not _claude_login_ready(claude_executable, environment):
+                raise ValueError("AF-340 full Claude authentication preflight failed")
+        else:
+            competing = (
+                "MINIMAX_CN_API_KEY"
+                if profile.compatible_config_key == "MINIMAX_API_KEY"
+                else "MINIMAX_API_KEY"
+            )
+            if not environment.get(profile.compatible_config_key) or environment.get(competing):
+                raise ValueError("AF-340 full Claude credential preflight failed")
     else:
         from asterion.dci.config import resolve_dci_paths  # noqa: PLC0415
 
         paths = resolve_dci_paths(root, environment=environment)
-        if not paths.pi.package_dir.is_dir() or not paths.pi.agent_dir.is_dir():
-            raise ValueError("AF-340 full Pi runtime preflight failed")
+        if (
+            not paths.pi.package_dir.is_dir()
+            or not paths.pi.agent_dir.is_dir()
+            or not _pi_auth_ready(paths.pi.agent_dir, str(profile.provider), environment)
+        ):
+            raise ValueError("AF-340 full Pi authentication preflight failed")
     *_, resolve_benchmark, resolve_scope = _asterion_profile_api(root)
     for scope_id in profile.scope_ids:
         scope = resolve_scope(scope_id)
@@ -1944,13 +2115,21 @@ def _write_full_execution_report(
     profile: object,
     plan: Mapping[str, object],
     result: FullRunResult,
+    authorizations: Mapping[str, Mapping[str, object]],
 ) -> Path:
     source = str(Path(__file__).resolve().parents[1] / "asterion/src")
     if source not in sys.path:
         sys.path.insert(0, source)
-    from asterion.dci.reproduction import load_comparison_report  # noqa: PLC0415
+    from asterion.dci.experiment_profiles import (  # noqa: PLC0415
+        consumed_full_execution_authorization_snapshot,
+    )
+    from asterion.dci.reproduction import (  # noqa: PLC0415
+        load_comparison_report,
+        load_run_manifest,
+    )
 
     comparison_root = parent_root / "comparisons"
+    _validate_private_tree(comparison_root)
     paths = tuple(sorted(comparison_root.glob("*.json")))
     if len(paths) != len(profile.scope_ids):
         raise ValueError("AF-340 full comparison evidence incomplete [scope-count]")
@@ -1969,6 +2148,38 @@ def _write_full_execution_report(
         )
     if {item["selection_id"] for item in comparisons} != set(profile.scope_ids):
         raise ValueError("AF-340 full comparison evidence incomplete [selection-set]")
+    scope_evidence: list[dict[str, object]] = []
+    for product, by_scope in sorted(authorizations.items()):
+        for scope_id, authorization in sorted(by_scope.items()):
+            output_root = authorization.output_root
+            expected_root = (parent_root / product / _safe_slug(scope_id)).resolve()
+            if output_root != expected_root:
+                raise ValueError("AF-340 full native root drifted [product-or-scope]")
+            receipt = consumed_full_execution_authorization_snapshot(authorization)
+            receipt_path = output_root / "authorization-receipt.json"
+            _write_report(receipt_path, receipt)
+            manifest_path = output_root / "af340-run-manifest.json"
+            manifest = load_run_manifest(manifest_path)
+            if (
+                manifest.product != product
+                or manifest.selection_id != scope_id
+                or manifest.profile_id != profile.profile_id
+            ):
+                raise ValueError("AF-340 full native manifest drifted [product-or-scope]")
+            tree_sha256 = _private_tree_sha256(output_root)
+            scope_evidence.append(
+                {
+                    "product": product,
+                    "selection_id": scope_id,
+                    "root_ref": output_root.relative_to(parent_root).as_posix(),
+                    "tree_sha256": tree_sha256,
+                    "authorization_ref": receipt_path.relative_to(parent_root).as_posix(),
+                    "authorization_sha256": hashlib.sha256(receipt_path.read_bytes()).hexdigest(),
+                    "manifest_ref": manifest_path.relative_to(parent_root).as_posix(),
+                    "manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+                    "manifest_identity_sha256": manifest.identity_sha256,
+                }
+            )
     values: dict[str, object] = {
         "schema": FULL_REPORT_SCHEMA,
         "mode": "full",
@@ -1977,13 +2188,12 @@ def _write_full_execution_report(
         "profile_sha256": plan["profile_sha256"],
         "profile_provider": profile.provider,
         "profile_model": profile.model,
-        "authorization_issued": True,
-        "full_dataset_ran": result.full_dataset_ran,
         "agent_operations": result.agent_operations,
         "judge_operations": result.judge_operations,
         "agent_maximum": plan["agent_maximum"],
         "judge_maximum": plan["judge_maximum"],
         "comparisons": comparisons,
+        "scope_evidence": scope_evidence,
     }
     values["report_sha256"] = _canonical_sha256(values)
     target = parent_root / "af340-full-report.json"
@@ -2055,7 +2265,15 @@ def _run_full(
         and executor is subprocess.run
         and full_comparator is _default_full_comparator
     ):
-        report_path = _write_full_execution_report(parent_root, profile, plan, result)
+        report_path = _write_full_execution_report(
+            parent_root, profile, plan, result, authorizations
+        )
+        # The same coordinator invocation still holds the consumed Task 6
+        # capabilities here.  Do not publish retained evidence until the exact
+        # persistent inspection path also accepts the completed native trees.
+        _run_inspect_full(
+            argparse.Namespace(report=report_path), root, StringIO()
+        )
         stdout.write(
             "Full evidence report SHA-256: "
             + hashlib.sha256(report_path.read_bytes()).hexdigest()
@@ -2072,6 +2290,7 @@ def _validate_report(path: Path, root: Path) -> tuple[str, set[str]]:
         raise ValueError("AF-340 retained report permissions are invalid")
     if stat.S_IMODE(path.parent.stat().st_mode) != 0o700:
         raise ValueError("AF-340 retained report root permissions are invalid")
+    _validate_private_tree(path.parent / "private")
     report = json.loads(path.read_text(encoding="utf-8"))
     required = {
         "schema",
@@ -2203,14 +2422,70 @@ def _validate_report(path: Path, root: Path) -> tuple[str, set[str]]:
         ):
             raise ValueError("AF-340 retained provider identity drifted")
         native_artifacts = config["native_artifacts"]
-        if not isinstance(native_artifacts, list) or not all(
-            isinstance(item, dict)
-            and set(item) == {"kind", "sha256"}
-            and isinstance(item["kind"], str)
-            and _SHA256.fullmatch(str(item["sha256"])) is not None
-            for item in native_artifacts
-        ):
+        if not isinstance(native_artifacts, list) or not native_artifacts:
             raise ValueError("AF-340 retained native artifact identity drifted")
+        native_by_root: dict[str, dict[str, object]] = {}
+        for item in native_artifacts:
+            if (
+                not isinstance(item, dict)
+                or set(item) != {"artifact", "kind", "root_ref", "sha256"}
+                or not isinstance(item["artifact"], str)
+                or not isinstance(item["kind"], str)
+                or not isinstance(item["root_ref"], str)
+                or _SHA256.fullmatch(str(item["sha256"])) is None
+                or item["artifact"] not in artifacts
+                or item["artifact"] == "effective-config.json"
+            ):
+                raise ValueError("AF-340 retained native artifact identity drifted")
+            root_ref = Path(item["root_ref"])
+            if root_ref.is_absolute() or ".." in root_ref.parts:
+                raise ValueError("AF-340 retained native root identity drifted")
+            native_path = (path.parent / artifacts[item["artifact"]]["ref"]).resolve()
+            if hashlib.sha256(native_path.read_bytes()).hexdigest() != item["sha256"]:
+                raise ValueError("AF-340 retained native artifact digest drifted")
+            root_facts = native_by_root.setdefault(
+                item["root_ref"], {"pi_request": False, "pi_completed": False,
+                                   "claude_request": False, "claude_completed": False,
+                                   "judge": False},
+            )
+            document = _read_native_json(native_path) if native_path.suffix == ".json" else None
+            if re.fullmatch(r"attempt-[0-9]{4}\.request\.json", item["kind"]):
+                root_facts["pi_request"] = isinstance(document, dict)
+            elif item["kind"] == "state.json":
+                root_facts["pi_completed"] = (
+                    isinstance(document, dict) and document.get("status") == "completed"
+                )
+            elif item["kind"] == "request.json":
+                root_facts["claude_request"] = (
+                    isinstance(document, dict) and isinstance(document.get("run_id"), str)
+                )
+            elif item["kind"] == "events.jsonl":
+                root_facts["claude_completed"] = _completed_claude_events(native_path)
+            elif item["kind"] == "eval_result.json":
+                root_facts["judge"] = (
+                    isinstance(document, dict)
+                    and isinstance(document.get("is_correct"), bool)
+                )
+        measured_agent = sum(
+            bool(facts["pi_request"] and facts["pi_completed"])
+            or bool(facts["claude_request"] and facts["claude_completed"])
+            for facts in native_by_root.values()
+        )
+        measured_judge = sum(bool(facts["judge"]) for facts in native_by_root.values())
+        has_pi = any(
+            facts["pi_request"] or facts["pi_completed"]
+            for facts in native_by_root.values()
+        )
+        has_claude = any(
+            facts["claude_request"] or facts["claude_completed"]
+            for facts in native_by_root.values()
+        )
+        if (
+            (measured_agent, measured_judge) != (expected_agent, expected_judge)
+            or (variant == "pi" and (not has_pi or has_claude))
+            or (variant != "pi" and (not has_claude or has_pi))
+        ):
+            raise ValueError("AF-340 retained native operation counts drifted")
         process = config["process"]
         if (
             not isinstance(process, dict)
@@ -2279,9 +2554,9 @@ def _run_inspect_full(args: argparse.Namespace, root: Path, stdout: TextIO) -> i
         raise ValueError("AF-340 full report invalid [json]") from None
     keys = {
         "schema", "mode", "status", "profile_id", "profile_sha256",
-        "profile_provider", "profile_model", "authorization_issued",
-        "full_dataset_ran", "agent_operations", "judge_operations",
-        "agent_maximum", "judge_maximum", "comparisons", "report_sha256",
+        "profile_provider", "profile_model", "agent_operations", "judge_operations",
+        "agent_maximum", "judge_maximum", "comparisons", "scope_evidence",
+        "report_sha256",
     }
     if not isinstance(report, dict) or set(report) != keys:
         raise ValueError("AF-340 full report invalid [schema]")
@@ -2291,8 +2566,6 @@ def _run_inspect_full(args: argparse.Namespace, root: Path, stdout: TextIO) -> i
         report["schema"] != FULL_REPORT_SCHEMA
         or report["mode"] != "full"
         or report["status"] != "passed"
-        or report["authorization_issued"] is not True
-        or report["full_dataset_ran"] is not True
         or signature != _canonical_sha256(unsigned)
     ):
         raise ValueError("AF-340 full report invalid [identity-or-state]")
@@ -2315,6 +2588,7 @@ def _run_inspect_full(args: argparse.Namespace, root: Path, stdout: TextIO) -> i
     comparisons = report["comparisons"]
     if not isinstance(comparisons, list) or len(comparisons) != len(profile.scope_ids):
         raise ValueError("AF-340 full report invalid [comparison-count]")
+    _validate_private_tree(path.parent / "comparisons")
     source = str(root / "asterion/src")
     if source not in sys.path:
         sys.path.insert(0, source)
@@ -2322,11 +2596,110 @@ def _run_inspect_full(args: argparse.Namespace, root: Path, stdout: TextIO) -> i
         resolve_paper_benchmark,
         resolve_paper_experiment_scope,
     )
-    from asterion.dci.reproduction import load_comparison_report  # noqa: PLC0415
+    from asterion.dci.reproduction import (  # noqa: PLC0415
+        load_comparison_report,
+        load_run_manifest,
+    )
+
+    expected_products = (
+        ("original-dci", "asterion-dci")
+        if profile.runtime == "pi"
+        else ("asterion-dci",)
+    )
+    evidence = report["scope_evidence"]
+    if not isinstance(evidence, list) or len(evidence) != (
+        len(expected_products) * len(profile.scope_ids)
+    ):
+        raise ValueError("AF-340 full report invalid [native-count]")
+    manifests: dict[tuple[str, str], object] = {}
+    selected_by_scope = dict(
+        zip(profile.scope_ids, profile.selected_ids_sha256, strict=True)
+    )
+    receipt_keys = {
+        "schema", "profile_id", "profile_sha256", "dataset_inventory_sha256",
+        "experiment_scopes_sha256", "authorized_scope_ids", "selected_ids_sha256",
+        "output_root_device", "output_root_inode", "estimated_budget_usd",
+        "invocation_authorized", "issuance_token_sha256",
+    }
+    for item in evidence:
+        item_keys = {
+            "product", "selection_id", "root_ref", "tree_sha256",
+            "authorization_ref", "authorization_sha256", "manifest_ref",
+            "manifest_sha256", "manifest_identity_sha256",
+        }
+        if not isinstance(item, dict) or set(item) != item_keys:
+            raise ValueError("AF-340 full report invalid [native-ref]")
+        product = item["product"]
+        scope_id = item["selection_id"]
+        identity = (product, scope_id)
+        if (
+            product not in expected_products
+            or scope_id not in profile.scope_ids
+            or identity in manifests
+            or item["root_ref"] != f"{product}/{_safe_slug(scope_id)}"
+        ):
+            raise ValueError("AF-340 full report invalid [native-identity]")
+        native_root = (path.parent / item["root_ref"]).resolve()
+        try:
+            native_root.relative_to(path.parent.resolve())
+        except ValueError:
+            raise ValueError("AF-340 full report invalid [native-escape]") from None
+        if _private_tree_sha256(native_root) != item["tree_sha256"]:
+            raise ValueError("AF-340 full report invalid [native-tree]")
+        receipt_path = (path.parent / item["authorization_ref"]).resolve()
+        manifest_path = (path.parent / item["manifest_ref"]).resolve()
+        if receipt_path.parent != native_root or manifest_path.parent != native_root:
+            raise ValueError("AF-340 full report invalid [native-binding]")
+        if (
+            hashlib.sha256(receipt_path.read_bytes()).hexdigest()
+            != item["authorization_sha256"]
+            or hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+            != item["manifest_sha256"]
+        ):
+            raise ValueError("AF-340 full report invalid [native-digest]")
+        receipt = _read_native_json(receipt_path)
+        metadata = native_root.stat()
+        if (
+            not isinstance(receipt, dict)
+            or set(receipt) != receipt_keys
+            or receipt["schema"] != "dci.full-execution-authorization-receipt/v1"
+            or receipt["profile_id"] != profile.profile_id
+            or receipt["profile_sha256"] != report["profile_sha256"]
+            or receipt["dataset_inventory_sha256"] != profile.dataset_inventory_sha256
+            or receipt["experiment_scopes_sha256"] != profile.experiment_scopes_sha256
+            or receipt["authorized_scope_ids"] != [scope_id]
+            or receipt["selected_ids_sha256"] != [selected_by_scope[scope_id]]
+            or receipt["output_root_device"] != metadata.st_dev
+            or receipt["output_root_inode"] != metadata.st_ino
+            or receipt["invocation_authorized"] is not True
+            or _SHA256.fullmatch(str(receipt["issuance_token_sha256"])) is None
+        ):
+            raise ValueError("AF-340 full report invalid [authorization-receipt]")
+        manifest = load_run_manifest(manifest_path)
+        normalized = normalize_full_scope_manifest(
+            FullScopeRequest(
+                product, scope_id, None, native_root, profile, root
+            ),
+            write=False,
+        )
+        if (
+            manifest.product != product
+            or manifest.selection_id != scope_id
+            or manifest.profile_id != profile.profile_id
+            or manifest.profile_sha256 != report["profile_sha256"]
+            or manifest.identity_sha256 != item["manifest_identity_sha256"]
+            or normalized.identity_sha256 != manifest.identity_sha256
+        ):
+            raise ValueError("AF-340 full report invalid [native-manifest]")
+        manifests[identity] = manifest
 
     seen: set[str] = set()
-    counted_agent = 0
-    counted_judge = 0
+    counted_agent = sum(
+        manifest.aggregates.agent_operations for manifest in manifests.values()
+    )
+    counted_judge = sum(
+        manifest.aggregates.judge_operations for manifest in manifests.values()
+    )
     for item in comparisons:
         if not isinstance(item, dict) or set(item) != {
             "selection_id", "ref", "sha256", "accepted"
@@ -2349,20 +2722,26 @@ def _run_inspect_full(args: argparse.Namespace, root: Path, stdout: TextIO) -> i
             or item["accepted"] is False
             or hashlib.sha256(candidate.read_bytes()).hexdigest() != item["sha256"]
             or comparison.profile_sha256 != report["profile_sha256"]
+            or comparison.candidate_run_sha256
+            != manifests[("asterion-dci", item["selection_id"])].identity_sha256
             or comparison.candidate.agent_operations != scope.selection_count
             or comparison.candidate.judge_operations != expected_judge
         ):
             raise ValueError("AF-340 full report invalid [comparison-evidence]")
-        counted_agent += comparison.candidate.agent_operations
-        counted_judge += comparison.candidate.judge_operations
-        if comparison.baseline is not None:
+        if "original-dci" in expected_products:
             if (
+                comparison.baseline is None
+                or comparison.baseline_run_sha256 is None
+                or
+                comparison.baseline_run_sha256
+                != manifests[("original-dci", item["selection_id"])].identity_sha256
+                or
                 comparison.baseline.agent_operations != scope.selection_count
                 or comparison.baseline.judge_operations != expected_judge
             ):
                 raise ValueError("AF-340 full report invalid [baseline-counts]")
-            counted_agent += comparison.baseline.agent_operations
-            counted_judge += comparison.baseline.judge_operations
+        elif comparison.baseline is not None or comparison.baseline_run_sha256 is not None:
+            raise ValueError("AF-340 full report invalid [baseline-counts]")
         seen.add(item["selection_id"])
     if (
         seen != set(profile.scope_ids)

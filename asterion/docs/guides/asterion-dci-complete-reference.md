@@ -403,7 +403,10 @@ uv run python tools/verify_af340_reproduction.py full --profile current-default/
 The coordinator writes one strict Task 7 manifest in each product/scope private
 root and immediately performs the matched Pi or target-only Claude comparison.
 Body-free comparison reports are retained under the full root's `comparisons/`
-directory; no separate manual comparison command is required.
+directory; no separate manual comparison command is required. Inspection
+rehashes native bounded evidence and requires consumed Task 6 receipts plus
+exact product/scope Task 7 manifest identities; report JSON alone cannot close
+the gate.
 
 Validate that the retained full report was explicitly authorized, covered every
 profile scope, matched the exact operation maxima, and contains no rejected

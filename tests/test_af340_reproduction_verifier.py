@@ -61,35 +61,66 @@ class TimeoutExecutor(RecordingExecutor):
 class NativeArtifactExecutor:
     """Stand in for subprocess.run while writing representative native evidence."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self, *, kinds: list[str] | None = None, fail_at: int | None = None,
+        timeout_at: int | None = None,
+    ) -> None:
         self.calls: list[tuple[str, ...]] = []
+        self.kinds = list(kinds or [])
+        self.fail_at = fail_at
+        self.timeout_at = timeout_at
 
     def __call__(self, command, **kwargs):
         self.calls.append(tuple(str(value) for value in command))
+        if self.timeout_at == len(self.calls):
+            raise subprocess.TimeoutExpired(command, 1)
         evidence_root = Path(kwargs["env"]["ASTERION_DCI_OUTPUT_ROOT"])
         run = evidence_root / f"native-{len(self.calls)}"
-        protocol = run / "protocol"
-        protocol.mkdir(parents=True)
-        (protocol / "attempt-0001.request.json").write_text(
-            json.dumps({"schema": "dci.protocol-request/v1"}) + "\n",
-            encoding="utf-8",
-        )
-        (run / "state.json").write_text(
-            json.dumps({"status": "completed", "attempts": [{"status": "completed"}]})
-            + "\n",
-            encoding="utf-8",
-        )
+        run.mkdir(parents=True, mode=0o700)
+        run.chmod(0o700)
+        if kwargs["env"].get("DCI_RUNTIME") == "claude-code":
+            (run / "request.json").write_text(
+                json.dumps({"run_id": f"native-{len(self.calls)}"}) + "\n"
+            )
+            (run / "request.json").chmod(0o600)
+            (run / "events.jsonl").write_text(
+                json.dumps({"type": "run.started"}) + "\n"
+                + json.dumps({"type": "run.completed"}) + "\n"
+            )
+            (run / "events.jsonl").chmod(0o600)
+        else:
+            protocol = run / "protocol"
+            protocol.mkdir(mode=0o700)
+            (protocol / "attempt-0001.request.json").write_text(
+                json.dumps({"schema": "dci.protocol-request/v1"}) + "\n",
+                encoding="utf-8",
+            )
+            (protocol / "attempt-0001.request.json").chmod(0o600)
+            (run / "state.json").write_text(
+                json.dumps({"status": "completed", "attempts": [{"status": "completed"}]})
+                + "\n",
+                encoding="utf-8",
+            )
+            (run / "state.json").chmod(0o600)
         (run / "native-config.json").write_text(
             json.dumps({"runtime": kwargs["env"].get("DCI_RUNTIME")}) + "\n",
             encoding="utf-8",
         )
-        if "judge" in kwargs["env"].get("AF340_TEST_KIND", ""):
+        (run / "native-config.json").chmod(0o600)
+        kind = self.kinds[len(self.calls) - 1] if self.kinds else kwargs["env"].get(
+            "AF340_TEST_KIND", "agent"
+        )
+        if "judge" in kind:
             (run / "eval_result.json").write_text(
                 json.dumps({"is_correct": True, "judge_request_fingerprint": "a" * 64})
                 + "\n",
                 encoding="utf-8",
             )
-        return subprocess.CompletedProcess(command, 0, stdout="private answer", stderr="")
+            (run / "eval_result.json").chmod(0o600)
+        return subprocess.CompletedProcess(
+            command, int(self.fail_at == len(self.calls)),
+            stdout="private answer", stderr="private failure body",
+        )
 
 
 class Af340ReproductionVerifierTests(unittest.TestCase):
@@ -149,7 +180,7 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             temporary_root = Path(temporary)
             plan = module.bounded_operation_plan(ROOT, "pi", None, None)
-            executor = RecordingExecutor(kinds=[item.kind for item in plan])
+            executor = NativeArtifactExecutor(kinds=[item.kind for item in plan])
             stdout = io.StringIO()
             result = self._run(module,
                 self._bounded_args(temporary_root, "pi"),
@@ -245,6 +276,115 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             self.assertRegex(safe_config["rendered_command_sha256"], r"^[0-9a-f]{64}$")
             self.assertTrue(safe_config["native_artifacts"])
 
+    def test_running_pi_state_never_counts_as_completed_agent_evidence(self) -> None:
+        module = load_verifier()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            protocol = root / "run/protocol"
+            protocol.mkdir(parents=True, mode=0o700)
+            request = protocol / "attempt-0001.request.json"
+            request.write_text('{"schema":"dci.protocol-request/v1"}\n')
+            request.chmod(0o600)
+            state = root / "run/state.json"
+            state.write_text('{"status":"running","attempts":[{"status":"running"}]}\n')
+            state.chmod(0o600)
+            result = module._bounded_native_operation_result(
+                completed=subprocess.CompletedProcess(("agent",), 0, "", ""),
+                before={}, output_root=root,
+                operation=module.Operation("agent", "agent", ("agent",)),
+                command=("agent",), variant="pi", provider=None, model=None,
+            )
+            self.assertEqual(result.status, "failed")
+            self.assertEqual(result.agent_operations, 0)
+
+    def test_inspect_rejects_rehashed_report_without_genuine_native_refs(self) -> None:
+        module = load_verifier()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            reports = []
+            for variant, provider, model in (
+                ("pi", None, None),
+                ("claude-subscription", None, None),
+                ("claude-minimax", "minimax", "MiniMax-M3"),
+            ):
+                variant_root = root / variant
+                variant_root.mkdir()
+                plan = module.bounded_operation_plan(ROOT, variant, provider, model)
+                executor = NativeArtifactExecutor(kinds=[item.kind for item in plan])
+                self.assertEqual(self._run(
+                    module,
+                    self._bounded_args(variant_root, variant, provider=provider, model=model),
+                    repo_root=ROOT, executor=executor,
+                ), 0)
+                reports.append(variant_root / "evidence/af340-bounded-report.json")
+            report_path = reports[0]
+            report = json.loads(report_path.read_text())
+            operation = report["operations"][0]
+            config_identity = operation["artifacts"]["effective-config.json"]
+            config_path = report_path.parent / config_identity["ref"]
+            config = json.loads(config_path.read_text())
+            config["native_artifacts"] = []
+            body = json.dumps(config, sort_keys=True).encode() + b"\n"
+            config_path.write_bytes(body)
+            config_identity["sha256"] = __import__("hashlib").sha256(body).hexdigest()
+            unsigned = dict(report)
+            unsigned.pop("report_sha256")
+            report["report_sha256"] = module._canonical_sha256(unsigned)
+            report_path.write_text(json.dumps(report) + "\n")
+            args = ["inspect"]
+            for item in reports:
+                args.extend(("--report", str(item)))
+            self.assertEqual(module.verify_af340_reproduction_main(args, repo_root=ROOT), 2)
+
+    def test_injected_operation_result_cannot_self_certify_native_evidence(self) -> None:
+        module = load_verifier()
+        operation = module.Operation("injected", "agent", ("fake",))
+        forged = {
+            "schema": "dci.af340-effective-config/v1",
+            "operation_id": "injected",
+            "kind": "agent",
+            "variant": "pi",
+            "runtime": module._bounded_runtime_identity("pi", None),
+            "provider": None,
+            "model": None,
+            "command_template_sha256": module._command_sha256(operation.command),
+            "rendered_command_sha256": module._command_sha256(operation.command),
+            "native_artifacts": [{"artifact": "state.json", "kind": "state.json",
+                                  "root_ref": ".", "sha256": "0" * 64}],
+            "actual_counts": {"agent": 1, "judge": 0},
+            "process": {"status": "completed"},
+        }
+        projected = module._coordinator_bounded_result(
+            module.OperationResult(
+                "completed", 1, 0,
+                {"effective-config.json": json.dumps(forged).encode(),
+                 "state.json": b'{"status":"completed"}\n'},
+            ),
+            operation=operation,
+            command=operation.command,
+            variant="pi",
+            provider=None,
+            model=None,
+        )
+        config = json.loads(projected.artifacts["effective-config.json"])
+        self.assertEqual(config["native_artifacts"], [])
+        self.assertNotIn("state.json", projected.artifacts)
+
+    def test_private_tree_validation_rejects_loose_modes_and_symlinks(self) -> None:
+        module = load_verifier()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "private"
+            root.mkdir(mode=0o700)
+            loose = root / "loose.json"
+            loose.write_text("{}\n")
+            loose.chmod(0o644)
+            with self.assertRaisesRegex(ValueError, "permissions"):
+                module._validate_private_tree(root)
+            loose.chmod(0o600)
+            (root / "link.json").symlink_to(loose)
+            with self.assertRaisesRegex(ValueError, "symlink"):
+                module._validate_private_tree(root)
+
     def test_claude_subscription_and_minimax_are_distinct_installed_wheel_variants(self) -> None:
         module = load_verifier()
         subscription = module.bounded_operation_plan(ROOT, "claude-subscription", None, None)
@@ -331,7 +471,9 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
         module = load_verifier()
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            executor = RecordingExecutor(fail_at=2, kinds=["agent-and-judge"] * 2)
+            executor = NativeArtifactExecutor(
+                fail_at=2, kinds=["agent-and-judge"] * 2
+            )
             result = self._run(module,
                 self._bounded_args(root, "claude-subscription"),
                 repo_root=ROOT,
@@ -363,7 +505,9 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
         module = load_verifier()
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            executor = TimeoutExecutor()
+            executor = NativeArtifactExecutor(
+                timeout_at=2, kinds=["agent-and-judge"] * 2
+            )
             self.assertEqual(
                 self._run(module,
                     self._bounded_args(root, "claude-subscription"),
@@ -805,10 +949,12 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             original_auth = authorization(base / "original")
             commands = []
             process_environments = []
+            process_kwargs = []
 
             def process_executor(command, **kwargs):
                 commands.append(tuple(command))
                 process_environments.append(kwargs["env"])
+                process_kwargs.append(kwargs)
                 original_auth.output_root.joinpath("config.json").write_text(
                     json.dumps(
                         {
@@ -872,6 +1018,7 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             )
             self.assertEqual(original_result.manifest.product, "original-dci")
             self.assertEqual(len(commands), 1)
+            self.assertEqual(process_kwargs[0]["umask"], 0o077)
             self.assertIn("scripts/bcplus_eval/run_bcplus_eval.py", commands[0])
             self.assertNotIn("asterion-dci", commands[0])
             self.assertIn(str(original_auth.output_root), commands[0])
@@ -949,6 +1096,41 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             )
             self.assertEqual(comparison.dataset_id, "qa.nq")
 
+    def test_paper_pi_asterion_adapter_transports_high_reasoning(self) -> None:
+        module = load_verifier()
+        source = str(ROOT / "asterion/src")
+        if source not in __import__("sys").path:
+            __import__("sys").path.insert(0, source)
+        from asterion.dci.experiment_profiles import resolve_experiment_profile
+
+        profile = resolve_experiment_profile("paper-reference/pi")
+        captured = []
+
+        def runner(request, *, paths):
+            captured.append((request, paths))
+            return SimpleNamespace(output_root=request.output_root)
+
+        with tempfile.TemporaryDirectory() as temporary, mock.patch.dict(
+            "os.environ", {"OPENAI_API_KEY": "test-only"}, clear=True
+        ), mock.patch.object(
+            module,
+            "normalize_full_scope_manifest",
+            return_value=SimpleNamespace(queries=()),
+        ):
+            output = Path(temporary) / "scope"
+            output.mkdir(mode=0o700)
+            module._execute_production_full_scope(
+                module.FullScopeRequest(
+                    "asterion-dci", "qa.nq.main.random50", object(), output,
+                    profile, ROOT,
+                ),
+                Path(temporary) / "dataset.jsonl",
+                SimpleNamespace(corpus_path="corpus/wiki_corpus", mode="qa", batch_profile=None),
+                process_executor=subprocess.run,
+                asterion_runner=runner,
+            )
+        self.assertEqual(captured[0][0].runtime_options.thinking_level, "high")
+
     def test_all_sixteen_full_scopes_route_through_af320_selection_verification(self) -> None:
         module = load_verifier()
         source = str(ROOT / "asterion/src")
@@ -1021,6 +1203,117 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
                 with mock.patch("shutil.which", return_value="/usr/bin/claude"):
                     module._full_execution_preflight(SimpleNamespace(), root, minimax)
 
+    def test_bounded_pi_auth_preflight_fails_before_any_process(self) -> None:
+        module = load_verifier()
+        args = SimpleNamespace(variant="pi", provider=None, model=None)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "pi/packages/coding-agent").mkdir(parents=True)
+            (root / "pi/.pi/agent").mkdir(parents=True)
+            environment = {
+                "DEEPSEEK_API_KEY": "judge-only",
+                "DCI_PI_DIR": str(root / "pi"),
+                "DCI_PROVIDER": "openai-codex",
+            }
+            with mock.patch(
+                "asterion.dci.paper_benchmarks.paper_benchmark_ids", return_value=()
+            ), mock.patch("subprocess.run") as process:
+                with self.assertRaisesRegex(ValueError, "credential|auth"):
+                    module._default_bounded_preflight(args, root, (), environment)
+            process.assert_not_called()
+
+    def test_pi_saved_auth_must_match_selected_provider_and_have_a_credential(self) -> None:
+        module = load_verifier()
+        with tempfile.TemporaryDirectory() as temporary:
+            agent = Path(temporary)
+            auth = agent / "auth.json"
+            auth.write_text(json.dumps({"wrong-provider": {"type": "oauth", "access": "x"}}))
+            self.assertFalse(module._pi_auth_ready(agent, "openai-codex", {}))
+            auth.write_text(json.dumps({"openai-codex": {"type": "oauth"}}))
+            self.assertFalse(module._pi_auth_ready(agent, "openai-codex", {}))
+            auth.write_text(
+                json.dumps({"openai-codex": {"type": "oauth", "access": "expired",
+                                              "expires": 0}})
+            )
+            self.assertFalse(module._pi_auth_ready(agent, "openai-codex", {}))
+            auth.write_text(
+                json.dumps({"openai-codex": {"type": "oauth", "refresh": "saved-token"}})
+            )
+            self.assertTrue(module._pi_auth_ready(agent, "openai-codex", {}))
+
+    def test_bounded_subscription_checks_login_before_build_or_adapter(self) -> None:
+        module = load_verifier()
+        args = SimpleNamespace(
+            variant="claude-subscription", provider=None, model=None
+        )
+        calls = []
+
+        def process(command, **_kwargs):
+            calls.append(tuple(command))
+            return subprocess.CompletedProcess(
+                command, 1, stdout='{"loggedIn":false}', stderr=""
+            )
+
+        with mock.patch(
+            "asterion.dci.paper_benchmarks.paper_benchmark_ids", return_value=()
+        ), mock.patch("shutil.which", return_value="/tool/claude"), mock.patch(
+            "subprocess.run", side_effect=process
+        ):
+            with self.assertRaisesRegex(ValueError, "auth|login"):
+                module._default_bounded_preflight(
+                    args, ROOT, (), {"DEEPSEEK_API_KEY": "judge-only"}
+                )
+        self.assertEqual(calls, [("/tool/claude", "auth", "status", "--json")])
+
+    def test_full_preflight_auth_checks_finish_before_scope_or_provider_work(self) -> None:
+        module = load_verifier()
+        source = str(ROOT / "asterion/src")
+        if source not in __import__("sys").path:
+            __import__("sys").path.insert(0, source)
+        from dataclasses import replace
+        from asterion.dci.experiment_profiles import resolve_experiment_profile
+
+        subscription = replace(
+            resolve_experiment_profile("current-default/claude-subscription"),
+            scope_ids=(),
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / ".env").write_text("DEEPSEEK_API_KEY=judge-only\n")
+            auth_call = subprocess.CompletedProcess(
+                ("claude",), 1, stdout='{"loggedIn":false}', stderr=""
+            )
+            with mock.patch("shutil.which", return_value="/tool/claude"), mock.patch(
+                "subprocess.run", return_value=auth_call
+            ) as process:
+                with self.assertRaisesRegex(ValueError, "authentication"):
+                    module._full_execution_preflight(SimpleNamespace(), root, subscription)
+            self.assertEqual(
+                process.call_args.args[0],
+                ("/tool/claude", "auth", "status", "--json"),
+            )
+
+        minimax = replace(
+            resolve_experiment_profile(
+                "current-default/claude-minimax",
+                invocation_provider="minimax-cn",
+                invocation_model="MiniMax-M3",
+            ),
+            scope_ids=(),
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / ".env").write_text(
+                "DEEPSEEK_API_KEY=judge\nMINIMAX_API_KEY=competing\n"
+                "MINIMAX_CN_API_KEY=selected\n"
+            )
+            with mock.patch("shutil.which", return_value="/tool/claude"), mock.patch(
+                "subprocess.run"
+            ) as process:
+                with self.assertRaisesRegex(ValueError, "credential"):
+                    module._full_execution_preflight(SimpleNamespace(), root, minimax)
+            process.assert_not_called()
+
     def test_pi_full_preflight_uses_configured_external_checkout(self) -> None:
         module = load_verifier()
         source = str(ROOT / "asterion/src")
@@ -1040,6 +1333,27 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
                 "os.environ", {"OPENAI_API_KEY": "test-only"}, clear=True
             ):
                 module._full_execution_preflight(SimpleNamespace(), root, profile)
+
+    def test_pi_full_preflight_rejects_unusable_saved_auth_before_scope_work(self) -> None:
+        module = load_verifier()
+        source = str(ROOT / "asterion/src")
+        if source not in __import__("sys").path:
+            __import__("sys").path.insert(0, source)
+        from dataclasses import replace
+        from asterion.dci.experiment_profiles import resolve_experiment_profile
+
+        profile = replace(resolve_experiment_profile("current-default/pi"), scope_ids=())
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "pi/packages/coding-agent").mkdir(parents=True)
+            agent = root / "pi/.pi/agent"
+            agent.mkdir(parents=True)
+            (agent / "auth.json").write_text("{}\n")
+            (root / ".env").write_text("DEEPSEEK_API_KEY=judge-only\n")
+            with mock.patch("subprocess.run") as process:
+                with self.assertRaisesRegex(ValueError, "authentication"):
+                    module._full_execution_preflight(SimpleNamespace(), root, profile)
+            process.assert_not_called()
 
     def test_shared_pi_path_resolution_uses_passed_merged_environment(self) -> None:
         source = str(ROOT / "asterion/src")
@@ -1137,6 +1451,7 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
 
             def process_executor(command, **kwargs):
                 commands.append(tuple(command))
+                self.assertEqual(kwargs["umask"], 0o077)
                 self.assertEqual(
                     kwargs["env"]["DCI_MODEL"],
                     "" if profile.model is None else profile.model,
@@ -1238,7 +1553,7 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
                 variant_root = root / variant
                 variant_root.mkdir()
                 plan = module.bounded_operation_plan(ROOT, variant, provider, model)
-                executor = RecordingExecutor(kinds=[item.kind for item in plan])
+                executor = NativeArtifactExecutor(kinds=[item.kind for item in plan])
                 self.assertEqual(
                     self._run(
                         module,
@@ -1323,11 +1638,8 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
                 "asterion.dci.reproduction.load_comparison_report",
                 return_value=comparison,
             ):
-                self.assertEqual(
-                    module._run_inspect_full(SimpleNamespace(report=report), ROOT, stdout),
-                    0,
-                )
-            self.assertIn("Authorized full comparison evidence: yes", stdout.getvalue())
+                with self.assertRaisesRegex(ValueError, "schema|authorization|native"):
+                    module._run_inspect_full(SimpleNamespace(report=report), ROOT, stdout)
 
             values["comparisons"][0]["accepted"] = False
             unsigned = dict(values)
@@ -1345,8 +1657,161 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             ), mock.patch(
                 "asterion.dci.reproduction.load_comparison_report",
                 return_value=SimpleNamespace(**{**comparison.__dict__, "accepted": False}),
-            ), self.assertRaisesRegex(ValueError, "comparison-evidence"):
+            ), self.assertRaisesRegex(ValueError, "schema|comparison-evidence"):
                 module._run_inspect_full(SimpleNamespace(report=report), ROOT, io.StringIO())
+
+    def test_inspect_full_binds_consumed_task6_roots_and_detects_native_mutation(self) -> None:
+        module = load_verifier()
+        source = str(ROOT / "asterion/src")
+        if source not in __import__("sys").path:
+            __import__("sys").path.insert(0, source)
+        from dataclasses import replace
+        from asterion.dci.experiment_profiles import (
+            authorize_full_execution,
+            consume_full_execution_authorization,
+            experiment_profile_sha256,
+            resolve_experiment_profile,
+        )
+        scope_id = "qa.nq.main.random50"
+        full_profile = resolve_experiment_profile("current-default/pi")
+        index = full_profile.scope_ids.index(scope_id)
+        profile = replace(
+            full_profile,
+            scope_ids=(scope_id,),
+            selected_ids_sha256=(full_profile.selected_ids_sha256[index],),
+        )
+        profile_sha = experiment_profile_sha256(profile.profile_id)
+        manifests = {
+            "original-dci": SimpleNamespace(
+                product="original-dci", selection_id=scope_id,
+                profile_id=profile.profile_id, profile_sha256=profile_sha,
+                identity_sha256="1" * 64,
+                aggregates=SimpleNamespace(agent_operations=50, judge_operations=50),
+            ),
+            "asterion-dci": SimpleNamespace(
+                product="asterion-dci", selection_id=scope_id,
+                profile_id=profile.profile_id, profile_sha256=profile_sha,
+                identity_sha256="2" * 64,
+                aggregates=SimpleNamespace(agent_operations=50, judge_operations=50),
+            ),
+        }
+        comparison = SimpleNamespace(
+            profile_id=profile.profile_id, profile_sha256=profile_sha,
+            selection_id=scope_id, accepted=True,
+            baseline_run_sha256="1" * 64, candidate_run_sha256="2" * 64,
+            baseline=SimpleNamespace(agent_operations=50, judge_operations=50),
+            candidate=SimpleNamespace(agent_operations=50, judge_operations=50),
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            parent = Path(temporary) / "full"
+            parent.mkdir(mode=0o700)
+            parent = parent.resolve()
+            authorizations = {"original-dci": {}, "asterion-dci": {}}
+            for product in authorizations:
+                authorization = authorize_full_execution(
+                    profile.profile_id, parent / product / module._safe_slug(scope_id),
+                    0, True, preflight_profile_sha256=profile_sha,
+                    preflight_dataset_inventory_sha256=profile.dataset_inventory_sha256,
+                    preflight_experiment_scopes_sha256=profile.experiment_scopes_sha256,
+                    preflight_scope_ids=(scope_id,),
+                    preflight_selected_ids_sha256=(profile.selected_ids_sha256[0],),
+                )
+                consume_full_execution_authorization(authorization, scope_id)
+                manifest_path = authorization.output_root / "af340-run-manifest.json"
+                manifest_path.write_text("{}\n")
+                manifest_path.chmod(0o600)
+                authorizations[product][scope_id] = authorization
+            comparisons = parent / "comparisons"
+            comparisons.mkdir(mode=0o700)
+            comparison_path = comparisons / f"{module._safe_slug(scope_id)}.json"
+            comparison_path.write_text("{}\n")
+            comparison_path.chmod(0o600)
+
+            def load_manifest(path):
+                return manifests[path.parent.parent.name]
+
+            def normalize(request, *, write=True):
+                self.assertFalse(write)
+                return manifests[request.product]
+
+            with mock.patch(
+                "asterion.dci.reproduction.load_comparison_report",
+                return_value=comparison,
+            ), mock.patch(
+                "asterion.dci.reproduction.load_run_manifest",
+                side_effect=load_manifest,
+            ), mock.patch.object(
+                module, "normalize_full_scope_manifest", side_effect=normalize,
+            ):
+                report = module._write_full_execution_report(
+                    parent, profile,
+                    {"profile_sha256": profile_sha, "agent_maximum": 100, "judge_maximum": 100},
+                    module.FullRunResult(100, 100, True), authorizations,
+                )
+                with mock.patch.object(
+                    module, "_full_preflight",
+                    return_value=(profile, {"profile_sha256": profile_sha, "agent_maximum": 100, "judge_maximum": 100}),
+                ):
+                    self.assertEqual(
+                        module._run_inspect_full(SimpleNamespace(report=report), ROOT, io.StringIO()),
+                        0,
+                    )
+                    comparison_path.chmod(0o644)
+                    with self.assertRaisesRegex(ValueError, "permissions"):
+                        module._run_inspect_full(
+                            SimpleNamespace(report=report), ROOT, io.StringIO()
+                        )
+                    comparison_path.chmod(0o600)
+                    real_comparison = comparisons / "real-comparison.json"
+                    comparison_path.rename(real_comparison)
+                    comparison_path.symlink_to(real_comparison)
+                    with self.assertRaisesRegex(ValueError, "symlink"):
+                        module._run_inspect_full(
+                            SimpleNamespace(report=report), ROOT, io.StringIO()
+                        )
+                    comparison_path.unlink()
+                    real_comparison.rename(comparison_path)
+                    mutated = authorizations["asterion-dci"][scope_id].output_root / "af340-run-manifest.json"
+                    mutated.chmod(0o644)
+                    with self.assertRaisesRegex(ValueError, "permissions"):
+                        module._run_inspect_full(
+                            SimpleNamespace(report=report), ROOT, io.StringIO()
+                        )
+                    mutated.chmod(0o600)
+                    mutated.write_text('{"mutated":true}\n')
+                    mutated.chmod(0o600)
+                    with self.assertRaisesRegex(ValueError, "native-tree"):
+                        module._run_inspect_full(
+                            SimpleNamespace(report=report), ROOT, io.StringIO()
+                        )
+
+                    missing_baseline = SimpleNamespace(
+                        **{**comparison.__dict__, "baseline": None,
+                           "baseline_run_sha256": None}
+                    )
+                    mutated.write_text("{}\n")
+                    mutated.chmod(0o600)
+                    values = json.loads(report.read_text())
+                    for evidence in values["scope_evidence"]:
+                        native_root = parent / evidence["root_ref"]
+                        evidence["tree_sha256"] = module._private_tree_sha256(native_root)
+                        if evidence["product"] == "asterion-dci":
+                            manifest_file = native_root / "af340-run-manifest.json"
+                            evidence["manifest_sha256"] = __import__("hashlib").sha256(
+                                manifest_file.read_bytes()
+                            ).hexdigest()
+                    unsigned = dict(values)
+                    unsigned.pop("report_sha256")
+                    values["report_sha256"] = module._canonical_sha256(unsigned)
+                    report.write_text(json.dumps(values) + "\n")
+                    report.chmod(0o600)
+                    with mock.patch(
+                        "asterion.dci.reproduction.load_comparison_report",
+                        return_value=missing_baseline,
+                    ), self.assertRaisesRegex(ValueError, "baseline"):
+                        module._run_inspect_full(
+                            SimpleNamespace(report=report), ROOT, io.StringIO()
+                        )
 
 
 if __name__ == "__main__":
