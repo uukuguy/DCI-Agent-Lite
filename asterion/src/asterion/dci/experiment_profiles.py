@@ -134,7 +134,6 @@ class FullExecutionAuthorization:
 
 @dataclass(frozen=True, slots=True)
 class _AuthorizationSnapshot:
-    capability_identity: int
     profile_id: str
     profile_sha256: str
     dataset_inventory_sha256: str
@@ -152,6 +151,7 @@ class _AuthorizationSnapshot:
 
 @dataclass(slots=True)
 class _AuthorizationRecord:
+    issuer: FullExecutionAuthorization
     snapshot: _AuthorizationSnapshot
     consumed_scopes: set[str]
 
@@ -368,8 +368,7 @@ def _authorization_matches_snapshot(
     authorization: FullExecutionAuthorization, snapshot: _AuthorizationSnapshot
 ) -> bool:
     return (
-        id(authorization) == snapshot.capability_identity
-        and authorization.profile_id == snapshot.profile_id
+        authorization.profile_id == snapshot.profile_id
         and authorization.profile_sha256 == snapshot.profile_sha256
         and authorization.dataset_inventory_sha256
         == snapshot.dataset_inventory_sha256
@@ -452,7 +451,6 @@ def authorize_full_execution(
         _issuance_token=token,
     )
     snapshot = _AuthorizationSnapshot(
-        capability_identity=id(authorization),
         profile_id=profile.profile_id,
         profile_sha256=profile_sha256,
         dataset_inventory_sha256=profile.dataset_inventory_sha256,
@@ -468,7 +466,9 @@ def authorize_full_execution(
         issuance_token=token,
     )
     with _AUTHORIZATION_LOCK:
-        _AUTHORIZATION_REGISTRY[token] = _AuthorizationRecord(snapshot, set())
+        _AUTHORIZATION_REGISTRY[token] = _AuthorizationRecord(
+            authorization, snapshot, set()
+        )
     return authorization
 
 
@@ -482,8 +482,10 @@ def consume_full_execution_authorization(
     token = getattr(authorization, "_issuance_token", None)
     with _AUTHORIZATION_LOCK:
         record = _AUTHORIZATION_REGISTRY.get(token)
-        if record is None or not _authorization_matches_snapshot(
-            authorization, record.snapshot
+        if (
+            record is None
+            or record.issuer is not authorization
+            or not _authorization_matches_snapshot(authorization, record.snapshot)
         ):
             raise ValueError("DCI full execution authorization is invalid")
         issued = record.snapshot
@@ -517,6 +519,7 @@ def _consumed_authorized_output_identity(
         if (
             record is None
             or not record.consumed_scopes
+            or record.issuer is not authorization
             or not _authorization_matches_snapshot(authorization, record.snapshot)
         ):
             raise ValueError("DCI full execution authorization is invalid")

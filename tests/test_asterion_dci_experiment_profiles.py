@@ -6,6 +6,7 @@ import math
 import os
 import stat
 import copy
+import gc
 import tempfile
 import unittest
 from dataclasses import FrozenInstanceError, replace
@@ -152,6 +153,35 @@ class ExperimentProfileTests(unittest.TestCase):
 
 
 class FullExecutionAuthorizationTests(unittest.TestCase):
+    def test_registry_strongly_retains_issuer_without_integer_identity_trust(self) -> None:
+        import asterion.dci.experiment_profiles as module
+
+        scope = "browsecomp-plus.main.all830"
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            authorization = module.authorize_full_execution(
+                "current-default/pi",
+                Path(temporary_directory) / "issued",
+                1.0,
+                True,
+                **_preflight(),
+            )
+            token = authorization._issuance_token
+            record = module._AUTHORIZATION_REGISTRY[token]
+            self.assertTrue(hasattr(record, "issuer"))
+            self.assertIs(record.issuer, authorization)
+            self.assertFalse(hasattr(record.snapshot, "capability_identity"))
+
+            forged = copy.copy(authorization)
+            with self.assertRaisesRegex(ValueError, "authorization"):
+                module.consume_full_execution_authorization(forged, scope)
+
+            del authorization
+            gc.collect()
+            self.assertIs(module._AUTHORIZATION_REGISTRY[token].issuer, record.issuer)
+            self.assertIsNone(
+                module.consume_full_execution_authorization(record.issuer, scope)
+            )
+
     def test_registry_snapshot_is_independent_and_rejects_every_field_tamper(self) -> None:
         import asterion.dci.experiment_profiles as module
 
