@@ -16,6 +16,46 @@ from types import SimpleNamespace
 ROOT = Path(__file__).resolve().parents[1]
 MODULE_PATH = ROOT / "tools/verify_af340_reproduction.py"
 
+BOUNDED_LAUNCHER_RESOURCES = {
+    "bcplus_eval/run_bcplus_eval_openai.sh": (
+        "data/bcplus_qa.jsonl", "corpus/bc_plus_docs"
+    ),
+    "qa/run_2wikimultihopqa_dev_sample50.sh": (
+        "data/dci-bench/data/2wikimultihopqa/test.jsonl", "corpus/wiki_corpus"
+    ),
+    "qa/run_bamboogle_test_sample50.sh": (
+        "data/dci-bench/data/bamboogle/test.jsonl", "corpus/wiki_corpus"
+    ),
+    "qa/run_hotpotqa_dev_sample50.sh": (
+        "data/dci-bench/data/hotpotqa/test.jsonl", "corpus/wiki_corpus"
+    ),
+    "qa/run_musique_dev_sample50.sh": (
+        "data/dci-bench/data/musique/test.jsonl", "corpus/wiki_corpus"
+    ),
+    "qa/run_nq_test_sample50.sh": (
+        "data/dci-bench/data/nq/test.jsonl", "corpus/wiki_corpus"
+    ),
+    "qa/run_triviaqa_test_sample50.sh": (
+        "data/dci-bench/data/triviaqa/test.jsonl", "corpus/wiki_corpus"
+    ),
+    "bright/run_bio.sh": (
+        "data/dci-bench/data/bright_biology/bright_biology.jsonl",
+        "corpus/bright_corpus/biology",
+    ),
+    "bright/run_earth_science.sh": (
+        "data/dci-bench/data/bright_earth_science/bright_earth_science.jsonl",
+        "corpus/bright_corpus/earth_science",
+    ),
+    "bright/run_economics.sh": (
+        "data/dci-bench/data/bright_economics/economics_full.jsonl",
+        "corpus/bright_corpus/economics",
+    ),
+    "bright/run_robotics.sh": (
+        "data/dci-bench/data/bright_robotics/bright_robotics.jsonl",
+        "corpus/bright_corpus/robotics",
+    ),
+}
+
 
 def load_verifier():
     spec = importlib.util.spec_from_file_location("verify_af340_reproduction", MODULE_PATH)
@@ -137,6 +177,14 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
         return module.verify_af340_reproduction_main(
             argv, bounded_preflight=self._preflight, **kwargs
         )
+
+    @staticmethod
+    def _write_pi_bounded_resources(root: Path) -> None:
+        for dataset, corpus in BOUNDED_LAUNCHER_RESOURCES.values():
+            dataset_path = root / dataset
+            dataset_path.parent.mkdir(parents=True, exist_ok=True)
+            dataset_path.write_text("{}\n", encoding="utf-8")
+            (root / corpus).mkdir(parents=True, exist_ok=True)
     def _bounded_args(
         self, root: Path, variant: str, *, provider: str | None = None, model: str | None = None
     ) -> list[str]:
@@ -225,13 +273,16 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             "mode": "bounded",
             "status": status_value,
             "variant": variant,
+            "resource_root_sha256": module._resource_root_sha256(ROOT.resolve()),
             "evidence_dimensions": module._dimensions_for_variant(variant),
             "agent_operations": sum(item["agent_operations"] for item in records),
             "judge_operations": sum(item["judge_operations"] for item in records),
             "attempted_operations": len(records),
             "full_dataset_ran": False,
             "operations": records,
-            "plan_sha256": module._plan_sha256(operations),
+            "plan_sha256": module._plan_sha256(
+                operations, module._resource_root_sha256(ROOT.resolve())
+            ),
         }
         report["report_sha256"] = module._canonical_sha256(report)
         report_path = output_root / "af340-bounded-report.json"
@@ -302,6 +353,235 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             self.assertEqual(stat.S_IMODE((temporary_root / "evidence").stat().st_mode), 0o700)
             self.assertEqual(stat.S_IMODE(report_path.stat().st_mode), 0o600)
 
+    def test_bounded_cli_and_plan_bind_distinct_explicit_resource_root(self) -> None:
+        module = load_verifier()
+        resource = Path("/private/shared-resources")
+        args = module._parser().parse_args(
+            [
+                "bounded", "--variant", "pi", "--env-file", ".env",
+                "--output-root", "out", "--resource-root", str(resource),
+            ]
+        )
+        self.assertEqual(args.resource_root, resource)
+        plan = module.bounded_operation_plan(ROOT, "pi", None, None)
+        for operation in plan:
+            if operation.operation_id in {
+                "original:quick-start", "asterion:pi-quick-start"
+            }:
+                cwd = operation.command[operation.command.index("--cwd") + 1]
+                self.assertEqual(cwd, "{RESOURCE_ROOT}/corpus/wiki_corpus")
+            if not operation.operation_id.startswith("launcher:"):
+                continue
+            relative = operation.operation_id.split(":", 2)[2]
+            dataset, corpus = BOUNDED_LAUNCHER_RESOURCES[relative]
+            self.assertEqual(
+                operation.command[-4:],
+                (
+                    "--dataset", f"{{RESOURCE_ROOT}}/{dataset}",
+                    "--corpus-dir", f"{{RESOURCE_ROOT}}/{corpus}",
+                ),
+            )
+            self.assertFalse(Path(operation.command[1]).is_absolute())
+
+    def test_bounded_resource_root_is_not_inferred_and_rejects_symlinks(self) -> None:
+        module = load_verifier()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            shared = root / "shared"
+            shared.mkdir()
+            link = root / "resource-link"
+            link.symlink_to(shared, target_is_directory=True)
+            with self.assertRaisesRegex(ValueError, "resource root"):
+                module._bounded_resource_root(link, ROOT)
+            self.assertEqual(module._bounded_resource_root(None, ROOT), ROOT.resolve())
+
+    def test_bounded_preflight_requires_only_selected_variant_resources(self) -> None:
+        module = load_verifier()
+        args = SimpleNamespace(
+            variant="claude-subscription", provider=None, model=None,
+            resource_root=None,
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            resource = Path(temporary) / "shared"
+            wiki = resource / "corpus/wiki_corpus"
+            wiki.mkdir(parents=True)
+            args.resource_root = resource
+            environment = {"DEEPSEEK_API_KEY": "judge-only"}
+            with mock.patch(
+                "asterion.dci.paper_benchmarks.paper_benchmark_ids",
+                side_effect=AssertionError("paper-full inventory must not be consulted"),
+            ), mock.patch("shutil.which", return_value="/tool/claude"), mock.patch.object(
+                module, "_claude_login_ready", return_value=True
+            ), mock.patch(
+                "tempfile.mkdtemp", side_effect=RuntimeError("past exact resources")
+            ):
+                with self.assertRaisesRegex(RuntimeError, "past exact resources"):
+                    module._default_bounded_preflight(
+                        args, ROOT, (), environment
+                    )
+
+    def test_missing_selected_resource_fails_before_provider_or_build(self) -> None:
+        module = load_verifier()
+        args = SimpleNamespace(
+            variant="claude-subscription", provider=None, model=None,
+            resource_root=None,
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            resource = Path(temporary) / "shared"
+            resource.mkdir()
+            with mock.patch("shutil.which") as which, mock.patch(
+                "subprocess.run"
+            ) as process, mock.patch("tempfile.mkdtemp") as build:
+                with self.assertRaisesRegex(ValueError, "resource"):
+                    module._default_bounded_preflight(
+                        args,
+                        ROOT,
+                        (),
+                        {"DEEPSEEK_API_KEY": "judge-only"},
+                    )
+            which.assert_not_called()
+            process.assert_not_called()
+            build.assert_not_called()
+
+    def test_pi_preflight_requires_all_launcher_samples_but_no_paper_full_assets(self) -> None:
+        module = load_verifier()
+        args = SimpleNamespace(
+            variant="pi", provider=None, model=None, resource_root=None
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            resource = root / "shared"
+            self._write_pi_bounded_resources(resource)
+            args.resource_root = resource
+            pi_paths = SimpleNamespace(
+                pi=SimpleNamespace(
+                    package_dir=root / "pi-package", agent_dir=root / "pi-agent"
+                )
+            )
+            pi_paths.pi.package_dir.mkdir()
+            pi_paths.pi.agent_dir.mkdir()
+            environment = {
+                "DEEPSEEK_API_KEY": "judge-only",
+                "OPENAI_API_KEY": "agent-only",
+                "DCI_PROVIDER": "openai-codex",
+            }
+            with mock.patch(
+                "asterion.dci.config.resolve_dci_paths", return_value=pi_paths
+            ), mock.patch(
+                "tempfile.mkdtemp", side_effect=RuntimeError("past exact resources")
+            ):
+                with self.assertRaisesRegex(RuntimeError, "past exact resources"):
+                    module._default_bounded_preflight(args, ROOT, (), environment)
+            self.assertFalse((resource / "corpus/beir").exists())
+            self.assertFalse((resource / "data/dci-bench/data/beir_arguana").exists())
+
+            missing = resource / "data/dci-bench/data/bamboogle/test.jsonl"
+            missing.unlink()
+            with mock.patch("tempfile.mkdtemp") as build:
+                with self.assertRaisesRegex(ValueError, "dataset resource"):
+                    module._default_bounded_preflight(args, ROOT, (), environment)
+            build.assert_not_called()
+
+    def test_selected_resource_symlink_fails_before_runtime_readiness(self) -> None:
+        module = load_verifier()
+        args = SimpleNamespace(
+            variant="claude-subscription", provider=None, model=None,
+            resource_root=None,
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            resource = root / "shared"
+            target = root / "wiki"
+            target.mkdir()
+            (resource / "corpus").mkdir(parents=True)
+            (resource / "corpus/wiki_corpus").symlink_to(
+                target, target_is_directory=True
+            )
+            args.resource_root = resource
+            with mock.patch("shutil.which") as which:
+                with self.assertRaisesRegex(ValueError, "corpus resource"):
+                    module._default_bounded_preflight(
+                        args, ROOT, (), {"DEEPSEEK_API_KEY": "judge-only"}
+                    )
+            which.assert_not_called()
+
+            redirected = root / "redirected"
+            (redirected / "wiki_corpus").mkdir(parents=True)
+            resource = root / "shared-with-parent-link"
+            resource.mkdir()
+            (resource / "corpus").symlink_to(redirected, target_is_directory=True)
+            args.resource_root = resource
+            with mock.patch("shutil.which") as which:
+                with self.assertRaisesRegex(ValueError, "corpus resource"):
+                    module._default_bounded_preflight(
+                        args, ROOT, (), {"DEEPSEEK_API_KEY": "judge-only"}
+                    )
+            which.assert_not_called()
+
+    def test_launcher_downstream_parsers_use_last_dataset_and_corpus_values(self) -> None:
+        asterion_args = __import__(
+            "asterion.dci.cli", fromlist=["_parser"]
+        )._parser().parse_args(
+            [
+                "benchmark", "--dataset", "code.jsonl", "--corpus-dir", "code-corpus",
+                "--dataset", "shared.jsonl", "--corpus-dir", "shared-corpus",
+            ]
+        )
+        self.assertEqual(asterion_args.dataset, Path("shared.jsonl"))
+        self.assertEqual(asterion_args.corpus, Path("shared-corpus"))
+
+        spec = importlib.util.spec_from_file_location(
+            "af340_original_batch", ROOT / "scripts/bcplus_eval/run_bcplus_eval.py"
+        )
+        assert spec is not None and spec.loader is not None
+        original = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(original)
+        with mock.patch(
+            "sys.argv",
+            [
+                "run_bcplus_eval.py", "--dataset", "code.jsonl",
+                "--corpus-dir", "code-corpus", "--dataset", "shared.jsonl",
+                "--corpus-dir", "shared-corpus",
+            ],
+        ):
+            original_args = original.parse_args()
+        self.assertEqual(original_args.dataset, Path("shared.jsonl"))
+        self.assertEqual(original_args.corpus_dir, Path("shared-corpus"))
+
+    def test_asterion_primary_launchers_honor_explicit_bounded_resource_root(self) -> None:
+        for relative in BOUNDED_LAUNCHER_RESOURCES:
+            body = (ROOT / "asterion/scripts" / relative).read_text(encoding="utf-8")
+            with self.subTest(relative=relative):
+                self.assertIn(
+                    'RESOURCE_ROOT=${ASTERION_DCI_RESOURCE_ROOT:-$REPO_ROOT}', body
+                )
+                self.assertIn('dataset="$RESOURCE_ROOT/', body)
+                self.assertIn('corpus="$RESOURCE_ROOT/', body)
+
+    def test_resource_root_identity_is_bound_into_rendered_plan_digest(self) -> None:
+        module = load_verifier()
+        plan = module.bounded_operation_plan(ROOT, "pi", None, None)
+        first = module._resource_root_sha256(Path("/shared/one"))
+        second = module._resource_root_sha256(Path("/shared/two"))
+        self.assertRegex(first, r"^[0-9a-f]{64}$")
+        self.assertNotEqual(first, second)
+        self.assertNotEqual(
+            module._plan_sha256(plan, first), module._plan_sha256(plan, second)
+        )
+        launcher = next(
+            item for item in plan if item.operation_id == "launcher:original:qa/run_nq_test_sample50.sh"
+        )
+        rendered = module._render_command(
+            launcher,
+            Path("/private/output"),
+            Path("/private/wheel/asterion"),
+            Path("/shared/one"),
+        )
+        self.assertEqual(rendered[-4:], (
+            "--dataset", "/shared/one/data/dci-bench/data/nq/test.jsonl",
+            "--corpus-dir", "/shared/one/corpus/wiki_corpus",
+        ))
+
     def test_default_bounded_adapter_measures_native_artifacts_and_retains_safe_identity(self) -> None:
         module = load_verifier()
         with tempfile.TemporaryDirectory() as temporary:
@@ -315,6 +595,7 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             report = json.loads(
                 (temporary_root / "evidence/af340-bounded-report.json").read_text()
             )
+            self.assertRegex(report["resource_root_sha256"], r"^[0-9a-f]{64}$")
             self.assertEqual(report["agent_operations"], 1)
             self.assertEqual(report["judge_operations"], 0)
             config_ref = report["operations"][0]["artifacts"]["effective-config.json"]["ref"]
@@ -1296,6 +1577,9 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
         args = SimpleNamespace(variant="pi", provider=None, model=None)
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
+            resource = root / "shared"
+            self._write_pi_bounded_resources(resource)
+            args.resource_root = resource
             (root / "pi/packages/coding-agent").mkdir(parents=True)
             (root / "pi/.pi/agent").mkdir(parents=True)
             environment = {
@@ -1303,9 +1587,7 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
                 "DCI_PI_DIR": str(root / "pi"),
                 "DCI_PROVIDER": "openai-codex",
             }
-            with mock.patch(
-                "asterion.dci.paper_benchmarks.paper_benchmark_ids", return_value=()
-            ), mock.patch("subprocess.run") as process:
+            with mock.patch("subprocess.run") as process:
                 with self.assertRaisesRegex(ValueError, "credential|auth"):
                     module._default_bounded_preflight(args, root, (), environment)
             process.assert_not_called()
@@ -1359,15 +1641,17 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
                 command, 1, stdout='{"loggedIn":false}', stderr=""
             )
 
-        with mock.patch(
-            "asterion.dci.paper_benchmarks.paper_benchmark_ids", return_value=()
-        ), mock.patch("shutil.which", return_value="/tool/claude"), mock.patch(
-            "subprocess.run", side_effect=process
-        ):
-            with self.assertRaisesRegex(ValueError, "auth|login"):
-                module._default_bounded_preflight(
-                    args, ROOT, (), {"DEEPSEEK_API_KEY": "judge-only"}
-                )
+        with tempfile.TemporaryDirectory() as temporary:
+            resource = Path(temporary)
+            (resource / "corpus/wiki_corpus").mkdir(parents=True)
+            args.resource_root = resource
+            with mock.patch("shutil.which", return_value="/tool/claude"), mock.patch(
+                "subprocess.run", side_effect=process
+            ):
+                with self.assertRaisesRegex(ValueError, "auth|login"):
+                    module._default_bounded_preflight(
+                        args, ROOT, (), {"DEEPSEEK_API_KEY": "judge-only"}
+                    )
         self.assertEqual(calls, [("/tool/claude", "auth", "status", "--json")])
 
     def test_full_preflight_auth_checks_finish_before_scope_or_provider_work(self) -> None:
@@ -1490,14 +1774,15 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             "DEEPSEEK_API_KEY": "test-judge",
             "MINIMAX_CN_API_KEY": "test-cn",
         }
-        with mock.patch("shutil.which", return_value="/usr/bin/claude"), mock.patch(
-            "asterion.dci.paper_benchmarks.paper_benchmark_ids", return_value=()
-        ), mock.patch("tempfile.mkdtemp", side_effect=RuntimeError("past credential checks")):
-            with self.assertRaisesRegex(RuntimeError, "past credential checks"):
-                module._default_bounded_preflight(args, ROOT, (), environment)
-        with mock.patch(
-            "asterion.dci.paper_benchmarks.paper_benchmark_ids", return_value=()
-        ):
+        with tempfile.TemporaryDirectory() as temporary:
+            resource = Path(temporary)
+            (resource / "corpus/wiki_corpus").mkdir(parents=True)
+            args.resource_root = resource
+            with mock.patch("shutil.which", return_value="/usr/bin/claude"), mock.patch(
+                "tempfile.mkdtemp", side_effect=RuntimeError("past credential checks")
+            ):
+                with self.assertRaisesRegex(RuntimeError, "past credential checks"):
+                    module._default_bounded_preflight(args, ROOT, (), environment)
             with self.assertRaisesRegex(ValueError, "credential"):
                 module._default_bounded_preflight(
                     args,
@@ -1673,6 +1958,20 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             self.assertIn("Agent operations: 0", stdout.getvalue())
             self.assertIn("Judge operations: 0", stdout.getvalue())
             self.assertIn("Full dataset ran: no", stdout.getvalue())
+
+            bound_report = json.loads(reports[0].read_text(encoding="utf-8"))
+            original_report = dict(bound_report)
+            bound_report["resource_root_sha256"] = "f" * 64
+            unsigned = dict(bound_report)
+            unsigned.pop("report_sha256")
+            bound_report["report_sha256"] = module._canonical_sha256(unsigned)
+            reports[0].write_text(json.dumps(bound_report) + "\n", encoding="utf-8")
+            reports[0].chmod(0o600)
+            self.assertEqual(
+                module.verify_af340_reproduction_main(args, repo_root=ROOT), 2
+            )
+            reports[0].write_text(json.dumps(original_report) + "\n", encoding="utf-8")
+            reports[0].chmod(0o600)
 
             artifact = next((reports[0].parent / "private").rglob("effective-config.json"))
             artifact.write_bytes(b"tampered\n")

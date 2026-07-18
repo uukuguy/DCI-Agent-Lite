@@ -356,17 +356,26 @@ Run the complete provider-free matrix first:
 uv run python tools/verify_af340_reproduction.py local
 ```
 
-Each bounded command requires the repository environment file and a fresh output
-root. Run Pi, Claude Code subscription, and explicit MiniMax as separate retained
-variants:
+Each bounded command requires the repository environment file, a fresh output
+root, and the resource tree used by the README examples. `--resource-root`
+defaults to the code checkout, but worktree runs should set it explicitly to the
+main/shared checkout; the environment-file parent is not guessed. Code executes
+from the current checkout, while Quick Start and launcher sample inputs come
+from the resource root. Pi checks the exact 11 launcher dataset/corpus pairs;
+the Claude variants require only the wiki corpus. The retained plan and report
+bind the resolved resource-root identity. Run the variants separately:
 
 ```bash
+DCI_RESOURCE_ROOT=/absolute/path/to/main/DCI-Agent-Lite
 uv run python tools/verify_af340_reproduction.py bounded --variant pi \
-  --env-file .env --output-root outputs/verification/af340-bounded-pi
+  --env-file .env --resource-root "$DCI_RESOURCE_ROOT" \
+  --output-root outputs/verification/af340-bounded-pi
 uv run python tools/verify_af340_reproduction.py bounded --variant claude-subscription \
-  --env-file .env --output-root outputs/verification/af340-bounded-claude-subscription
+  --env-file .env --resource-root "$DCI_RESOURCE_ROOT" \
+  --output-root outputs/verification/af340-bounded-claude-subscription
 uv run python tools/verify_af340_reproduction.py bounded --variant claude-minimax \
   --provider minimax --model MiniMax-M3 --env-file .env \
+  --resource-root "$DCI_RESOURCE_ROOT" \
   --output-root outputs/verification/af340-bounded-claude-minimax
 ```
 

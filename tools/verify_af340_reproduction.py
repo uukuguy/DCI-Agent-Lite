@@ -53,6 +53,19 @@ _LAUNCHERS = (
     ("bright/run_economics.sh", (), False),
     ("bright/run_robotics.sh", (), False),
 )
+_LAUNCHER_RESOURCES = {
+    "bcplus_eval/run_bcplus_eval_openai.sh": ("data/bcplus_qa.jsonl", "corpus/bc_plus_docs"),
+    "qa/run_2wikimultihopqa_dev_sample50.sh": ("data/dci-bench/data/2wikimultihopqa/test.jsonl", "corpus/wiki_corpus"),
+    "qa/run_bamboogle_test_sample50.sh": ("data/dci-bench/data/bamboogle/test.jsonl", "corpus/wiki_corpus"),
+    "qa/run_hotpotqa_dev_sample50.sh": ("data/dci-bench/data/hotpotqa/test.jsonl", "corpus/wiki_corpus"),
+    "qa/run_musique_dev_sample50.sh": ("data/dci-bench/data/musique/test.jsonl", "corpus/wiki_corpus"),
+    "qa/run_nq_test_sample50.sh": ("data/dci-bench/data/nq/test.jsonl", "corpus/wiki_corpus"),
+    "qa/run_triviaqa_test_sample50.sh": ("data/dci-bench/data/triviaqa/test.jsonl", "corpus/wiki_corpus"),
+    "bright/run_bio.sh": ("data/dci-bench/data/bright_biology/bright_biology.jsonl", "corpus/bright_corpus/biology"),
+    "bright/run_earth_science.sh": ("data/dci-bench/data/bright_earth_science/bright_earth_science.jsonl", "corpus/bright_corpus/earth_science"),
+    "bright/run_economics.sh": ("data/dci-bench/data/bright_economics/economics_full.jsonl", "corpus/bright_corpus/economics"),
+    "bright/run_robotics.sh": ("data/dci-bench/data/bright_robotics/bright_robotics.jsonl", "corpus/bright_corpus/robotics"),
+}
 _SHA256 = re.compile(r"[0-9a-f]{64}\Z")
 _BOUNDED_NATIVE_NAMES = frozenset(
     {"request.json", "state.json", "events.jsonl", "eval_result.json", "effective-config.json", "config.json", "native-config.json"}
@@ -171,7 +184,9 @@ def _original_runner(profile: str | None) -> tuple[str, ...]:
         "--runtime",
         "pi",
         "--cwd",
-        "{PRESSURE_CORPUS}" if profile else "corpus/wiki_corpus",
+        "{PRESSURE_CORPUS}"
+        if profile
+        else "{RESOURCE_ROOT}/corpus/wiki_corpus",
         "--output-dir",
         "{OUTPUT_ROOT}/" + ("original-quick-start" if profile is None else f"original-{profile}"),
         "--max-turns",
@@ -205,7 +220,9 @@ def _asterion_run(
         "--runtime",
         runtime,
         "--cwd",
-        "{PRESSURE_CORPUS}" if context_profile else "corpus/wiki_corpus",
+        "{PRESSURE_CORPUS}"
+        if context_profile
+        else "{RESOURCE_ROOT}/corpus/wiki_corpus",
         "--output-dir",
         f"{{OUTPUT_ROOT}}/{suffix}",
         "--max-turns",
@@ -325,6 +342,7 @@ def bounded_operation_plan(
     ]
     for product, prefix in (("original", "scripts"), ("asterion", "asterion/scripts")):
         for relative, leading, judged in _LAUNCHERS:
+            dataset, corpus = _LAUNCHER_RESOURCES[relative]
             operations.append(
                 Operation(
                     f"launcher:{product}:{relative}",
@@ -339,6 +357,10 @@ def bounded_operation_plan(
                         f"{{OUTPUT_ROOT}}/launchers/{product}/{relative.replace('/', '-')}",
                         "--resume-policy",
                         "fresh",
+                        "--dataset",
+                        f"{{RESOURCE_ROOT}}/{dataset}",
+                        "--corpus-dir",
+                        f"{{RESOURCE_ROOT}}/{corpus}",
                     ),
                 )
             )
@@ -364,6 +386,7 @@ def _parser() -> argparse.ArgumentParser:
     )
     bounded.add_argument("--env-file", type=Path, required=True)
     bounded.add_argument("--output-root", type=Path, required=True)
+    bounded.add_argument("--resource-root", type=Path)
     bounded.add_argument("--provider")
     bounded.add_argument("--model")
     full = commands.add_parser("full")
@@ -398,6 +421,31 @@ def _preflight_env_file(path: Path) -> Path:
     return resolved.resolve()
 
 
+def _bounded_resource_root(requested: Path | None, code_root: Path) -> Path:
+    candidate = code_root if requested is None else requested.expanduser()
+    if candidate.is_symlink() or not candidate.is_dir():
+        raise ValueError("AF-340 bounded resource root is invalid")
+    return candidate.resolve()
+
+
+def _resource_root_sha256(resource_root: Path) -> str:
+    return _canonical_sha256(
+        {
+            "schema": "dci.af340-bounded-resource-root/v1",
+            "resolved_path": str(resource_root),
+        }
+    )
+
+
+def _bounded_resource_path(resource_root: Path, relative: str) -> Path:
+    candidate = resource_root
+    for part in Path(relative).parts:
+        candidate /= part
+        if candidate.is_symlink():
+            raise ValueError("AF-340 bounded resource path contains a symlink")
+    return candidate
+
+
 def _bounded_environment(path: Path) -> dict[str, str]:
     environment = dict(os.environ)
     for raw in path.read_text(encoding="utf-8").splitlines():
@@ -421,13 +469,18 @@ def _root_environment(root: Path) -> dict[str, str]:
 
 
 def _render_command(
-    operation: Operation, output_root: Path, wheel_asterion: Path
+    operation: Operation,
+    output_root: Path,
+    wheel_asterion: Path,
+    resource_root: Path,
 ) -> tuple[str, ...]:
     pressure_corpus = output_root / "private-pressure-corpus"
     return tuple(
         value.replace("{OUTPUT_ROOT}", str(output_root)).replace(
             "{WHEEL_ASTERION}", str(wheel_asterion)
-        ).replace("{PRESSURE_CORPUS}", str(pressure_corpus))
+        ).replace("{PRESSURE_CORPUS}", str(pressure_corpus)).replace(
+            "{RESOURCE_ROOT}", str(resource_root)
+        )
         for value in operation.command
     )
 
@@ -457,12 +510,21 @@ def _canonical_sha256(value: object) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
-def _plan_sha256(operations: Sequence[Operation]) -> str:
+def _plan_sha256(
+    operations: Sequence[Operation], resource_root_sha256: str
+) -> str:
     return _canonical_sha256(
-        [
-            {"operation_id": item.operation_id, "kind": item.kind, "command": item.command}
-            for item in operations
-        ]
+        {
+            "resource_root_sha256": resource_root_sha256,
+            "operations": [
+                {
+                    "operation_id": item.operation_id,
+                    "kind": item.kind,
+                    "command": item.command,
+                }
+                for item in operations
+            ],
+        }
     )
 
 
@@ -797,6 +859,9 @@ def _run_bounded(
     stdout: TextIO,
 ) -> int:
     env_file = _preflight_env_file(args.env_file)
+    resource_root = _bounded_resource_root(getattr(args, "resource_root", None), root)
+    resource_root_sha256 = _resource_root_sha256(resource_root)
+    args.resource_root = resource_root
     plan = bounded_operation_plan(root, args.variant, args.provider, args.model)
     for operation in plan:
         for value in operation.command:
@@ -817,14 +882,17 @@ def _run_bounded(
     output_root = _private_root(args.output_root)
     _write_pressure_corpus(output_root)
     environment = dict(preflight.environment)
-    environment["ASTERION_RUNTIME_CWD"] = str(root / "corpus/wiki_corpus")
+    environment["ASTERION_RUNTIME_CWD"] = str(resource_root / "corpus/wiki_corpus")
+    environment["ASTERION_DCI_RESOURCE_ROOT"] = str(resource_root)
     environment["ASTERION_DCI_OUTPUT_ROOT"] = str(output_root)
     environment["ASTERION_CLAUDE_OUTPUT_ROOT"] = str(output_root / "claude-native")
     records: list[dict[str, object]] = []
     status_value = "passed"
     retainable = executor is subprocess.run
     for operation in plan:
-        command = _render_command(operation, output_root, preflight.wheel_asterion)
+        command = _render_command(
+            operation, output_root, preflight.wheel_asterion, resource_root
+        )
         native_before = _bounded_native_snapshot(output_root)
         projected_result = False
         try:
@@ -897,13 +965,14 @@ def _run_bounded(
         "mode": "bounded",
         "status": status_value,
         "variant": args.variant,
+        "resource_root_sha256": resource_root_sha256,
         "evidence_dimensions": _dimensions_for_variant(args.variant),
         "agent_operations": agent_count,
         "judge_operations": judge_count,
         "attempted_operations": len(records),
         "full_dataset_ran": False,
         "operations": records,
-        "plan_sha256": _plan_sha256(plan),
+        "plan_sha256": _plan_sha256(plan, resource_root_sha256),
     }
     report["report_sha256"] = _canonical_sha256(report)
     if retainable:
@@ -930,19 +999,27 @@ def _default_bounded_preflight(
     source = str(root / "asterion/src")
     if source not in sys.path:
         sys.path.insert(0, source)
-    from asterion.dci.paper_benchmarks import (  # noqa: PLC0415
-        paper_benchmark_ids,
-        resolve_paper_benchmark,
-    )
-
-    for dataset_id in paper_benchmark_ids():
-        benchmark = resolve_paper_benchmark(dataset_id)
-        dataset = root / benchmark.dataset_path
-        corpus = root / benchmark.corpus_path if benchmark.corpus_path else None
-        if dataset.is_symlink() or not dataset.is_file():
-            raise ValueError("AF-340 dataset/corpus preflight failed")
-        if corpus is not None and (corpus.is_symlink() or not corpus.exists()):
-            raise ValueError("AF-340 dataset/corpus preflight failed")
+    resource_root = _bounded_resource_root(getattr(args, "resource_root", None), root)
+    dataset_paths: set[str] = set()
+    corpus_paths = {"corpus/wiki_corpus"}
+    if args.variant == "pi":
+        for dataset, corpus in _LAUNCHER_RESOURCES.values():
+            dataset_paths.add(dataset)
+            corpus_paths.add(corpus)
+    for relative in sorted(dataset_paths):
+        try:
+            candidate = _bounded_resource_path(resource_root, relative)
+        except ValueError as error:
+            raise ValueError("AF-340 bounded dataset resource is invalid") from error
+        if not candidate.is_file():
+            raise ValueError("AF-340 bounded dataset resource is invalid")
+    for relative in sorted(corpus_paths):
+        try:
+            candidate = _bounded_resource_path(resource_root, relative)
+        except ValueError as error:
+            raise ValueError("AF-340 bounded corpus resource is invalid") from error
+        if not candidate.is_dir():
+            raise ValueError("AF-340 bounded corpus resource is invalid")
     if not environment.get("DEEPSEEK_API_KEY"):
         raise ValueError("AF-340 Judge credential preflight failed")
     if args.variant == "claude-minimax":
@@ -2314,6 +2391,7 @@ def _validate_report(path: Path, root: Path) -> tuple[str, set[str]]:
         "full_dataset_ran",
         "operations",
         "variant",
+        "resource_root_sha256",
         "plan_sha256",
         "report_sha256",
     }
@@ -2336,7 +2414,13 @@ def _validate_report(path: Path, root: Path) -> tuple[str, set[str]]:
         "minimax" if variant == "claude-minimax" else None,
         "retained-model" if variant == "claude-minimax" else None,
     )
-    if report["plan_sha256"] != _plan_sha256(expected_plan):
+    resource_root_sha256 = report["resource_root_sha256"]
+    if (
+        not isinstance(resource_root_sha256, str)
+        or _SHA256.fullmatch(resource_root_sha256) is None
+        or report["plan_sha256"]
+        != _plan_sha256(expected_plan, resource_root_sha256)
+    ):
         raise ValueError("AF-340 retained operation plan drifted")
     unsigned = dict(report)
     signature = unsigned.pop("report_sha256")
