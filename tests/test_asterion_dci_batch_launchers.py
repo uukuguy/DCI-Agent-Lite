@@ -106,6 +106,7 @@ PRIMARY_LAUNCHERS = {
         "corpus/bright_corpus/robotics",
     ),
 }
+PRIMARY_PROFILE_NAMES = {profile for profile, _, _ in PRIMARY_LAUNCHERS.values()}
 
 
 class AsterionDciBatchLauncherTests(unittest.TestCase):
@@ -117,8 +118,12 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
         self.assertEqual(set(document["profiles"]), PROFILE_NAMES)
         for name, profile in document["profiles"].items():
             with self.subTest(profile=name):
-                self.assertEqual(profile["provider"], "openai")
-                self.assertEqual(profile["model"], "gpt-5.4-nano")
+                if name in PRIMARY_PROFILE_NAMES:
+                    self.assertNotIn("provider", profile)
+                    self.assertNotIn("model", profile)
+                else:
+                    self.assertEqual(profile["provider"], "openai")
+                    self.assertEqual(profile["model"], "gpt-5.4-nano")
                 self.assertEqual(profile["tools"], "read,bash")
                 self.assertEqual(profile["node_max_old_space_size_mb"], 8192)
                 self.assertIn(
@@ -209,8 +214,6 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
                     capture_args = root / f"{product}-args.txt"
                     capture_provider = root / f"{product}-provider.txt"
                     forwarded = ["--limit", "1", "--resume-policy", "fresh"]
-                    if relative == "bcplus_eval/run_bcplus_eval_openai.sh":
-                        forwarded = ["level4", "high", *forwarded]
                     result = subprocess.run(
                         ["bash", str(launcher), *forwarded],
                         env=os.environ
@@ -239,6 +242,10 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
                         self.assertIn(profile, argv)
                     self.assertNotIn("--provider", argv)
                     self.assertNotIn("--model", argv)
+                    if relative == "bcplus_eval/run_bcplus_eval_openai.sh":
+                        context_index = argv.index("--runtime-context-level")
+                        self.assertEqual(argv[context_index + 1], "level3")
+                        self.assertNotIn("--thinking-level", argv)
 
                     text = launcher.read_text(encoding="utf-8")
                     self.assertEqual(text.count('"$@"'), 1)
@@ -267,7 +274,8 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
         text = (
             ASTERION_LAUNCHER_ROOT / "bcplus_eval/run_bcplus_eval_openai.sh"
         ).read_text(encoding="utf-8")
-        self.assertIn('level=${1:-"level3"}', text)
+        self.assertIn('level="level3"', text)
+        self.assertIn('if (($# > 0)) && [[ "$1" != --* ]]; then level=$1; shift; fi', text)
         self.assertIn('thinking_level=""', text)
         self.assertIn('[[ "$1" != --* ]]', text)
         self.assertIn('--runtime-context-level "$level"', text)
@@ -401,6 +409,45 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
         self.assertEqual(request.max_concurrency, 3)
         self.assertEqual(request.runtime_options.extra_args, ("--custom value",))
         self.assertEqual(request.runtime_options.provider, "openai")
+
+    def test_primary_profile_preserves_exported_runtime_provider_and_model(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve() / "repo"
+            invocation = Path(temporary_directory).resolve() / "invocation"
+            invocation.mkdir()
+            dataset = root / "data/dci-bench/data/hotpotqa/test.jsonl"
+            dataset.parent.mkdir(parents=True)
+            dataset.write_text("{}\n", encoding="utf-8")
+            (root / "corpus/wiki_corpus").mkdir(parents=True)
+            (root / ".env").write_text(
+                "DCI_PROVIDER=dotenv-provider\nDCI_MODEL=dotenv-model\n",
+                encoding="utf-8",
+            )
+            with patch.dict(
+                os.environ,
+                {
+                    "DCI_PROVIDER": "exported-provider",
+                    "DCI_MODEL": "exported-model",
+                },
+                clear=True,
+            ), patch("asterion.dci.cli.Path.cwd", return_value=invocation), patch(
+                "asterion.dci.cli.run_benchmark"
+            ) as run:
+                run.return_value = type(
+                    "Result",
+                    (),
+                    {"output_root": root / "out", "counts": {"total": 1}},
+                )()
+                status = main(
+                    ["benchmark", "--profile", "qa.hotpotqa", "--limit", "1"],
+                    repo_root=root,
+                    stdout=io.StringIO(),
+                    stderr=io.StringIO(),
+                )
+        self.assertEqual(status, 0)
+        options = run.call_args.args[0].runtime_options
+        self.assertEqual(options.provider, "exported-provider")
+        self.assertEqual(options.model, "exported-model")
 
     def test_unknown_profile_runner_only_paths_and_invalid_bounds_are_body_free(self) -> None:
         cases = (

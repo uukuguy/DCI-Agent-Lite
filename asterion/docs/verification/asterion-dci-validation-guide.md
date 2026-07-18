@@ -320,7 +320,10 @@ The eleven primary launchers are paired one-to-one:
 `asterion/scripts/bcplus_eval/run_L3.sh` remain compatibility helpers outside
 the eleven-primary count. The 22 primary wrappers forward `"$@"` exactly once,
 do not source `.env`, and do not inject provider/model; their Python entry
-points load repository `.env` without replacing exported process values.
+points load repository `.env` without replacing exported process values. The eleven
+primary Asterion batch profiles are runtime-neutral as well: they do not
+carry provider/model values into the invocation layer, while explicit CLI,
+exported environment, `.env`, and runtime-default precedence remains intact.
 
 These launchers resolve the mixed-repository root from their own file location,
 so their internal root/config setup does not depend on the operator's CWD.

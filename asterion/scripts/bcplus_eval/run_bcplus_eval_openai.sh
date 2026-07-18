@@ -6,8 +6,8 @@ dataset="$REPO_ROOT/data/bcplus_qa.jsonl"
 corpus="$REPO_ROOT/corpus/bc_plus_docs"
 [ -f "$dataset" ] || { echo "Asterion DCI dataset is unavailable" >&2; exit 2; }
 [ -d "$corpus" ] || { echo "Asterion DCI corpus is unavailable" >&2; exit 2; }
-level=${1:-"level3"}
-if (($# > 0)); then shift; fi
+level="level3"
+if (($# > 0)) && [[ "$1" != --* ]]; then level=$1; shift; fi
 thinking_level=""
 if (($# > 0)) && [[ "$1" != --* ]]; then thinking_level=$1; shift; fi
 case "$level" in

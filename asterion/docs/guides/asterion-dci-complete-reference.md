@@ -329,7 +329,10 @@ Bundled profile 定义在 `asterion/dci/resources/batch-profiles.json`：
 | BRIGHT Robotics | `scripts/bright/run_robotics.sh` | `asterion/scripts/bright/run_robotics.sh` |
 
 所有 22 个主要 wrapper 都把参数原样透传一次，由 Python 配置层非覆盖地读取
-仓库 `.env`；wrapper 不 `source` `.env`，也不写死 provider/model。代表性有界命令：
+仓库 `.env`；wrapper 不 `source` `.env`，也不写死 provider/model。对应的 11 个
+主要 Asterion batch profile 同样不携带 provider/model，因此不会把 profile 值提升为
+invocation override；显式 CLI、已导出环境、`.env` 和 runtime default 的层次保持不变。
+代表性有界命令：
 
 ```bash
 bash scripts/bcplus_eval/run_bcplus_eval_openai.sh level3 high --limit 1

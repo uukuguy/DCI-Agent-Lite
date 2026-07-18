@@ -4,8 +4,8 @@ set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/../.." && pwd)
-level=${1:-"level3"}
-if (($# > 0)); then shift; fi
+level="level3"
+if (($# > 0)) && [[ "$1" != --* ]]; then level=$1; shift; fi
 concurrency="10"
 node_heap_mb="8192"
 thinking_level=""

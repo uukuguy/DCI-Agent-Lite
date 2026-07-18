@@ -267,8 +267,8 @@ claim. Successful evidence can be terminally bound with
 bodies, and credentials must never be committed.
 
 The one-to-one Pi-default wrappers under `asterion/scripts/{bcplus_eval,qa,bright}`
-load the shared repository `.env`, preflight their dataset and corpus, and call
-only `asterion-dci benchmark`. For example:
+delegate shared repository `.env` loading to the Python entry point, preflight
+their dataset and corpus, and call only `asterion-dci benchmark`. For example:
 
 ```bash
 bash asterion/scripts/qa/run_hotpotqa_dev_sample50.sh --limit 1
@@ -586,7 +586,10 @@ uv run python tools/verify_original_readme.py --level bounded \
 The launchers below retain their documented dataset, corpus, context, thinking,
 turn, concurrency, and output identities. Agent provider and model now come
 from the shared CLI/environment/`.env` configuration layers; the shell wrappers
-do not source `.env` or inject either value.
+do not source `.env` or inject either value. The eleven primary Asterion batch profiles are runtime-neutral
+too: they preserve explicit or exported
+provider/model values and use runtime defaults only when neither layer supplies
+them.
 
 | Data | Data Size | Retrieval Corpus | Corpus Size | Avg. Corpus Len. (words) | Corpus Path |
 |------|-----------|------------------|-------------|--------------------------|-------------|

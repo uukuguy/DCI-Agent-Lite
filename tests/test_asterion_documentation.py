@@ -177,8 +177,14 @@ class AsterionDocumentationTests(unittest.TestCase):
             self.assertIn(representative, readme)
         self.assertIn("tools/verify_af340_reproduction.py full", readme)
         self.assertIn("is not full execution authorization", readme)
+        self.assertIn("primary Asterion batch profiles are runtime-neutral", readme)
+        self.assertIn("不携带 provider/model", text)
         self.assertIn("tools/verify_af340_reproduction.py full", validation_guide)
         self.assertIn("is not full execution authorization", validation_guide)
+        self.assertIn(
+            "primary Asterion batch profiles are runtime-neutral",
+            validation_guide,
+        )
 
         for source in (
             "../../src/asterion/dci/run.py",

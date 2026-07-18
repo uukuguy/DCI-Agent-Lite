@@ -864,6 +864,7 @@ _BATCH_PROFILE_FIELDS = frozenset(
         "node_max_old_space_size_mb",
     }
 )
+_BATCH_PROFILE_REQUIRED_FIELDS = _BATCH_PROFILE_FIELDS - {"provider", "model"}
 _BATCH_PROFILE_PATH_FIELDS = frozenset({"dataset", "output_root", "corpus"})
 
 
@@ -883,7 +884,10 @@ def _load_batch_profiles() -> dict[str, dict[str, object]]:
     for name, value in document["profiles"].items():
         if not isinstance(name, str) or not name or not isinstance(value, dict):
             raise ValueError("batch profile resource is invalid")
-        if set(value) != _BATCH_PROFILE_FIELDS:
+        fields = set(value)
+        if not _BATCH_PROFILE_REQUIRED_FIELDS.issubset(
+            fields
+        ) or not fields.issubset(_BATCH_PROFILE_FIELDS):
             raise ValueError("batch profile resource is invalid")
         for field in _BATCH_PROFILE_PATH_FIELDS:
             path_value = value.get(field)
@@ -894,9 +898,13 @@ def _load_batch_profiles() -> dict[str, dict[str, object]]:
                 raise ValueError("batch profile resource is invalid")
         if value.get("mode") not in {"qa", "ir"}:
             raise ValueError("batch profile resource is invalid")
-        for field in ("provider", "model", "tools"):
-            if not isinstance(value.get(field), str) or not value[field]:
+        for field in ("provider", "model"):
+            if field in value and (
+                not isinstance(value[field], str) or not value[field]
+            ):
                 raise ValueError("batch profile resource is invalid")
+        if not isinstance(value.get("tools"), str) or not value["tools"]:
+            raise ValueError("batch profile resource is invalid")
         for field in (
             "max_turns",
             "max_concurrency",
