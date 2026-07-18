@@ -549,6 +549,44 @@ def _render_command(
     )
 
 
+def _bounded_operation_environment(
+    operation: Operation,
+    environment: Mapping[str, str],
+    code_root: Path,
+) -> dict[str, str]:
+    operation_environment = dict(environment)
+    original_src = (code_root / "src").resolve()
+    inherited = operation_environment.get("PYTHONPATH")
+    inherited_entries = [] if inherited is None else inherited.split(os.pathsep)
+
+    def is_original_src(entry: str) -> bool:
+        if not entry:
+            return False
+        candidate = Path(entry)
+        if not candidate.is_absolute():
+            candidate = code_root / candidate
+        try:
+            return candidate.samefile(original_src)
+        except (OSError, RuntimeError):
+            return False
+
+    unrelated_entries = [
+        entry for entry in inherited_entries if not is_original_src(entry)
+    ]
+    if operation.operation_id.startswith(("original:", "launcher:original:")):
+        operation_environment["PYTHONPATH"] = os.pathsep.join(
+            (str(original_src), *unrelated_entries)
+        )
+    elif inherited is not None:
+        if unrelated_entries:
+            operation_environment["PYTHONPATH"] = os.pathsep.join(
+                unrelated_entries
+            )
+        else:
+            operation_environment.pop("PYTHONPATH")
+    return operation_environment
+
+
 def _write_pressure_corpus(output_root: Path) -> None:
     corpus = output_root / "private-pressure-corpus"
     corpus.mkdir(mode=0o700)
@@ -964,7 +1002,7 @@ def _run_bounded(
             completed = executor(
                 command,
                 cwd=root,
-                env=environment,
+                env=_bounded_operation_environment(operation, environment, root),
                 umask=0o077,
                 check=False,
                 text=True,

@@ -164,6 +164,16 @@ class NativeArtifactExecutor:
         )
 
 
+class EnvironmentRecordingNativeExecutor(NativeArtifactExecutor):
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.environments: list[dict[str, str]] = []
+
+    def __call__(self, command, **kwargs):
+        self.environments.append(dict(kwargs["env"]))
+        return super().__call__(command, **kwargs)
+
+
 class Af340ReproductionVerifierTests(unittest.TestCase):
     @staticmethod
     def _preflight(_args, _root, _plan, environment):
@@ -371,6 +381,106 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             self.assertEqual(report["judge_operations"], 16)
             self.assertEqual(stat.S_IMODE((temporary_root / "evidence").stat().st_mode), 0o700)
             self.assertEqual(stat.S_IMODE(report_path.stat().st_mode), 0o600)
+
+    def test_pi_executor_adds_original_src_only_to_original_product_operations(self) -> None:
+        module = load_verifier()
+        plan = module.bounded_operation_plan(ROOT, "pi", None, None)
+
+        with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
+            temporary_root = Path(temporary)
+            original_src = str(ROOT / "src")
+            src_alias = temporary_root / "src-alias"
+            src_alias.symlink_to(ROOT / "src", target_is_directory=True)
+            unrelated_pythonpath = "/inherited/pythonpath"
+            inherited_entries = [
+                original_src, unrelated_pythonpath, "src", str(src_alias)
+            ]
+            case_alias = Path(original_src.replace("/Users/", "/users/", 1))
+            try:
+                if case_alias.samefile(ROOT / "src"):
+                    inherited_entries.append(str(case_alias))
+            except OSError:
+                pass
+            inherited_pythonpath = os.pathsep.join(inherited_entries)
+
+            def preflight(_args, _root, _plan, environment):
+                bounded_environment = dict(environment)
+                bounded_environment["PYTHONPATH"] = inherited_pythonpath
+                return SimpleNamespace(
+                    environment=bounded_environment,
+                    wheel_asterion=Path("/private/fake-wheel/bin/asterion"),
+                    cleanup_root=None,
+                )
+
+            resource_root = temporary_root / "resources"
+            self._write_pi_bounded_resources(resource_root)
+            env_file = temporary_root / "bounded.env"
+            env_file.write_text("DEEPSEEK_API_KEY=judge-only\n", encoding="utf-8")
+            executor = EnvironmentRecordingNativeExecutor(
+                kinds=[operation.kind for operation in plan]
+            )
+            with mock.patch.object(module.subprocess, "run", executor):
+                result = module.verify_af340_reproduction_main(
+                    [
+                        "bounded", "--variant", "pi", "--env-file", str(env_file),
+                        "--output-root", str(temporary_root / "evidence"),
+                        "--resource-root", str(resource_root),
+                    ],
+                    repo_root=ROOT,
+                    executor=executor,
+                    bounded_preflight=preflight,
+                    stdout=io.StringIO(),
+                    raise_errors=True,
+                )
+
+            self.assertEqual(result, 0)
+            self.assertEqual(len(executor.environments), len(plan))
+            expected_original = os.pathsep.join(
+                (original_src, unrelated_pythonpath)
+            )
+            by_id = dict(
+                zip(
+                    (operation.operation_id for operation in plan),
+                    executor.environments,
+                    strict=True,
+                )
+            )
+            launcher_ids = {
+                operation.operation_id
+                for operation in plan
+                if operation.operation_id.startswith("launcher:")
+            }
+            self.assertEqual(len(launcher_ids), 22)
+            self.assertEqual(
+                sum(name.startswith("launcher:original:") for name in launcher_ids),
+                11,
+            )
+            for operation_id, environment in by_id.items():
+                if operation_id.startswith(("original:", "launcher:original:")):
+                    self.assertEqual(environment["PYTHONPATH"], expected_original)
+                else:
+                    self.assertEqual(
+                        environment["PYTHONPATH"], unrelated_pythonpath
+                    )
+            for operation_id in (
+                "asterion:pi-quick-start",
+                "asterion:pi-context-level3",
+                "asterion:pi-context-level4",
+                "asterion:installed-pi",
+                "asterion:wheel-pi",
+            ):
+                self.assertNotIn(original_src, by_id[operation_id]["PYTHONPATH"])
+
+            report_root = temporary_root / "evidence"
+            retained = (report_root / "af340-bounded-report.json").read_text(
+                encoding="utf-8"
+            )
+            retained += "".join(
+                path.read_text(encoding="utf-8")
+                for path in report_root.rglob("effective-config.json")
+            )
+            self.assertNotIn("PYTHONPATH", retained)
+            self.assertNotIn(original_src, retained)
 
     def test_bounded_cli_and_plan_bind_distinct_explicit_resource_root(self) -> None:
         module = load_verifier()
