@@ -51,7 +51,9 @@ class ConfigLayers:
         def is_empty(value: object) -> bool:
             return isinstance(value, str) and not value.strip()
 
-        if invocation is not None and not is_empty(invocation):
+        if invocation is not None and (
+            allow_empty_environment or not is_empty(invocation)
+        ):
             return invocation, "invocation"
         if name in self.process and (
             allow_empty_environment or not is_empty(self.process[name])
@@ -279,7 +281,8 @@ def resolve_asterion_runtime(
     raw_context_profile = values["context_profile"]
     context_profile = (
         None
-        if raw_context_profile is None or raw_context_profile == ""
+        if raw_context_profile is None
+        or (isinstance(raw_context_profile, str) and not raw_context_profile.strip())
         else resolve_context_profile(str(raw_context_profile)).name
     )
     return AsterionRuntimeConfig(

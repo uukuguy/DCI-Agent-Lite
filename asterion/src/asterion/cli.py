@@ -209,10 +209,12 @@ async def _run(
         if len(matches) != 1:
             raise ApplicationProviderError("application assembly selection is invalid")
         application = matches[0]
+    layers = ConfigLayers.from_repo(Path.cwd())
     resolved_runtime = resolve_asterion_runtime(
         {"runtime": args.runtime} if args.runtime is not None else {},
-        ConfigLayers.from_repo(Path.cwd()),
+        layers,
     )
+    layers.materialize(os.environ)
     runtime_id = resolve_public_runtime_id(resolved_runtime.runtime)
     if runtime_id not in application.runtime_ids:
         raise ApplicationProviderError("application runtime selection is invalid")

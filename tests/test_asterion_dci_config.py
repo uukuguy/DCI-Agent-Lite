@@ -79,6 +79,55 @@ class AsterionDciConfigTests(unittest.TestCase):
         self.assertIsNone(resolved.timeout_seconds)
         self.assertEqual(resolved.sources["agent.timeout_seconds"], "environment")
 
+    def test_empty_optional_invocation_overrides_populated_lower_layers(self) -> None:
+        resolved = resolve_asterion_runtime(
+            {
+                "timeout_seconds": "",
+                "thinking_level": "",
+                "context_profile": "",
+            },
+            ConfigLayers(
+                process={
+                    "DCI_RPC_TIMEOUT_SECONDS": "30",
+                    "DCI_PI_THINKING_LEVEL": "high",
+                    "DCI_RUNTIME_CONTEXT_LEVEL": "level4",
+                },
+                dotenv={
+                    "DCI_RPC_TIMEOUT_SECONDS": "60",
+                    "DCI_PI_THINKING_LEVEL": "medium",
+                    "DCI_RUNTIME_CONTEXT_LEVEL": "level3",
+                },
+            ),
+        )
+
+        self.assertIsNone(resolved.timeout_seconds)
+        self.assertIsNone(resolved.thinking_level)
+        self.assertIsNone(resolved.context_profile)
+        self.assertEqual(resolved.sources["agent.timeout_seconds"], "invocation")
+        self.assertEqual(resolved.sources["agent.thinking_level"], "invocation")
+        self.assertEqual(resolved.sources["context.profile"], "invocation")
+
+    def test_whitespace_optional_invocation_is_also_authoritative_omission(self) -> None:
+        resolved = resolve_asterion_runtime(
+            {
+                "timeout_seconds": "  ",
+                "thinking_level": "  ",
+                "context_profile": "  ",
+            },
+            ConfigLayers(
+                process={
+                    "DCI_RPC_TIMEOUT_SECONDS": "30",
+                    "DCI_PI_THINKING_LEVEL": "high",
+                    "DCI_RUNTIME_CONTEXT_LEVEL": "level4",
+                },
+                dotenv={},
+            ),
+        )
+
+        self.assertIsNone(resolved.timeout_seconds)
+        self.assertIsNone(resolved.thinking_level)
+        self.assertIsNone(resolved.context_profile)
+
     def test_safe_pi_projection_matches_original_except_product_and_identity(self) -> None:
         invocation = {
             "runtime": "pi",
