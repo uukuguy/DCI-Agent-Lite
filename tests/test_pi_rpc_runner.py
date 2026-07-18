@@ -133,6 +133,77 @@ class PiRpcLifecycleTests(unittest.TestCase):
         self.assertRegex(expanded[digest_index], r"^[0-9a-f]{64}$")
         self.assertNotIn("--context-management-level", expanded)
 
+    def test_batch_context_profile_is_consumed_by_runner_before_external_pi(self) -> None:
+        args = Namespace(
+            runtime="pi",
+            provider="fixture-provider",
+            model="fixture-model",
+            package_dir=Path("/private/pi/packages/coding-agent"),
+            agent_dir=Path("/private/pi-agent"),
+            corpus_dir=Path("/private/corpus"),
+            tools="read,bash",
+            rpc_timeout_seconds=30,
+            max_turns=7,
+            system_prompt_file=None,
+            append_system_prompt_file=None,
+            pi_extra_arg=["--custom-flag=value"],
+            pi_thinking_level="high",
+            runtime_context_level="level3",
+        )
+        batch_command = bcplus_runner.build_run_command(
+            args=args,
+            question_text="fixture question",
+            query_output_dir=Path("/private/output"),
+            resume_run=False,
+        )
+
+        self.assertEqual(
+            batch_command[-5:],
+            [
+                "--runtime-context-level",
+                "level3",
+                "--extra-arg=--custom-flag=value",
+                "--extra-arg=--thinking high",
+                "fixture question",
+            ],
+        )
+        runner_argv = batch_command[
+            batch_command.index("dci.benchmark.pi_rpc_runner") + 1:
+        ]
+        with patch("sys.argv", ["pi_rpc_runner.py", *runner_argv]):
+            runner_args = rpc_runner.parse_args()
+        self.assertEqual(runner_args.runtime_context_level, "level3")
+
+        with (
+            patch.object(
+                rpc_runner,
+                "ensure_built_pi_cli",
+                return_value=Path("/private/pi/dist/cli.js"),
+            ),
+            patch.object(rpc_runner, "_node_bin", return_value="/private/node"),
+        ):
+            external_pi_argv = rpc_runner.build_pi_command(
+                package_dir=runner_args.package_dir,
+                mode="rpc",
+                provider=runner_args.provider,
+                model=runner_args.model,
+                tools=runner_args.tools,
+                no_session=True,
+                system_prompt_file=None,
+                append_system_prompt_file=None,
+                extra_args=rpc_runner.resolved_pi_extra_args(runner_args),
+            )
+
+        self.assertIn("--custom-flag=value", external_pi_argv)
+        thinking_index = external_pi_argv.index("--thinking")
+        self.assertEqual(external_pi_argv[thinking_index + 1], "high")
+        self.assertIn("--extension", external_pi_argv)
+        self.assertIn("--dci-context-profile", external_pi_argv)
+        self.assertIn("--dci-context-contract", external_pi_argv)
+        self.assertIn("--dci-context-extension-sha256", external_pi_argv)
+        self.assertNotIn("--runtime-context-level", external_pi_argv)
+        self.assertNotIn("--context-management-level", " ".join(external_pi_argv))
+
     def test_run_recorder_writes_a_conformant_protocol_attempt(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output_dir = Path(temp_dir) / "run"

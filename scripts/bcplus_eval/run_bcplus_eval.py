@@ -738,12 +738,12 @@ def build_run_command(
         cmd.extend(["--system-prompt-file", str(args.system_prompt_file)])
     if args.append_system_prompt_file:
         cmd.extend(["--append-system-prompt-file", str(args.append_system_prompt_file)])
+    if args.runtime_context_level:
+        cmd.extend(["--runtime-context-level", args.runtime_context_level])
 
     pi_extra_args = list(args.pi_extra_arg)
     if args.pi_thinking_level:
         pi_extra_args.append(f"--thinking {args.pi_thinking_level}")
-    if args.runtime_context_level:
-        pi_extra_args.append(f"--context-management-level {args.runtime_context_level}")
     for extra_arg in pi_extra_args:
         cmd.append(f"--extra-arg={extra_arg}")
     cmd.append(question_text)
