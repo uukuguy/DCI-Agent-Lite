@@ -2,10 +2,10 @@
   "session": "2026-07-18-af-340-readme-reproduction-runtime-parity",
   "phase": "implementation",
   "work_package_id": "AF-340",
-  "last_cycle": 105,
-  "next_hypothesis": "AF-340-H-003",
+  "last_cycle": 106,
+  "next_hypothesis": "AF-340-H-004",
   "in_flight": null,
-  "next_action": "Start AF-340-H-003.",
+  "next_action": "Start AF-340-H-004.",
   "falsified_routes": [
     "duplicate the authoritative Pi commit across setup.sh and .env.template",
     "convert the independent Pi checkout to vendored or submodule ownership",

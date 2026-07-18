@@ -1,19 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (104 runs).
+> Deterministic summary generated from tracked state (105 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 105
-- Next hypothesis: AF-340-H-003
+- Last cycle: 106
+- Next hypothesis: AF-340-H-004
 - In flight: none
-- Next action: Start AF-340-H-003.
+- Next action: Start AF-340-H-004.
 
 ## Active hypotheses
 
-- **AF-340-H-003** (pending, rank 0.80): Prove immutable current/paper experiment profiles, invocation-only full authorization, normalized per-query evidence, deterministic confidence intervals, and provider-free local orchestration.
 - **AF-340-H-004** (pending, rank 0.70): Prove bounded real original/Asterion Pi and Asterion Claude subscription and MiniMax paths, then bind separately authorized full-result non-inferiority and paper-target evidence without credential or body leakage.
 
 ## Run ladder
@@ -124,6 +123,7 @@
 | 20260717-184511-dci-climb-af330h004 | AF-330-H-004 | 4 | confirmed 4/4 |
 | 20260718-200307-dci-climb-af340h001 | AF-340-H-001 | 4 | confirmed 4/4 |
 | 20260718-213112-dci-climb-af340h002 | AF-340-H-002 | 4 | confirmed 4/4 |
+| 20260719-033104-dci-climb-af340h003 | AF-340-H-003 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

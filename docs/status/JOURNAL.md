@@ -975,3 +975,13 @@
 - 02:10 Task 7 复审仍拒绝：非 completed pair 可携带成功 metric。
 - 02:17 拒绝失败 pair 携带 Judge/NDCG 成功证据。 [5e16861]
 - 02:22 Task 7 五轮复审清零，统计比较契约通过。
+- 02:23 固化 Task 7 恢复边界，支持根协调器接续。 [559ed8d]
+- 04:18 新增 AF-340 coordinator，强制精确 bounded/full 证据。 [930d3f8]
+- 02:38 Task 8 独立复审拒绝：inspect 可伪造 retained/full 闭环，且 preflight、完成计数与原生证据权限不完整。
+- 03:07 加固 AF-340 原生证据、授权绑定、隐私与认证预检，阻止自认证 retained report。 [e18e4a5]
+- 03:12 Task 8 复审仍拒绝：CompletedProcess 注入可认证，openai-codex key 映射错误，full 中间目录非私有。
+- 03:25 AF-340 retained evidence 要求精确 production runner，并修正认证别名与 full-tree 隐私。 [1df9c5f]
+- 03:29 Task 8 三轮独立复审清零，provider-free reproduction coordinator 契约通过。
+
+## 2026-07-19
+- 03:31 AF-340-H-003 confirmed 4/4; package acceptance recorded.
