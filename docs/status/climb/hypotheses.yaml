@@ -2379,11 +2379,23 @@ hypotheses:
   expected_lift: +1 README and launcher acceptance
   cost_h: 2.0
   ranking: 0.9
-  status: pending
+  status: confirmed
   created_at: '2026-07-18T18:16:00+08:00'
   verification_command: uv run python -m unittest -v tests.test_original_readme_acceptance
     tests.test_asterion_dci_batch_launchers tests.test_asterion_documentation
-  results: []
+  results:
+  - session: 2026-07-18-af-340-readme-reproduction-runtime-parity
+    cycle: 105
+    run: 20260718-213112-dci-climb-af340h002
+    local: 4
+    local_per_task:
+      quick_start_context: 1
+      source_launchers: 1
+      asterion_launchers: 1
+      documentation_contract: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-340-H-003
   work_package_id: AF-340
   description: Prove immutable current/paper experiment profiles, invocation-only

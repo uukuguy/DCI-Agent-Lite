@@ -1,19 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (103 runs).
+> Deterministic summary generated from tracked state (104 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 104
-- Next hypothesis: AF-340-H-002
+- Last cycle: 105
+- Next hypothesis: AF-340-H-003
 - In flight: none
-- Next action: Start AF-340-H-002.
+- Next action: Start AF-340-H-003.
 
 ## Active hypotheses
 
-- **AF-340-H-002** (pending, rank 0.90): Prove the original Quick Start, L0-L4 context paths, eleven benchmark launchers, and one-to-one Asterion operator paths are literal and executable.
 - **AF-340-H-003** (pending, rank 0.80): Prove immutable current/paper experiment profiles, invocation-only full authorization, normalized per-query evidence, deterministic confidence intervals, and provider-free local orchestration.
 - **AF-340-H-004** (pending, rank 0.70): Prove bounded real original/Asterion Pi and Asterion Claude subscription and MiniMax paths, then bind separately authorized full-result non-inferiority and paper-target evidence without credential or body leakage.
 
@@ -124,6 +123,7 @@
 | 20260717-182523-dci-climb-af330h004 | AF-330-H-004 | 4 | confirmed 4/4 |
 | 20260717-184511-dci-climb-af330h004 | AF-330-H-004 | 4 | confirmed 4/4 |
 | 20260718-200307-dci-climb-af340h001 | AF-340-H-001 | 4 | confirmed 4/4 |
+| 20260718-213112-dci-climb-af340h002 | AF-340-H-002 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

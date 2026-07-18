@@ -948,3 +948,10 @@
 - 21:20 Task 4 复审仍拒绝：真实 TS resume/digest 与 L4 token 目标不完整。
 - 21:36 绑定真实 context resume 身份并落实 L4 20k 目标。 [25b3d07]
 - 21:42 Task 4 三轮复审清零，字面 README 与 context 验收通过。
+- 21:43 固化 Task 4 恢复边界，支持 launcher parity 接续。 [e9d3401]
+- 22:00 Task 5 统一 11 对 thin launchers 与文档路径。 [6a8b8c7]
+- 22:12 Task 5 初审拒绝：profile 仍覆盖环境，BC+ 不接受裸 limit。
+- 22:29 修复 runtime-neutral profiles 与 BC+ 裸 limit 透传。 [8a35dd2]
+- 22:34 Task 5 复审清零，11/11 launcher parity 通过。
+- 21:31 AF-340-H-002 confirmed 4/4; package acceptance recorded.
+- 22:35 AF-340-H-002 正式确认 4/4，下一假设 H003。
