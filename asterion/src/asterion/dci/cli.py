@@ -179,6 +179,7 @@ def _parser() -> argparse.ArgumentParser:
 def _add_runtime_option_arguments(parser: argparse.ArgumentParser) -> None:
     """Add shared DCI settings with None defaults for environment resolution."""
 
+    parser.add_argument("--runtime")
     parser.add_argument("--provider")
     parser.add_argument("--model")
     parser.add_argument("--tools")
@@ -979,6 +980,7 @@ def _judge_config(args: argparse.Namespace) -> JudgeConfig:
 
 def _runtime_options(args: argparse.Namespace) -> DciRuntimeOptions:
     values = {
+        "runtime": args.runtime,
         "provider": args.provider,
         "model": args.model,
         "tools": args.tools,

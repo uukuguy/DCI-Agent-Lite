@@ -9,7 +9,7 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 from unittest.mock import patch
 
-from asterion.cli import _parser, main
+from asterion.cli import _parser, main, resolve_public_runtime_id
 from asterion.applications.dci_agent_lite.provider import create_provider as create_dci_provider
 from asterion.applications.provider import InstalledApplication, InstalledApplicationProvider
 from asterion.applications.product import (
@@ -179,6 +179,19 @@ def configure_manager(manager, config):
 
 
 class AsterionCliTests(unittest.TestCase):
+    def test_public_runtime_names_map_to_exact_installed_ids(self) -> None:
+        self.assertEqual(resolve_public_runtime_id("pi"), "pi.reference")
+        self.assertEqual(
+            resolve_public_runtime_id("claude-code"), "claude-code.reference"
+        )
+        self.assertEqual(resolve_public_runtime_id("pi.reference"), "pi.reference")
+        self.assertEqual(
+            resolve_public_runtime_id("claude-code.reference"),
+            "claude-code.reference",
+        )
+        with self.assertRaises(ValueError):
+            resolve_public_runtime_id("unsupported")
+
     def _product_provider(self, root: Path, calls: list[object]) -> InstalledApplicationProvider:
         valid = provider(root)
         description = CapabilityProductDescription(

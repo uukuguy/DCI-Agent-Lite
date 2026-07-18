@@ -7,13 +7,101 @@ from pathlib import Path
 from unittest.mock import patch
 
 from asterion.dci.config import (
+    ConfigLayers,
     load_asterion_dci_env,
+    resolve_asterion_runtime,
     resolve_dci_paths,
     resolve_dci_runtime_options,
 )
+from asterion.dci.effective_config import AsterionEffectiveConfig
+from dci.config import ConfigLayers as OriginalConfigLayers
+from dci.config import resolve_original_runtime
+from dci.effective_config import OriginalEffectiveConfig
 
 
 class AsterionDciConfigTests(unittest.TestCase):
+    def test_runtime_resolution_is_runtime_first_and_layered(self) -> None:
+        layers = ConfigLayers(
+            process={
+                "DCI_RUNTIME": "claude-code",
+                "DCI_PROVIDER": "minimax",
+                "DCI_MODEL": "process-model",
+            },
+            dotenv={
+                "DCI_RUNTIME": "pi",
+                "DCI_PROVIDER": "dotenv-provider",
+                "DCI_MODEL": "dotenv-model",
+            },
+        )
+
+        resolved = resolve_asterion_runtime(
+            {"runtime": "pi", "model": "invocation-model"}, layers
+        )
+
+        self.assertEqual(resolved.runtime, "pi")
+        self.assertEqual(resolved.provider, "minimax")
+        self.assertEqual(resolved.model, "invocation-model")
+        self.assertEqual(resolved.sources["runtime"], "invocation")
+        self.assertEqual(resolved.sources["agent.provider"], "environment")
+        self.assertEqual(resolved.sources["agent.model"], "invocation")
+
+    def test_pi_defaults_and_claude_subscription_are_runtime_relative(self) -> None:
+        pi = resolve_asterion_runtime({}, ConfigLayers({}, {}))
+        claude = resolve_asterion_runtime(
+            {}, ConfigLayers({"DCI_RUNTIME": "claude-code"}, {})
+        )
+
+        self.assertEqual(
+            (pi.runtime, pi.provider, pi.model, pi.authentication_mode),
+            ("pi", "openai-codex", "gpt-5.6-luna", "saved-auth"),
+        )
+        self.assertEqual(
+            (claude.runtime, claude.provider, claude.model, claude.authentication_mode),
+            ("claude-code", None, None, "subscription"),
+        )
+
+    def test_exact_installed_runtime_ids_remain_compatible(self) -> None:
+        for exact, public in (
+            ("pi.reference", "pi"),
+            ("claude-code.reference", "claude-code"),
+        ):
+            with self.subTest(exact=exact):
+                resolved = resolve_asterion_runtime(
+                    {"runtime": exact}, ConfigLayers({}, {})
+                )
+                self.assertEqual(resolved.runtime, public)
+
+    def test_empty_optional_timeout_is_preserved_as_omitted(self) -> None:
+        resolved = resolve_asterion_runtime(
+            {}, ConfigLayers({"DCI_RPC_TIMEOUT_SECONDS": ""}, {})
+        )
+
+        self.assertIsNone(resolved.timeout_seconds)
+        self.assertEqual(resolved.sources["agent.timeout_seconds"], "environment")
+
+    def test_safe_pi_projection_matches_original_except_product_and_identity(self) -> None:
+        invocation = {
+            "runtime": "pi",
+            "provider": "provider",
+            "model": "model",
+            "tools": "read,bash",
+            "max_turns": 7,
+            "timeout_seconds": 12,
+            "thinking_level": "high",
+            "context_profile": "level3",
+        }
+        original = OriginalEffectiveConfig(
+            resolve_original_runtime(invocation, OriginalConfigLayers({}, {}))
+        ).to_public_dict()
+        asterion = AsterionEffectiveConfig(
+            resolve_asterion_runtime(invocation, ConfigLayers({}, {}))
+        ).to_public_dict()
+
+        for projection in (original, asterion):
+            projection.pop("product")
+            projection.pop("identity_sha256")
+        self.assertEqual(asterion, original)
+
     def test_shared_paths_win_over_compatibility_aliases(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory).resolve()
