@@ -12,6 +12,7 @@ from unittest.mock import MagicMock, call, patch
 from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
 import dci.benchmark.pi_rpc_runner as rpc_runner
 from dci.benchmark.pi_rpc_runner import PiRpcClient, parse_args
+from dci.config import ConfigLayers
 from dci.framework.protocol import validate_event_stream, validate_run_request
 
 
@@ -524,6 +525,37 @@ class PiRpcLifecycleTests(unittest.TestCase):
             args = parse_args()
 
         self.assertEqual(args.rpc_timeout_seconds, 42.0)
+
+    def test_parser_leaves_layered_runtime_values_unresolved(self) -> None:
+        with (
+            patch.dict(
+                "os.environ",
+                {"DCI_PROVIDER": "environment-provider", "DCI_MODEL": "environment-model"},
+                clear=True,
+            ),
+            patch("sys.argv", ["dci-agent-lite", "--runtime", "pi"]),
+        ):
+            args = parse_args()
+
+        self.assertEqual(args.runtime, "pi")
+        self.assertIsNone(args.provider)
+        self.assertIsNone(args.model)
+
+    def test_runtime_defaults_do_not_make_terminal_flags_explicit(self) -> None:
+        with (
+            patch.dict("os.environ", {}, clear=True),
+            patch("sys.argv", ["dci-agent-lite", "--terminal"]),
+        ):
+            args = parse_args()
+        rpc_runner.resolve_runtime_args(args, ConfigLayers({}, {}))
+
+        with (
+            patch("sys.stdin.isatty", return_value=True),
+            patch("sys.stdout.isatty", return_value=True),
+        ):
+            error = rpc_runner.validate_terminal_mode_args(args)
+
+        self.assertIsNone(error)
 
 
 if __name__ == "__main__":

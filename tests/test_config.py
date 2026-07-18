@@ -7,10 +7,59 @@ from pathlib import Path
 from unittest.mock import patch
 
 from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
-from dci.config import resolve_pi_paths
+from dci.config import (
+    ConfigLayers,
+    load_project_env,
+    resolve_original_runtime,
+    resolve_pi_paths,
+)
 
 
 class PiPathConfigTests(unittest.TestCase):
+    def test_original_runtime_precedence_and_sources(self) -> None:
+        layers = ConfigLayers(
+            process={"DCI_PROVIDER": "environment-provider"},
+            dotenv={"DCI_PROVIDER": "dotenv-provider", "DCI_MODEL": "dotenv-model"},
+        )
+        resolved = resolve_original_runtime(
+            {"provider": "invocation-provider", "model": None}, layers
+        )
+        self.assertEqual(resolved.runtime, "pi")
+        self.assertEqual(resolved.provider, "invocation-provider")
+        self.assertEqual(resolved.model, "dotenv-model")
+        self.assertEqual(resolved.sources["agent.provider"], "invocation")
+        self.assertEqual(resolved.sources["agent.model"], "environment")
+
+    def test_original_runtime_rejects_claude_code(self) -> None:
+        with self.assertRaisesRegex(ValueError, "Original DCI runtime is unsupported"):
+            resolve_original_runtime({"runtime": "claude-code"}, ConfigLayers({}, {}))
+
+    def test_config_layers_snapshot_dotenv_and_materialize_missing_values(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            (root / ".env").write_text(
+                "DCI_PROVIDER=dotenv-provider\nDCI_MODEL=dotenv-model\n",
+                encoding="utf-8",
+            )
+            target = {"DCI_PROVIDER": "process-provider"}
+            layers = ConfigLayers.from_repo(root, target)
+            layers.materialize(target)
+
+        self.assertEqual(layers.process["DCI_PROVIDER"], "process-provider")
+        self.assertEqual(target["DCI_PROVIDER"], "process-provider")
+        self.assertEqual(target["DCI_MODEL"], "dotenv-model")
+
+    def test_load_project_env_remains_backward_compatible(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            env_path = root / ".env"
+            env_path.write_text("DCI_MODEL=dotenv-model\n", encoding="utf-8")
+            with patch.dict(os.environ, {"DCI_MODEL": "process-model"}, clear=True):
+                returned = load_project_env(root)
+                self.assertEqual(os.environ["DCI_MODEL"], "process-model")
+
+        self.assertEqual(returned, env_path)
+
     def test_new_pi_directory_is_preferred(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory).resolve()

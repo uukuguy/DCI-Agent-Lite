@@ -37,7 +37,13 @@ from dci.benchmark.judge import (
     judge_answer_sync,
     judge_request_fingerprint,
 )
-from dci.config import load_project_env, resolve_pi_paths
+from dci.config import (
+    ConfigLayers,
+    OriginalRuntimeConfig,
+    resolve_original_runtime,
+    resolve_pi_paths,
+)
+from dci.effective_config import OriginalEffectiveConfig
 from dci.framework.adapters.pi import PiProtocolAdapter, map_pi_capabilities
 from dci.framework.protocol import (
     MAX_DEADLINE_MS,
@@ -1520,6 +1526,10 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("question", nargs="*", help="Question text. If omitted, reads from --question-file or stdin.")
     parser.add_argument(
+        "--runtime",
+        help="Agent runtime. Original DCI supports exactly 'pi'. Default: pi.",
+    )
+    parser.add_argument(
         "--terminal",
         action="store_true",
         help=(
@@ -1530,13 +1540,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--question-file", type=Path, help="Read the question from a UTF-8 text file.")
     parser.add_argument(
         "--provider",
-        default=os.environ.get("DCI_PROVIDER"),
-        help="Provider passed to pi. Defaults to DCI_PROVIDER from .env when set.",
+        help="Provider passed to pi. Overrides DCI_PROVIDER and the Pi default.",
     )
     parser.add_argument(
         "--model",
-        default=os.environ.get("DCI_MODEL"),
-        help="Model id or pattern passed to pi. Defaults to DCI_MODEL from .env when set.",
+        help="Model id or pattern passed to pi. Overrides DCI_MODEL and the Pi default.",
     )
     parser.add_argument(
         "--package-dir",
@@ -1568,6 +1576,15 @@ def parse_args() -> argparse.Namespace:
         "--max-turns",
         type=int,
         help="Client-side cap on agent turns. The runner sends an RPC abort before turn N+1 starts.",
+    )
+    parser.add_argument(
+        "--pi-thinking-level",
+        choices=["", "off", "minimal", "low", "medium", "high", "xhigh"],
+        help="Pi thinking/reasoning level forwarded as --thinking <level>.",
+    )
+    parser.add_argument(
+        "--runtime-context-level",
+        help="Optional Pi context-management profile, such as level0 through level4.",
     )
     parser.add_argument(
         "--rpc-timeout-seconds",
@@ -1748,6 +1765,80 @@ def load_judge_config_from_args(args: argparse.Namespace) -> JudgeConfig:
     )
 
 
+def resolve_runtime_args(
+    args: argparse.Namespace, layers: ConfigLayers
+) -> OriginalRuntimeConfig:
+    args.max_turns_explicit = args.max_turns is not None
+    resolved = resolve_original_runtime(
+        {
+            "runtime": args.runtime,
+            "provider": args.provider,
+            "model": args.model,
+            "tools": args.tools,
+            "max_turns": args.max_turns,
+            "timeout_seconds": args.rpc_timeout_seconds,
+            "thinking_level": args.pi_thinking_level,
+            "context_profile": args.runtime_context_level,
+        },
+        layers,
+    )
+    args.runtime = resolved.runtime
+    args.provider = resolved.provider
+    args.model = resolved.model
+    args.tools = resolved.tools
+    args.max_turns = resolved.max_turns
+    args.rpc_timeout_seconds = resolved.timeout_seconds
+    args.pi_thinking_level = resolved.thinking_level
+    args.runtime_context_level = resolved.context_profile
+    return resolved
+
+
+def effective_config_for_run(
+    *,
+    runtime: OriginalRuntimeConfig,
+    args: argparse.Namespace,
+    judge_config: Optional[JudgeConfig],
+) -> dict[str, object]:
+    judge: dict[str, object] = {}
+    if judge_config is not None:
+        judge = {
+            "endpoint": judge_config.endpoint,
+            "api": judge_config.api,
+            "model": judge_config.model,
+            "thinking": judge_config.effective_thinking,
+            "json_mode": judge_config.json_mode,
+        }
+    return OriginalEffectiveConfig(
+        runtime=runtime,
+        context={
+            "profile": runtime.context_profile,
+            "implementation_sha256": None,
+        },
+        judge=judge,
+        experiment={
+            "dataset": None,
+            "selection": "single-query",
+            "corpus": args.cwd.name,
+            "metric": "judge-correctness" if judge_config is not None else None,
+            "execution_class": "single",
+        },
+    ).to_public_dict()
+
+
+def write_effective_config(path: Path, payload: dict[str, object]) -> None:
+    write_json(path, payload)
+    path.chmod(0o600)
+
+
+def resolved_pi_extra_args(args: argparse.Namespace) -> List[str]:
+    extra_args = expand_extra_args(args.extra_arg)
+    if args.pi_thinking_level:
+        extra_args.extend(["--thinking", args.pi_thinking_level])
+    if args.runtime_context_level:
+        extra_args.extend(["--context-management-level", args.runtime_context_level])
+    return extra_args
+
+
 def load_question(args: argparse.Namespace, *, resume_dir: Optional[Path]) -> str:
     if args.question_file:
         return args.question_file.read_text(encoding="utf-8").strip()
@@ -1815,7 +1906,7 @@ def validate_terminal_mode_args(args: argparse.Namespace) -> Optional[str]:
         incompatible.append("--output-dir")
     if args.resume is not None:
         incompatible.append("--resume")
-    if args.max_turns is not None:
+    if getattr(args, "max_turns_explicit", args.max_turns is not None):
         incompatible.append("--max-turns")
     if args.show_tools:
         incompatible.append("--show-tools")
@@ -1858,7 +1949,7 @@ def run_terminal_mode(args: argparse.Namespace) -> int:
         no_session=False,
         system_prompt_file=system_prompt_file,
         append_system_prompt_file=append_system_prompt_file,
-        extra_args=expand_extra_args(args.extra_arg),
+        extra_args=resolved_pi_extra_args(args),
         messages=terminal_initial_messages(args),
     )
     completed = subprocess.run(
@@ -1871,8 +1962,14 @@ def run_terminal_mode(args: argparse.Namespace) -> int:
 
 
 def main() -> int:
-    load_project_env(REPO_ROOT)
+    layers = ConfigLayers.from_repo(REPO_ROOT)
+    layers.materialize(os.environ)
     args = parse_args()
+    try:
+        runtime_config = resolve_runtime_args(args, layers)
+    except ValueError as exc:
+        print(f"Invalid runtime configuration: {exc}", file=sys.stderr)
+        return 2
     if args.terminal:
         try:
             return run_terminal_mode(args)
@@ -1926,6 +2023,15 @@ def main() -> int:
             return 2
 
     existing_state = read_json_if_exists(output_dir / "state.json") if resume else None
+    output_dir.mkdir(parents=True, exist_ok=True)
+    write_effective_config(
+        output_dir / "effective-config.json",
+        effective_config_for_run(
+            runtime=runtime_config,
+            args=args,
+            judge_config=judge_config,
+        ),
+    )
     if resume and eval_answer is not None and existing_state and existing_state.get("status") == "completed":
         predicted_answer = (
             read_text_if_exists(output_dir / "final.txt")
@@ -1993,7 +2099,7 @@ def main() -> int:
         show_tools=args.show_tools,
         system_prompt_file=system_prompt_file,
         append_system_prompt_file=append_system_prompt_file,
-        extra_args=expand_extra_args(args.extra_arg),
+        extra_args=resolved_pi_extra_args(args),
     )
 
     try:

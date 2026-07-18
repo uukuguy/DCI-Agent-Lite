@@ -32,13 +32,17 @@ from dci.benchmark.judge import (  # noqa: E402
     JudgeConfig,
     judge_answer_sync,
 )
-from dci.config import load_project_env, resolve_pi_paths  # noqa: E402
+from dci.config import (  # noqa: E402
+    ConfigLayers,
+    OriginalRuntimeConfig,
+    resolve_original_runtime,
+    resolve_pi_paths,
+)
+from dci.effective_config import OriginalEffectiveConfig  # noqa: E402
 
 DEFAULT_DATASET_PATH = REPO_ROOT / "data" / "bcplus_qa.jsonl"
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / "outputs" / "bcplus_eval"
 DEFAULT_CORPUS_DIR = REPO_ROOT / "corpus" / "bc_plus_docs"
-DEFAULT_PROVIDER = "anthropic"
-DEFAULT_MODEL = "claude-sonnet-4-20250514"
 DEFAULT_TOOLS = "read,bash"
 # OpenAI API pricing verified on April 5, 2026 from official OpenAI pricing/model pages.
 
@@ -76,6 +80,10 @@ def parse_args() -> argparse.Namespace:
         )
     )
     parser.add_argument(
+        "--runtime",
+        help="Agent runtime. Original DCI supports exactly 'pi'. Default: pi.",
+    )
+    parser.add_argument(
         "--dataset",
         type=Path,
         default=DEFAULT_DATASET_PATH,
@@ -105,20 +113,21 @@ def parse_args() -> argparse.Namespace:
         default=pi_paths.agent_dir,
         help=f"Pi agent config directory. Default from DCI_PI_DIR: {pi_paths.agent_dir}",
     )
-    default_provider = os.environ.get("DCI_PROVIDER", DEFAULT_PROVIDER)
-    default_model = os.environ.get("DCI_MODEL", DEFAULT_MODEL)
     parser.add_argument(
         "--provider",
-        default=default_provider,
-        help=f"Pi provider. Defaults to DCI_PROVIDER from .env, otherwise {DEFAULT_PROVIDER}.",
+        help="Pi provider. Overrides DCI_PROVIDER and the Pi default.",
     )
     parser.add_argument(
         "--model",
-        default=default_model,
-        help=f"Pi model. Defaults to DCI_MODEL from .env, otherwise {DEFAULT_MODEL}.",
+        help="Pi model. Overrides DCI_MODEL and the Pi default.",
     )
     parser.add_argument("--tools", default=DEFAULT_TOOLS, help=f"Pi tool list. Default: {DEFAULT_TOOLS}")
     parser.add_argument("--max-turns", type=int, default=100, help="Pi max turns. Default: 100")
+    parser.add_argument(
+        "--rpc-timeout-seconds",
+        type=float,
+        help="Wall-clock timeout for each Pi RPC prompt; 0 disables the timeout.",
+    )
     parser.add_argument(
         "--runtime-context-level",
         help="Optional pi runtime context-management level, such as level0, level3, legacy, or level5.",
@@ -244,6 +253,65 @@ def load_judge_config_from_args(args: argparse.Namespace) -> JudgeConfig:
         cached_input_price_per_1m=args.judge_cached_input_price_per_1m,
         output_price_per_1m=args.judge_output_price_per_1m,
     )
+
+
+def resolve_runtime_args(
+    args: argparse.Namespace, layers: ConfigLayers
+) -> OriginalRuntimeConfig:
+    resolved = resolve_original_runtime(
+        {
+            "runtime": args.runtime,
+            "provider": args.provider,
+            "model": args.model,
+            "tools": args.tools,
+            "max_turns": args.max_turns,
+            "timeout_seconds": args.rpc_timeout_seconds,
+            "thinking_level": args.pi_thinking_level,
+            "context_profile": args.runtime_context_level,
+        },
+        layers,
+    )
+    args.runtime = resolved.runtime
+    args.provider = resolved.provider
+    args.model = resolved.model
+    args.tools = resolved.tools
+    args.max_turns = resolved.max_turns
+    args.rpc_timeout_seconds = resolved.timeout_seconds
+    args.pi_thinking_level = resolved.thinking_level
+    args.runtime_context_level = resolved.context_profile
+    return resolved
+
+
+def effective_config_for_batch(
+    *,
+    runtime: OriginalRuntimeConfig,
+    args: argparse.Namespace,
+    judge_config: Optional[JudgeConfig],
+) -> Dict[str, object]:
+    judge: Dict[str, object] = {}
+    if judge_config is not None:
+        judge = {
+            "endpoint": judge_config.endpoint,
+            "api": judge_config.api,
+            "model": judge_config.model,
+            "thinking": judge_config.effective_thinking,
+            "json_mode": judge_config.json_mode,
+        }
+    return OriginalEffectiveConfig(
+        runtime=runtime,
+        context={
+            "profile": runtime.context_profile,
+            "implementation_sha256": None,
+        },
+        judge=judge,
+        experiment={
+            "dataset": args.dataset.name,
+            "selection": f"limit-{args.limit}" if args.limit is not None else "all",
+            "corpus": args.corpus_dir.name,
+            "metric": "ndcg@10" if args.enable_ir else "judge-correctness",
+            "execution_class": "bounded" if args.limit is not None else "full",
+        },
+    ).to_public_dict()
 
 
 def read_jsonl(path: Path) -> List[Dict[str, Any]]:
@@ -650,6 +718,8 @@ def build_run_command(
         "python",
         "-m",
         "dci.benchmark.pi_rpc_runner",
+        "--runtime",
+        args.runtime,
         "--provider",
         args.provider,
         "--model",
@@ -665,6 +735,8 @@ def build_run_command(
         "--output-dir",
         str(query_output_dir),
     ]
+    if args.rpc_timeout_seconds is not None:
+        cmd.extend(["--rpc-timeout-seconds", str(args.rpc_timeout_seconds)])
     if resume_run:
         cmd.append("--resume")
     if args.max_turns is not None:
@@ -1675,8 +1747,14 @@ async def run_single_query(
 
 
 async def main_async() -> int:
-    load_project_env(REPO_ROOT)
+    layers = ConfigLayers.from_repo(REPO_ROOT)
+    layers.materialize(os.environ)
     args = parse_args()
+    try:
+        runtime_config = resolve_runtime_args(args, layers)
+    except ValueError as exc:
+        print(f"Invalid runtime configuration: {exc}", file=sys.stderr)
+        return 2
     if args.max_concurrency <= 0:
         print("--max-concurrency must be >= 1", file=sys.stderr)
         return 2
@@ -1713,6 +1791,16 @@ async def main_async() -> int:
     has_pending_work = bool(query_dirs_requiring_work)
 
     args.output_root.mkdir(parents=True, exist_ok=True)
+    effective_config_path = args.output_root / "effective-config.json"
+    write_json(
+        effective_config_path,
+        effective_config_for_batch(
+            runtime=runtime_config,
+            args=args,
+            judge_config=judge_config,
+        ),
+    )
+    effective_config_path.chmod(0o600)
     system_prompt_file = resolve_repo_relative_path(args.system_prompt_file)
     append_system_prompt_file = resolve_repo_relative_path(args.append_system_prompt_file)
     args.system_prompt_file = system_prompt_file
