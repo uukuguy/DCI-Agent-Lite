@@ -137,7 +137,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--runtime-context-level",
-        help="Optional pi runtime context-management level, such as level0, level3, legacy, or level5.",
+        help="Optional Pi context-management profile, level0 through level4.",
     )
     parser.add_argument(
         "--system-prompt-file",
