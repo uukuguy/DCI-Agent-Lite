@@ -1568,6 +1568,10 @@ def _validate_report_evidence(
     has_ndcg = _NDCG_METRIC in metric_identities
     for pair in pairs:
         for evidence in (pair.baseline, pair.candidate):
+            if evidence.status != "completed" and (
+                evidence.judge_verdict is not None or evidence.ndcg_at_10 is not None
+            ):
+                raise ValueError("DCI reproduction failed query evidence drifted")
             if evidence.status == "completed" and (
                 (has_accuracy and type(evidence.judge_verdict) is not bool)
                 or (has_ndcg and evidence.ndcg_at_10 is None)

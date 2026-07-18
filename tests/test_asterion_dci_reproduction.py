@@ -136,12 +136,15 @@ def _manifest(
     effective_config_sha256: str = _SHA_B,
     product: str = "asterion-dci",
     run_id: str | None = None,
+    metric_identities_override: list[str] | None = None,
 ) -> dict[str, object]:
     queries = sorted(queries, key=lambda row: str(row["query_id"]))
     if any(row["ndcg_at_10"] is not None for row in queries):
         metric_identities = ["ndcg@10-binary-deduplicated"]
     else:
         metric_identities = ["llm-answer-correctness"]
+    if metric_identities_override is not None:
+        metric_identities = list(metric_identities_override)
     dataset_id = dataset_id or (
         "beir.arguana"
         if metric_identities == ["ndcg@10-binary-deduplicated"]
@@ -743,6 +746,63 @@ class ReproductionStatisticsTests(unittest.TestCase):
                 self._assert_report_forgery_rejected_everywhere(
                     _forge_report(report, exclusions=(forged_exclusion,))
                 )
+
+    def test_report_rejects_noncompleted_pairs_with_metric_evidence(self) -> None:
+        accuracy = self._accuracy_report(count=20, regressions=0)
+        ndcg = self._ndcg_report(0.0)
+        profile = resolve_experiment_profile("current-default/pi")
+        for status in ("failed", "cancelled", "timed_out", "missing"):
+            for evidence_name, report, changes in (
+                ("verdict", accuracy, {"status": status, "judge_verdict": True}),
+                ("ndcg", ndcg, {"status": status, "ndcg_at_10": 0.5}),
+            ):
+                pair = report.pairs[0]
+                forged_pairs = (
+                    replace(pair, candidate=replace(pair.candidate, **changes)),
+                    *report.pairs[1:],
+                )
+                metric_names = tuple(report.metrics)
+                metrics = reproduction_module._recompute_metrics(
+                    forged_pairs, metric_names, profile
+                )
+                forged = _forge_report(
+                    report,
+                    pairs=forged_pairs,
+                    metrics=metrics,
+                    accepted=all(metric.accepted for metric in metrics.values()),
+                )
+                with self.subTest(status=status, evidence=evidence_name):
+                    self._assert_report_forgery_rejected_everywhere(forged)
+
+    def test_valid_noncompleted_pairs_retain_zero_metric_contribution(self) -> None:
+        rows = [
+            _query(
+                status,
+                status=status,
+                verdict=None,
+                ndcg=None,
+                failure_class=f"runtime.{status}/v1",
+            )
+            for status in ("failed", "cancelled", "timed_out", "missing")
+        ]
+        profile = resolve_experiment_profile("current-default/pi")
+        for metric_identity, metric_name in (
+            ("llm-answer-correctness", "accuracy"),
+            ("ndcg@10-binary-deduplicated", "ndcg_at_10"),
+        ):
+            baseline = self._loaded(
+                _source_manifest(
+                    rows, metric_identities_override=[metric_identity]
+                )
+            )
+            candidate = self._loaded(
+                _manifest(rows, metric_identities_override=[metric_identity])
+            )
+            report = compare_reproduction_runs(baseline, candidate, profile)
+            with self.subTest(metric=metric_name):
+                self.assertEqual(report.metrics[metric_name].baseline, 0.0)
+                self.assertEqual(report.metrics[metric_name].candidate, 0.0)
+                self.assertEqual(report.pair_ids, tuple(sorted(row["query_id"] for row in rows)))
 
     def test_target_report_binds_exact_profile_target_and_runtime(self) -> None:
         profile = resolve_experiment_profile("paper-reference/claude-code")
