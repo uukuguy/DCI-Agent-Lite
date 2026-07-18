@@ -289,10 +289,13 @@ profile、mode、limit、tools、context 或 resolution override 都会在读取
 
 Bundled profile 定义在 `asterion/dci/resources/batch-profiles.json`：
 
-其中绑定 AF-320 `paper-full` inventory 的 12 个 profile 目前只用于配置、清单和
-模型外验证，执行会在读取数据或启动 provider 前失败关闭。`bcplus.level3` 与
-`qa.bamboogle` 是未绑定的既有迁移 profile；后者明确只是 sample-50，不能代表
-论文的 Bamboogle full-125 scope。
+绑定 AF-320 `paper-full` inventory 的 profile，其未修改命令仍会在读取数据或
+启动 provider 前失败关闭，并且只能由 AF-340 的显式 full authorization 执行。
+AF-340 另行开放精确整数 `--limit 1` 的有界 successor gate：系统先验证未截断
+数据与 profile 绑定的完整 paper scope 完全一致，再只执行一行；配置证据固定记录
+`limit-1`、`full_dataset: false` 和 `comparable: false`。省略 limit、使用布尔值或
+使用大于 1 的 limit 都不能进入该 gate。`qa.bamboogle` 仍是未绑定的 sample-50
+迁移 profile，不能代表论文的 Bamboogle full-125 scope。
 
 | Profile | 模式 | 数据/语料 |
 |---|---|---|

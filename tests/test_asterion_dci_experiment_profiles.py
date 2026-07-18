@@ -485,6 +485,22 @@ class FullExecutionAuthorizationTests(unittest.TestCase):
             self.assertEqual(len(rows), 50)
             with self.assertRaisesRegex(DciBenchmarkError, "replay"):
                 _prepare(request)
+
+            limited_output = base / "limited-full-authorization"
+            limited_authorization = authorize_full_execution(
+                "current-default/pi", limited_output, 1.0, True, **preflight
+            )
+            with self.assertRaisesRegex(
+                DciBenchmarkError, "paper scope does not match its profile"
+            ):
+                _prepare(
+                    replace(
+                        request,
+                        output_root=limited_authorization.output_root,
+                        limit=1,
+                        full_execution_authorization=limited_authorization,
+                    )
+                )
     def test_authorization_requires_explicit_boolean_finite_budget_and_fresh_private_root(self) -> None:
         from asterion.dci.experiment_profiles import authorize_full_execution
 

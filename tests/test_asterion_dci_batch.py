@@ -33,10 +33,12 @@ from asterion.dci.benchmark import (
     DciBenchmarkError,
     _Directory,
     _corpus_content_identity as _real_corpus_content_identity,
+    _fingerprint,
     _next_generation,
     _prepare,
     _run_pi_async as _real_run_pi_async,
     _utc_now,
+    _validate_config_document,
     run_benchmark_async,
 )
 from asterion.dci.artifacts import DciConversationFeatures
@@ -1120,7 +1122,7 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(output_root, request.output_root)
         self.assertEqual(rows[0].query_id, "q-0")
 
-    def test_af320_every_bound_paper_profile_fails_before_input_or_provider(self) -> None:
+    def test_af340_bound_paper_profiles_open_only_exact_limit_one(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory).resolve()
             request = _request(root)
@@ -1140,35 +1142,233 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
                 "qa.triviaqa",
             )
             for profile in profiles:
-                with self.subTest(profile=profile), patch(
-                    "asterion.dci.benchmark._read_input_snapshot"
-                ) as read_input, patch("asterion.dci.benchmark._run_pi_async") as run:
+                for limit in (None, 2):
+                    with self.subTest(profile=profile, limit=limit), patch(
+                        "asterion.dci.benchmark._read_input_snapshot"
+                    ) as read_input, patch(
+                        "asterion.dci.benchmark._run_pi_async"
+                    ) as run:
+                        with self.assertRaisesRegex(
+                            DciBenchmarkError, "not executable in AF-320"
+                        ):
+                            asyncio.run(
+                                run_benchmark_async(
+                                    replace(request, profile=profile, limit=limit),
+                                    paths=Mock(),
+                                )
+                            )
+                        read_input.assert_not_called()
+                        run.assert_not_called()
+
+                with self.subTest(profile=profile, limit=1), patch(
+                    "asterion.dci.benchmark._read_input_snapshot",
+                    return_value=b"not-json\n",
+                ) as read_input, patch(
+                    "asterion.dci.benchmark._run_pi_async"
+                ) as run:
                     with self.assertRaisesRegex(
-                        DciBenchmarkError, "not executable in AF-320"
+                        DciBenchmarkError, "dataset is invalid"
                     ):
                         asyncio.run(
                             run_benchmark_async(
-                                replace(request, profile=profile), paths=Mock()
+                                replace(request, profile=profile, limit=1),
+                                paths=Mock(),
                             )
                         )
-                    read_input.assert_not_called()
+                    read_input.assert_called_once()
                     run.assert_not_called()
+
+    def test_af340_bcplus_limit_one_runs_one_mocked_agent_and_judge_only(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            request = replace(
+                _request(root),
+                profile="bcplus.openai",
+                limit=1,
+                resume_policy="fresh",
+            )
+            paper_scope = "browsecomp-plus.main.all830"
+            with patch(
+                "asterion.dci.benchmark._run_pi_async"
+            ) as mismatched_run, self.assertRaisesRegex(
+                DciBenchmarkError, "paper scope does not match its profile"
+            ):
+                asyncio.run(run_benchmark_async(request, paths=Mock()))
+            mismatched_run.assert_not_called()
+
+            with patch(
+                "asterion.dci.benchmark._paper_scope_for_rows",
+                return_value=paper_scope,
+            ), patch(
+                "asterion.dci.benchmark._run_pi_async",
+                side_effect=_recorded_fixture_run,
+            ) as run, patch(
+                "asterion.dci.benchmark.evaluate_run_directory_async",
+                side_effect=_recorded_fixture_evaluate,
+            ) as judge:
+                result = asyncio.run(run_benchmark_async(request, paths=Mock()))
+
+            self.assertEqual(result.counts["total"], 1)
+            run.assert_called_once()
+            judge.assert_called_once()
+            config = json.loads((result.output_root / "config.json").read_text())
+            self.assertEqual(
+                config["selection"],
+                {
+                    "id": "limit-1",
+                    "paper_scope": paper_scope,
+                    "selected_rows": 1,
+                    "full_dataset": False,
+                    "comparable": False,
+                },
+            )
+            _validate_config_document(config)
+            for claim, value in (
+                ("full_dataset", True),
+                ("comparable", True),
+                ("selected_rows", True),
+                ("paper_scope", "qa.nq.main.random50"),
+            ):
+                with self.subTest(forged_claim=claim):
+                    forged = json.loads(json.dumps(config))
+                    forged["selection"][claim] = value
+                    forged["run_fingerprint"] = _fingerprint(
+                        {
+                            key: item
+                            for key, item in forged.items()
+                            if key
+                            not in {
+                                "judge",
+                                "judge_configuration_fingerprint",
+                                "run_fingerprint",
+                                "batch_fingerprint",
+                            }
+                        }
+                    )
+                    forged["batch_fingerprint"] = _fingerprint(
+                        {
+                            key: item
+                            for key, item in forged.items()
+                            if key != "batch_fingerprint"
+                        }
+                    )
+                    with self.assertRaisesRegex(
+                        DciBenchmarkError, "configuration evidence is invalid"
+                    ):
+                        _validate_config_document(forged)
+
+            forged = json.loads(json.dumps(config))
+            forged["profile"] = "qa.bamboogle"
+            forged["run_fingerprint"] = _fingerprint(
+                {
+                    key: item
+                    for key, item in forged.items()
+                    if key
+                    not in {
+                        "judge",
+                        "judge_configuration_fingerprint",
+                        "run_fingerprint",
+                        "batch_fingerprint",
+                    }
+                }
+            )
+            forged["batch_fingerprint"] = _fingerprint(
+                {
+                    key: item
+                    for key, item in forged.items()
+                    if key != "batch_fingerprint"
+                }
+            )
+            with self.assertRaisesRegex(
+                DciBenchmarkError, "configuration evidence is invalid"
+            ):
+                _validate_config_document(forged)
+
+            for limit in (None, 2):
+                with self.subTest(limit=limit), patch(
+                    "asterion.dci.benchmark._run_pi_async"
+                ) as blocked_run, patch(
+                    "asterion.dci.benchmark.evaluate_run_directory_async"
+                ) as blocked_judge, self.assertRaisesRegex(
+                    DciBenchmarkError, "not executable in AF-320"
+                ):
+                    asyncio.run(
+                        run_benchmark_async(
+                            replace(
+                                request,
+                                limit=limit,
+                                output_root=root / f"blocked-{limit}",
+                            ),
+                            paths=Mock(),
+                        )
+                    )
+                blocked_run.assert_not_called()
+                blocked_judge.assert_not_called()
+
+            for invalid_limit in (0, True):
+                with self.subTest(invalid_limit=invalid_limit), patch(
+                    "asterion.dci.benchmark._read_input_snapshot"
+                ) as read_input, patch(
+                    "asterion.dci.benchmark._run_pi_async"
+                ) as blocked_run, self.assertRaisesRegex(
+                    DciBenchmarkError, "limit is invalid"
+                ):
+                    asyncio.run(
+                        run_benchmark_async(
+                            replace(
+                                request,
+                                limit=invalid_limit,
+                                output_root=root / f"blocked-{invalid_limit}",
+                            ),
+                            paths=Mock(),
+                        )
+                    )
+                read_input.assert_not_called()
+                blocked_run.assert_not_called()
+
+    def test_af340_exact_selected_ids_are_verified_before_limit_one_slice(self) -> None:
+        from asterion.dci.paper_benchmarks import published_scope_selected_ids
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            selected = published_scope_selected_ids("qa.nq.main.random50")
+            dataset = root / "nq-selected.jsonl"
+            dataset.write_text(
+                "\n".join(
+                    json.dumps(
+                        {"query_id": query_id, "query": "question", "answer": "gold"}
+                    )
+                    for query_id in selected
+                )
+                + "\n"
+            )
+            request = replace(
+                _request(root),
+                dataset=dataset,
+                profile="qa.nq",
+                limit=1,
+                resume_policy="fresh",
+            )
+            with patch(
+                "asterion.dci.benchmark._run_pi_async",
+                side_effect=_recorded_fixture_run,
+            ) as run, patch(
+                "asterion.dci.benchmark.evaluate_run_directory_async",
+                side_effect=_recorded_fixture_evaluate,
+            ) as judge:
+                result = asyncio.run(run_benchmark_async(request, paths=Mock()))
+
+            run.assert_called_once()
+            judge.assert_called_once()
+            self.assertEqual(result.counts["total"], 1)
+            self.assertTrue((result.output_root / selected[0]).is_dir())
 
     def test_af320_copied_paper_dataset_is_digest_gated_without_profile(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             request = replace(
-                _request(Path(temporary_directory)),
-                dataset=Path("data/bcplus_qa.jsonl").resolve(),
+                _request(Path(temporary_directory), mode="ir", ir=True),
                 profile=None,
             )
-            with patch(
-                "asterion.dci.benchmark._run_pi_async"
-            ) as run, self.assertRaisesRegex(
-                DciBenchmarkError, "not executable in AF-320"
-            ):
-                asyncio.run(run_benchmark_async(request, paths=Mock()))
-            run.assert_not_called()
-
             selected = __import__(
                 "asterion.dci.paper_benchmarks",
                 fromlist=["published_scope_selected_ids"],
@@ -1188,22 +1388,23 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
                 )
                 + "\n"
             )
+            with patch(
+                "asterion.dci.benchmark._run_pi_async"
+            ) as run, self.assertRaisesRegex(
+                DciBenchmarkError, "requires AF-340 authorization"
+            ):
+                asyncio.run(
+                    run_benchmark_async(
+                        replace(request, dataset=beir_dataset, limit=1),
+                        paths=Mock(),
+                    )
+                )
+            run.assert_not_called()
+
             with self.assertRaisesRegex(
-                DciBenchmarkError, "not executable in AF-320"
+                DciBenchmarkError, "requires AF-340 authorization"
             ):
                 _prepare(replace(request, dataset=beir_dataset))
-
-            browsecomp_superset = request.cwd / "browsecomp-superset.jsonl"
-            browsecomp_superset.write_bytes(
-                Path("data/bcplus_qa.jsonl").read_bytes()
-                + b'{"query_id":"not-paper","query":"extra","answer":"extra"}\n'
-            )
-            with self.assertRaisesRegex(
-                DciBenchmarkError, "not executable in AF-320"
-            ):
-                _prepare(
-                    replace(request, dataset=browsecomp_superset, limit=830)
-                )
 
             with beir_dataset.open("a", encoding="utf-8") as handle:
                 handle.write(
@@ -1218,7 +1419,7 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
                     + "\n"
                 )
             with self.assertRaisesRegex(
-                DciBenchmarkError, "not executable in AF-320"
+                DciBenchmarkError, "requires AF-340 authorization"
             ):
                 _prepare(replace(request, dataset=beir_dataset, limit=50))
 

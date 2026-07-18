@@ -529,7 +529,17 @@ def _prepare(
             "matrix_sha256": paper_ablation_matrix_sha256(),
         }
     paper_scope = paper_scope_for_profile(request.profile)
-    if paper_scope is not None and request.full_execution_authorization is None:
+    bounded_paper_selection = (
+        paper_scope is not None
+        and request.full_execution_authorization is None
+        and type(request.limit) is int
+        and request.limit == 1
+    )
+    if (
+        paper_scope is not None
+        and request.full_execution_authorization is None
+        and not bounded_paper_selection
+    ):
         raise DciBenchmarkError(
             "DCI paper scope is not executable in AF-320 without AF-340 authorization"
         )
@@ -555,10 +565,12 @@ def _prepare(
                 raise DatasetError("DCI BEIR selected-ID manifest does not match")
     except DatasetError as error:
         raise DciBenchmarkError("DCI benchmark dataset is invalid") from error
-    selected_scope = _paper_scope_for_rows(rows)
+    source_scope = _paper_scope_for_rows(rows)
+    if paper_scope is not None and source_scope != paper_scope:
+        raise DciBenchmarkError("DCI benchmark paper scope does not match its profile")
     if request.limit is not None:
         rows = rows[: request.limit]
-        selected_scope = _paper_scope_for_rows(rows)
+    selected_scope = _paper_scope_for_rows(rows)
     if any((row.is_ir if request.mode == "qa" else not row.is_ir) for row in rows):
         raise DciBenchmarkError("DCI benchmark dataset does not match its mode")
     _resolution_paths, resolution_config, resolution_snapshots = (
@@ -566,8 +578,12 @@ def _prepare(
     )
     output_root = Path(os.path.abspath(os.path.normpath(request.output_root)))
     _reject_symlink_components(output_root)
-    authorized_scope = paper_scope or selected_scope
-    if paper_scope is not None and selected_scope != paper_scope:
+    authorized_scope = paper_scope or source_scope or selected_scope
+    if (
+        paper_scope is not None
+        and not bounded_paper_selection
+        and selected_scope != paper_scope
+    ):
         raise DciBenchmarkError("DCI benchmark paper scope does not match its profile")
     corpus_identity = (
         str(canonical_input_identity(request.corpus)) if request.corpus else None
@@ -613,6 +629,14 @@ def _prepare(
         "judge_configuration_fingerprint": judge_fingerprint,
         "prompt_resources": prompt_resources,
     }
+    if bounded_paper_selection:
+        config["selection"] = {
+            "id": "limit-1",
+            "paper_scope": paper_scope,
+            "selected_rows": len(rows),
+            "full_dataset": False,
+            "comparable": False,
+        }
     if resolution_config:
         config["resolution"] = resolution_config
     if ablation_identity is not None:
@@ -655,7 +679,7 @@ def _prepare(
                 "judge_configuration_fingerprint": judge_fingerprint,
             }
         )
-    if authorized_scope is not None:
+    if authorized_scope is not None and not bounded_paper_selection:
         authorization = request.full_execution_authorization
         if authorization is None or authorization.output_root != output_root:
             raise DciBenchmarkError("DCI benchmark requires AF-340 authorization")
@@ -995,8 +1019,33 @@ def _validate_config_document(value: dict[str, Any]) -> None:
             frozenset(expected | {"resolution"}),
             frozenset(expected | {"ablation"}),
             frozenset(expected | {"resolution", "ablation"}),
+            frozenset(expected | {"selection"}),
+            frozenset(expected | {"selection", "resolution"}),
+            frozenset(expected | {"selection", "ablation"}),
+            frozenset(expected | {"selection", "resolution", "ablation"}),
         }
         or value.get("schema") != "asterion.dci.batch/v1"
+    ):
+        raise DciBenchmarkError("DCI benchmark configuration evidence is invalid")
+    selection = value.get("selection")
+    selection_profile_scope = None
+    if isinstance(selection, dict):
+        try:
+            selection_profile_scope = paper_scope_for_profile(value.get("profile"))
+        except ValueError:
+            pass
+    if selection is not None and (
+        not isinstance(selection, dict)
+        or set(selection)
+        != {"id", "paper_scope", "selected_rows", "full_dataset", "comparable"}
+        or selection.get("id") != "limit-1"
+        or type(selection.get("paper_scope")) is not str
+        or not selection.get("paper_scope")
+        or selection.get("paper_scope") != selection_profile_scope
+        or type(selection.get("selected_rows")) is not int
+        or selection.get("selected_rows") != 1
+        or selection.get("full_dataset") is not False
+        or selection.get("comparable") is not False
     ):
         raise DciBenchmarkError("DCI benchmark configuration evidence is invalid")
     batch_payload = dict(value)
