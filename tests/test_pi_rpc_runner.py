@@ -480,6 +480,33 @@ class PiRpcLifecycleTests(unittest.TestCase):
         self.assertEqual(result, "final")
         send.assert_called_once_with({"id": "py-1", "type": "prompt", "message": "question"})
 
+    def test_terminal_assistant_error_fails_prompt(self) -> None:
+        client = make_client()
+        events = [
+            {"type": "response", "id": "py-1", "success": True},
+            {"type": "agent_start"},
+            {
+                "type": "message_end",
+                "message": {
+                    "role": "assistant",
+                    "content": [],
+                    "stopReason": "error",
+                    "errorMessage": "private provider detail",
+                },
+            },
+            {"type": "agent_end", "willRetry": False},
+            {"type": "agent_settled"},
+        ]
+
+        with (
+            patch.object(client, "_send"),
+            patch.object(client, "_read_json_line", side_effect=events),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "assistant error") as raised:
+                client.prompt_and_wait("question", timeout_seconds=30)
+
+        self.assertNotIn("private provider detail", str(raised.exception))
+
     def test_agent_settled_requires_an_idle_state_postcondition(self) -> None:
         client = make_client()
         events = [

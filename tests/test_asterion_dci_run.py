@@ -15,6 +15,7 @@ from unittest.mock import patch
 
 from asterion.dci.config import DciRuntimeOptions, resolve_dci_paths
 from asterion.dci.artifacts import DciConversationFeatures
+from asterion.dci.pi_rpc import PiRpcClient
 from asterion.dci.run import (
     DciRunError,
     DciRunRequest,
@@ -234,6 +235,46 @@ class LifecyclePiClient(FixturePiClient):
 
 
 class AsterionDciRunTests(unittest.TestCase):
+    def test_pi_rpc_terminal_assistant_error_fails_prompt(self) -> None:
+        client = PiRpcClient(
+            package_dir=Path("pi/packages/coding-agent"),
+            cwd=Path("."),
+            agent_dir=Path("pi/.pi/agent"),
+            provider="test-provider",
+            model="test-model",
+            tools="read,bash",
+            show_tools=False,
+            system_prompt_file=None,
+            append_system_prompt_file=None,
+            extra_args=(),
+            literal_extra_args=(),
+            keep_session=False,
+            node_max_old_space_size_mb=None,
+        )
+        events = [
+            {"type": "response", "id": "py-1", "success": True},
+            {"type": "agent_start"},
+            {
+                "type": "message_end",
+                "message": {
+                    "role": "assistant",
+                    "content": [],
+                    "stopReason": "error",
+                    "errorMessage": "private provider detail",
+                },
+            },
+            {"type": "agent_end"},
+        ]
+
+        with (
+            patch.object(client, "_send"),
+            patch.object(client, "_read_json_line", side_effect=events),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "assistant error") as raised:
+                client.prompt_and_wait("question", timeout_seconds=30)
+
+        self.assertNotIn("private provider detail", str(raised.exception))
+
     def test_resume_rejects_relabelled_completed_or_mismatched_run_id_stream_without_mutation(
         self,
     ) -> None:
