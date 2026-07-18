@@ -6,7 +6,9 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, call, patch
 
 from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
@@ -14,6 +16,7 @@ import dci.benchmark.pi_rpc_runner as rpc_runner
 from dci.benchmark.pi_rpc_runner import PiRpcClient, parse_args
 from dci.config import ConfigLayers
 from dci.framework.protocol import validate_event_stream, validate_run_request
+import scripts.bcplus_eval.run_bcplus_eval as bcplus_runner
 
 
 def make_client() -> PiRpcClient:
@@ -517,14 +520,50 @@ class PiRpcLifecycleTests(unittest.TestCase):
         ):
             client._read_json_line(timeout_seconds=0)
 
-    def test_rpc_timeout_defaults_from_environment(self) -> None:
+    def test_layered_agent_values_remain_unresolved_until_runtime_resolution(self) -> None:
+        environment = {
+            "DCI_TOOLS": "read,grep",
+            "DCI_MAX_TURNS": "7",
+            "DCI_RPC_TIMEOUT_SECONDS": "42",
+        }
         with (
-            patch.dict("os.environ", {"DCI_RPC_TIMEOUT_SECONDS": "42"}, clear=True),
+            patch.dict("os.environ", environment, clear=True),
             patch("sys.argv", ["dci-agent-lite"]),
         ):
             args = parse_args()
+        self.assertIsNone(args.tools)
+        self.assertIsNone(args.max_turns)
+        self.assertIsNone(args.rpc_timeout_seconds)
 
-        self.assertEqual(args.rpc_timeout_seconds, 42.0)
+        resolved = rpc_runner.resolve_runtime_args(
+            args, ConfigLayers(process=environment, dotenv={})
+        )
+
+        self.assertEqual(resolved.tools, "read,grep")
+        self.assertEqual(resolved.max_turns, 7)
+        self.assertEqual(resolved.timeout_seconds, 42.0)
+        self.assertEqual(resolved.sources["agent.tools"], "environment")
+        self.assertEqual(resolved.sources["agent.max_turns"], "environment")
+        self.assertEqual(resolved.sources["agent.timeout_seconds"], "environment")
+
+    def test_batch_parser_preserves_layered_agent_omission(self) -> None:
+        with (
+            patch.dict(
+                "os.environ",
+                {
+                    "DCI_TOOLS": "read,grep",
+                    "DCI_MAX_TURNS": "7",
+                    "DCI_RPC_TIMEOUT_SECONDS": "42",
+                },
+                clear=True,
+            ),
+            patch("sys.argv", ["run_bcplus_eval.py"]),
+        ):
+            args = bcplus_runner.parse_args()
+
+        self.assertIsNone(args.tools)
+        self.assertIsNone(args.max_turns)
+        self.assertIsNone(args.rpc_timeout_seconds)
 
     def test_parser_leaves_layered_runtime_values_unresolved(self) -> None:
         with (
@@ -547,7 +586,7 @@ class PiRpcLifecycleTests(unittest.TestCase):
             patch("sys.argv", ["dci-agent-lite", "--terminal"]),
         ):
             args = parse_args()
-        rpc_runner.resolve_runtime_args(args, ConfigLayers({}, {}))
+        resolved = rpc_runner.resolve_runtime_args(args, ConfigLayers({}, {}))
 
         with (
             patch("sys.stdin.isatty", return_value=True),
@@ -556,6 +595,46 @@ class PiRpcLifecycleTests(unittest.TestCase):
             error = rpc_runner.validate_terminal_mode_args(args)
 
         self.assertIsNone(error)
+        self.assertEqual(resolved.sources["agent.tools"], "runtime-default")
+        self.assertEqual(resolved.sources["agent.max_turns"], "runtime-default")
+        self.assertEqual(resolved.sources["agent.timeout_seconds"], "runtime-default")
+
+    def test_runner_effective_config_rejects_sensitive_judge_endpoint(self) -> None:
+        runtime = rpc_runner.resolve_original_runtime({}, ConfigLayers({}, {}))
+        args = Namespace(cwd=Path("corpus"))
+        judge = SimpleNamespace(
+            endpoint="https://user:secret@judge.example/v1/chat/completions",
+            api="chat-completions",
+            model="judge-model",
+            effective_thinking=None,
+            json_mode=True,
+        )
+
+        with self.assertRaisesRegex(ValueError, "unsafe judge endpoint"):
+            rpc_runner.effective_config_for_run(
+                runtime=runtime, args=args, judge_config=judge
+            )
+
+    def test_batch_effective_config_rejects_sensitive_judge_endpoint(self) -> None:
+        runtime = rpc_runner.resolve_original_runtime({}, ConfigLayers({}, {}))
+        args = Namespace(
+            dataset=Path("dataset.jsonl"),
+            limit=1,
+            corpus_dir=Path("corpus"),
+            enable_ir=False,
+        )
+        judge = SimpleNamespace(
+            endpoint="https://judge.example/v1/chat/completions?api_key=secret",
+            api="chat-completions",
+            model="judge-model",
+            effective_thinking=None,
+            json_mode=True,
+        )
+
+        with self.assertRaisesRegex(ValueError, "unsafe judge endpoint"):
+            bcplus_runner.effective_config_for_batch(
+                runtime=runtime, args=args, judge_config=judge
+            )
 
 
 if __name__ == "__main__":

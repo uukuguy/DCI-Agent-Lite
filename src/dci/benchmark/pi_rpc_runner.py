@@ -1569,8 +1569,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--tools",
-        default="read,bash",
-        help="Comma-separated built-in tools to enable. Default: read,bash",
+        help="Comma-separated built-in tools. Overrides DCI_TOOLS and the Pi default.",
     )
     parser.add_argument(
         "--max-turns",
@@ -1589,9 +1588,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--rpc-timeout-seconds",
         type=non_negative_float,
-        default=os.environ.get("DCI_RPC_TIMEOUT_SECONDS", str(DEFAULT_RPC_TIMEOUT_SECONDS)),
         help=(
-            "Wall-clock deadline for one RPC prompt. Defaults to DCI_RPC_TIMEOUT_SECONDS "
+            "Wall-clock deadline for one RPC prompt. Overrides DCI_RPC_TIMEOUT_SECONDS "
             f"or {DEFAULT_RPC_TIMEOUT_SECONDS:g}; set to 0 to disable."
         ),
     )

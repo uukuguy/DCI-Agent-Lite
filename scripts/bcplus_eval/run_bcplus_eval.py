@@ -43,7 +43,6 @@ from dci.effective_config import OriginalEffectiveConfig  # noqa: E402
 DEFAULT_DATASET_PATH = REPO_ROOT / "data" / "bcplus_qa.jsonl"
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / "outputs" / "bcplus_eval"
 DEFAULT_CORPUS_DIR = REPO_ROOT / "corpus" / "bc_plus_docs"
-DEFAULT_TOOLS = "read,bash"
 # OpenAI API pricing verified on April 5, 2026 from official OpenAI pricing/model pages.
 
 COLOR_CORRECT = "#2E8B57"
@@ -121,8 +120,15 @@ def parse_args() -> argparse.Namespace:
         "--model",
         help="Pi model. Overrides DCI_MODEL and the Pi default.",
     )
-    parser.add_argument("--tools", default=DEFAULT_TOOLS, help=f"Pi tool list. Default: {DEFAULT_TOOLS}")
-    parser.add_argument("--max-turns", type=int, default=100, help="Pi max turns. Default: 100")
+    parser.add_argument(
+        "--tools",
+        help="Pi tool list. Overrides DCI_TOOLS and the Pi default.",
+    )
+    parser.add_argument(
+        "--max-turns",
+        type=int,
+        help="Pi max turns. Overrides DCI_MAX_TURNS and the Pi default.",
+    )
     parser.add_argument(
         "--rpc-timeout-seconds",
         type=float,

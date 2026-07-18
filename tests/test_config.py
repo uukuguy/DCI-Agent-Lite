@@ -34,6 +34,26 @@ class PiPathConfigTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Original DCI runtime is unsupported"):
             resolve_original_runtime({"runtime": "claude-code"}, ConfigLayers({}, {}))
 
+    def test_original_runtime_uses_dotenv_agent_controls(self) -> None:
+        resolved = resolve_original_runtime(
+            {},
+            ConfigLayers(
+                process={},
+                dotenv={
+                    "DCI_TOOLS": "read,grep",
+                    "DCI_MAX_TURNS": "7",
+                    "DCI_RPC_TIMEOUT_SECONDS": "42",
+                },
+            ),
+        )
+
+        self.assertEqual(resolved.tools, "read,grep")
+        self.assertEqual(resolved.max_turns, 7)
+        self.assertEqual(resolved.timeout_seconds, 42.0)
+        self.assertEqual(resolved.sources["agent.tools"], "environment")
+        self.assertEqual(resolved.sources["agent.max_turns"], "environment")
+        self.assertEqual(resolved.sources["agent.timeout_seconds"], "environment")
+
     def test_config_layers_snapshot_dotenv_and_materialize_missing_values(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory).resolve()
