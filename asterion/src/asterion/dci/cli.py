@@ -187,6 +187,13 @@ def _parser() -> argparse.ArgumentParser:
     paper_reproduce.add_argument("--dry-run", action="store_true")
     paper_reproduce.add_argument("--provider")
     paper_reproduce.add_argument("--model")
+    paper_compare = paper_commands.add_parser("compare")
+    paper_compare.add_argument("--baseline", type=Path)
+    paper_compare.add_argument("--candidate", type=Path, required=True)
+    paper_compare.add_argument("--profile", required=True)
+    paper_compare.add_argument("--output", type=Path, required=True)
+    paper_compare.add_argument("--provider")
+    paper_compare.add_argument("--model")
     return parser
 
 
@@ -358,6 +365,37 @@ def main(
                     + "\n"
                 )
                 return 0
+            if args.paper_command == "compare":
+                from asterion.dci.experiment_profiles import resolve_experiment_profile
+                from asterion.dci.reproduction import (
+                    compare_reproduction_runs,
+                    load_run_manifest,
+                    write_comparison_report,
+                )
+
+                profile = resolve_experiment_profile(
+                    args.profile,
+                    invocation_provider=args.provider,
+                    invocation_model=args.model,
+                )
+                baseline = (
+                    None
+                    if args.baseline is None
+                    else load_run_manifest(args.baseline)
+                )
+                candidate = load_run_manifest(args.candidate)
+                report = compare_reproduction_runs(baseline, candidate, profile)
+                write_comparison_report(args.output, report)
+                stdout.write(f"Comparison report: {report.identity_sha256}\n")
+                stdout.write(
+                    "Acceptance: "
+                    + (
+                        "not-applicable\n"
+                        if report.accepted is None
+                        else ("pass\n" if report.accepted else "fail\n")
+                    )
+                )
+                return 0 if report.accepted is not False else 3
             if args.paper_command == "reproduce":
                 from asterion.dci.experiment_profiles import (
                     authorize_full_execution,

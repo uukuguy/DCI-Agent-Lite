@@ -100,6 +100,7 @@ class PaperBenchmarkCliTests(unittest.TestCase):
         self.assertEqual(len(value["dataset_ids"]), 13)
         self.assertEqual(len(value["experiment_scope_ids"]), 16)
         self.assertEqual(len(value["experiment_profile_ids"]), 5)
+        self.assertIn("reproduction-result.schema.json", value["resources"])
         self.assertTrue(value["paper_full_requires_invocation_authorization"])
         self.assertEqual(len(value["ablation_row_ids"]), 20)
         self.assertEqual(value["context_profiles"], [f"level{i}" for i in range(5)])

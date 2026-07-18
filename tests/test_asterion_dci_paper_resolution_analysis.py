@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from importlib import resources
 import unittest
 from unittest import mock
 
@@ -58,6 +59,18 @@ def _metric(summary: dict[str, object], query_id: str) -> dict[str, object]:
 
 
 class PaperResolutionAnalysisTests(unittest.TestCase):
+    def test_reproduction_schema_is_packaged_and_strict(self) -> None:
+        schema = json.loads(
+            resources.files("asterion.dci.resources")
+            .joinpath("reproduction-result.schema.json")
+            .read_text(encoding="utf-8")
+        )
+        self.assertEqual(schema["$id"], "dci.reproduction-results/v1")
+        self.assertFalse(schema["additionalProperties"])
+        self.assertFalse(schema["$defs"]["query"]["additionalProperties"])
+        self.assertFalse(schema["$defs"]["run_manifest"]["additionalProperties"])
+        self.assertFalse(schema["$defs"]["comparison_report"]["additionalProperties"])
+
     def test_query_metrics_reject_unvalidated_resolution_fields(self) -> None:
         summary = _resolution(localization=0.5, matched=1)
         summary["body"] = "SECRET BODY"

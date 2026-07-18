@@ -277,6 +277,11 @@ def paper_product_contract() -> dict[str, object]:
         .joinpath("experiment-profiles.json")
         .read_bytes()
     ).hexdigest()
+    reproduction_schema_sha256 = hashlib.sha256(
+        resources.files("asterion.dci.resources")
+        .joinpath("reproduction-result.schema.json")
+        .read_bytes()
+    ).hexdigest()
     batch_profiles = tuple(
         sorted(
             {
@@ -321,6 +326,7 @@ def paper_product_contract() -> dict[str, object]:
             "paper-benchmarks.json": inventory_sha256,
             "paper-experiment-scopes.json": scopes_sha256,
             "experiment-profiles.json": profile_resource_sha256,
+            "reproduction-result.schema.json": reproduction_schema_sha256,
         },
         "paper_full_executable": False,
         "paper_full_requires_invocation_authorization": True,
@@ -399,6 +405,7 @@ def paper_benchmark_resource_digests() -> tuple[tuple[str, str], ...]:
     for identity, relative in (
         ("experiment_profile_schema", "experiment-profile.schema.json"),
         ("experiment_profiles", "experiment-profiles.json"),
+        ("reproduction_result_schema", "reproduction-result.schema.json"),
     ):
         values.append((identity, hashlib.sha256(root.joinpath(relative).read_bytes()).hexdigest()))
     for identity, relative in (
