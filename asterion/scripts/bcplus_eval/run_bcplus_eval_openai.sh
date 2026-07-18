@@ -21,7 +21,7 @@ case "$thinking_level" in
 esac
 output_root="$REPO_ROOT/outputs/asterion/bcplus_eval/openai_${level}_concurrency10"
 if [[ -n "$thinking_level" ]]; then output_root="${output_root}_thinking${thinking_level}"; fi
-command=(asterion-dci benchmark --profile bcplus.openai --dataset "$dataset" --corpus "$corpus" --output-root "$output_root" --runtime-context-level "$level")
+command=(uv run --project "$REPO_ROOT/asterion" asterion-dci benchmark --profile bcplus.openai --dataset "$dataset" --corpus "$corpus" --output-root "$output_root" --runtime-context-level "$level")
 if [[ -n "$thinking_level" ]]; then command+=(--thinking-level "$thinking_level"); fi
 command+=("$@")
 exec "${command[@]}"

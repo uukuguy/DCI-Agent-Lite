@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -179,6 +180,54 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
                 self.assertNotIn("src/dci", text)
                 self.assertNotIn("scripts/bcplus_eval/run_bcplus_eval.py", text)
                 self.assertNotIn("uv run python", text)
+                if relative in PRIMARY_LAUNCHERS:
+                    self.assertIn(
+                        'uv run --project "$REPO_ROOT/asterion" asterion-dci benchmark',
+                        text,
+                    )
+                    self.assertNotIn("command=(asterion-dci", text)
+
+    def test_all_primary_launchers_execute_repository_source_without_bare_cli(self) -> None:
+        uv = shutil.which("uv")
+        self.assertIsNotNone(uv)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            for _profile, dataset_relative, corpus_relative in PRIMARY_LAUNCHERS.values():
+                dataset = root / dataset_relative
+                dataset.parent.mkdir(parents=True, exist_ok=True)
+                dataset.write_text("{}\n", encoding="utf-8")
+                (root / corpus_relative).mkdir(parents=True, exist_ok=True)
+            clean_bin = root / "bin"
+            clean_bin.mkdir()
+            uv_wrapper = clean_bin / "uv"
+            uv_wrapper.write_text(
+                f'#!/bin/sh\nexec "{uv}" "$@"\n', encoding="utf-8"
+            )
+            uv_wrapper.chmod(0o755)
+            clean_path = os.pathsep.join((str(clean_bin), "/usr/bin", "/bin"))
+            self.assertIsNone(shutil.which("asterion-dci", path=clean_path))
+            environment = os.environ.copy()
+            environment.pop("VIRTUAL_ENV", None)
+            environment.update(
+                {
+                    "PATH": clean_path,
+                    "ASTERION_DCI_RESOURCE_ROOT": str(root),
+                }
+            )
+
+            for relative in sorted(PRIMARY_LAUNCHERS):
+                launcher = ASTERION_LAUNCHER_ROOT / relative
+                with self.subTest(relative=relative):
+                    result = subprocess.run(
+                        ["bash", str(launcher), "--help"],
+                        cwd=ROOT,
+                        env=environment,
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                    )
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertIn("usage: asterion-dci benchmark", result.stdout)
 
     def test_all_eleven_primary_pairs_are_thin_and_forward_literal_limit_once(self) -> None:
         self.assertEqual(len(PRIMARY_LAUNCHERS), 11)
@@ -204,8 +253,7 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
                     (root / corpus_relative).mkdir(parents=True, exist_ok=True)
                     bin_dir = root / "bin"
                     bin_dir.mkdir()
-                    command_name = "uv" if product == "source" else "asterion-dci"
-                    fake = bin_dir / command_name
+                    fake = bin_dir / "uv"
                     fake.write_text(
                         '#!/usr/bin/env bash\nprintf "%s\\n" "$DCI_PROVIDER" > "$CAPTURE_PROVIDER"\nprintf "%s\\n" "$@" > "$CAPTURE_ARGS"\n',
                         encoding="utf-8",
@@ -239,6 +287,16 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
                     self.assertIn(corpus_flag, argv)
                     self.assertTrue(any(value.endswith(corpus_relative) for value in argv), argv)
                     if product == "asterion":
+                        self.assertEqual(
+                            argv[:5],
+                            [
+                                "run",
+                                "--project",
+                                str(root / "asterion"),
+                                "asterion-dci",
+                                "benchmark",
+                            ],
+                        )
                         self.assertIn(profile, argv)
                     self.assertNotIn("--provider", argv)
                     self.assertNotIn("--model", argv)
@@ -297,7 +355,7 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
             (root / "corpus/bc_plus_docs").mkdir(parents=True)
             bin_dir = root / "bin"
             bin_dir.mkdir()
-            fake = bin_dir / "asterion-dci"
+            fake = bin_dir / "uv"
             fake.write_text(
                 '#!/usr/bin/env bash\nprintf "%s\\n" "$@" > "$CAPTURE_ARGS"\n',
                 encoding="utf-8",
@@ -314,6 +372,16 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             unset_args = unset_log.read_text(encoding="utf-8").splitlines()
+            self.assertEqual(
+                unset_args[:5],
+                [
+                    "run",
+                    "--project",
+                    str(root / "asterion"),
+                    "asterion-dci",
+                    "benchmark",
+                ],
+            )
             self.assertNotIn("--thinking-level", unset_args)
             self.assertNotIn("--limit", unset_args)
 
