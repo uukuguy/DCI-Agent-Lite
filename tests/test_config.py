@@ -54,6 +54,54 @@ class PiPathConfigTests(unittest.TestCase):
         self.assertEqual(resolved.sources["agent.max_turns"], "environment")
         self.assertEqual(resolved.sources["agent.timeout_seconds"], "environment")
 
+    def test_empty_process_required_value_continues_to_dotenv(self) -> None:
+        resolved = resolve_original_runtime(
+            {},
+            ConfigLayers(
+                process={"DCI_PROVIDER": ""},
+                dotenv={"DCI_PROVIDER": "dotenv-provider"},
+            ),
+        )
+
+        self.assertEqual(resolved.provider, "dotenv-provider")
+        self.assertEqual(resolved.sources["agent.provider"], "environment")
+
+    def test_empty_required_layers_fall_to_truthful_runtime_defaults(self) -> None:
+        resolved = resolve_original_runtime(
+            {"model": ""},
+            ConfigLayers(
+                process={"DCI_MODEL": "", "DCI_TOOLS": "", "DCI_MAX_TURNS": ""},
+                dotenv={"DCI_MODEL": "", "DCI_TOOLS": "", "DCI_MAX_TURNS": ""},
+            ),
+        )
+
+        self.assertEqual(resolved.model, "gpt-5.6-luna")
+        self.assertEqual(resolved.tools, "read,bash")
+        self.assertEqual(resolved.max_turns, 100)
+        self.assertEqual(resolved.sources["agent.model"], "runtime-default")
+        self.assertEqual(resolved.sources["agent.tools"], "runtime-default")
+        self.assertEqual(resolved.sources["agent.max_turns"], "runtime-default")
+
+    def test_empty_optional_environment_values_remain_explicit(self) -> None:
+        resolved = resolve_original_runtime(
+            {},
+            ConfigLayers(
+                process={
+                    "DCI_PI_THINKING_LEVEL": "",
+                    "DCI_RUNTIME_CONTEXT_LEVEL": "",
+                },
+                dotenv={
+                    "DCI_PI_THINKING_LEVEL": "high",
+                    "DCI_RUNTIME_CONTEXT_LEVEL": "level4",
+                },
+            ),
+        )
+
+        self.assertIsNone(resolved.thinking_level)
+        self.assertIsNone(resolved.context_profile)
+        self.assertEqual(resolved.sources["agent.thinking_level"], "environment")
+        self.assertEqual(resolved.sources["context.profile"], "environment")
+
     def test_config_layers_snapshot_dotenv_and_materialize_missing_values(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory).resolve()

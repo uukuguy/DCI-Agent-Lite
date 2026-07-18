@@ -40,13 +40,25 @@ class ConfigLayers:
         )
 
     def resolve(
-        self, name: str, invocation: object, default: object
+        self,
+        name: str,
+        invocation: object,
+        default: object,
+        *,
+        allow_empty_environment: bool = False,
     ) -> tuple[object, ValueSource]:
-        if invocation is not None:
+        def is_empty(value: object) -> bool:
+            return isinstance(value, str) and not value.strip()
+
+        if invocation is not None and not is_empty(invocation):
             return invocation, "invocation"
-        if name in self.process:
+        if name in self.process and (
+            allow_empty_environment or not is_empty(self.process[name])
+        ):
             return self.process[name], "environment"
-        if name in self.dotenv:
+        if name in self.dotenv and (
+            allow_empty_environment or not is_empty(self.dotenv[name])
+        ):
             return self.dotenv[name], "environment"
         return default, "runtime-default"
 
@@ -66,13 +78,6 @@ class OriginalRuntimeConfig:
     thinking_level: str | None
     context_profile: str | None
     sources: Mapping[str, ValueSource]
-
-
-def _nonempty_invocation(invocation: Mapping[str, object], name: str) -> object:
-    value = invocation.get(name)
-    if isinstance(value, str) and not value.strip():
-        return None
-    return value
 
 
 def _required_text(value: object, *, name: str, default: str) -> str:
@@ -119,35 +124,57 @@ def resolve_original_runtime(
     values: dict[str, object] = {}
     sources: dict[str, ValueSource] = {}
     specs = (
-        ("runtime", "DCI_RUNTIME", "pi", "runtime"),
-        ("provider", "DCI_PROVIDER", PI_DEFAULT_PROVIDER, "agent.provider"),
-        ("model", "DCI_MODEL", PI_DEFAULT_MODEL, "agent.model"),
-        ("tools", "DCI_TOOLS", PI_DEFAULT_TOOLS, "agent.tools"),
-        ("max_turns", "DCI_MAX_TURNS", PI_DEFAULT_MAX_TURNS, "agent.max_turns"),
+        ("runtime", "DCI_RUNTIME", "pi", "runtime", False),
+        (
+            "provider",
+            "DCI_PROVIDER",
+            PI_DEFAULT_PROVIDER,
+            "agent.provider",
+            False,
+        ),
+        ("model", "DCI_MODEL", PI_DEFAULT_MODEL, "agent.model", False),
+        ("tools", "DCI_TOOLS", PI_DEFAULT_TOOLS, "agent.tools", False),
+        (
+            "max_turns",
+            "DCI_MAX_TURNS",
+            PI_DEFAULT_MAX_TURNS,
+            "agent.max_turns",
+            False,
+        ),
         (
             "timeout_seconds",
             "DCI_RPC_TIMEOUT_SECONDS",
             PI_DEFAULT_TIMEOUT_SECONDS,
             "agent.timeout_seconds",
+            True,
         ),
         (
             "thinking_level",
             "DCI_PI_THINKING_LEVEL",
             None,
             "agent.thinking_level",
+            True,
         ),
         (
             "context_profile",
             "DCI_RUNTIME_CONTEXT_LEVEL",
             None,
             "context.profile",
+            True,
         ),
     )
-    for field_name, environment_name, default, source_name in specs:
+    for (
+        field_name,
+        environment_name,
+        default,
+        source_name,
+        allow_empty_environment,
+    ) in specs:
         value, source = layers.resolve(
             environment_name,
-            _nonempty_invocation(invocation, field_name),
+            invocation.get(field_name),
             default,
+            allow_empty_environment=allow_empty_environment,
         )
         values[field_name] = value
         sources[source_name] = source
