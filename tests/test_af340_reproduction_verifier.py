@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import io
 import json
+import os
 import stat
 import subprocess
 import tempfile
@@ -156,6 +157,87 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             args.extend(("--model", model))
         return args
 
+    def _retained_report_fixture(
+        self, module, root: Path, variant: str, *, provider: str | None = None,
+        model: str | None = None, plan=None, fail_at: int | None = None,
+        timeout_at: int | None = None,
+    ):
+        """Build inspection input through lower-level native projection only."""
+
+        operations = tuple(
+            plan or module.bounded_operation_plan(ROOT, variant, provider, model)
+        )
+        output_root = module._private_root(root / "evidence")
+        environment = {
+            "ASTERION_DCI_OUTPUT_ROOT": str(output_root),
+            "DCI_RUNTIME": "pi" if variant == "pi" else "claude-code",
+        }
+        executor = NativeArtifactExecutor(
+            kinds=[item.kind for item in operations],
+            fail_at=fail_at,
+            timeout_at=timeout_at,
+        )
+        records = []
+        status_value = "passed"
+        for operation in operations:
+            command = operation.command
+            before = module._bounded_native_snapshot(output_root)
+            try:
+                completed = executor(command, env=environment)
+                outcome = module._bounded_native_operation_result(
+                    completed=completed,
+                    before=before,
+                    output_root=output_root,
+                    operation=operation,
+                    command=command,
+                    variant=variant,
+                    provider=provider,
+                    model=model,
+                )
+            except subprocess.TimeoutExpired:
+                outcome = module._coordinator_bounded_result(
+                    module.OperationResult("timed_out", 0, 0, {}),
+                    operation=operation,
+                    command=command,
+                    variant=variant,
+                    provider=provider,
+                    model=model,
+                )
+            artifacts = module._store_private_artifacts(
+                output_root, operation.operation_id, outcome.artifacts
+            )
+            records.append(
+                {
+                    "operation_id": operation.operation_id,
+                    "kind": operation.kind,
+                    "status": outcome.status,
+                    "command_sha256": module._command_sha256(operation.command),
+                    "agent_operations": outcome.agent_operations,
+                    "judge_operations": outcome.judge_operations,
+                    "artifacts": artifacts,
+                }
+            )
+            if outcome.status != "completed":
+                status_value = outcome.status
+                break
+        report = {
+            "schema": module.REPORT_SCHEMA,
+            "mode": "bounded",
+            "status": status_value,
+            "variant": variant,
+            "evidence_dimensions": module._dimensions_for_variant(variant),
+            "agent_operations": sum(item["agent_operations"] for item in records),
+            "judge_operations": sum(item["judge_operations"] for item in records),
+            "attempted_operations": len(records),
+            "full_dataset_ran": False,
+            "operations": records,
+            "plan_sha256": module._plan_sha256(operations),
+        }
+        report["report_sha256"] = module._canonical_sha256(report)
+        report_path = output_root / "af340-bounded-report.json"
+        module._write_report(report_path, report)
+        return report_path, executor
+
     def test_local_exact_matrix_has_zero_provider_operations(self) -> None:
         module = load_verifier()
         executor = RecordingExecutor()
@@ -180,15 +262,9 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             temporary_root = Path(temporary)
             plan = module.bounded_operation_plan(ROOT, "pi", None, None)
-            executor = NativeArtifactExecutor(kinds=[item.kind for item in plan])
-            stdout = io.StringIO()
-            result = self._run(module,
-                self._bounded_args(temporary_root, "pi"),
-                repo_root=ROOT,
-                executor=executor,
-                stdout=stdout,
+            report_path, executor = self._retained_report_fixture(
+                module, temporary_root, "pi", plan=plan
             )
-            self.assertEqual(result, 0)
             launcher_operations = [item for item in plan if item.operation_id.startswith("launcher:")]
             self.assertEqual(len(launcher_operations), 22)
             for operation in launcher_operations:
@@ -219,42 +295,23 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
                     "asterion:wheel-pi": "agent-and-judge",
                 },
             )
-            report_path = temporary_root / "evidence" / "af340-bounded-report.json"
             report = json.loads(report_path.read_text(encoding="utf-8"))
             self.assertEqual(report["evidence_dimensions"], ["original-pi", "asterion-pi"])
             self.assertEqual(report["agent_operations"], 30)
             self.assertEqual(report["judge_operations"], 16)
             self.assertEqual(stat.S_IMODE((temporary_root / "evidence").stat().st_mode), 0o700)
             self.assertEqual(stat.S_IMODE(report_path.stat().st_mode), 0o600)
-            self.assertIn("Agent operations: 30", stdout.getvalue())
-            self.assertIn("Judge operations: 16", stdout.getvalue())
 
     def test_default_bounded_adapter_measures_native_artifacts_and_retains_safe_identity(self) -> None:
         module = load_verifier()
         with tempfile.TemporaryDirectory() as temporary:
             temporary_root = Path(temporary)
-            executor = NativeArtifactExecutor()
-
-            def preflight(_args, _root, _plan, environment):
-                adjusted = dict(environment)
-                adjusted["AF340_TEST_KIND"] = "agent"
-                return SimpleNamespace(
-                    environment=adjusted,
-                    wheel_asterion=Path("/private/fake-wheel/bin/asterion"),
-                    cleanup_root=None,
-                )
-
             plan = (
                 module.Operation("native-agent", "agent", ("native-agent",)),
             )
-            with mock.patch.object(module, "bounded_operation_plan", return_value=plan):
-                result = module.verify_af340_reproduction_main(
-                    self._bounded_args(temporary_root, "pi"),
-                    repo_root=ROOT,
-                    executor=executor,
-                    bounded_preflight=preflight,
-                )
-            self.assertEqual(result, 0)
+            self._retained_report_fixture(
+                module, temporary_root, "pi", plan=plan
+            )
             report = json.loads(
                 (temporary_root / "evidence/af340-bounded-report.json").read_text()
             )
@@ -309,14 +366,10 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             ):
                 variant_root = root / variant
                 variant_root.mkdir()
-                plan = module.bounded_operation_plan(ROOT, variant, provider, model)
-                executor = NativeArtifactExecutor(kinds=[item.kind for item in plan])
-                self.assertEqual(self._run(
-                    module,
-                    self._bounded_args(variant_root, variant, provider=provider, model=model),
-                    repo_root=ROOT, executor=executor,
-                ), 0)
-                reports.append(variant_root / "evidence/af340-bounded-report.json")
+                report, _executor = self._retained_report_fixture(
+                    module, variant_root, variant, provider=provider, model=model
+                )
+                reports.append(report)
             report_path = reports[0]
             report = json.loads(report_path.read_text())
             operation = report["operations"][0]
@@ -369,6 +422,39 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
         config = json.loads(projected.artifacts["effective-config.json"])
         self.assertEqual(config["native_artifacts"], [])
         self.assertNotIn("state.json", projected.artifacts)
+
+    def test_injected_completed_process_with_synthetic_native_tree_is_non_retaining(self) -> None:
+        module = load_verifier()
+        with tempfile.TemporaryDirectory() as temporary:
+            temporary_root = Path(temporary)
+            retained = []
+            for variant, provider, model in (
+                ("pi", None, None),
+                ("claude-subscription", None, None),
+                ("claude-minimax", "minimax", "MiniMax-M3"),
+            ):
+                variant_root = temporary_root / variant
+                variant_root.mkdir()
+                plan = (module.Operation("synthetic", "agent", ("synthetic",)),)
+                executor = NativeArtifactExecutor(kinds=["agent"])
+                with mock.patch.object(
+                    module, "bounded_operation_plan", return_value=plan
+                ):
+                    result = self._run(
+                        module,
+                        self._bounded_args(
+                            variant_root, variant, provider=provider, model=model
+                        ),
+                        repo_root=ROOT,
+                        executor=executor,
+                    )
+                self.assertEqual(result, 2)
+                self.assertEqual(len(executor.calls), 1)
+                report = variant_root / "evidence/af340-bounded-report.json"
+                self.assertFalse(report.exists())
+                if report.exists():
+                    retained.append(report)
+            self.assertEqual(retained, [])
 
     def test_private_tree_validation_rejects_loose_modes_and_symlinks(self) -> None:
         module = load_verifier()
@@ -471,16 +557,13 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
         module = load_verifier()
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            executor = NativeArtifactExecutor(
-                fail_at=2, kinds=["agent-and-judge"] * 2
+            plan = tuple(
+                module.Operation(f"failure-{index}", "agent-and-judge", ("run", str(index)))
+                for index in range(2)
             )
-            result = self._run(module,
-                self._bounded_args(root, "claude-subscription"),
-                repo_root=ROOT,
-                executor=executor,
+            report_path, executor = self._retained_report_fixture(
+                module, root, "claude-subscription", plan=plan, fail_at=2
             )
-            self.assertEqual(result, 2)
-            report_path = root / "evidence" / "af340-bounded-report.json"
             raw = report_path.read_text(encoding="utf-8")
             report = json.loads(raw)
             self.assertEqual(report["status"], "failed")
@@ -505,21 +588,15 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
         module = load_verifier()
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            executor = NativeArtifactExecutor(
-                timeout_at=2, kinds=["agent-and-judge"] * 2
+            plan = tuple(
+                module.Operation(f"timeout-{index}", "agent-and-judge", ("run", str(index)))
+                for index in range(2)
             )
-            self.assertEqual(
-                self._run(module,
-                    self._bounded_args(root, "claude-subscription"),
-                    repo_root=ROOT,
-                    executor=executor,
-                ),
-                2,
+            report_path, executor = self._retained_report_fixture(
+                module, root, "claude-subscription", plan=plan, timeout_at=2
             )
             report = json.loads(
-                (root / "evidence/af340-bounded-report.json").read_text(
-                    encoding="utf-8"
-                )
+                report_path.read_text(encoding="utf-8")
             )
             self.assertEqual(report["status"], "timed_out")
             self.assertEqual(
@@ -580,22 +657,26 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
                 )
 
             stdout = io.StringIO()
-            result = module.verify_af340_reproduction_main(
-                [
-                    "full",
-                    "--profile",
-                    "current-default/pi",
-                    "--output-root",
-                    str(output_root),
-                    "--estimated-budget-usd",
-                    "0",
-                    "--authorize-full",
-                ],
-                repo_root=ROOT,
-                full_runner=full_runner,
-                full_preflight=lambda *_args: None,
-                stdout=stdout,
-            )
+            previous_umask = os.umask(0o022)
+            try:
+                result = module.verify_af340_reproduction_main(
+                    [
+                        "full",
+                        "--profile",
+                        "current-default/pi",
+                        "--output-root",
+                        str(output_root),
+                        "--estimated-budget-usd",
+                        "0",
+                        "--authorize-full",
+                    ],
+                    repo_root=ROOT,
+                    full_runner=full_runner,
+                    full_preflight=lambda *_args: None,
+                    stdout=stdout,
+                )
+            finally:
+                os.umask(previous_umask)
             self.assertEqual(result, 0)
             self.assertEqual(len(received), 1)
             authorizations, profile = received[0]
@@ -607,6 +688,13 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
                     self.assertTrue(authorization.invocation_authorized)
             self.assertEqual(profile.profile_id, "current-default/pi")
             self.assertEqual(stat.S_IMODE(output_root.stat().st_mode), 0o700)
+            self.assertEqual(
+                stat.S_IMODE((output_root / "original-dci").stat().st_mode), 0o700
+            )
+            self.assertEqual(
+                stat.S_IMODE((output_root / "asterion-dci").stat().st_mode), 0o700
+            )
+            module._validate_private_tree(output_root)
             self.assertNotEqual(
                 next(iter(authorizations["original-dci"].values())).output_root.parent,
                 next(iter(authorizations["asterion-dci"].values())).output_root.parent,
@@ -1227,7 +1315,19 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             agent = Path(temporary)
             auth = agent / "auth.json"
-            auth.write_text(json.dumps({"wrong-provider": {"type": "oauth", "access": "x"}}))
+            auth.write_text(
+                json.dumps({"wrong-provider": {"type": "oauth", "access": "x"}})
+            )
+            self.assertTrue(
+                module._pi_auth_ready(
+                    agent, "openai-codex", {"OPENAI_API_KEY": "project-contract"}
+                )
+            )
+            self.assertFalse(
+                module._pi_auth_ready(
+                    agent, "openai-codex", {"OPENAI_CODEX_API_KEY": "wrong-alias"}
+                )
+            )
             self.assertFalse(module._pi_auth_ready(agent, "openai-codex", {}))
             auth.write_text(json.dumps({"openai-codex": {"type": "oauth"}}))
             self.assertFalse(module._pi_auth_ready(agent, "openai-codex", {}))
@@ -1240,6 +1340,11 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
                 json.dumps({"openai-codex": {"type": "oauth", "refresh": "saved-token"}})
             )
             self.assertTrue(module._pi_auth_ready(agent, "openai-codex", {}))
+            self.assertTrue(
+                module._pi_auth_ready(
+                    agent, "openai-codex", {"OPENAI_CODEX_API_KEY": "ignored"}
+                )
+            )
 
     def test_bounded_subscription_checks_login_before_build_or_adapter(self) -> None:
         module = load_verifier()
@@ -1552,20 +1657,10 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             ):
                 variant_root = root / variant
                 variant_root.mkdir()
-                plan = module.bounded_operation_plan(ROOT, variant, provider, model)
-                executor = NativeArtifactExecutor(kinds=[item.kind for item in plan])
-                self.assertEqual(
-                    self._run(
-                        module,
-                        self._bounded_args(
-                            variant_root, variant, provider=provider, model=model
-                        ),
-                        repo_root=ROOT,
-                        executor=executor,
-                    ),
-                    0,
+                report, _executor = self._retained_report_fixture(
+                    module, variant_root, variant, provider=provider, model=model
                 )
-                reports.append(variant_root / "evidence/af340-bounded-report.json")
+                reports.append(report)
             args = ["inspect"]
             for report in reports:
                 args.extend(("--report", str(report)))
@@ -1708,6 +1803,9 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             parent = parent.resolve()
             authorizations = {"original-dci": {}, "asterion-dci": {}}
             for product in authorizations:
+                product_root = parent / product
+                product_root.mkdir(mode=0o700)
+                product_root.chmod(0o700)
                 authorization = authorize_full_execution(
                     profile.profile_id, parent / product / module._safe_slug(scope_id),
                     0, True, preflight_profile_sha256=profile_sha,
@@ -1756,6 +1854,22 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
                         module._run_inspect_full(SimpleNamespace(report=report), ROOT, io.StringIO()),
                         0,
                     )
+                    product_root = parent / "original-dci"
+                    product_root.chmod(0o755)
+                    with self.assertRaisesRegex(ValueError, "permissions"):
+                        module._run_inspect_full(
+                            SimpleNamespace(report=report), ROOT, io.StringIO()
+                        )
+                    product_root.chmod(0o700)
+                    moved_product = parent / "original-dci-real"
+                    product_root.rename(moved_product)
+                    product_root.symlink_to(moved_product, target_is_directory=True)
+                    with self.assertRaisesRegex(ValueError, "symlink"):
+                        module._run_inspect_full(
+                            SimpleNamespace(report=report), ROOT, io.StringIO()
+                        )
+                    product_root.unlink()
+                    moved_product.rename(product_root)
                     comparison_path.chmod(0o644)
                     with self.assertRaisesRegex(ValueError, "permissions"):
                         module._run_inspect_full(

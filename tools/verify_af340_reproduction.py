@@ -822,7 +822,7 @@ def _run_bounded(
     environment["ASTERION_CLAUDE_OUTPUT_ROOT"] = str(output_root / "claude-native")
     records: list[dict[str, object]] = []
     status_value = "passed"
-    retainable = True
+    retainable = executor is subprocess.run
     for operation in plan:
         command = _render_command(operation, output_root, preflight.wheel_asterion)
         native_before = _bounded_native_snapshot(output_root)
@@ -1008,7 +1008,11 @@ def _default_bounded_preflight(
 def _provider_key_name(provider: str) -> str | None:
     if re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", provider) is None:
         return None
-    aliases = {"google": "GOOGLE_API_KEY", "gemini": "GOOGLE_API_KEY"}
+    aliases = {
+        "google": "GOOGLE_API_KEY",
+        "gemini": "GOOGLE_API_KEY",
+        "openai-codex": "OPENAI_API_KEY",
+    }
     return aliases.get(provider.lower(), f"{provider.upper().replace('-', '_')}_API_KEY")
 
 
@@ -2129,6 +2133,7 @@ def _write_full_execution_report(
     )
 
     comparison_root = parent_root / "comparisons"
+    _validate_private_tree(parent_root)
     _validate_private_tree(comparison_root)
     paths = tuple(sorted(comparison_root.glob("*.json")))
     if len(paths) != len(profile.scope_ids):
@@ -2198,6 +2203,7 @@ def _write_full_execution_report(
     values["report_sha256"] = _canonical_sha256(values)
     target = parent_root / "af340-full-report.json"
     _write_report(target, values)
+    _validate_private_tree(parent_root)
     return target
 
 
@@ -2224,6 +2230,11 @@ def _run_full(
     products = ("original-dci", "asterion-dci") if profile.runtime == "pi" else ("asterion-dci",)
     authorizations: dict[str, dict[str, object]] = {}
     for product in products:
+        product_root = parent_root / product
+        if product_root.is_symlink() or product_root.exists():
+            raise ValueError("AF-340 full product root must be fresh")
+        product_root.mkdir(mode=0o700)
+        product_root.chmod(0o700)
         authorizations[product] = {}
         for index, scope_id in enumerate(profile.scope_ids):
             authorization = authorize(
@@ -2548,6 +2559,7 @@ def _run_inspect_full(args: argparse.Namespace, root: Path, stdout: TextIO) -> i
         or stat.S_IMODE(path.parent.stat().st_mode) != 0o700
     ):
         raise ValueError("AF-340 full report invalid [permissions]")
+    _validate_private_tree(path.parent)
     try:
         report = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, ValueError):
