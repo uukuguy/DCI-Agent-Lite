@@ -1026,3 +1026,4 @@
 - 07:33 Claude subscription bounded 预检按本机未登录状态 fail closed；Agent/Judge 0。
 - 07:35 五个 full profile dry-run 固化 1978 queries；Pi 上限 3956/2910，Claude 1978/1455，full no。
 - 07:37 provider-free AF-340 local coordinator PASS；Agent/Judge 0，full no。
+- 07:40 checkpoint 固化 H004 外部认证阻断与 full dry-run 边界。 [b06c970]
