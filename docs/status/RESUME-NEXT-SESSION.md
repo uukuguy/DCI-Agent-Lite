@@ -1,12 +1,12 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-19 07:12 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-19 07:37 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-340
 
 Package: README reproduction and runtime-result parity
 
-Currently running: no live process. Pi bounded r8 stopped on the `openai-codex` usage limit and was rejected; terminal provider errors now fail closed in both Pi RPC paths at `9397ed5`. No full dataset is authorized.
+Currently running: no live process. Claude MiniMax r1/r2 were both rejected after 10 HTTP 401 retries on the international and China endpoints, so the current Coding Plan token is not authenticating. Pi r8 was rejected on the `openai-codex` usage limit; no full dataset is authorized.
 
 ## TL;DR
 
@@ -29,10 +29,10 @@ Currently running: no live process. Pi bounded r8 stopped on the `openai-codex` 
 
 ## Next action
 
-1. Run the Claude MiniMax production bounded variant into a fresh private root and retain its exact report.
-2. Re-run Pi into a fresh private root only after the `openai-codex` usage limit clears; run Claude subscription after local login is available.
+1. Restore one external runtime credential boundary: wait for the `openai-codex` usage limit to clear, refresh the MiniMax Coding Plan token, or log Claude Code into a subscription.
+2. Re-run the restored bounded variant into a fresh private root; never reuse or stitch r1-r8 diagnostic outputs.
 3. Bind successful bounded reports into H-004 state, but do not substitute them for full evidence.
-4. Generate the exact full dry-run profile/count/budget proposal and stop for explicit authorization before any full dataset.
+4. Use the retained five-profile dry-run counts to request a named profile and real budget; require explicit authorization before any full dataset.
 
 ## Accepted boundaries
 

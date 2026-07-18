@@ -1018,3 +1018,11 @@
 - 07:01 启动 H004 Pi bounded r8，PID 46835，fresh 全矩阵；full 未授权。
 - 07:04 Pi bounded r8 被 openai-codex 用量上限阻断；暴露 provider error 被误记 completed，证据拒收。
 - 07:12 Pi provider 终端错误现在双路径 fail closed，防止空答案进入 Judge。 [9397ed5]
+- 07:18 启动 H004 Claude MiniMax bounded r1，PID 52707，fresh retained 路径；full 未授权。
+- 07:23 Claude MiniMax r1 因国际端点与本机中国 Coding Plan 凭据错配返回 401；Agent/Judge 0，证据拒收。
+- 07:24 checkpoint 记录 Pi 配额阻断与 provider fail-closed 恢复边界。 [6031c7d]
+- 07:26 启动 H004 Claude MiniMax-CN bounded r2，PID 55775，按 process-env 层映射本机 Coding Plan。
+- 07:31 Claude MiniMax-CN r2 仍经 10 次 401 失败；确认当前 Coding Plan token 不可认证，Agent/Judge 0。
+- 07:33 Claude subscription bounded 预检按本机未登录状态 fail closed；Agent/Judge 0。
+- 07:35 五个 full profile dry-run 固化 1978 queries；Pi 上限 3956/2910，Claude 1978/1455，full no。
+- 07:37 provider-free AF-340 local coordinator PASS；Agent/Judge 0，full no。
