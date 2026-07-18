@@ -467,7 +467,7 @@
 
 ## D-049 — Keep agent selection shared and translate it inside runtime adapters
 
-- Status: ✅ accepted design correction
+- Status: 🔴 superseded in configuration precedence and defaults by D-051; its adapter-translation and role-separation boundaries remain historical inputs
 - Decided: 2026-07-17
 - Decision: `DCI_PROVIDER` and `DCI_MODEL` select the agent backend independently of the application-selected Pi or Claude Code runtime. Runtime-native environment names are adapter internals, not required user configuration.
 - MiniMax boundary: `minimax` and `minimax-cn` reuse Pi's existing provider IDs and single provider credential variables. The Claude adapter derives its Anthropic-compatible URL, model, and aliases only in the private subprocess environment; documented `sk-cp-` Token Plan credentials use bearer auth while ordinary API keys use the API-key header matching locked Pi. It never persists either derived credential.
@@ -487,3 +487,15 @@
 - Evidence boundary: closure reruns the independent auditor over retained private artifacts, reparses the raw Claude JSONL and replays it through the production protocol adapter for exact normalized-event equality, derives the one agent operation plus safe provider/model/Claude-version identity from private runtime evidence, compares report and implementation/source identities with the tracked body-free record, and rejects path, mode, digest, or identity substitution. A tracked counter-only JSON assertion is not terminal rebinding.
 - Implemented evidence: fresh r12 binds MiniMax-M3 through Claude Code 2.1.212, one corpus-contained Grep, five application stages, and one correct configured DeepSeek evaluation to report `07a69074…bce2`, tracked record `a62e62cd…ae89`, implementation `613578bd…6477`, and descendant-safe source `f3e2528`; Climb cycle 103 independently invokes the terminal verifier.
 - Revalidation trigger: broaden the child environment, change working-directory authority, add mid-graph workflow persistence, or weaken terminal evidence only through a new reviewed security/protocol decision and adversarial tests.
+
+## D-051 — Resolve one layered configuration contract through runtime-owned provider semantics
+
+- Status: ✅ accepted design decision
+- Decided: 2026-07-18
+- Decision: `.env`, exported environment, CLI options, and application request fields are ordered layers of one DCI configuration contract. Explicit invocation values override exported process values; exported values override repository `.env`; both override defaults owned by the selected runtime or Judge role. Runtime resolves first; shared `DCI_PROVIDER` and `DCI_MODEL` fields are then interpreted by that runtime's explicit compatibility and translation table.
+- Runtime defaults: original DCI permits only Pi. Pi defaults to `openai-codex` with `gpt-5.6-luna` and retains its broader provider registry. Claude Code defaults to its local subscription login and native model selection, while explicit MiniMax selections use only the tested Claude-Code-compatible Coding Plan translation. A future Claude Agent SDK must join the same layered contract through its own adapter rather than inheriting Pi or Claude Code assumptions.
+- Judge boundary: the independent default Judge is DeepSeek V4 Flash over the OpenAI-compatible Chat Completions API. `DCI_EVAL_JUDGE_*` and Judge CLI fields remain separate from agent configuration; the safe request-shaping and prompt identity participates in evaluation cache identity.
+- Reproduction boundary: original README Quick Start, Context Management Strategies, and Benchmark DCI-Agent-Lite are executable product contracts. Asterion must reproduce the same Pi experiment inputs and expose the paper's Claude Code path independently. Bounded evidence cannot claim full results, and `.env` alone cannot authorize a full dataset.
+- Evidence boundary: both products emit `dci.effective-config/v1` without secrets, private paths, prompts, answers, or bodies. Full comparison retains query-level evidence and versioned confidence/non-inferiority criteria.
+- Rationale: one precedence framework preserves simple `.env` defaults and precise CLI overrides while allowing runtime-specific provider capabilities and authentication. Runtime-specific public variable families would fragment the contract; a universal provider compatibility claim would be false.
+- Revalidation trigger: change the public precedence order, runtime defaults, Judge default, full-run authorization, or result-comparison margins only through a versioned configuration/evidence migration and renewed README/Asterion parity acceptance.

@@ -2,7 +2,7 @@
 
 > Canonical work-package ledger. An `active` lifecycle requires exactly one `in_progress` package; a `complete` lifecycle permits none and forbids autonomous dispatch.
 
-> Project lifecycle: complete
+> Project lifecycle: active
 
 ## AF-000 — Framework control plane
 
@@ -360,6 +360,16 @@
 - Design: `docs/superpowers/specs/2026-07-17-af-330-complete-application-dual-runtime-design.md`
 - Plan: `docs/superpowers/plans/2026-07-17-af-330-complete-application-dual-runtime.md`
 - Closure evidence: AF-330-H-001 through H-004 are confirmed 4/4. One exact five-stage research/evaluation/benchmark/analysis/export graph executes through Pi and Claude Code with shared domain contracts, adapter-owned provider translation, exact stage identities, cancellation/deadline/failure safety, original `asterion-dci resume`, and body-free public evidence. Bounded real Pi and final r12 MiniMax-M3 Claude Code runs each stayed inside an attempt-local corpus without Bash, web, subagents, or a full dataset and completed one configured DeepSeek evaluation. The r12 terminal verifier replays raw Claude JSONL through the production adapter and binds report `07a69074…bce2`, tracked record `a62e62cd…ae89`, implementation `613578bd…6477`, and descendant-safe source `f3e2528`; Climb cycle 103 independently confirms it. Closure passes 1396 root Python, 123 Asterion, 11 TypeScript, 19 Rust, product 8/8, 533/533 delegated selectors, 12/12 launchers, 6/6 extras, 7/7 bounded cases, isolated wheel, compile, Ruff, shell, fmt, Clippy, scope, diff, and actual-key privacy gates. Final independent review reports no Critical, Important, or Minor findings. Full-dataset and paper-score reproduction remain outside this completed lifecycle pending separately authorized AF-340 governance.
+
+## AF-340 — README reproduction and runtime-result parity
+
+- Status: in_progress
+- Parent objective: Reproduce the documented DCI product and establish Asterion runtime-result parity
+- Scope: implement one layered `.env`/environment/CLI/application configuration contract with runtime-aware agent defaults and an independent DeepSeek Judge default; make the original README Quick Start, Context Management Strategies, and Benchmark DCI-Agent-Lite paths executable; then run the same Pi experiment contract and the paper's Claude Code path through Asterion source, application, and installed-wheel surfaces with bounded and explicitly authorized full-result comparison.
+- Dependencies: AF-330
+- Acceptance: original DCI and Asterion independently emit the same safe effective-configuration schema; Pi defaults to `openai-codex`/`gpt-5.6-luna`, Claude Code supports local subscription login and explicit compatible MiniMax Coding Plan translation, and Judge defaults to DeepSeek V4 Flash while every value remains overrideable through the unified precedence layers; all eleven documented benchmark launchers, Quick Start, and L0-L4 paths pass local and bounded gates; full execution requires explicit invocation authorization and records exact per-query evidence, 95% confidence intervals, paired original/Asterion Pi non-inferiority, and separately identified Asterion Claude Code target comparison without credential or body leakage.
+- Design: `docs/superpowers/specs/2026-07-18-af-340-readme-reproduction-runtime-parity-design.md`
+- Plan: gated by user review of the committed design; `writing-plans` is the next authorized action.
 
 ## AF-095 — Asterion framework identity and extraction
 

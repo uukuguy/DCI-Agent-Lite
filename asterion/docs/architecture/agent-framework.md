@@ -21,6 +21,14 @@ Build Asterion as a multi-runtime, multi-language agent-application framework. D
 - Add enterprise policy, audit, artifact, and observability boundaries through the shared protocol rather than adapter-private behavior.
 - Keep Asterion's generic core domain-neutral; package-local CLIs and implementation details must not enter generic framework selection or execution paths.
 
+## Layered runtime configuration
+
+- `.env`, exported environment, CLI fields, and application request fields are layers of one public configuration contract. Explicit invocation values override exported process values; exported values override repository `.env`; both override defaults owned by the selected runtime or Judge role.
+- Runtime selection resolves before `DCI_PROVIDER` and `DCI_MODEL`. Those shared field names are interpreted and validated by the selected adapter; they do not imply that every provider is portable across runtimes.
+- Pi owns the broader provider surface and defaults to `openai-codex` with `gpt-5.6-luna`. Claude Code owns its subscription-login default plus explicit compatible provider translations such as MiniMax Coding Plan. Unsupported runtime/provider pairs fail before provider construction.
+- `DCI_EVAL_JUDGE_*` is an independent evaluation role whose default is the DeepSeek V4 Flash OpenAI-compatible Chat Completions contract. Agent and Judge credentials, requests, evidence, and cache identities remain separate.
+- Original DCI and Asterion implement the contract independently and emit the same body-free effective-configuration schema for parity. Full-dataset execution requires explicit invocation-level authorization; normal `.env` values never authorize cost by themselves.
+
 ## Non-goals
 
 - Do not claim identical native semantics or reasoning traces across runtimes.

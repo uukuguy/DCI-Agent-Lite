@@ -1,57 +1,56 @@
-# Next-Session Handoff
+# Live Session Checkpoint
 
-> Finalized: 2026-07-17 19:05 +0800. This is the reviewed session-closeout baton.
+> Updated: 2026-07-18 17:07 +0800. **Session remains active — not a final handoff.**
 
-Active work package: none
+Active work package: AF-340
 
-Package: none — project lifecycle complete
+Package: README reproduction and runtime-result parity
 
 Currently running: no repository-owned process.
 
 ## TL;DR
 
-- The paper-aligned functional DCI implementation is complete through AF-330; every package in `docs/status/WORKLIST.md` is completed and lifecycle is `complete`.
-- Context Management Strategies, paper benchmark/metric contracts, complete five-stage application execution, native resume, Pi, Claude Code, DeepSeek Judge, CLI, installed application, and isolated wheel surfaces are implemented and verified.
-- Final r12 completed MiniMax-M3 through Claude Code 2.1.212, one corpus-contained Grep, all five stages, and one correct configured DeepSeek evaluation without a full dataset.
-- Terminal replay binds report `07a69074…bce2`, tracked record `a62e62cd…ae89`, implementation `613578bd…6477`, and descendant-safe source `f3e2528`; Climb cycle 103 confirms H004 4/4.
-- Post-repair closure passes 1396 root Python, 123 Asterion, 11 TypeScript, 19 Rust, product 8/8, delegated 533/533, launchers 12/12, extras 6/6, bounded 7/7, zero provider requests, fresh isolated wheel, static, scope, diff, and actual-key scans.
-- Terminal independent review reports no Critical, Important, or Minor findings.
-- `.env` is mode 0600 and privately configured for international MiniMax plus DeepSeek Judge. Never print or commit it. External `pi/` remains untouched.
+- The user approved AF-340's complete design: one layered CLI/application → `.env`/environment → runtime/Judge-default configuration contract.
+- Pi defaults to `openai-codex`/`gpt-5.6-luna`; Claude Code defaults to local subscription login and supports explicit compatible MiniMax Coding Plan translation; Judge defaults independently to DeepSeek V4 Flash.
+- Original DCI README Quick Start, Context Management Strategies, and all eleven Benchmark DCI-Agent-Lite launchers are the baseline acceptance paths. Asterion must run the same Pi experiment contract and the paper Claude Code path through source, application, and installed-wheel surfaces.
+- No implementation has started. The next gate is user review of the committed design spec, followed by a `writing-plans` implementation plan.
 
-## Git boundary
+## Where things stand
 
-- Branch: `main`.
-- Last completed implementation/state commit before this handoff: `87bf0bb` (`docs(status): record AF-330 closure commit`).
-- `main` was seven commits ahead of `origin/main` and zero behind before the final handoff commit; nothing was pushed during this session.
-- The working tree was clean before handoff synthesis. The three stale ignored `planning-with-files` files were removed.
-- No repository-owned process remains. Long-lived MCP/npm processes observed during closeout belong to external user sessions and were not stopped.
+- Project route: managed.
+- Lifecycle: active.
+- Active package: AF-340.
+- Dependencies: AF-330 completed.
+- No provider request or dataset run occurred while preparing the design.
+- External `pi/` remains untouched; `.env` credentials were not read or printed.
 
-## First resume action
+## Next action
 
-1. Run `project-state resume`; it should recover lifecycle `complete` and no active package.
-2. Do not implement or launch Climb until governance is explicitly reopened with a named package.
-3. If the user authorizes AF-340, first define its budget, experiment identities, data availability, and score-comparability boundary in design/worklist/decisions, then run the scope preflight.
+1. Review `docs/superpowers/specs/2026-07-18-af-340-readme-reproduction-runtime-parity-design.md`.
+2. After explicit approval, invoke `writing-plans` and create the AF-340 implementation plan.
+3. Run `python3 tools/project_scope_check.py` before implementation dispatch.
+4. Implement test-first; do not launch a full dataset until the explicit full-run authorization and budget gate exist and are separately invoked.
 
-## Open questions
+## Accepted boundaries
 
-- Whether to push the local commits to `origin/main`.
-- Whether to authorize and budget AF-340 full-dataset/paper-score reproduction. It is not an implementation gap in the completed functional lifecycle.
+- `.env` and CLI are complementary layers, not alternate modes.
+- `DCI_PROVIDER`/`DCI_MODEL` are common public fields interpreted by the selected runtime.
+- Original DCI supports Pi only; Asterion supports Pi and Claude Code.
+- Agent and Judge roles remain independently configured and credentialed.
+- Local, bounded, and full verification are distinct evidence classes.
+- Full comparison retains per-query evidence and versioned non-inferiority/confidence criteria.
 
 ## Ruled-out paths
 
-- Do not equate functional paper capability reproduction with literal provider/model/number matching.
-- Do not call full datasets or paper scores reproduced; no full dataset ran.
-- Do not use r7–r11 as terminal Claude evidence. r12 is authoritative; r10 was explicitly rejected for making no tool call.
-- Do not duplicate Pi and Claude Code runtime/provider configuration in `.env`; `DCI_PROVIDER` and `DCI_MODEL` select the agent while adapters perform native translation.
-- Do not relabel DeepSeek Judge as GPT-4.1 or claim paper-score comparability.
-- Do not modify, clean, or commit the external `pi/` checkout.
-- Do not create another workflow persistence control plane; `asterion-dci resume` remains authoritative.
+- Do not create runtime-specific public provider variable families.
+- Do not apply Pi provider compatibility or defaults to Claude Code.
+- Do not substitute internal fixtures for the literal README user paths.
+- Do not claim full or comparable results from bounded `--limit 1` evidence.
+- Do not make Asterion import or launch original DCI to manufacture parity.
+- Do not let `.env`, generic verification, or cache presence authorize full-dataset cost.
 
-## Ready commands
+## Ready command
 
 ```bash
-git status --short
-git log --oneline origin/main..HEAD
 python3 tools/project_scope_check.py
-uv run --project asterion python tools/verify_af330_claude_evidence.py --repo-root . --run-dir outputs/af330-claude-runs/b97d0ec61ccbbf73cbf66b299e9cc5718721cb5093b05f896bac46d19583c809 --corpus-dir outputs/af330-claude-corpus --report outputs/af330-claude-evidence/r12-report.json --record docs/status/climb/provider-evidence/af-330-h-004.json
 ```
