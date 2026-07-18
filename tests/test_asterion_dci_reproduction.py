@@ -5,12 +5,13 @@ import math
 import stat
 import tempfile
 import unittest
-from dataclasses import FrozenInstanceError, replace
+from dataclasses import FrozenInstanceError, fields, replace
 from importlib import resources
 from pathlib import Path
 from types import MappingProxyType
 
 from asterion.dci.cli import main
+from asterion.dci import reproduction as reproduction_module
 from asterion.dci.experiment_profiles import (
     experiment_profile_sha256,
     resolve_experiment_profile,
@@ -26,8 +27,10 @@ from asterion.dci.reproduction import (
     TokenCounts,
     ConfidenceInterval,
     EstimatorEvidence,
+    MetricComparison,
     compare_reproduction_runs,
     load_run_manifest,
+    write_comparison_report,
 )
 
 
@@ -183,6 +186,24 @@ def _rehash(value: dict[str, object]) -> None:
     value["identity_sha256"] = canonical_sha256(
         {key: item for key, item in value.items() if key != "identity_sha256"}
     )
+
+
+def _forge_report_metrics(report, metrics: dict[str, MetricComparison]):
+    """Build a self-hashed report without invoking its constructor validation."""
+
+    forged = object.__new__(type(report))
+    for field in fields(report):
+        object.__setattr__(
+            forged,
+            field.name,
+            MappingProxyType(dict(metrics))
+            if field.name == "metrics"
+            else getattr(report, field.name),
+        )
+    from asterion.dci.paper_benchmarks import canonical_sha256
+
+    object.__setattr__(forged, "identity_sha256", canonical_sha256(forged._unsigned_dict()))
+    return forged
 
 
 class ReproductionManifestTests(unittest.TestCase):
@@ -384,6 +405,38 @@ class ReproductionStatisticsTests(unittest.TestCase):
             resolve_experiment_profile("current-default/pi"),
         )
 
+    def _forged_metric_reports(self):
+        report = self._accuracy_report(count=20, regressions=0)
+        metric = report.metrics["accuracy"]
+        drifted_values = MetricComparison(
+            baseline=0.5,
+            candidate=0.5,
+            delta=0.0,
+            confidence_interval=metric.confidence_interval,
+            margin=metric.margin,
+            accepted=metric.accepted,
+            estimator=metric.estimator,
+        )
+        drifted_sample = replace(
+            metric,
+            estimator=replace(metric.estimator, sample_sha256=_SHA_A),
+        )
+        drifted_interval = replace(
+            metric,
+            confidence_interval=ConfidenceInterval(lower=-0.01, upper=0.01),
+        )
+        return {
+            "point-values": _forge_report_metrics(
+                report, {"accuracy": drifted_values}
+            ),
+            "sample-digest": _forge_report_metrics(
+                report, {"accuracy": drifted_sample}
+            ),
+            "bootstrap-interval": _forge_report_metrics(
+                report, {"accuracy": drifted_interval}
+            ),
+        }
+
     def test_accuracy_minus_point_zero_four_passes_and_is_deterministic(self) -> None:
         report = self._accuracy_report(count=2_500, regressions=100)
         metric = report.metrics["accuracy"]
@@ -569,6 +622,48 @@ class ReproductionStatisticsTests(unittest.TestCase):
             first_report.metrics["accuracy"].estimator.sample_sha256,
             status_report.metrics["accuracy"].estimator.sample_sha256,
         )
+
+    def test_constructor_rejects_self_hashed_cross_field_metric_forgery(self) -> None:
+        for drift, forged in self._forged_metric_reports().items():
+            with self.subTest(drift=drift), self.assertRaises(ValueError):
+                replace(
+                    forged,
+                    metrics=dict(forged.metrics),
+                    identity_sha256=forged.identity_sha256,
+                )
+
+    def test_load_rejects_self_hashed_cross_field_metric_forgery(self) -> None:
+        loader = getattr(reproduction_module, "load_comparison_report", None)
+        self.assertIsNotNone(loader)
+        for drift, forged in self._forged_metric_reports().items():
+            with self.subTest(drift=drift), tempfile.TemporaryDirectory() as temporary:
+                path = Path(temporary) / "forged-report.json"
+                _write(
+                    path,
+                    {**forged._unsigned_dict(), "identity_sha256": forged.identity_sha256},
+                )
+                with self.assertRaises(ValueError):
+                    loader(path)
+
+    def test_load_comparison_report_round_trips_valid_report(self) -> None:
+        report = self._accuracy_report(count=20, regressions=0)
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "report.json"
+            path.write_bytes(report.to_json_bytes())
+            loaded = reproduction_module.load_comparison_report(path)
+        self.assertEqual(loaded.to_json_bytes(), report.to_json_bytes())
+
+    def test_serialization_rejects_self_hashed_cross_field_metric_forgery(self) -> None:
+        for drift, forged in self._forged_metric_reports().items():
+            with self.subTest(drift=drift), self.assertRaises(ValueError):
+                forged.to_dict()
+            with self.subTest(drift=drift), tempfile.TemporaryDirectory() as temporary:
+                parent = Path(temporary) / "private"
+                parent.mkdir(mode=0o700)
+                path = parent / "report.json"
+                with self.assertRaises(ValueError):
+                    write_comparison_report(path, forged)
+                self.assertFalse(path.exists())
 
     def test_source_parity_rejects_self_comparison(self) -> None:
         manifest = self._loaded(_manifest([_query("q-1")]))

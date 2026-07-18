@@ -17,6 +17,7 @@ from asterion.dci.experiment_profiles import (
     ExperimentProfile,
     experiment_profile_sha256,
     experiment_profile_ids,
+    resolve_experiment_profile,
 )
 from asterion.dci.paper_benchmarks import canonical_sha256
 
@@ -113,6 +114,35 @@ _AGGREGATE_KEYS = {
     "output_tokens",
     "total_tokens",
     "cost_usd",
+}
+_COMPARISON_KEYS = {
+    "schema",
+    "comparison_kind",
+    "profile_id",
+    "profile_sha256",
+    "dataset_id",
+    "selection_id",
+    "selection_sha256",
+    "effective_config_sha256",
+    "metric_contract_sha256",
+    "baseline_product",
+    "baseline_implementation_sha256",
+    "baseline_product_effective_config_sha256",
+    "candidate_product",
+    "candidate_implementation_sha256",
+    "candidate_product_effective_config_sha256",
+    "baseline_run_sha256",
+    "candidate_run_sha256",
+    "target_identity",
+    "pair_ids",
+    "exclusion_ids",
+    "pairs",
+    "exclusions",
+    "baseline",
+    "candidate",
+    "metrics",
+    "accepted",
+    "identity_sha256",
 }
 _FORBIDDEN_KEY_PARTS = (
     "answer",
@@ -1020,6 +1050,67 @@ class ComparisonReport:
         object.__setattr__(self, "metrics", copied_metrics)
         self._validate()
 
+    @classmethod
+    def from_mapping(cls, value: object) -> "ComparisonReport":
+        _reject_body_fields(value)
+        item = _require_exact_mapping(value, _COMPARISON_KEYS, "comparison report")
+        if item["schema"] != COMPARISON_SCHEMA:
+            raise ValueError("DCI reproduction comparison schema is invalid")
+        identity = _require_sha256(item["identity_sha256"], "comparison identity")
+        unsigned = {key: data for key, data in item.items() if key != "identity_sha256"}
+        if identity != canonical_sha256(unsigned):
+            raise ValueError("DCI reproduction comparison identity is invalid")
+        raw_pairs = item["pairs"]
+        raw_exclusions = item["exclusions"]
+        if type(raw_pairs) is not list or type(raw_exclusions) is not list:
+            raise ValueError("DCI reproduction comparison evidence is invalid")
+        pairs = tuple(_parse_matched_pair(pair) for pair in raw_pairs)
+        exclusions = tuple(_parse_exclusion(row) for row in raw_exclusions)
+        if item["pair_ids"] != [pair.query_id for pair in pairs] or item[
+            "exclusion_ids"
+        ] != [row.query_id for row in exclusions]:
+            raise ValueError("DCI reproduction comparison query IDs are invalid")
+        raw_metrics = item["metrics"]
+        if type(raw_metrics) is not dict or set(raw_metrics) - {
+            "accuracy",
+            "ndcg_at_10",
+        }:
+            raise ValueError("DCI reproduction comparison metrics are invalid")
+        metrics = {name: _parse_metric(metric) for name, metric in raw_metrics.items()}
+        baseline = (
+            None if item["baseline"] is None else _parse_comparison_totals(item["baseline"])
+        )
+        return cls(
+            comparison_kind=item["comparison_kind"],
+            profile_id=item["profile_id"],
+            profile_sha256=item["profile_sha256"],
+            dataset_id=item["dataset_id"],
+            selection_id=item["selection_id"],
+            selection_sha256=item["selection_sha256"],
+            effective_config_sha256=item["effective_config_sha256"],
+            metric_contract_sha256=item["metric_contract_sha256"],
+            baseline_product=item["baseline_product"],
+            baseline_implementation_sha256=item["baseline_implementation_sha256"],
+            baseline_product_effective_config_sha256=item[
+                "baseline_product_effective_config_sha256"
+            ],
+            candidate_product=item["candidate_product"],
+            candidate_implementation_sha256=item["candidate_implementation_sha256"],
+            candidate_product_effective_config_sha256=item[
+                "candidate_product_effective_config_sha256"
+            ],
+            baseline_run_sha256=item["baseline_run_sha256"],
+            candidate_run_sha256=item["candidate_run_sha256"],
+            target_identity=item["target_identity"],
+            pairs=pairs,
+            exclusions=exclusions,
+            baseline=baseline,
+            candidate=_parse_comparison_totals(item["candidate"]),
+            metrics=metrics,
+            accepted=item["accepted"],
+            identity_sha256=identity,
+        )
+
     @property
     def pair_ids(self) -> tuple[str, ...]:
         return tuple(pair.query_id for pair in self.pairs)
@@ -1099,6 +1190,18 @@ class ComparisonReport:
                 (self.baseline_run_sha256, "baseline run digest"),
             ):
                 _require_sha256(value, label)
+            profile = resolve_experiment_profile(self.profile_id)
+            if self.profile_sha256 != _profile_digest(profile):
+                raise ValueError("DCI reproduction comparison profile drifted")
+            expected_metrics = _recompute_metrics(
+                self.pairs, tuple(self.metrics), profile
+            )
+            if (
+                dict(self.metrics) != expected_metrics
+                or self.accepted
+                is not all(metric.accepted for metric in expected_metrics.values())
+            ):
+                raise ValueError("DCI reproduction comparison metrics are inconsistent")
         else:
             if (
                 self.baseline_product is not None
@@ -1163,7 +1266,111 @@ class ComparisonReport:
         ).encode("utf-8")
 
 
-def _metric_value(row: QueryEvidence, metric: str) -> float:
+def _parse_comparison_totals(value: object) -> ComparisonTotals:
+    keys = {
+        "completion_rate",
+        "failure_rate",
+        "agent_operations",
+        "judge_operations",
+        "input_tokens",
+        "cached_input_tokens",
+        "output_tokens",
+        "total_tokens",
+        "cost_usd",
+    }
+    item = _require_exact_mapping(value, keys, "comparison totals")
+    return ComparisonTotals(
+        completion_rate=_require_finite(item["completion_rate"], "completion rate"),
+        failure_rate=_require_finite(item["failure_rate"], "failure rate"),
+        agent_operations=_require_count(item["agent_operations"], "agent operations"),
+        judge_operations=_require_count(item["judge_operations"], "Judge operations"),
+        input_tokens=_require_count(item["input_tokens"], "input tokens"),
+        cached_input_tokens=_require_count(
+            item["cached_input_tokens"], "cached input tokens"
+        ),
+        output_tokens=_require_count(item["output_tokens"], "output tokens"),
+        total_tokens=_require_count(item["total_tokens"], "total tokens"),
+        cost_usd=_require_finite(item["cost_usd"], "comparison cost", minimum=0.0),
+    )
+
+
+def _parse_compared_query(value: object, *, excluded: bool) -> _ComparedQueryEvidence:
+    keys = {"status", "judge_verdict", "ndcg_at_10", "evidence_sha256"}
+    if excluded:
+        keys.add("exclusion_reason")
+    item = _require_exact_mapping(value, keys, "compared query")
+    return _ComparedQueryEvidence(
+        status=item["status"],
+        judge_verdict=item["judge_verdict"],
+        ndcg_at_10=item["ndcg_at_10"],
+        evidence_sha256=item["evidence_sha256"],
+        exclusion_reason=item["exclusion_reason"] if excluded else None,
+    )
+
+
+def _parse_matched_pair(value: object) -> _MatchedPairEvidence:
+    item = _require_exact_mapping(
+        value, {"query_id", "baseline", "candidate"}, "matched pair"
+    )
+    return _MatchedPairEvidence(
+        query_id=item["query_id"],
+        baseline=_parse_compared_query(item["baseline"], excluded=False),
+        candidate=_parse_compared_query(item["candidate"], excluded=False),
+    )
+
+
+def _parse_exclusion(value: object) -> _ExclusionEvidence:
+    item = _require_exact_mapping(
+        value, {"query_id", "baseline", "candidate"}, "exclusion"
+    )
+    return _ExclusionEvidence(
+        query_id=item["query_id"],
+        baseline=_parse_compared_query(item["baseline"], excluded=True),
+        candidate=_parse_compared_query(item["candidate"], excluded=True),
+    )
+
+
+def _parse_metric(value: object) -> MetricComparison:
+    item = _require_exact_mapping(
+        value,
+        {
+            "baseline",
+            "candidate",
+            "delta",
+            "confidence_interval",
+            "margin",
+            "accepted",
+            "estimator",
+        },
+        "metric comparison",
+    )
+    interval = _require_exact_mapping(
+        item["confidence_interval"], {"lower", "upper"}, "confidence interval"
+    )
+    estimator = _require_exact_mapping(
+        item["estimator"],
+        {"name", "seed", "resamples", "sample_sha256"},
+        "estimator",
+    )
+    return MetricComparison(
+        baseline=item["baseline"],
+        candidate=item["candidate"],
+        delta=item["delta"],
+        confidence_interval=ConfidenceInterval(
+            lower=interval["lower"], upper=interval["upper"]
+        ),
+        margin=item["margin"],
+        accepted=item["accepted"],
+        estimator=EstimatorEvidence(
+            name=estimator["name"],
+            seed=estimator["seed"],
+            resamples=estimator["resamples"],
+            sample_sha256=estimator["sample_sha256"],
+        ),
+    )
+
+
+def _metric_value(row: QueryEvidence | _ComparedQueryEvidence, metric: str) -> float:
     if row.status != "completed":
         return 0.0
     if metric == "accuracy":
@@ -1171,15 +1378,12 @@ def _metric_value(row: QueryEvidence, metric: str) -> float:
     return row.ndcg_at_10 if row.ndcg_at_10 is not None else 0.0
 
 
-def _paired_metric(
-    baseline: tuple[QueryEvidence, ...],
-    candidate: tuple[QueryEvidence, ...],
-    metric: str,
+def _paired_metric_values(
+    baseline_values: tuple[float, ...],
+    candidate_values: tuple[float, ...],
     margin: float,
     sample_sha256: str,
 ) -> MetricComparison:
-    baseline_values = tuple(_metric_value(row, metric) for row in baseline)
-    candidate_values = tuple(_metric_value(row, metric) for row in candidate)
     differences = tuple(
         candidate_value - baseline_value
         for baseline_value, candidate_value in zip(
@@ -1214,6 +1418,46 @@ def _paired_metric(
             sample_sha256=sample_sha256,
         ),
     )
+
+
+def _recompute_metrics(
+    pairs: tuple[_MatchedPairEvidence, ...],
+    metric_names: tuple[str, ...],
+    profile: ExperimentProfile,
+) -> dict[str, MetricComparison]:
+    """Purely recompute report statistics from retained pair evidence."""
+
+    comparison = dict(profile.comparison)
+    margins = {
+        "accuracy": _require_finite(
+            comparison.get("accuracy_margin"), "accuracy margin"
+        ),
+        "ndcg_at_10": _require_finite(
+            comparison.get("ndcg_margin"), "NDCG margin"
+        ),
+    }
+    if (
+        not metric_names
+        or len(set(metric_names)) != len(metric_names)
+        or set(metric_names) - set(margins)
+    ):
+        raise ValueError("DCI reproduction comparison metrics are invalid")
+    metrics: dict[str, MetricComparison] = {}
+    for metric in metric_names:
+        sample_sha256 = canonical_sha256(
+            {
+                "schema": "dci.paired-bootstrap-sample/v1",
+                "metric": metric,
+                "pairs": [pair.to_dict() for pair in pairs],
+            }
+        )
+        metrics[metric] = _paired_metric_values(
+            tuple(_metric_value(pair.baseline, metric) for pair in pairs),
+            tuple(_metric_value(pair.candidate, metric) for pair in pairs),
+            margins[metric],
+            sample_sha256,
+        )
+    return metrics
 
 
 def _profile_digest(profile: ExperimentProfile) -> str:
@@ -1354,8 +1598,6 @@ def compare_reproduction_runs(
             )
         )
     pair_ids = tuple(query_id for query_id in all_ids if query_id not in exclusion_ids)
-    baseline_pairs = tuple(baseline_by_id[query_id] for query_id in pair_ids)
-    candidate_pairs = tuple(candidate_by_id[query_id] for query_id in pair_ids)
     pairs = tuple(
         _MatchedPairEvidence(
             query_id=query_id,
@@ -1364,42 +1606,14 @@ def compare_reproduction_runs(
         )
         for query_id in pair_ids
     )
-    comparison = dict(profile.comparison)
-    metrics: dict[str, MetricComparison] = {}
+    metric_names: list[str] = []
     has_accuracy = _ACCURACY_METRIC in baseline.metric_identities
     has_ndcg = _NDCG_METRIC in baseline.metric_identities
     if has_accuracy:
-        accuracy_sample_sha256 = canonical_sha256(
-            {
-                "schema": "dci.paired-bootstrap-sample/v1",
-                "metric": "accuracy",
-                "pairs": [pair.to_dict() for pair in pairs],
-            }
-        )
-        metrics["accuracy"] = _paired_metric(
-            baseline_pairs,
-            candidate_pairs,
-            "accuracy",
-            _require_finite(comparison.get("accuracy_margin"), "accuracy margin"),
-            accuracy_sample_sha256,
-        )
+        metric_names.append("accuracy")
     if has_ndcg:
-        ndcg_sample_sha256 = canonical_sha256(
-            {
-                "schema": "dci.paired-bootstrap-sample/v1",
-                "metric": "ndcg_at_10",
-                "pairs": [pair.to_dict() for pair in pairs],
-            }
-        )
-        metrics["ndcg_at_10"] = _paired_metric(
-            baseline_pairs,
-            candidate_pairs,
-            "ndcg_at_10",
-            _require_finite(comparison.get("ndcg_margin"), "NDCG margin"),
-            ndcg_sample_sha256,
-        )
-    if not metrics:
-        raise ValueError("DCI reproduction comparison has no metric evidence")
+        metric_names.append("ndcg_at_10")
+    metrics = _recompute_metrics(pairs, tuple(metric_names), profile)
     accepted = all(metric.accepted for metric in metrics.values())
     baseline_totals = ComparisonTotals.from_manifest(baseline)
     candidate_totals = ComparisonTotals.from_manifest(candidate)
@@ -1451,6 +1665,7 @@ def compare_reproduction_runs(
 def write_comparison_report(path: Path, report: ComparisonReport) -> None:
     """Write a deterministic report beneath a private directory."""
 
+    payload = report.to_json_bytes()
     destination = Path(path)
     parent = destination.parent
     if parent.exists():
@@ -1471,8 +1686,22 @@ def write_comparison_report(path: Path, report: ComparisonReport) -> None:
     try:
         os.fchmod(descriptor, 0o600)
         with os.fdopen(descriptor, "wb", closefd=False) as handle:
-            handle.write(report.to_json_bytes())
+            handle.write(payload)
             handle.flush()
             os.fsync(handle.fileno())
     finally:
         os.close(descriptor)
+
+
+def load_comparison_report(path: Path) -> ComparisonReport:
+    """Load one exact, duplicate-key-free, body-free comparison report."""
+
+    source = Path(path)
+    try:
+        metadata = source.lstat()
+        if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
+            raise ValueError("DCI reproduction comparison path is invalid")
+        payload = json.loads(source.read_text(encoding="utf-8"), object_pairs_hook=_unique_object)
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        raise ValueError("DCI reproduction comparison is invalid") from None
+    return ComparisonReport.from_mapping(payload)
