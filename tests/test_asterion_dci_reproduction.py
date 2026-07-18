@@ -130,8 +130,8 @@ def _manifest(
     *,
     profile_id: str = "current-default/pi",
     runtime: str = "pi",
-    dataset_id: str = "qa.fixture.main",
-    selection_id: str = "qa.fixture.main.all",
+    dataset_id: str | None = None,
+    selection_id: str | None = None,
     selection_sha256: str = _SHA_A,
     effective_config_sha256: str = _SHA_B,
     product: str = "asterion-dci",
@@ -142,6 +142,12 @@ def _manifest(
         metric_identities = ["ndcg@10-binary-deduplicated"]
     else:
         metric_identities = ["llm-answer-correctness"]
+    dataset_id = dataset_id or (
+        "beir.arguana"
+        if metric_identities == ["ndcg@10-binary-deduplicated"]
+        else "qa.bamboogle"
+    )
+    selection_id = selection_id or f"{dataset_id}.fixture.all"
     value: dict[str, object] = {
         "schema": RUN_MANIFEST_SCHEMA,
         "run_id": run_id or (
@@ -200,6 +206,19 @@ def _forge_report_metrics(report, metrics: dict[str, MetricComparison]):
             if field.name == "metrics"
             else getattr(report, field.name),
         )
+    from asterion.dci.paper_benchmarks import canonical_sha256
+
+    object.__setattr__(forged, "identity_sha256", canonical_sha256(forged._unsigned_dict()))
+    return forged
+
+
+def _forge_report(report, **changes: object):
+    forged = object.__new__(type(report))
+    for field in fields(report):
+        value = changes.get(field.name, getattr(report, field.name))
+        if field.name == "metrics":
+            value = MappingProxyType(dict(value))  # type: ignore[arg-type]
+        object.__setattr__(forged, field.name, value)
     from asterion.dci.paper_benchmarks import canonical_sha256
 
     object.__setattr__(forged, "identity_sha256", canonical_sha256(forged._unsigned_dict()))
@@ -437,6 +456,28 @@ class ReproductionStatisticsTests(unittest.TestCase):
             ),
         }
 
+    def _assert_report_forgery_rejected_everywhere(self, forged) -> None:
+        with self.assertRaises(ValueError):
+            replace(forged, identity_sha256=forged.identity_sha256)
+        with self.assertRaises(ValueError):
+            forged.to_dict()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            serialized = {
+                **forged._unsigned_dict(),
+                "identity_sha256": forged.identity_sha256,
+            }
+            source = root / "forged.json"
+            _write(source, serialized)
+            with self.assertRaises(ValueError):
+                reproduction_module.load_comparison_report(source)
+            private = root / "private"
+            private.mkdir(mode=0o700)
+            output = private / "report.json"
+            with self.assertRaises(ValueError):
+                write_comparison_report(output, forged)
+            self.assertFalse(output.exists())
+
     def test_accuracy_minus_point_zero_four_passes_and_is_deterministic(self) -> None:
         report = self._accuracy_report(count=2_500, regressions=100)
         metric = report.metrics["accuracy"]
@@ -652,6 +693,86 @@ class ReproductionStatisticsTests(unittest.TestCase):
             path.write_bytes(report.to_json_bytes())
             loaded = reproduction_module.load_comparison_report(path)
         self.assertEqual(loaded.to_json_bytes(), report.to_json_bytes())
+
+    def test_report_binds_required_metric_identities_and_rejects_deletion(self) -> None:
+        report = self._accuracy_report(count=20, regressions=0)
+        self.assertEqual(report.metric_identities, ("llm-answer-correctness",))
+        forged = _forge_report(
+            report,
+            metric_identities=(),
+            metrics={},
+            accepted=True,
+        )
+        self._assert_report_forgery_rejected_everywhere(forged)
+
+    def test_report_replays_full_exclusion_contract(self) -> None:
+        rows = [
+            _query("q-1"),
+            _query("q-2", verdict=None, exclusion_reason="metric.not-applicable/v1"),
+        ]
+        report = compare_reproduction_runs(
+            self._loaded(_source_manifest(rows)),
+            self._loaded(_manifest(rows)),
+            resolve_experiment_profile("current-default/pi"),
+        )
+        exclusion = report.exclusions[0]
+        variants = {
+            "asymmetric": replace(
+                exclusion,
+                candidate=replace(
+                    exclusion.candidate, exclusion_reason="metric.other/v1"
+                ),
+            ),
+            "unallowed": replace(
+                exclusion,
+                baseline=replace(
+                    exclusion.baseline, exclusion_reason="metric.other/v1"
+                ),
+                candidate=replace(
+                    exclusion.candidate, exclusion_reason="metric.other/v1"
+                ),
+            ),
+            "noncompleted": replace(
+                exclusion,
+                baseline=replace(exclusion.baseline, status="failed"),
+                candidate=replace(exclusion.candidate, status="failed"),
+            ),
+        }
+        for drift, forged_exclusion in variants.items():
+            with self.subTest(drift=drift):
+                self._assert_report_forgery_rejected_everywhere(
+                    _forge_report(report, exclusions=(forged_exclusion,))
+                )
+
+    def test_target_report_binds_exact_profile_target_and_runtime(self) -> None:
+        profile = resolve_experiment_profile("paper-reference/claude-code")
+        report = compare_reproduction_runs(
+            None,
+            self._loaded(
+                _manifest(
+                    [_query("q-1")],
+                    profile_id=profile.profile_id,
+                    runtime="claude-code",
+                )
+            ),
+            profile,
+        )
+        self.assertEqual(report.runtime, "claude-code")
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "target-report.json"
+            path.write_bytes(report.to_json_bytes())
+            self.assertEqual(
+                reproduction_module.load_comparison_report(path).to_json_bytes(),
+                report.to_json_bytes(),
+            )
+        variants = {
+            "wrong-target": _forge_report(report, target_identity="DCI-Agent-Lite"),
+            "wrong-profile-digest": _forge_report(report, profile_sha256=_SHA_A),
+            "wrong-runtime": _forge_report(report, runtime="pi"),
+        }
+        for drift, forged in variants.items():
+            with self.subTest(drift=drift):
+                self._assert_report_forgery_rejected_everywhere(forged)
 
     def test_serialization_rejects_self_hashed_cross_field_metric_forgery(self) -> None:
         for drift, forged in self._forged_metric_reports().items():

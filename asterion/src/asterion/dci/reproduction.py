@@ -20,6 +20,7 @@ from asterion.dci.experiment_profiles import (
     resolve_experiment_profile,
 )
 from asterion.dci.paper_benchmarks import canonical_sha256
+from asterion.dci.paper_benchmarks import resolve_paper_benchmark
 
 RUN_MANIFEST_SCHEMA = "dci.reproduction-run/v1"
 COMPARISON_SCHEMA = "dci.reproduction-comparison/v1"
@@ -120,11 +121,15 @@ _COMPARISON_KEYS = {
     "comparison_kind",
     "profile_id",
     "profile_sha256",
+    "profile_provider",
+    "profile_model",
+    "runtime",
     "dataset_id",
     "selection_id",
     "selection_sha256",
     "effective_config_sha256",
     "metric_contract_sha256",
+    "metric_identities",
     "baseline_product",
     "baseline_implementation_sha256",
     "baseline_product_effective_config_sha256",
@@ -1023,11 +1028,15 @@ class ComparisonReport:
     comparison_kind: str
     profile_id: str
     profile_sha256: str
+    profile_provider: str | None
+    profile_model: str | None
+    runtime: str
     dataset_id: str
     selection_id: str
     selection_sha256: str
     effective_config_sha256: str
     metric_contract_sha256: str
+    metric_identities: tuple[str, ...]
     baseline_product: str | None
     baseline_implementation_sha256: str | None
     baseline_product_effective_config_sha256: str | None
@@ -1084,11 +1093,17 @@ class ComparisonReport:
             comparison_kind=item["comparison_kind"],
             profile_id=item["profile_id"],
             profile_sha256=item["profile_sha256"],
+            profile_provider=item["profile_provider"],
+            profile_model=item["profile_model"],
+            runtime=item["runtime"],
             dataset_id=item["dataset_id"],
             selection_id=item["selection_id"],
             selection_sha256=item["selection_sha256"],
             effective_config_sha256=item["effective_config_sha256"],
             metric_contract_sha256=item["metric_contract_sha256"],
+            metric_identities=tuple(item["metric_identities"])
+            if type(item["metric_identities"]) is list
+            else (),
             baseline_product=item["baseline_product"],
             baseline_implementation_sha256=item["baseline_implementation_sha256"],
             baseline_product_effective_config_sha256=item[
@@ -1124,11 +1139,18 @@ class ComparisonReport:
             raise ValueError("DCI reproduction comparison kind is invalid")
         for value, label in (
             (self.profile_id, "comparison profile ID"),
+            (self.runtime, "comparison runtime"),
             (self.dataset_id, "comparison dataset ID"),
             (self.selection_id, "comparison selection ID"),
             (self.candidate_product, "candidate product"),
         ):
             _require_public_id(value, label)
+        for value, label in (
+            (self.profile_provider, "comparison profile provider"),
+            (self.profile_model, "comparison profile model"),
+        ):
+            if value is not None:
+                _require_public_id(value, label)
         for value, label in (
             (self.profile_sha256, "comparison profile digest"),
             (self.selection_sha256, "comparison selection digest"),
@@ -1154,8 +1176,21 @@ class ComparisonReport:
             or any(type(item) is not _ExclusionEvidence for item in self.exclusions)
             or set(self.metrics) - {"accuracy", "ndcg_at_10"}
             or any(type(metric) is not MetricComparison for metric in self.metrics.values())
+            or type(self.metric_identities) is not tuple
         ):
             raise ValueError("DCI reproduction comparison values are invalid")
+        profile = _resolve_report_profile(self)
+        expected_metric_identities, expected_metric_names = _expected_report_metrics(
+            profile, self.dataset_id
+        )
+        if (
+            self.profile_sha256 != _profile_digest(profile)
+            or self.profile_provider != profile.provider
+            or self.profile_model != profile.model
+            or self.runtime != profile.runtime
+            or self.metric_identities != expected_metric_identities
+        ):
+            raise ValueError("DCI reproduction comparison profile contract drifted")
         pair_ids = self.pair_ids
         exclusion_ids = self.exclusion_ids
         if (
@@ -1190,12 +1225,10 @@ class ComparisonReport:
                 (self.baseline_run_sha256, "baseline run digest"),
             ):
                 _require_sha256(value, label)
-            profile = resolve_experiment_profile(self.profile_id)
-            if self.profile_sha256 != _profile_digest(profile):
-                raise ValueError("DCI reproduction comparison profile drifted")
-            expected_metrics = _recompute_metrics(
-                self.pairs, tuple(self.metrics), profile
+            _validate_report_evidence(
+                self.pairs, self.exclusions, self.metric_identities, profile.profile_id
             )
+            expected_metrics = _recompute_metrics(self.pairs, expected_metric_names, profile)
             if (
                 dict(self.metrics) != expected_metrics
                 or self.accepted
@@ -1210,12 +1243,18 @@ class ComparisonReport:
                 or self.baseline_run_sha256 is not None
                 or self.baseline is not None
                 or self.pairs
+                or self.exclusions
                 or self.metrics
                 or self.accepted is not None
                 or type(self.target_identity) is not str
             ):
                 raise ValueError("DCI target comparison is invalid")
             _require_public_id(self.target_identity, "target identity")
+            expected_target = profile.comparison.get(
+                "published_target"
+            ) or profile.comparison.get("target_identity")
+            if self.target_identity != expected_target:
+                raise ValueError("DCI target comparison identity drifted")
         if self.identity_sha256 != canonical_sha256(self._unsigned_dict()):
             raise ValueError("DCI reproduction comparison identity is invalid")
 
@@ -1225,11 +1264,15 @@ class ComparisonReport:
             "comparison_kind": self.comparison_kind,
             "profile_id": self.profile_id,
             "profile_sha256": self.profile_sha256,
+            "profile_provider": self.profile_provider,
+            "profile_model": self.profile_model,
+            "runtime": self.runtime,
             "dataset_id": self.dataset_id,
             "selection_id": self.selection_id,
             "selection_sha256": self.selection_sha256,
             "effective_config_sha256": self.effective_config_sha256,
             "metric_contract_sha256": self.metric_contract_sha256,
+            "metric_identities": list(self.metric_identities),
             "baseline_product": self.baseline_product,
             "baseline_implementation_sha256": self.baseline_implementation_sha256,
             "baseline_product_effective_config_sha256": self.baseline_product_effective_config_sha256,
@@ -1472,6 +1515,74 @@ def _profile_digest(profile: ExperimentProfile) -> str:
     )
 
 
+def _resolve_report_profile(report: ComparisonReport) -> ExperimentProfile:
+    if report.profile_id == "current-default/claude-minimax":
+        return resolve_experiment_profile(
+            report.profile_id,
+            invocation_provider=report.profile_provider,
+            invocation_model=report.profile_model,
+        )
+    return resolve_experiment_profile(report.profile_id)
+
+
+def _expected_report_metrics(
+    profile: ExperimentProfile, dataset_id: str
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    benchmark = resolve_paper_benchmark(dataset_id)
+    mode_metric = {
+        "qa": _ACCURACY_METRIC,
+        "ir": _NDCG_METRIC,
+    }.get(benchmark.mode)
+    contract_metrics = tuple(_metric_contract(profile.profile_id)["metric_identities"])
+    if (
+        mode_metric is None
+        or benchmark.metric != mode_metric
+        or mode_metric not in profile.metric_identities
+        or mode_metric not in contract_metrics
+    ):
+        raise ValueError("DCI reproduction benchmark metric contract drifted")
+    metric_name = "accuracy" if mode_metric == _ACCURACY_METRIC else "ndcg_at_10"
+    return (mode_metric,), (metric_name,)
+
+
+def _validate_report_evidence(
+    pairs: tuple[_MatchedPairEvidence, ...],
+    exclusions: tuple[_ExclusionEvidence, ...],
+    metric_identities: tuple[str, ...],
+    profile_id: str,
+) -> None:
+    contract = _metric_contract(profile_id)
+    allowed_reasons = set(contract["allowed_exclusion_reasons"])
+    allowed_statuses = set(contract["allowed_exclusion_statuses"])
+    for exclusion in exclusions:
+        baseline = exclusion.baseline
+        candidate = exclusion.candidate
+        if (
+            baseline.exclusion_reason != candidate.exclusion_reason
+            or baseline.exclusion_reason not in allowed_reasons
+            or baseline.status not in allowed_statuses
+            or candidate.status not in allowed_statuses
+        ):
+            raise ValueError("DCI reproduction exclusion contract drifted")
+    has_accuracy = _ACCURACY_METRIC in metric_identities
+    has_ndcg = _NDCG_METRIC in metric_identities
+    for pair in pairs:
+        for evidence in (pair.baseline, pair.candidate):
+            if evidence.status == "completed" and (
+                (has_accuracy and type(evidence.judge_verdict) is not bool)
+                or (has_ndcg and evidence.ndcg_at_10 is None)
+            ):
+                raise ValueError("DCI reproduction matched metric evidence drifted")
+            if (not has_accuracy and evidence.judge_verdict is not None) or (
+                not has_ndcg and evidence.ndcg_at_10 is not None
+            ):
+                raise ValueError("DCI reproduction undeclared metric evidence drifted")
+    for exclusion in exclusions:
+        for evidence in (exclusion.baseline, exclusion.candidate):
+            if evidence.judge_verdict is not None or evidence.ndcg_at_10 is not None:
+                raise ValueError("DCI reproduction excluded metric evidence drifted")
+
+
 def compare_reproduction_runs(
     baseline: RunManifest | None,
     candidate: RunManifest,
@@ -1490,6 +1601,11 @@ def compare_reproduction_runs(
         raise ValueError("DCI reproduction profile identity drifted")
     if candidate.runtime != profile.runtime:
         raise ValueError("DCI reproduction runtime identity drifted")
+    expected_metric_identities, expected_metric_names = _expected_report_metrics(
+        profile, candidate.dataset_id
+    )
+    if candidate.metric_identities != expected_metric_identities:
+        raise ValueError("DCI reproduction benchmark metric identity drifted")
     if profile.runtime == "claude-code":
         if baseline is not None:
             raise ValueError("DCI Claude reproduction has no source parity baseline")
@@ -1505,11 +1621,15 @@ def compare_reproduction_runs(
             comparison_kind="target-comparison",
             profile_id=profile.profile_id,
             profile_sha256=profile_digest,
+            profile_provider=profile.provider,
+            profile_model=profile.model,
+            runtime=profile.runtime,
             dataset_id=candidate.dataset_id,
             selection_id=candidate.selection_id,
             selection_sha256=candidate.selection_sha256,
             effective_config_sha256=candidate.effective_config_sha256,
             metric_contract_sha256=candidate.metric_contract_sha256,
+            metric_identities=expected_metric_identities,
             baseline_product=None,
             baseline_implementation_sha256=None,
             baseline_product_effective_config_sha256=None,
@@ -1606,14 +1726,7 @@ def compare_reproduction_runs(
         )
         for query_id in pair_ids
     )
-    metric_names: list[str] = []
-    has_accuracy = _ACCURACY_METRIC in baseline.metric_identities
-    has_ndcg = _NDCG_METRIC in baseline.metric_identities
-    if has_accuracy:
-        metric_names.append("accuracy")
-    if has_ndcg:
-        metric_names.append("ndcg_at_10")
-    metrics = _recompute_metrics(pairs, tuple(metric_names), profile)
+    metrics = _recompute_metrics(pairs, expected_metric_names, profile)
     accepted = all(metric.accepted for metric in metrics.values())
     baseline_totals = ComparisonTotals.from_manifest(baseline)
     candidate_totals = ComparisonTotals.from_manifest(candidate)
@@ -1621,11 +1734,15 @@ def compare_reproduction_runs(
         comparison_kind="source-parity",
         profile_id=profile.profile_id,
         profile_sha256=profile_digest,
+        profile_provider=profile.provider,
+        profile_model=profile.model,
+        runtime=profile.runtime,
         dataset_id=candidate.dataset_id,
         selection_id=candidate.selection_id,
         selection_sha256=candidate.selection_sha256,
         effective_config_sha256=candidate.effective_config_sha256,
         metric_contract_sha256=candidate.metric_contract_sha256,
+        metric_identities=expected_metric_identities,
         baseline_product=baseline.product,
         baseline_implementation_sha256=baseline.implementation_sha256,
         baseline_product_effective_config_sha256=(
