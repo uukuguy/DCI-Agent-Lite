@@ -13,6 +13,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+import scripts.bcplus_eval.run_bcplus_eval as source_batch
+from dci.benchmark.judge import (
+    JudgeConfig as SourceJudgeConfig,
+    judge_public_identity as source_judge_public_identity,
+)
+
 from asterion.dci.analysis import (
     aggregate_results,
     compute_run_batch_timing,
@@ -36,7 +42,7 @@ from asterion.dci.artifacts import DciConversationFeatures
 from asterion.dci.config import DciRuntimeOptions, resolve_dci_paths
 from asterion.dci.context_extension import resolve_context_extension
 from asterion.dci.context_profiles import resolve_context_profile
-from asterion.dci.judge import JudgeConfig
+from asterion.dci.judge import JudgeConfig, judge_public_identity
 from asterion.dci.evaluation import evaluate_run_directory_async as _real_evaluate
 from asterion.dci.pi_rpc import _pi_child_environment, expand_extra_args
 from asterion.dci.run import DciRunResult
@@ -134,6 +140,78 @@ async def _recorded_fixture_evaluate(*args: object, **kwargs: object) -> dict[st
 
 
 class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
+    def test_source_batch_reuse_requires_complete_safe_judge_identity(self) -> None:
+        config = SourceJudgeConfig(api_key="credential-one")
+        persisted = {**source_judge_public_identity(config), "is_correct": True}
+
+        self.assertTrue(source_batch.judge_result_succeeded(persisted, config))
+        for changed in (
+            replace(config, responses_store=True),
+            replace(config, output_price_per_1m=3.0),
+            replace(config, api_key_env="OTHER_JUDGE_KEY"),
+        ):
+            with self.subTest(changed=changed):
+                self.assertFalse(
+                    source_batch.judge_result_succeeded(persisted, changed)
+                )
+        changed_prompt = {
+            **source_judge_public_identity(config),
+            "prompt_contract_sha256": "f" * 64,
+        }
+        with patch.object(
+            source_batch,
+            "judge_public_identity",
+            return_value=changed_prompt,
+            create=True,
+        ):
+            self.assertFalse(source_batch.judge_result_succeeded(persisted, config))
+        self.assertTrue(
+            source_batch.judge_result_succeeded(
+                persisted, replace(config, api_key="credential-two")
+            )
+        )
+        with patch.object(
+            source_batch,
+            "judge_answer_sync",
+            return_value={"is_correct": True},
+        ):
+            produced = asyncio.run(source_batch.judge_answer_async(config=config))
+        for key, value in source_judge_public_identity(config).items():
+            self.assertEqual(produced[key], value)
+
+    def test_asterion_batch_identity_includes_complete_safe_judge_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            request = _request(root)
+            _rows, _output, config, _items, _snapshots = _prepare(request)
+            identity = judge_public_identity(request.judge_config)
+
+            self.assertEqual(config["judge"], identity)
+            self.assertEqual(
+                config["judge_configuration_fingerprint"],
+                hashlib.sha256(
+                    json.dumps(
+                        identity,
+                        ensure_ascii=False,
+                        sort_keys=True,
+                        separators=(",", ":"),
+                        allow_nan=False,
+                    ).encode("utf-8")
+                ).hexdigest(),
+            )
+
+            credential_only = replace(
+                request,
+                judge_config=replace(
+                    request.judge_config, api_key="credential-only-change"
+                ),
+            )
+            _rows, _output, unchanged, _items, _snapshots = _prepare(credential_only)
+            self.assertEqual(
+                config["judge_configuration_fingerprint"],
+                unchanged["judge_configuration_fingerprint"],
+            )
+
     def test_af240_task3_inventory_rows_have_executable_evidence(self) -> None:
         inventory = json.loads(
             (

@@ -31,6 +31,7 @@ from dci.benchmark.judge import (  # noqa: E402
     DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M,
     JudgeConfig,
     judge_answer_sync,
+    judge_public_identity,
 )
 from dci.config import (  # noqa: E402
     ConfigLayers,
@@ -296,13 +297,7 @@ def effective_config_for_batch(
 ) -> Dict[str, object]:
     judge: Dict[str, object] = {}
     if judge_config is not None:
-        judge = {
-            "endpoint": judge_config.endpoint,
-            "api": judge_config.api,
-            "model": judge_config.model,
-            "thinking": judge_config.effective_thinking,
-            "json_mode": judge_config.json_mode,
-        }
+        judge = judge_public_identity(judge_config)
     return OriginalEffectiveConfig(
         runtime=runtime,
         context={
@@ -635,18 +630,9 @@ def judge_result_succeeded(
     if judge_result.get("error"):
         return False
     if judge_config is not None:
-        current_config = judge_config.public_dict()
-        for key in (
-            "judge_model",
-            "judge_base_url",
-            "judge_api",
-            "judge_max_output_tokens",
-            "judge_json_mode",
-            "judge_strict_json_schema",
-            "judge_thinking",
-        ):
-            if judge_result.get(key) != current_config.get(key):
-                return False
+        current_config = judge_public_identity(judge_config)
+        if any(judge_result.get(key) != value for key, value in current_config.items()):
+            return False
     return isinstance(judge_result.get("is_correct"), bool)
 
 
@@ -667,7 +653,7 @@ def existing_result_succeeded(
 
 def build_failed_judge_result(*, config: JudgeConfig, error: str, attempts: int) -> Dict[str, Any]:
     return {
-        **config.public_dict(),
+        **judge_public_identity(config),
         "judged_at": utc_now(),
         "judge_status": "failed",
         "is_correct": None,
@@ -695,6 +681,7 @@ async def judge_answer_async(**kwargs: Any) -> Dict[str, Any]:
     for attempt in range(1, max_attempts + 1):
         try:
             result = await asyncio.to_thread(judge_answer_sync, **kwargs)
+            result.update(judge_public_identity(config))
             result["judge_status"] = "completed"
             result["attempt_count"] = attempt
             return result
@@ -1834,7 +1821,7 @@ async def main_async() -> int:
         "question_count": len(rows),
     }
     if judge_config is not None:
-        run_config.update(judge_config.public_dict())
+        run_config.update(judge_public_identity(judge_config))
     write_json(args.output_root / "config.json", run_config)
 
     semaphore = asyncio.Semaphore(args.max_concurrency)

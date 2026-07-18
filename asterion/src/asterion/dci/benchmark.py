@@ -46,7 +46,11 @@ from asterion.dci.evaluation import (
     _load_reusable_result,
     evaluate_run_directory_async,
 )
-from asterion.dci.judge import JudgeConfig, judge_request_fingerprint
+from asterion.dci.judge import (
+    JudgeConfig,
+    judge_public_identity,
+    judge_request_fingerprint,
+)
 from asterion.dci.paper_benchmarks import (
     paper_scope_for_profile,
     paper_scope_for_selected_ids,
@@ -553,7 +557,7 @@ def _prepare(
         str(canonical_input_identity(request.corpus)) if request.corpus else None
     )
     runtime = _runtime_document(request.runtime_options)
-    judge = request.judge_config.public_dict()
+    judge = judge_public_identity(request.judge_config)
     judge_fingerprint = _fingerprint(judge)
     dataset_identity = canonical_input_identity(request.dataset)
     dataset_digest = hashlib.sha256(dataset_raw).hexdigest()

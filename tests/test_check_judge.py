@@ -308,6 +308,13 @@ class CheckJudgeTests(unittest.TestCase):
         self.assertIn("DCI_MODEL=gpt-5.6-luna", template)
         self.assertIn("local subscription login", template)
         self.assertIn("CLI", template)
+        self.assertIn(
+            "Subscription mode omits DCI_PROVIDER and DCI_MODEL", template
+        )
+        self.assertIn(
+            "Only explicit compatible MiniMax mode consumes those shared fields",
+            template,
+        )
 
 
 if __name__ == "__main__":
