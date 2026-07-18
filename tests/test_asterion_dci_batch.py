@@ -109,6 +109,25 @@ def _emit_measured_failure_events(on_event) -> None:
     })
 
 
+def _refingerprint_config(config: dict[str, object]) -> None:
+    config["run_fingerprint"] = _fingerprint(
+        {
+            key: item
+            for key, item in config.items()
+            if key
+            not in {
+                "judge",
+                "judge_configuration_fingerprint",
+                "run_fingerprint",
+                "batch_fingerprint",
+            }
+        }
+    )
+    config["batch_fingerprint"] = _fingerprint(
+        {key: item for key, item in config.items() if key != "batch_fingerprint"}
+    )
+
+
 class _MeasuredFailingFixtureClient(_FixtureClient):
     def prompt_and_wait(self, _message: str, *, on_event, **_kwargs: object) -> str:
         _emit_measured_failure_events(on_event)
@@ -1215,14 +1234,19 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(
                 config["selection"],
                 {
+                    "schema": "asterion.dci.selection/v1",
+                    "execution_class": "paper-bounded",
                     "id": "limit-1",
                     "paper_scope": paper_scope,
                     "selected_rows": 1,
                     "full_dataset": False,
                     "comparable": False,
+                    "authorization_profile": None,
                 },
             )
-            _validate_config_document(config)
+            _validate_config_document(
+                config, expected_execution_class="paper-bounded"
+            )
             for claim, value in (
                 ("full_dataset", True),
                 ("comparable", True),
@@ -1232,57 +1256,60 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
                 with self.subTest(forged_claim=claim):
                     forged = json.loads(json.dumps(config))
                     forged["selection"][claim] = value
-                    forged["run_fingerprint"] = _fingerprint(
-                        {
-                            key: item
-                            for key, item in forged.items()
-                            if key
-                            not in {
-                                "judge",
-                                "judge_configuration_fingerprint",
-                                "run_fingerprint",
-                                "batch_fingerprint",
-                            }
-                        }
-                    )
-                    forged["batch_fingerprint"] = _fingerprint(
-                        {
-                            key: item
-                            for key, item in forged.items()
-                            if key != "batch_fingerprint"
-                        }
-                    )
+                    _refingerprint_config(forged)
                     with self.assertRaisesRegex(
                         DciBenchmarkError, "configuration evidence is invalid"
                     ):
-                        _validate_config_document(forged)
+                        _validate_config_document(
+                            forged, expected_execution_class="paper-bounded"
+                        )
 
             forged = json.loads(json.dumps(config))
             forged["profile"] = "qa.bamboogle"
-            forged["run_fingerprint"] = _fingerprint(
-                {
-                    key: item
-                    for key, item in forged.items()
-                    if key
-                    not in {
-                        "judge",
-                        "judge_configuration_fingerprint",
-                        "run_fingerprint",
-                        "batch_fingerprint",
-                    }
-                }
-            )
-            forged["batch_fingerprint"] = _fingerprint(
-                {
-                    key: item
-                    for key, item in forged.items()
-                    if key != "batch_fingerprint"
-                }
-            )
+            _refingerprint_config(forged)
             with self.assertRaisesRegex(
                 DciBenchmarkError, "configuration evidence is invalid"
             ):
-                _validate_config_document(forged)
+                _validate_config_document(
+                    forged, expected_execution_class="paper-bounded"
+                )
+
+            for forged_selection in (
+                None,
+                {
+                    "schema": "asterion.dci.selection/v1",
+                    "execution_class": "non-paper",
+                    "id": "request",
+                    "paper_scope": None,
+                    "selected_rows": 1,
+                    "full_dataset": False,
+                    "comparable": True,
+                    "authorization_profile": None,
+                },
+                {
+                    "schema": "asterion.dci.selection/v1",
+                    "execution_class": "paper-full-authorized",
+                    "id": "paper-full",
+                    "paper_scope": paper_scope,
+                    "selected_rows": 830,
+                    "full_dataset": True,
+                    "comparable": False,
+                    "authorization_profile": "current-default/pi",
+                },
+            ):
+                with self.subTest(cross_class=forged_selection):
+                    forged = json.loads(json.dumps(config))
+                    if forged_selection is None:
+                        forged.pop("selection")
+                    else:
+                        forged["selection"] = forged_selection
+                    _refingerprint_config(forged)
+                    with self.assertRaisesRegex(
+                        DciBenchmarkError, "configuration evidence is invalid"
+                    ):
+                        _validate_config_document(
+                            forged, expected_execution_class="paper-bounded"
+                        )
 
             for limit in (None, 2):
                 with self.subTest(limit=limit), patch(
@@ -1362,6 +1389,56 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
             judge.assert_called_once()
             self.assertEqual(result.counts["total"], 1)
             self.assertTrue((result.output_root / selected[0]).is_dir())
+
+    def test_nonpaper_selection_is_explicit_and_legacy_resume_migrates(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            request = _request(root)
+            with patch(
+                "asterion.dci.benchmark._run_pi_async",
+                side_effect=_recorded_fixture_run,
+            ), patch(
+                "asterion.dci.benchmark.evaluate_run_directory_async",
+                side_effect=_recorded_fixture_evaluate,
+            ):
+                result = asyncio.run(run_benchmark_async(request, paths=Mock()))
+
+            config_path = result.output_root / "config.json"
+            config = json.loads(config_path.read_text())
+            self.assertEqual(
+                config["selection"],
+                {
+                    "schema": "asterion.dci.selection/v1",
+                    "execution_class": "non-paper",
+                    "id": "request",
+                    "paper_scope": None,
+                    "selected_rows": 1,
+                    "full_dataset": False,
+                    "comparable": False,
+                    "authorization_profile": None,
+                },
+            )
+            legacy = json.loads(json.dumps(config))
+            legacy.pop("selection")
+            _refingerprint_config(legacy)
+            with self.assertRaisesRegex(
+                DciBenchmarkError, "configuration evidence is invalid"
+            ):
+                _validate_config_document(
+                    legacy, expected_execution_class="non-paper"
+                )
+            config_path.write_text(json.dumps(legacy))
+
+            with patch(
+                "asterion.dci.benchmark._run_pi_async"
+            ) as run, patch(
+                "asterion.dci.benchmark.evaluate_run_directory_async"
+            ) as judge:
+                asyncio.run(run_benchmark_async(request, paths=Mock()))
+            run.assert_not_called()
+            judge.assert_not_called()
+            migrated = json.loads(config_path.read_text())
+            self.assertEqual(migrated["selection"], config["selection"])
 
     def test_af320_copied_paper_dataset_is_digest_gated_without_profile(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:

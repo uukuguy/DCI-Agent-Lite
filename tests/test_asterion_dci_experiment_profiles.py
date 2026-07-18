@@ -451,7 +451,13 @@ class FullExecutionAuthorizationTests(unittest.TestCase):
         module._profiles.cache_clear()
 
     def test_benchmark_prepare_consumes_real_scope_authorization_once(self) -> None:
-        from asterion.dci.benchmark import BenchmarkRequest, DciBenchmarkError, _prepare
+        from asterion.dci.benchmark import (
+            BenchmarkRequest,
+            DciBenchmarkError,
+            _fingerprint,
+            _prepare,
+            _validate_config_document,
+        )
         from asterion.dci.config import DciRuntimeOptions
         from asterion.dci.experiment_profiles import authorize_full_execution, resolve_experiment_profile
         from asterion.dci.judge import JudgeConfig
@@ -483,6 +489,50 @@ class FullExecutionAuthorizationTests(unittest.TestCase):
             )
             rows, *_rest = _prepare(request)
             self.assertEqual(len(rows), 50)
+            self.assertEqual(
+                _rest[1]["selection"],
+                {
+                    "schema": "asterion.dci.selection/v1",
+                    "execution_class": "paper-full-authorized",
+                    "id": "paper-full",
+                    "paper_scope": scope,
+                    "selected_rows": 50,
+                    "full_dataset": True,
+                    "comparable": True,
+                    "authorization_profile": "current-default/pi",
+                },
+            )
+            _validate_config_document(
+                _rest[1], expected_execution_class="paper-full-authorized"
+            )
+            forged = json.loads(json.dumps(_rest[1]))
+            forged.pop("selection")
+            forged["run_fingerprint"] = _fingerprint(
+                {
+                    key: value
+                    for key, value in forged.items()
+                    if key
+                    not in {
+                        "judge",
+                        "judge_configuration_fingerprint",
+                        "run_fingerprint",
+                        "batch_fingerprint",
+                    }
+                }
+            )
+            forged["batch_fingerprint"] = _fingerprint(
+                {
+                    key: value
+                    for key, value in forged.items()
+                    if key != "batch_fingerprint"
+                }
+            )
+            with self.assertRaisesRegex(
+                DciBenchmarkError, "configuration evidence is invalid"
+            ):
+                _validate_config_document(
+                    forged, expected_execution_class="paper-full-authorized"
+                )
             with self.assertRaisesRegex(DciBenchmarkError, "replay"):
                 _prepare(request)
 

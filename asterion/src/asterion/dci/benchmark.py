@@ -46,7 +46,10 @@ from asterion.dci.evaluation import (
     _load_reusable_result,
     evaluate_run_directory_async,
 )
-from asterion.dci.experiment_profiles import FullExecutionAuthorization
+from asterion.dci.experiment_profiles import (
+    FullExecutionAuthorization,
+    resolve_experiment_profile,
+)
 from asterion.dci.judge import (
     JudgeConfig,
     judge_public_identity,
@@ -57,6 +60,7 @@ from asterion.dci.paper_benchmarks import (
     paper_scope_for_selected_ids,
     published_scope_selected_ids,
     require_af320_executable_scope,
+    resolve_paper_experiment_scope,
 )
 from asterion.dci.analysis import (
     aggregate_results,
@@ -630,13 +634,42 @@ def _prepare(
         "prompt_resources": prompt_resources,
     }
     if bounded_paper_selection:
-        config["selection"] = {
+        selection = {
+            "schema": "asterion.dci.selection/v1",
+            "execution_class": "paper-bounded",
             "id": "limit-1",
             "paper_scope": paper_scope,
             "selected_rows": len(rows),
             "full_dataset": False,
             "comparable": False,
+            "authorization_profile": None,
         }
+    elif authorized_scope is not None:
+        authorization = request.full_execution_authorization
+        selection = {
+            "schema": "asterion.dci.selection/v1",
+            "execution_class": "paper-full-authorized",
+            "id": "paper-full",
+            "paper_scope": authorized_scope,
+            "selected_rows": len(rows),
+            "full_dataset": True,
+            "comparable": True,
+            "authorization_profile": (
+                authorization.profile_id if authorization is not None else None
+            ),
+        }
+    else:
+        selection = {
+            "schema": "asterion.dci.selection/v1",
+            "execution_class": "non-paper",
+            "id": "request",
+            "paper_scope": None,
+            "selected_rows": len(rows),
+            "full_dataset": False,
+            "comparable": False,
+            "authorization_profile": None,
+        }
+    config["selection"] = selection
     if resolution_config:
         config["resolution"] = resolution_config
     if ablation_identity is not None:
@@ -986,8 +1019,19 @@ def _preflight_locked(
         if names - {lock.LOCK_NAME}:
             raise DciBenchmarkError("DCI benchmark configuration evidence is missing")
     else:
-        _validate_config_document(existing)
-        if existing.get("run_fingerprint") != config["run_fingerprint"]:
+        legacy_nonpaper = "selection" not in existing
+        expected_selection = config.get("selection")
+        if not isinstance(expected_selection, dict):
+            raise DciBenchmarkError("DCI benchmark configuration evidence is invalid")
+        _validate_config_document(
+            existing,
+            expected_execution_class=str(expected_selection.get("execution_class")),
+            allow_legacy_nonpaper=legacy_nonpaper,
+        )
+        compatible_fingerprints = {config["run_fingerprint"]}
+        if legacy_nonpaper:
+            compatible_fingerprints.add(_legacy_nonpaper_run_fingerprint(config))
+        if existing.get("run_fingerprint") not in compatible_fingerprints:
             raise DciBenchmarkError("DCI benchmark configuration is incompatible")
     for item in items:
         query = lock.open_existing_query(str(item["query_id"]))
@@ -1005,7 +1049,39 @@ def _preflight_locked(
             raise DciBenchmarkError("DCI benchmark row is incompatible")
 
 
-def _validate_config_document(value: dict[str, Any]) -> None:
+def _legacy_nonpaper_run_fingerprint(config: dict[str, object]) -> str:
+    selection = config.get("selection")
+    if (
+        not isinstance(selection, dict)
+        or selection.get("execution_class") != "non-paper"
+    ):
+        return ""
+    legacy = {key: item for key, item in config.items() if key != "selection"}
+    return _fingerprint(
+        {
+            key: item
+            for key, item in legacy.items()
+            if key
+            not in {
+                "judge",
+                "judge_configuration_fingerprint",
+                "run_fingerprint",
+                "batch_fingerprint",
+            }
+        }
+    )
+
+
+def _validate_config_document(
+    value: dict[str, Any], *, expected_execution_class: str,
+    allow_legacy_nonpaper: bool = False,
+) -> None:
+    if expected_execution_class not in {
+        "paper-bounded",
+        "paper-full-authorized",
+        "non-paper",
+    }:
+        raise DciBenchmarkError("DCI benchmark configuration evidence is invalid")
     expected = {
         "schema", "dataset", "mode", "profile", "corpus_identity", "corpus_hint",
         "cwd", "runtime", "conversation_features", "max_concurrency", "max_turns",
@@ -1028,26 +1104,86 @@ def _validate_config_document(value: dict[str, Any]) -> None:
     ):
         raise DciBenchmarkError("DCI benchmark configuration evidence is invalid")
     selection = value.get("selection")
-    selection_profile_scope = None
-    if isinstance(selection, dict):
-        try:
-            selection_profile_scope = paper_scope_for_profile(value.get("profile"))
-        except ValueError:
-            pass
-    if selection is not None and (
+    try:
+        selection_profile_scope = paper_scope_for_profile(value.get("profile"))
+    except ValueError:
+        selection_profile_scope = None
+    if selection is None:
+        if (
+            not allow_legacy_nonpaper
+            or expected_execution_class != "non-paper"
+            or selection_profile_scope is not None
+        ):
+            raise DciBenchmarkError(
+                "DCI benchmark configuration evidence is invalid"
+            )
+    elif (
         not isinstance(selection, dict)
         or set(selection)
-        != {"id", "paper_scope", "selected_rows", "full_dataset", "comparable"}
-        or selection.get("id") != "limit-1"
-        or type(selection.get("paper_scope")) is not str
-        or not selection.get("paper_scope")
-        or selection.get("paper_scope") != selection_profile_scope
+        != {
+            "schema",
+            "execution_class",
+            "id",
+            "paper_scope",
+            "selected_rows",
+            "full_dataset",
+            "comparable",
+            "authorization_profile",
+        }
+        or selection.get("schema") != "asterion.dci.selection/v1"
         or type(selection.get("selected_rows")) is not int
-        or selection.get("selected_rows") != 1
-        or selection.get("full_dataset") is not False
-        or selection.get("comparable") is not False
     ):
         raise DciBenchmarkError("DCI benchmark configuration evidence is invalid")
+    if isinstance(selection, dict):
+        execution_class = selection.get("execution_class")
+        if execution_class != expected_execution_class:
+            valid_selection = False
+        elif execution_class == "paper-bounded":
+            valid_selection = (
+                selection.get("id") == "limit-1"
+                and selection.get("paper_scope") == selection_profile_scope
+                and selection.get("selected_rows") == 1
+                and selection.get("full_dataset") is False
+                and selection.get("comparable") is False
+                and selection.get("authorization_profile") is None
+            )
+        elif execution_class == "paper-full-authorized":
+            authorization_profile = selection.get("authorization_profile")
+            try:
+                authorized_scopes = resolve_experiment_profile(
+                    authorization_profile
+                ).scope_ids
+                expected_rows = resolve_paper_experiment_scope(
+                    selection.get("paper_scope")
+                ).selection_count
+            except ValueError:
+                authorized_scopes = ()
+                expected_rows = None
+            valid_selection = (
+                selection.get("id") == "paper-full"
+                and selection.get("paper_scope") == selection_profile_scope
+                and selection.get("paper_scope") in authorized_scopes
+                and selection.get("selected_rows") == expected_rows
+                and selection.get("full_dataset") is True
+                and selection.get("comparable") is True
+                and type(authorization_profile) is str
+            )
+        elif execution_class == "non-paper":
+            valid_selection = (
+                selection_profile_scope is None
+                and selection.get("id") == "request"
+                and selection.get("paper_scope") is None
+                and selection.get("selected_rows") > 0
+                and selection.get("full_dataset") is False
+                and selection.get("comparable") is False
+                and selection.get("authorization_profile") is None
+            )
+        else:
+            valid_selection = False
+        if not valid_selection:
+            raise DciBenchmarkError(
+                "DCI benchmark configuration evidence is invalid"
+            )
     batch_payload = dict(value)
     batch_fingerprint = batch_payload.pop("batch_fingerprint", None)
     if batch_fingerprint != _fingerprint(batch_payload):
