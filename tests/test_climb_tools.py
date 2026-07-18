@@ -113,6 +113,26 @@ AF250_MATRIX_TESTS = {
 }
 
 
+def _shell_if_branch_bodies(script: str, hypothesis_id: str) -> list[str]:
+    return re.findall(
+        rf'(?:if|elif) \[ "\$1" = "{re.escape(hypothesis_id)}" \]; then\n'
+        r"(.*?)(?=\nelif \[ \"\$1\"|\nfi)",
+        script,
+        re.S,
+    )
+
+
+def _shell_case_branch(script: str, hypothesis_id: str) -> str:
+    match = re.search(
+        rf"^    {re.escape(hypothesis_id)}\)\n(.*?)^        ;;$",
+        script,
+        re.M | re.S,
+    )
+    if match is None:
+        raise AssertionError(f"missing case branch for {hypothesis_id}")
+    return match.group(1)
+
+
 def _af240_source_functions(path: str) -> set[str]:
     tree = ast.parse((REPO_ROOT / path).read_text(encoding="utf-8"))
     return {
@@ -3261,7 +3281,7 @@ class ClimbToolTests(unittest.TestCase):
                 self.assertEqual(evaluation["total"], 4)
                 self.assertEqual(set(evaluation["per_task"]), dimensions)
 
-    def test_af340_train_registers_exact_hypotheses_and_paradigms(self) -> None:
+    def test_af340_train_has_exact_closed_membership_and_paradigms(self) -> None:
         train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
         expected = {
             "AF-340-H-001": "dci-layered-runtime-configuration",
@@ -3269,80 +3289,190 @@ class ClimbToolTests(unittest.TestCase):
             "AF-340-H-003": "dci-versioned-reproduction-contract",
             "AF-340-H-004": "dci-measured-runtime-parity",
         }
+        allowlist = re.search(
+            r'^case "\$1" in\n    ([^\n]+)\) ;;$', train_script, re.M
+        )
+
+        self.assertIsNotNone(allowlist)
+        af340_members = [
+            item
+            for item in allowlist.group(1).split("|")
+            if item.startswith("AF-340-")
+        ]
+        self.assertEqual(af340_members, list(expected))
 
         for hypothesis_id, paradigm in expected.items():
             with self.subTest(hypothesis_id=hypothesis_id):
-                self.assertIn(hypothesis_id, train_script)
-                self.assertRegex(
-                    train_script,
-                    rf'elif \[ "\$1" = "{hypothesis_id}" \]; then\n'
-                    rf'    paradigm="{paradigm}"',
+                branches = _shell_if_branch_bodies(train_script, hypothesis_id)
+                self.assertEqual(len(branches), 2)
+                self.assertEqual(
+                    branches[0].strip(), f'paradigm="{paradigm}"'
                 )
 
-    def test_af340_eval_registers_exact_dimension_names(self) -> None:
+    def test_af340_eval_branches_have_exact_dimensions_and_selectors(self) -> None:
         eval_script = (REPO_ROOT / "tools/climb/eval-local.sh").read_text()
         expected = {
-            "AF-340-H-001": {
-                "layered_precedence",
-                "runtime_mapping",
-                "claude_authentication",
-                "judge_cache_identity",
-            },
-            "AF-340-H-002": {
-                "quick_start_context",
-                "source_launchers",
-                "asterion_launchers",
-                "documentation_contract",
-            },
-            "AF-340-H-003": {
-                "immutable_profiles",
-                "full_authorization",
-                "query_evidence",
-                "local_orchestration",
-            },
-            "AF-340-H-004": {
-                "bounded_original_pi",
-                "bounded_asterion_pi",
-                "bounded_claude_modes",
-                "full_comparison_evidence",
-            },
+            "AF-340-H-001": (
+                (
+                    "layered_precedence",
+                    "runtime_mapping",
+                    "claude_authentication",
+                    "judge_cache_identity",
+                ),
+                (
+                    "tests.test_config.PiPathConfigTests.test_original_runtime_precedence_and_sources",
+                    "tests.test_asterion_dci_config.AsterionDciConfigTests.test_runtime_resolution_is_runtime_first_and_layered",
+                    "tests.test_default_runtime_factory.DefaultRuntimeFactoryTests.test_claude_subscription_injects_no_provider_credentials",
+                    "tests.test_asterion_dci_judge.AsterionDciJudgeTests.test_every_public_request_shaping_field_changes_fingerprint",
+                ),
+            ),
+            "AF-340-H-002": (
+                (
+                    "quick_start_context",
+                    "source_launchers",
+                    "asterion_launchers",
+                    "documentation_contract",
+                ),
+                (
+                    "tests.test_original_readme_acceptance",
+                    "tests.test_asterion_dci_batch_launchers",
+                    "tests.test_asterion_dci_batch_launchers",
+                    "tests.test_asterion_documentation",
+                ),
+            ),
+            "AF-340-H-003": (
+                (
+                    "immutable_profiles",
+                    "full_authorization",
+                    "query_evidence",
+                    "local_orchestration",
+                ),
+                (
+                    "tests.test_asterion_dci_experiment_profiles",
+                    "tests.test_asterion_dci_experiment_profiles",
+                    "tests.test_asterion_dci_reproduction",
+                    "tests.test_af340_reproduction_verifier",
+                ),
+            ),
+            "AF-340-H-004": (
+                (
+                    "bounded_original_pi",
+                    "bounded_asterion_pi",
+                    "bounded_claude_modes",
+                    "full_comparison_evidence",
+                ),
+                (
+                    "bounded_original_pi",
+                    "bounded_asterion_pi",
+                    "bounded_claude_modes",
+                    "full_comparison_evidence",
+                ),
+            ),
         }
 
-        for hypothesis_id, dimensions in expected.items():
+        for hypothesis_id, (dimensions, selectors) in expected.items():
             with self.subTest(hypothesis_id=hypothesis_id):
-                branch_marker = f"    {hypothesis_id})"
-                self.assertIn(branch_marker, eval_script)
-                branch = eval_script.split(branch_marker, 1)[1].split("        ;;", 1)[0]
+                branch = _shell_case_branch(eval_script, hypothesis_id)
+                assignments = dict(re.findall(r'^        (\w+)="([^"]+)"$', branch, re.M))
                 self.assertEqual(
-                    set(
-                        re.findall(
-                            r'^\s*(?:first|second|third|fourth)_dimension="([^"]+)"',
-                            branch,
-                            re.M,
-                        )
-                    ),
+                    tuple(assignments[f"{name}_dimension"] for name in (
+                        "first", "second", "third", "fourth"
+                    )),
                     dimensions,
                 )
+                self.assertEqual(
+                    tuple(assignments[name] for name in (
+                        "immutable_test", "repeat_test", "dirty_test", "override_test"
+                    )),
+                    selectors,
+                )
+                expected_keys = {
+                    "first_dimension",
+                    "second_dimension",
+                    "third_dimension",
+                    "fourth_dimension",
+                    "immutable_test",
+                    "repeat_test",
+                    "dirty_test",
+                    "override_test",
+                }
+                if hypothesis_id == "AF-340-H-004":
+                    expected_keys.add("dimension_runner")
+                    self.assertEqual(
+                        assignments["dimension_runner"],
+                        "run_af340_evidence_dimension",
+                    )
+                self.assertEqual(set(assignments), expected_keys)
 
-    def test_af340_train_uses_only_tracked_acceptance_commands(self) -> None:
+    def test_af340_train_branches_use_exact_tracked_commands(self) -> None:
         train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
-        for command_fragment in (
-            "tests.test_config",
-            "tests.test_effective_config",
-            "tests.test_judge",
-            "tests.test_asterion_dci_config",
-            "tests.test_asterion_dci_judge",
-            "tests.test_default_runtime_factory",
-            "tests.test_original_readme_acceptance",
-            "tests.test_asterion_dci_batch_launchers",
-            "tests.test_asterion_documentation",
-            "tests.test_asterion_dci_experiment_profiles",
-            "tests.test_asterion_dci_reproduction",
-            "tests.test_af340_reproduction_verifier",
-            "uv run python tools/verify_af340_reproduction.py bounded",
-        ):
-            with self.subTest(command_fragment=command_fragment):
-                self.assertIn(command_fragment, train_script)
+        expected_modules = {
+            "AF-340-H-001": {
+                "tests.test_config",
+                "tests.test_effective_config",
+                "tests.test_judge",
+                "tests.test_asterion_dci_config",
+                "tests.test_asterion_dci_judge",
+                "tests.test_default_runtime_factory",
+            },
+            "AF-340-H-002": {
+                "tests.test_original_readme_acceptance",
+                "tests.test_asterion_dci_batch_launchers",
+                "tests.test_asterion_documentation",
+            },
+            "AF-340-H-003": {
+                "tests.test_asterion_dci_experiment_profiles",
+                "tests.test_asterion_dci_reproduction",
+                "tests.test_af340_reproduction_verifier",
+            },
+            "AF-340-H-004": set(),
+        }
+
+        for hypothesis_id, modules in expected_modules.items():
+            with self.subTest(hypothesis_id=hypothesis_id):
+                branch = _shell_if_branch_bodies(train_script, hypothesis_id)[1]
+                self.assertEqual(
+                    set(re.findall(r"tests\.test_[a-zA-Z0-9_]+", branch)),
+                    modules,
+                )
+                verifier_calls = re.findall(
+                    r"uv run python tools/verify_af340_reproduction\.py [^\n\\]+",
+                    branch,
+                )
+                if hypothesis_id == "AF-340-H-004":
+                    self.assertEqual(
+                        verifier_calls,
+                        [
+                            "uv run python tools/verify_af340_reproduction.py bounded "
+                            '--report "$run_dir/af340-reproduction-report.json" '
+                        ],
+                    )
+                else:
+                    self.assertEqual(verifier_calls, [])
+
+    def test_af340_h004_eval_only_inspects_retained_evidence(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+        eval_script = (REPO_ROOT / "tools/climb/eval-local.sh").read_text()
+        h004_eval = _shell_case_branch(eval_script, "AF-340-H-004")
+        runner = re.search(
+            r"run_af340_evidence_dimension\(\) \{\n(.*?)\n\}",
+            eval_script,
+            re.S,
+        )
+
+        self.assertIsNotNone(runner)
+        self.assertIn("inspect", runner.group(1))
+        self.assertIn(
+            '--report "$RUN_DIR/af340-reproduction-report.json"', runner.group(1)
+        )
+        self.assertIn('--dimension "$dimension"', runner.group(1))
+        self.assertNotIn("bounded", runner.group(1))
+        self.assertNotIn('="bounded"', h004_eval)
+        self.assertEqual(
+            train_script.count("verify_af340_reproduction.py bounded")
+            + eval_script.count("verify_af340_reproduction.py bounded"),
+            1,
+        )
 
     def test_af340_h001_eval_is_provider_free_and_scores_four(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

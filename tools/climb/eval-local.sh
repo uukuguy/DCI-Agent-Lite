@@ -161,10 +161,12 @@ run_dci_context_dimension() {
     fi
 }
 
-run_af340_reproduction_dimension() {
+run_af340_evidence_dimension() {
     name="$1"
-    mode="$2"
-    if run_python tools/verify_af340_reproduction.py "$mode" \
+    dimension="$2"
+    if run_python tools/verify_af340_reproduction.py inspect \
+        --report "$RUN_DIR/af340-reproduction-report.json" \
+        --dimension "$dimension" \
         >"$RUN_DIR/$name.log" 2>&1; then
         printf '1'
     else
@@ -1161,15 +1163,15 @@ case "$HYPOTHESIS_ID" in
         override_test="tests.test_af340_reproduction_verifier"
         ;;
     AF-340-H-004)
-        dimension_runner="run_af340_reproduction_dimension"
+        dimension_runner="run_af340_evidence_dimension"
         first_dimension="bounded_original_pi"
         second_dimension="bounded_asterion_pi"
         third_dimension="bounded_claude_modes"
         fourth_dimension="full_comparison_evidence"
-        immutable_test="bounded"
-        repeat_test="bounded"
-        dirty_test="bounded"
-        override_test="bounded"
+        immutable_test="bounded_original_pi"
+        repeat_test="bounded_asterion_pi"
+        dirty_test="bounded_claude_modes"
+        override_test="full_comparison_evidence"
         ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2
