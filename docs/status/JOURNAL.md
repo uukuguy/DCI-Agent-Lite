@@ -955,3 +955,12 @@
 - 22:34 Task 5 复审清零，11/11 launcher parity 通过。
 - 21:31 AF-340-H-002 confirmed 4/4; package acceptance recorded.
 - 22:35 AF-340-H-002 正式确认 4/4，下一假设 H003。
+- 22:36 固化 H002 文档表面证据，支持 profile 契约接续。 [e7a9d42]
+- 22:54 Task 6 新增不可变 profiles、显式 full 授权与零操作 dry-run。 [1154be8]
+- 23:07 Task 6 初审拒绝：授权可伪造重放且存在 root TOCTOU。
+- 23:28 加固不可伪造 scope 能力、root 身份与生产消费链。 [54afafa]
+- 23:37 Task 6 复审仍拒绝：registry 未保存独立签发快照。
+- 23:55 密封 registry 快照并在写前复验执行 root 身份。 [2f2bedf]
+- 00:02 Task 6 最终复审仍拒绝：整数 issuer 身份存在生命周期复用。
+- 00:09 registry 强引用原 issuer，移除整数身份信任。 [375aafa]
+- 00:12 Task 6 四轮安全复审清零，full 授权契约通过。
