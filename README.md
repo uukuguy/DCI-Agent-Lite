@@ -691,8 +691,8 @@ the main/shared checkout; it is never inferred from the environment-file path.
 The coordinator continues to execute code from the current checkout while using
 this root for the Quick Start wiki corpus and the exact launcher sample inputs.
 Pi checks all 11 launcher dataset/corpus pairs; the Claude variants require only
-the wiki corpus. Retained plans and reports bind a hash of the resolved resource
-root. Run Pi, Claude Code subscription, and explicit MiniMax as separate retained
+the wiki corpus. Retained plans and reports bind the exact selected-resource
+content manifest. Run Pi, Claude Code subscription, and explicit MiniMax as separate retained
 variants:
 
 ```bash

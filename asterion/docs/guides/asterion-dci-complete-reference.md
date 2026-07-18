@@ -363,7 +363,7 @@ main/shared checkout; the environment-file parent is not guessed. Code executes
 from the current checkout, while Quick Start and launcher sample inputs come
 from the resource root. Pi checks the exact 11 launcher dataset/corpus pairs;
 the Claude variants require only the wiki corpus. The retained plan and report
-bind the resolved resource-root identity. Run the variants separately:
+bind the exact selected-resource content manifest. Run the variants separately:
 
 ```bash
 DCI_RESOURCE_ROOT=/absolute/path/to/main/DCI-Agent-Lite

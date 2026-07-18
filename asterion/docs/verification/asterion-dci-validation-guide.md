@@ -372,7 +372,7 @@ the main/shared checkout; it is never inferred from the environment-file path.
 Code still executes from the current checkout. Quick Start and launcher sample
 inputs come from the resource root: Pi checks the exact 11 launcher
 dataset/corpus pairs, while each Claude variant requires only the wiki corpus.
-The resolved resource-root identity is bound into the retained plan and report.
+The exact selected-resource content manifest is bound into the retained plan and report.
 Run the three variants separately:
 
 ```bash
