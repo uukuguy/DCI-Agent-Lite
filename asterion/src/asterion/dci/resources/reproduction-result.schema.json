@@ -8,12 +8,19 @@
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "schema": {}, "run_id": {}, "profile_id": {}, "profile_sha256": {},
+    "schema": {}, "run_id": {}, "product": {}, "implementation_sha256": {},
+    "profile_id": {}, "profile_sha256": {},
     "runtime": {}, "dataset_id": {}, "selection_id": {}, "selection_sha256": {},
-    "effective_config_sha256": {}, "metric_identities": {}, "queries": {},
+    "effective_config_sha256": {}, "product_effective_config_sha256": {},
+    "metric_contract_sha256": {}, "metric_identities": {}, "queries": {},
     "aggregates": {}, "comparison_kind": {}, "baseline_run_sha256": {},
     "candidate_run_sha256": {}, "target_identity": {}, "pair_ids": {},
     "exclusion_ids": {}, "baseline": {}, "candidate": {}, "metrics": {},
+    "pairs": {}, "exclusions": {}, "baseline_product": {},
+    "baseline_implementation_sha256": {},
+    "baseline_product_effective_config_sha256": {}, "candidate_product": {},
+    "candidate_implementation_sha256": {},
+    "candidate_product_effective_config_sha256": {},
     "accepted": {}, "identity_sha256": {}
   },
   "$defs": {
@@ -83,10 +90,12 @@
     "run_manifest": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["schema", "run_id", "profile_id", "profile_sha256", "runtime", "dataset_id", "selection_id", "selection_sha256", "effective_config_sha256", "metric_identities", "queries", "aggregates", "identity_sha256"],
+      "required": ["schema", "run_id", "product", "implementation_sha256", "profile_id", "profile_sha256", "runtime", "dataset_id", "selection_id", "selection_sha256", "effective_config_sha256", "product_effective_config_sha256", "metric_contract_sha256", "metric_identities", "queries", "aggregates", "identity_sha256"],
       "properties": {
         "schema": {"const": "dci.reproduction-run/v1"},
         "run_id": {"$ref": "#/$defs/public_id"},
+        "product": {"enum": ["original-dci", "asterion-dci"]},
+        "implementation_sha256": {"$ref": "#/$defs/sha256"},
         "profile_id": {"$ref": "#/$defs/public_id"},
         "profile_sha256": {"$ref": "#/$defs/sha256"},
         "runtime": {"enum": ["pi", "claude-code"]},
@@ -94,6 +103,8 @@
         "selection_id": {"$ref": "#/$defs/public_id"},
         "selection_sha256": {"$ref": "#/$defs/sha256"},
         "effective_config_sha256": {"$ref": "#/$defs/sha256"},
+        "product_effective_config_sha256": {"$ref": "#/$defs/sha256"},
+        "metric_contract_sha256": {"$ref": "#/$defs/sha256"},
         "metric_identities": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/public_id"}},
         "queries": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/query"}},
         "aggregates": {"$ref": "#/$defs/aggregates"},
@@ -123,12 +134,12 @@
     },
     "estimator": {
       "type": "object", "additionalProperties": false,
-      "required": ["name", "seed", "resamples", "query_set_sha256"],
+      "required": ["name", "seed", "resamples", "sample_sha256"],
       "properties": {
         "name": {"const": "paired-bootstrap-percentile/v1"},
         "seed": {"type": "integer"},
         "resamples": {"const": 10000},
-        "query_set_sha256": {"$ref": "#/$defs/sha256"}
+        "sample_sha256": {"$ref": "#/$defs/sha256"}
       }
     },
     "metric_comparison": {
@@ -148,10 +159,49 @@
         "ndcg_at_10": {"$ref": "#/$defs/metric_comparison"}
       }
     },
+    "compared_query": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "judge_verdict", "ndcg_at_10", "evidence_sha256"],
+      "properties": {
+        "status": {"enum": ["completed", "failed", "cancelled", "timed_out", "missing"]},
+        "judge_verdict": {"type": ["boolean", "null"]},
+        "ndcg_at_10": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "evidence_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "excluded_query": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "judge_verdict", "ndcg_at_10", "evidence_sha256", "exclusion_reason"],
+      "properties": {
+        "status": {"enum": ["completed", "failed", "cancelled", "timed_out", "missing"]},
+        "judge_verdict": {"type": ["boolean", "null"]},
+        "ndcg_at_10": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+        "evidence_sha256": {"$ref": "#/$defs/sha256"},
+        "exclusion_reason": {"$ref": "#/$defs/versioned_reason"}
+      }
+    },
+    "matched_pair": {
+      "type": "object", "additionalProperties": false,
+      "required": ["query_id", "baseline", "candidate"],
+      "properties": {
+        "query_id": {"$ref": "#/$defs/public_id"},
+        "baseline": {"$ref": "#/$defs/compared_query"},
+        "candidate": {"$ref": "#/$defs/compared_query"}
+      }
+    },
+    "exclusion": {
+      "type": "object", "additionalProperties": false,
+      "required": ["query_id", "baseline", "candidate"],
+      "properties": {
+        "query_id": {"$ref": "#/$defs/public_id"},
+        "baseline": {"$ref": "#/$defs/excluded_query"},
+        "candidate": {"$ref": "#/$defs/excluded_query"}
+      }
+    },
     "comparison_report": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["schema", "comparison_kind", "profile_id", "profile_sha256", "dataset_id", "selection_id", "selection_sha256", "effective_config_sha256", "baseline_run_sha256", "candidate_run_sha256", "target_identity", "pair_ids", "exclusion_ids", "baseline", "candidate", "metrics", "accepted", "identity_sha256"],
+      "required": ["schema", "comparison_kind", "profile_id", "profile_sha256", "dataset_id", "selection_id", "selection_sha256", "effective_config_sha256", "metric_contract_sha256", "baseline_product", "baseline_implementation_sha256", "baseline_product_effective_config_sha256", "candidate_product", "candidate_implementation_sha256", "candidate_product_effective_config_sha256", "baseline_run_sha256", "candidate_run_sha256", "target_identity", "pair_ids", "exclusion_ids", "pairs", "exclusions", "baseline", "candidate", "metrics", "accepted", "identity_sha256"],
       "properties": {
         "schema": {"const": "dci.reproduction-comparison/v1"},
         "comparison_kind": {"enum": ["source-parity", "target-comparison"]},
@@ -161,11 +211,20 @@
         "selection_id": {"$ref": "#/$defs/public_id"},
         "selection_sha256": {"$ref": "#/$defs/sha256"},
         "effective_config_sha256": {"$ref": "#/$defs/sha256"},
+        "metric_contract_sha256": {"$ref": "#/$defs/sha256"},
+        "baseline_product": {"type": ["string", "null"], "enum": ["original-dci", null]},
+        "baseline_implementation_sha256": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+        "baseline_product_effective_config_sha256": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+        "candidate_product": {"const": "asterion-dci"},
+        "candidate_implementation_sha256": {"$ref": "#/$defs/sha256"},
+        "candidate_product_effective_config_sha256": {"$ref": "#/$defs/sha256"},
         "baseline_run_sha256": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
         "candidate_run_sha256": {"$ref": "#/$defs/sha256"},
         "target_identity": {"type": ["string", "null"]},
         "pair_ids": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/public_id"}},
         "exclusion_ids": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/public_id"}},
+        "pairs": {"type": "array", "items": {"$ref": "#/$defs/matched_pair"}},
+        "exclusions": {"type": "array", "items": {"$ref": "#/$defs/exclusion"}},
         "baseline": {"oneOf": [{"$ref": "#/$defs/comparison_totals"}, {"type": "null"}]},
         "candidate": {"$ref": "#/$defs/comparison_totals"},
         "metrics": {"$ref": "#/$defs/comparison_metrics"},

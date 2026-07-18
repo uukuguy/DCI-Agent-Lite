@@ -16,6 +16,7 @@ from typing import Any, Mapping
 from asterion.dci.experiment_profiles import (
     ExperimentProfile,
     experiment_profile_sha256,
+    experiment_profile_ids,
 )
 from asterion.dci.paper_benchmarks import canonical_sha256
 
@@ -30,12 +31,44 @@ _SHA256 = re.compile(r"[0-9a-f]{64}")
 _PUBLIC_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:/+@-]*")
 _VERSIONED_REASON = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]*/v[1-9][0-9]*")
 _STATUSES = ("completed", "failed", "cancelled", "timed_out", "missing")
+_PRODUCTS = ("original-dci", "asterion-dci")
 _ACCURACY_METRIC = "llm-answer-correctness"
 _NDCG_METRIC = "ndcg@10-binary-deduplicated"
 _METRIC_IDENTITIES = {_ACCURACY_METRIC, _NDCG_METRIC}
+def _metric_contract(profile_id: str) -> Mapping[str, object]:
+    if profile_id not in experiment_profile_ids():
+        raise ValueError("DCI reproduction metric contract profile is invalid")
+    return MappingProxyType(
+        {
+            "identity": "dci.reproduction-metric-contract/v1",
+            "profile_id": profile_id,
+            "metric_identities": (_ACCURACY_METRIC, _NDCG_METRIC),
+            "allowed_exclusion_reasons": ("metric.not-applicable/v1",),
+            "allowed_exclusion_statuses": ("completed",),
+        }
+    )
+
+
+def reproduction_metric_contract_sha256(profile_id: str) -> str:
+    contract = _metric_contract(profile_id)
+    return canonical_sha256(
+        {
+            "identity": contract["identity"],
+            "profile_id": contract["profile_id"],
+            "metric_identities": list(contract["metric_identities"]),  # type: ignore[arg-type]
+            "allowed_exclusion_reasons": list(
+                contract["allowed_exclusion_reasons"]  # type: ignore[arg-type]
+            ),
+            "allowed_exclusion_statuses": list(
+                contract["allowed_exclusion_statuses"]  # type: ignore[arg-type]
+            ),
+        }
+    )
 _MANIFEST_KEYS = {
     "schema",
     "run_id",
+    "product",
+    "implementation_sha256",
     "profile_id",
     "profile_sha256",
     "runtime",
@@ -43,6 +76,8 @@ _MANIFEST_KEYS = {
     "selection_id",
     "selection_sha256",
     "effective_config_sha256",
+    "product_effective_config_sha256",
+    "metric_contract_sha256",
     "metric_identities",
     "queries",
     "aggregates",
@@ -166,6 +201,7 @@ class OperationCounts:
         _require_count(self.judge, "Judge operation count")
 
     def to_dict(self) -> dict[str, int]:
+        self.__post_init__()
         return {"agent": self.agent, "judge": self.judge}
 
 
@@ -181,6 +217,7 @@ class TokenCounts:
         _require_count(self.output, "output token count")
 
     def to_dict(self) -> dict[str, int]:
+        self.__post_init__()
         return {
             "input": self.input,
             "cached_input": self.cached_input,
@@ -203,7 +240,7 @@ class QueryEvidence:
 
     def __post_init__(self) -> None:
         _require_public_id(self.query_id, "query ID")
-        if self.status not in _STATUSES:
+        if type(self.status) is not str or self.status not in _STATUSES:
             raise ValueError("DCI reproduction query status is invalid")
         if self.judge_verdict is not None and type(self.judge_verdict) is not bool:
             raise ValueError("DCI reproduction Judge verdict is invalid")
@@ -236,6 +273,8 @@ class QueryEvidence:
         _require_sha256(self.evidence_sha256, "evidence digest")
         if type(self.operations) is not OperationCounts or type(self.tokens) is not TokenCounts:
             raise ValueError("DCI reproduction query totals are invalid")
+        self.operations.__post_init__()
+        self.tokens.__post_init__()
         _require_finite(self.cost_usd, "cost", minimum=0.0)
 
     @classmethod
@@ -296,6 +335,7 @@ class QueryEvidence:
         )
 
     def to_dict(self) -> dict[str, object]:
+        self.__post_init__()
         return {
             "query_id": self.query_id,
             "status": self.status,
@@ -330,7 +370,45 @@ class RunAggregates:
     total_tokens: int
     cost_usd: float
 
+    def __post_init__(self) -> None:
+        count_names = (
+            "query_count",
+            "included_count",
+            "excluded_count",
+            "completed_count",
+            "failed_count",
+            "cancelled_count",
+            "timed_out_count",
+            "missing_count",
+            "agent_operations",
+            "judge_operations",
+            "input_tokens",
+            "cached_input_tokens",
+            "output_tokens",
+            "total_tokens",
+        )
+        for name in count_names:
+            _require_count(getattr(self, name), name.replace("_", " "))
+        _require_optional_unit(self.accuracy, "accuracy")
+        _require_optional_unit(self.mean_ndcg_at_10, "mean NDCG@10")
+        _require_finite(self.cost_usd, "aggregate cost", minimum=0.0)
+        if self.query_count < 1 or self.query_count != self.included_count + self.excluded_count:
+            raise ValueError("DCI reproduction aggregate query counts are inconsistent")
+        if self.included_count != sum(
+            (
+                self.completed_count,
+                self.failed_count,
+                self.cancelled_count,
+                self.timed_out_count,
+                self.missing_count,
+            )
+        ):
+            raise ValueError("DCI reproduction aggregate status counts are inconsistent")
+        if self.total_tokens != self.input_tokens + self.cached_input_tokens + self.output_tokens:
+            raise ValueError("DCI reproduction aggregate token counts are inconsistent")
+
     def to_dict(self) -> dict[str, object]:
+        self.__post_init__()
         return {
             name: getattr(self, name)
             for name in (
@@ -356,9 +434,17 @@ class RunAggregates:
 
 
 def _computed_aggregates(
-    queries: tuple[QueryEvidence, ...], metric_identities: tuple[str, ...]
+    queries: tuple[QueryEvidence, ...],
+    metric_identities: tuple[str, ...],
+    profile_id: str,
 ) -> RunAggregates:
-    included = tuple(row for row in queries if row.exclusion_reason is None)
+    contract = _metric_contract(profile_id)
+    allowed_statuses = set(contract["allowed_exclusion_statuses"])
+    included = tuple(
+        row
+        for row in queries
+        if row.exclusion_reason is None or row.status not in allowed_statuses
+    )
     has_accuracy = _ACCURACY_METRIC in metric_identities
     has_ndcg = _NDCG_METRIC in metric_identities
     accuracy_values = (
@@ -444,6 +530,8 @@ def _same_aggregates(left: RunAggregates, right: RunAggregates) -> bool:
 @dataclass(frozen=True, slots=True)
 class RunManifest:
     run_id: str
+    product: str
+    implementation_sha256: str
     profile_id: str
     profile_sha256: str
     runtime: str
@@ -451,6 +539,8 @@ class RunManifest:
     selection_id: str
     selection_sha256: str
     effective_config_sha256: str
+    product_effective_config_sha256: str
+    metric_contract_sha256: str
     metric_identities: tuple[str, ...]
     queries: tuple[QueryEvidence, ...]
     aggregates: RunAggregates
@@ -465,10 +555,18 @@ class RunManifest:
             (self.selection_id, "selection ID"),
         ):
             _require_public_id(value, label)
+        if type(self.product) is not str or self.product not in _PRODUCTS:
+            raise ValueError("DCI reproduction product role is invalid")
         for value, label in (
+            (self.implementation_sha256, "implementation digest"),
             (self.profile_sha256, "profile digest"),
             (self.selection_sha256, "selection digest"),
             (self.effective_config_sha256, "effective configuration digest"),
+            (
+                self.product_effective_config_sha256,
+                "product effective configuration digest",
+            ),
+            (self.metric_contract_sha256, "metric contract digest"),
             (self.identity_sha256, "run identity"),
         ):
             _require_sha256(value, label)
@@ -483,6 +581,21 @@ class RunManifest:
             or type(self.aggregates) is not RunAggregates
         ):
             raise ValueError("DCI reproduction run manifest values are invalid")
+        for row in self.queries:
+            row.__post_init__()
+        self.aggregates.__post_init__()
+        profile_ids = experiment_profile_ids()
+        if self.profile_id not in profile_ids:
+            raise ValueError("DCI reproduction profile ID is invalid")
+        expected_runtime = "pi" if self.profile_id.endswith("/pi") else "claude-code"
+        if self.runtime != expected_runtime:
+            raise ValueError("DCI reproduction runtime/profile identity is invalid")
+        if self.product == "original-dci" and self.runtime != "pi":
+            raise ValueError("Original DCI reproduction runtime is invalid")
+        if self.metric_contract_sha256 != reproduction_metric_contract_sha256(
+            self.profile_id
+        ):
+            raise ValueError("DCI reproduction metric contract identity is invalid")
         query_ids = tuple(row.query_id for row in self.queries)
         if query_ids != tuple(sorted(query_ids)) or len(set(query_ids)) != len(query_ids):
             raise ValueError("DCI reproduction query IDs are invalid")
@@ -493,12 +606,23 @@ class RunManifest:
                 raise ValueError("DCI reproduction declared accuracy evidence is missing")
             if _NDCG_METRIC in self.metric_identities and row.ndcg_at_10 is None:
                 raise ValueError("DCI reproduction declared NDCG evidence is missing")
+        allowed_reasons = set(
+            _metric_contract(self.profile_id)["allowed_exclusion_reasons"]
+        )
+        if any(
+            row.exclusion_reason is not None
+            and row.exclusion_reason not in allowed_reasons
+            for row in self.queries
+        ):
+            raise ValueError("DCI reproduction exclusion reason is not allowed")
         if not _same_aggregates(
             self.aggregates,
-            _computed_aggregates(self.queries, self.metric_identities),
+            _computed_aggregates(
+                self.queries, self.metric_identities, self.profile_id
+            ),
         ):
             raise ValueError("DCI reproduction aggregates are inconsistent")
-        unsigned = self.to_dict()
+        unsigned = self._raw_dict()
         unsigned.pop("identity_sha256")
         if self.identity_sha256 != canonical_sha256(unsigned):
             raise ValueError("DCI reproduction run identity is invalid")
@@ -537,11 +661,17 @@ class RunManifest:
             if _NDCG_METRIC in raw_metrics and row.ndcg_at_10 is None:
                 raise ValueError("DCI reproduction declared NDCG evidence is missing")
         aggregates = _parse_aggregates(item["aggregates"])
-        expected = _computed_aggregates(queries, tuple(raw_metrics))
+        expected = _computed_aggregates(
+            queries, tuple(raw_metrics), item["profile_id"]
+        )
         if not _same_aggregates(aggregates, expected):
             raise ValueError("DCI reproduction aggregates are inconsistent")
         return cls(
             run_id=_require_public_id(item["run_id"], "run ID"),
+            product=item["product"],
+            implementation_sha256=_require_sha256(
+                item["implementation_sha256"], "implementation digest"
+            ),
             profile_id=_require_public_id(item["profile_id"], "profile ID"),
             profile_sha256=_require_sha256(item["profile_sha256"], "profile digest"),
             runtime=_require_public_id(item["runtime"], "runtime ID"),
@@ -553,16 +683,25 @@ class RunManifest:
             effective_config_sha256=_require_sha256(
                 item["effective_config_sha256"], "effective configuration digest"
             ),
+            product_effective_config_sha256=_require_sha256(
+                item["product_effective_config_sha256"],
+                "product effective configuration digest",
+            ),
+            metric_contract_sha256=_require_sha256(
+                item["metric_contract_sha256"], "metric contract digest"
+            ),
             metric_identities=tuple(raw_metrics),
             queries=queries,
             aggregates=aggregates,
             identity_sha256=supplied_identity,
         )
 
-    def to_dict(self) -> dict[str, object]:
+    def _raw_dict(self) -> dict[str, object]:
         return {
             "schema": RUN_MANIFEST_SCHEMA,
             "run_id": self.run_id,
+            "product": self.product,
+            "implementation_sha256": self.implementation_sha256,
             "profile_id": self.profile_id,
             "profile_sha256": self.profile_sha256,
             "runtime": self.runtime,
@@ -570,11 +709,17 @@ class RunManifest:
             "selection_id": self.selection_id,
             "selection_sha256": self.selection_sha256,
             "effective_config_sha256": self.effective_config_sha256,
+            "product_effective_config_sha256": self.product_effective_config_sha256,
+            "metric_contract_sha256": self.metric_contract_sha256,
             "metric_identities": list(self.metric_identities),
             "queries": [row.to_dict() for row in self.queries],
             "aggregates": self.aggregates.to_dict(),
             "identity_sha256": self.identity_sha256,
         }
+
+    def to_dict(self) -> dict[str, object]:
+        self.__post_init__()
+        return self._raw_dict()
 
 
 def load_run_manifest(path: Path) -> RunManifest:
@@ -596,7 +741,14 @@ class ConfidenceInterval:
     lower: float
     upper: float
 
+    def __post_init__(self) -> None:
+        lower = _require_finite(self.lower, "confidence lower bound")
+        upper = _require_finite(self.upper, "confidence upper bound")
+        if lower > upper:
+            raise ValueError("DCI reproduction confidence interval is invalid")
+
     def to_dict(self) -> dict[str, float]:
+        self.__post_init__()
         return {"lower": self.lower, "upper": self.upper}
 
 
@@ -605,14 +757,32 @@ class EstimatorEvidence:
     name: str
     seed: int
     resamples: int
-    query_set_sha256: str
+    sample_sha256: str
+
+    def __post_init__(self) -> None:
+        if (
+            self.name != ESTIMATOR_NAME
+            or type(self.seed) is not int
+            or self.seed != ESTIMATOR_SEED
+            or type(self.resamples) is not int
+            or self.resamples != ESTIMATOR_RESAMPLES
+        ):
+            raise ValueError("DCI reproduction estimator identity is invalid")
+        _require_sha256(self.sample_sha256, "estimator sample digest")
+
+    @property
+    def query_set_sha256(self) -> str:
+        """Backward-compatible name for the now value-bound sample digest."""
+
+        return self.sample_sha256
 
     def to_dict(self) -> dict[str, object]:
+        self.__post_init__()
         return {
             "name": self.name,
             "seed": self.seed,
             "resamples": self.resamples,
-            "query_set_sha256": self.query_set_sha256,
+            "sample_sha256": self.sample_sha256,
         }
 
 
@@ -626,7 +796,27 @@ class MetricComparison:
     accepted: bool
     estimator: EstimatorEvidence
 
+    def __post_init__(self) -> None:
+        baseline = _require_optional_unit(self.baseline, "baseline metric")
+        candidate = _require_optional_unit(self.candidate, "candidate metric")
+        delta = _require_finite(self.delta, "metric delta")
+        _require_finite(self.margin, "non-inferiority margin")
+        if (
+            baseline is None
+            or candidate is None
+            or not math.isclose(candidate - baseline, delta, abs_tol=1e-12)
+            or type(self.confidence_interval) is not ConfidenceInterval
+            or type(self.accepted) is not bool
+            or type(self.estimator) is not EstimatorEvidence
+            or self.accepted
+            is not (self.confidence_interval.lower >= self.margin)
+        ):
+            raise ValueError("DCI reproduction metric comparison is invalid")
+        self.confidence_interval.__post_init__()
+        self.estimator.__post_init__()
+
     def to_dict(self) -> dict[str, object]:
+        self.__post_init__()
         return {
             "baseline": self.baseline,
             "candidate": self.candidate,
@@ -650,6 +840,27 @@ class ComparisonTotals:
     total_tokens: int
     cost_usd: float
 
+    def __post_init__(self) -> None:
+        completion = _require_optional_unit(self.completion_rate, "completion rate")
+        failure = _require_optional_unit(self.failure_rate, "failure rate")
+        if completion is None or failure is None or not (
+            math.isclose(completion + failure, 1.0, abs_tol=1e-12)
+            or (completion == 0.0 and failure == 0.0)
+        ):
+            raise ValueError("DCI reproduction completion rates are invalid")
+        for name in (
+            "agent_operations",
+            "judge_operations",
+            "input_tokens",
+            "cached_input_tokens",
+            "output_tokens",
+            "total_tokens",
+        ):
+            _require_count(getattr(self, name), name.replace("_", " "))
+        if self.total_tokens != self.input_tokens + self.cached_input_tokens + self.output_tokens:
+            raise ValueError("DCI reproduction comparison token totals are inconsistent")
+        _require_finite(self.cost_usd, "comparison cost", minimum=0.0)
+
     @classmethod
     def from_manifest(cls, manifest: RunManifest) -> "ComparisonTotals":
         aggregates = manifest.aggregates
@@ -668,6 +879,7 @@ class ComparisonTotals:
         )
 
     def to_dict(self) -> dict[str, object]:
+        self.__post_init__()
         return {
             "completion_rate": self.completion_rate,
             "failure_rate": self.failure_rate,
@@ -682,6 +894,101 @@ class ComparisonTotals:
 
 
 @dataclass(frozen=True, slots=True)
+class _ComparedQueryEvidence:
+    status: str
+    judge_verdict: bool | None
+    ndcg_at_10: float | None
+    evidence_sha256: str
+    exclusion_reason: str | None
+
+    def __post_init__(self) -> None:
+        if type(self.status) is not str or self.status not in _STATUSES:
+            raise ValueError("DCI comparison query status is invalid")
+        if self.judge_verdict is not None and type(self.judge_verdict) is not bool:
+            raise ValueError("DCI comparison Judge verdict is invalid")
+        _require_optional_unit(self.ndcg_at_10, "comparison NDCG@10")
+        _require_sha256(self.evidence_sha256, "comparison evidence digest")
+        if self.exclusion_reason is not None and (
+            type(self.exclusion_reason) is not str
+            or _VERSIONED_REASON.fullmatch(self.exclusion_reason) is None
+        ):
+            raise ValueError("DCI comparison exclusion reason is invalid")
+
+    @classmethod
+    def from_query(cls, row: QueryEvidence) -> "_ComparedQueryEvidence":
+        return cls(
+            status=row.status,
+            judge_verdict=row.judge_verdict,
+            ndcg_at_10=row.ndcg_at_10,
+            evidence_sha256=row.evidence_sha256,
+            exclusion_reason=row.exclusion_reason,
+        )
+
+    def to_pair_dict(self) -> dict[str, object]:
+        self.__post_init__()
+        return {
+            "status": self.status,
+            "judge_verdict": self.judge_verdict,
+            "ndcg_at_10": self.ndcg_at_10,
+            "evidence_sha256": self.evidence_sha256,
+        }
+
+    def to_exclusion_dict(self) -> dict[str, object]:
+        self.__post_init__()
+        return {**self.to_pair_dict(), "exclusion_reason": self.exclusion_reason}
+
+
+@dataclass(frozen=True, slots=True)
+class _MatchedPairEvidence:
+    query_id: str
+    baseline: _ComparedQueryEvidence
+    candidate: _ComparedQueryEvidence
+
+    def __post_init__(self) -> None:
+        _require_public_id(self.query_id, "matched query ID")
+        if (
+            type(self.baseline) is not _ComparedQueryEvidence
+            or type(self.candidate) is not _ComparedQueryEvidence
+            or self.baseline.exclusion_reason is not None
+            or self.candidate.exclusion_reason is not None
+        ):
+            raise ValueError("DCI matched pair evidence is invalid")
+
+    def to_dict(self) -> dict[str, object]:
+        self.__post_init__()
+        return {
+            "query_id": self.query_id,
+            "baseline": self.baseline.to_pair_dict(),
+            "candidate": self.candidate.to_pair_dict(),
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class _ExclusionEvidence:
+    query_id: str
+    baseline: _ComparedQueryEvidence
+    candidate: _ComparedQueryEvidence
+
+    def __post_init__(self) -> None:
+        _require_public_id(self.query_id, "excluded query ID")
+        if (
+            type(self.baseline) is not _ComparedQueryEvidence
+            or type(self.candidate) is not _ComparedQueryEvidence
+            or self.baseline.exclusion_reason is None
+            or self.candidate.exclusion_reason is None
+        ):
+            raise ValueError("DCI exclusion evidence is invalid")
+
+    def to_dict(self) -> dict[str, object]:
+        self.__post_init__()
+        return {
+            "query_id": self.query_id,
+            "baseline": self.baseline.to_exclusion_dict(),
+            "candidate": self.candidate.to_exclusion_dict(),
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class ComparisonReport:
     comparison_kind: str
     profile_id: str
@@ -690,16 +997,124 @@ class ComparisonReport:
     selection_id: str
     selection_sha256: str
     effective_config_sha256: str
+    metric_contract_sha256: str
+    baseline_product: str | None
+    baseline_implementation_sha256: str | None
+    baseline_product_effective_config_sha256: str | None
+    candidate_product: str
+    candidate_implementation_sha256: str
+    candidate_product_effective_config_sha256: str
     baseline_run_sha256: str | None
     candidate_run_sha256: str
     target_identity: str | None
-    pair_ids: tuple[str, ...]
-    exclusion_ids: tuple[str, ...]
+    pairs: tuple[_MatchedPairEvidence, ...]
+    exclusions: tuple[_ExclusionEvidence, ...]
     baseline: ComparisonTotals | None
     candidate: ComparisonTotals
     metrics: Mapping[str, MetricComparison]
     accepted: bool | None
     identity_sha256: str
+
+    def __post_init__(self) -> None:
+        copied_metrics = MappingProxyType(dict(self.metrics))
+        object.__setattr__(self, "metrics", copied_metrics)
+        self._validate()
+
+    @property
+    def pair_ids(self) -> tuple[str, ...]:
+        return tuple(pair.query_id for pair in self.pairs)
+
+    @property
+    def exclusion_ids(self) -> tuple[str, ...]:
+        return tuple(exclusion.query_id for exclusion in self.exclusions)
+
+    def _validate(self) -> None:
+        if self.comparison_kind not in {"source-parity", "target-comparison"}:
+            raise ValueError("DCI reproduction comparison kind is invalid")
+        for value, label in (
+            (self.profile_id, "comparison profile ID"),
+            (self.dataset_id, "comparison dataset ID"),
+            (self.selection_id, "comparison selection ID"),
+            (self.candidate_product, "candidate product"),
+        ):
+            _require_public_id(value, label)
+        for value, label in (
+            (self.profile_sha256, "comparison profile digest"),
+            (self.selection_sha256, "comparison selection digest"),
+            (self.effective_config_sha256, "normalized experiment digest"),
+            (self.metric_contract_sha256, "metric contract digest"),
+            (self.candidate_implementation_sha256, "candidate implementation digest"),
+            (
+                self.candidate_product_effective_config_sha256,
+                "candidate product configuration digest",
+            ),
+            (self.candidate_run_sha256, "candidate run digest"),
+            (self.identity_sha256, "comparison identity"),
+        ):
+            _require_sha256(value, label)
+        if (
+            self.candidate_product != "asterion-dci"
+            or self.metric_contract_sha256
+            != reproduction_metric_contract_sha256(self.profile_id)
+            or type(self.candidate) is not ComparisonTotals
+            or type(self.pairs) is not tuple
+            or type(self.exclusions) is not tuple
+            or any(type(pair) is not _MatchedPairEvidence for pair in self.pairs)
+            or any(type(item) is not _ExclusionEvidence for item in self.exclusions)
+            or set(self.metrics) - {"accuracy", "ndcg_at_10"}
+            or any(type(metric) is not MetricComparison for metric in self.metrics.values())
+        ):
+            raise ValueError("DCI reproduction comparison values are invalid")
+        pair_ids = self.pair_ids
+        exclusion_ids = self.exclusion_ids
+        if (
+            pair_ids != tuple(sorted(pair_ids))
+            or exclusion_ids != tuple(sorted(exclusion_ids))
+            or len(set(pair_ids)) != len(pair_ids)
+            or len(set(exclusion_ids)) != len(exclusion_ids)
+            or set(pair_ids) & set(exclusion_ids)
+        ):
+            raise ValueError("DCI reproduction comparison query evidence is invalid")
+        if self.comparison_kind == "source-parity":
+            if (
+                self.baseline_product != "original-dci"
+                or self.baseline_implementation_sha256 is None
+                or self.baseline_product_effective_config_sha256 is None
+                or self.baseline_run_sha256 is None
+                or self.baseline_run_sha256 == self.candidate_run_sha256
+                or self.target_identity is not None
+                or type(self.baseline) is not ComparisonTotals
+                or not self.pairs
+                or not self.metrics
+                or type(self.accepted) is not bool
+                or self.accepted is not all(metric.accepted for metric in self.metrics.values())
+            ):
+                raise ValueError("DCI source-parity comparison is invalid")
+            for value, label in (
+                (self.baseline_implementation_sha256, "baseline implementation digest"),
+                (
+                    self.baseline_product_effective_config_sha256,
+                    "baseline product configuration digest",
+                ),
+                (self.baseline_run_sha256, "baseline run digest"),
+            ):
+                _require_sha256(value, label)
+        else:
+            if (
+                self.baseline_product is not None
+                or self.baseline_implementation_sha256 is not None
+                or self.baseline_product_effective_config_sha256 is not None
+                or self.baseline_run_sha256 is not None
+                or self.baseline is not None
+                or self.pairs
+                or self.metrics
+                or self.accepted is not None
+                or type(self.target_identity) is not str
+            ):
+                raise ValueError("DCI target comparison is invalid")
+            _require_public_id(self.target_identity, "target identity")
+        if self.identity_sha256 != canonical_sha256(self._unsigned_dict()):
+            raise ValueError("DCI reproduction comparison identity is invalid")
 
     def _unsigned_dict(self) -> dict[str, object]:
         return {
@@ -711,11 +1126,20 @@ class ComparisonReport:
             "selection_id": self.selection_id,
             "selection_sha256": self.selection_sha256,
             "effective_config_sha256": self.effective_config_sha256,
+            "metric_contract_sha256": self.metric_contract_sha256,
+            "baseline_product": self.baseline_product,
+            "baseline_implementation_sha256": self.baseline_implementation_sha256,
+            "baseline_product_effective_config_sha256": self.baseline_product_effective_config_sha256,
+            "candidate_product": self.candidate_product,
+            "candidate_implementation_sha256": self.candidate_implementation_sha256,
+            "candidate_product_effective_config_sha256": self.candidate_product_effective_config_sha256,
             "baseline_run_sha256": self.baseline_run_sha256,
             "candidate_run_sha256": self.candidate_run_sha256,
             "target_identity": self.target_identity,
             "pair_ids": list(self.pair_ids),
             "exclusion_ids": list(self.exclusion_ids),
+            "pairs": [pair.to_dict() for pair in self.pairs],
+            "exclusions": [item.to_dict() for item in self.exclusions],
             "baseline": None if self.baseline is None else self.baseline.to_dict(),
             "candidate": self.candidate.to_dict(),
             "metrics": {name: metric.to_dict() for name, metric in self.metrics.items()},
@@ -723,6 +1147,7 @@ class ComparisonReport:
         }
 
     def to_dict(self) -> dict[str, object]:
+        self._validate()
         return {**self._unsigned_dict(), "identity_sha256": self.identity_sha256}
 
     def to_json_bytes(self) -> bytes:
@@ -751,7 +1176,7 @@ def _paired_metric(
     candidate: tuple[QueryEvidence, ...],
     metric: str,
     margin: float,
-    query_set_sha256: str,
+    sample_sha256: str,
 ) -> MetricComparison:
     baseline_values = tuple(_metric_value(row, metric) for row in baseline)
     candidate_values = tuple(_metric_value(row, metric) for row in candidate)
@@ -786,7 +1211,7 @@ def _paired_metric(
             name=ESTIMATOR_NAME,
             seed=ESTIMATOR_SEED,
             resamples=ESTIMATOR_RESAMPLES,
-            query_set_sha256=query_set_sha256,
+            sample_sha256=sample_sha256,
         ),
     )
 
@@ -811,40 +1236,28 @@ def compare_reproduction_runs(
     """Compare exact matched Pi runs or one Claude run against its target identity."""
 
     profile_digest = _profile_digest(profile)
-    if candidate.profile_id != profile.profile_id or candidate.profile_sha256 != profile_digest:
+    if (
+        candidate.profile_id != profile.profile_id
+        or candidate.profile_sha256 != profile_digest
+        or candidate.metric_contract_sha256
+        != reproduction_metric_contract_sha256(profile.profile_id)
+        or candidate.product != "asterion-dci"
+    ):
         raise ValueError("DCI reproduction profile identity drifted")
     if candidate.runtime != profile.runtime:
         raise ValueError("DCI reproduction runtime identity drifted")
     if profile.runtime == "claude-code":
         if baseline is not None:
             raise ValueError("DCI Claude reproduction has no source parity baseline")
+        if any(row.exclusion_reason is not None for row in candidate.queries):
+            raise ValueError("DCI target comparison cannot manufacture exclusions")
         target = profile.comparison.get("published_target") or profile.comparison.get(
             "target_identity"
         )
         if type(target) is not str:
             raise ValueError("DCI Claude reproduction target identity is invalid")
-        unsigned = {
-            "schema": COMPARISON_SCHEMA,
-            "comparison_kind": "target-comparison",
-            "profile_id": profile.profile_id,
-            "profile_sha256": profile_digest,
-            "dataset_id": candidate.dataset_id,
-            "selection_id": candidate.selection_id,
-            "selection_sha256": candidate.selection_sha256,
-            "effective_config_sha256": candidate.effective_config_sha256,
-            "baseline_run_sha256": None,
-            "candidate_run_sha256": candidate.identity_sha256,
-            "target_identity": target,
-            "pair_ids": [],
-            "exclusion_ids": [
-                row.query_id for row in candidate.queries if row.exclusion_reason is not None
-            ],
-            "baseline": None,
-            "candidate": ComparisonTotals.from_manifest(candidate).to_dict(),
-            "metrics": {},
-            "accepted": None,
-        }
-        return ComparisonReport(
+        candidate_totals = ComparisonTotals.from_manifest(candidate)
+        values = dict(
             comparison_kind="target-comparison",
             profile_id=profile.profile_id,
             profile_sha256=profile_digest,
@@ -852,19 +1265,47 @@ def compare_reproduction_runs(
             selection_id=candidate.selection_id,
             selection_sha256=candidate.selection_sha256,
             effective_config_sha256=candidate.effective_config_sha256,
+            metric_contract_sha256=candidate.metric_contract_sha256,
+            baseline_product=None,
+            baseline_implementation_sha256=None,
+            baseline_product_effective_config_sha256=None,
+            candidate_product=candidate.product,
+            candidate_implementation_sha256=candidate.implementation_sha256,
+            candidate_product_effective_config_sha256=(
+                candidate.product_effective_config_sha256
+            ),
             baseline_run_sha256=None,
             candidate_run_sha256=candidate.identity_sha256,
             target_identity=target,
-            pair_ids=(),
-            exclusion_ids=tuple(unsigned["exclusion_ids"]),  # type: ignore[arg-type]
+            pairs=(),
+            exclusions=(),
             baseline=None,
-            candidate=ComparisonTotals.from_manifest(candidate),
-            metrics=MappingProxyType({}),
+            candidate=candidate_totals,
+            metrics={},
             accepted=None,
-            identity_sha256=canonical_sha256(unsigned),
+        )
+        unsigned = {
+            "schema": COMPARISON_SCHEMA,
+            **values,
+            "pair_ids": [],
+            "exclusion_ids": [],
+        }
+        unsigned["pairs"] = []
+        unsigned["exclusions"] = []
+        unsigned["baseline"] = None
+        unsigned["candidate"] = candidate_totals.to_dict()
+        unsigned["metrics"] = {}
+        return ComparisonReport(
+            **values, identity_sha256=canonical_sha256(unsigned)  # type: ignore[arg-type]
         )
     if baseline is None:
         raise ValueError("DCI Pi reproduction requires a source baseline")
+    if (
+        baseline.product != "original-dci"
+        or candidate.product != "asterion-dci"
+        or baseline.identity_sha256 == candidate.identity_sha256
+    ):
+        raise ValueError("DCI reproduction source/candidate roles are invalid")
     identity_fields = (
         "profile_id",
         "profile_sha256",
@@ -873,6 +1314,7 @@ def compare_reproduction_runs(
         "selection_id",
         "selection_sha256",
         "effective_config_sha256",
+        "metric_contract_sha256",
         "metric_identities",
     )
     if any(getattr(baseline, name) != getattr(candidate, name) for name in identity_fields):
@@ -890,63 +1332,78 @@ def compare_reproduction_runs(
         if baseline_by_id[query_id].exclusion_reason is not None
         or candidate_by_id[query_id].exclusion_reason is not None
     )
+    exclusions: list[_ExclusionEvidence] = []
+    metric_contract = _metric_contract(profile.profile_id)
+    allowed_reasons = set(metric_contract["allowed_exclusion_reasons"])
+    allowed_statuses = set(metric_contract["allowed_exclusion_statuses"])
+    for query_id in exclusion_ids:
+        baseline_row = baseline_by_id[query_id]
+        candidate_row = candidate_by_id[query_id]
+        if (
+            baseline_row.exclusion_reason != candidate_row.exclusion_reason
+            or baseline_row.exclusion_reason not in allowed_reasons
+            or baseline_row.status not in allowed_statuses
+            or candidate_row.status not in allowed_statuses
+        ):
+            raise ValueError("DCI reproduction exclusion contract drifted")
+        exclusions.append(
+            _ExclusionEvidence(
+                query_id=query_id,
+                baseline=_ComparedQueryEvidence.from_query(baseline_row),
+                candidate=_ComparedQueryEvidence.from_query(candidate_row),
+            )
+        )
     pair_ids = tuple(query_id for query_id in all_ids if query_id not in exclusion_ids)
     baseline_pairs = tuple(baseline_by_id[query_id] for query_id in pair_ids)
     candidate_pairs = tuple(candidate_by_id[query_id] for query_id in pair_ids)
-    query_set_sha256 = canonical_sha256(
-        {
-            "dataset_id": baseline.dataset_id,
-            "selection_id": baseline.selection_id,
-            "selection_sha256": baseline.selection_sha256,
-            "pair_ids": list(pair_ids),
-            "exclusion_ids": list(exclusion_ids),
-        }
+    pairs = tuple(
+        _MatchedPairEvidence(
+            query_id=query_id,
+            baseline=_ComparedQueryEvidence.from_query(baseline_by_id[query_id]),
+            candidate=_ComparedQueryEvidence.from_query(candidate_by_id[query_id]),
+        )
+        for query_id in pair_ids
     )
     comparison = dict(profile.comparison)
     metrics: dict[str, MetricComparison] = {}
     has_accuracy = _ACCURACY_METRIC in baseline.metric_identities
     has_ndcg = _NDCG_METRIC in baseline.metric_identities
     if has_accuracy:
+        accuracy_sample_sha256 = canonical_sha256(
+            {
+                "schema": "dci.paired-bootstrap-sample/v1",
+                "metric": "accuracy",
+                "pairs": [pair.to_dict() for pair in pairs],
+            }
+        )
         metrics["accuracy"] = _paired_metric(
             baseline_pairs,
             candidate_pairs,
             "accuracy",
             _require_finite(comparison.get("accuracy_margin"), "accuracy margin"),
-            query_set_sha256,
+            accuracy_sample_sha256,
         )
     if has_ndcg:
+        ndcg_sample_sha256 = canonical_sha256(
+            {
+                "schema": "dci.paired-bootstrap-sample/v1",
+                "metric": "ndcg_at_10",
+                "pairs": [pair.to_dict() for pair in pairs],
+            }
+        )
         metrics["ndcg_at_10"] = _paired_metric(
             baseline_pairs,
             candidate_pairs,
             "ndcg_at_10",
             _require_finite(comparison.get("ndcg_margin"), "NDCG margin"),
-            query_set_sha256,
+            ndcg_sample_sha256,
         )
     if not metrics:
         raise ValueError("DCI reproduction comparison has no metric evidence")
     accepted = all(metric.accepted for metric in metrics.values())
     baseline_totals = ComparisonTotals.from_manifest(baseline)
     candidate_totals = ComparisonTotals.from_manifest(candidate)
-    unsigned = {
-        "schema": COMPARISON_SCHEMA,
-        "comparison_kind": "source-parity",
-        "profile_id": profile.profile_id,
-        "profile_sha256": profile_digest,
-        "dataset_id": candidate.dataset_id,
-        "selection_id": candidate.selection_id,
-        "selection_sha256": candidate.selection_sha256,
-        "effective_config_sha256": candidate.effective_config_sha256,
-        "baseline_run_sha256": baseline.identity_sha256,
-        "candidate_run_sha256": candidate.identity_sha256,
-        "target_identity": None,
-        "pair_ids": list(pair_ids),
-        "exclusion_ids": list(exclusion_ids),
-        "baseline": baseline_totals.to_dict(),
-        "candidate": candidate_totals.to_dict(),
-        "metrics": {name: metric.to_dict() for name, metric in metrics.items()},
-        "accepted": accepted,
-    }
-    return ComparisonReport(
+    values = dict(
         comparison_kind="source-parity",
         profile_id=profile.profile_id,
         profile_sha256=profile_digest,
@@ -954,16 +1411,40 @@ def compare_reproduction_runs(
         selection_id=candidate.selection_id,
         selection_sha256=candidate.selection_sha256,
         effective_config_sha256=candidate.effective_config_sha256,
+        metric_contract_sha256=candidate.metric_contract_sha256,
+        baseline_product=baseline.product,
+        baseline_implementation_sha256=baseline.implementation_sha256,
+        baseline_product_effective_config_sha256=(
+            baseline.product_effective_config_sha256
+        ),
+        candidate_product=candidate.product,
+        candidate_implementation_sha256=candidate.implementation_sha256,
+        candidate_product_effective_config_sha256=(
+            candidate.product_effective_config_sha256
+        ),
         baseline_run_sha256=baseline.identity_sha256,
         candidate_run_sha256=candidate.identity_sha256,
         target_identity=None,
-        pair_ids=pair_ids,
-        exclusion_ids=exclusion_ids,
+        pairs=pairs,
+        exclusions=tuple(exclusions),
         baseline=baseline_totals,
         candidate=candidate_totals,
-        metrics=MappingProxyType(metrics),
+        metrics=metrics,
         accepted=accepted,
-        identity_sha256=canonical_sha256(unsigned),
+    )
+    unsigned = {
+        "schema": COMPARISON_SCHEMA,
+        **values,
+        "pair_ids": list(pair_ids),
+        "exclusion_ids": list(exclusion_ids),
+        "pairs": [pair.to_dict() for pair in pairs],
+        "exclusions": [item.to_dict() for item in exclusions],
+        "baseline": baseline_totals.to_dict(),
+        "candidate": candidate_totals.to_dict(),
+        "metrics": {name: metric.to_dict() for name, metric in metrics.items()},
+    }
+    return ComparisonReport(
+        **values, identity_sha256=canonical_sha256(unsigned)  # type: ignore[arg-type]
     )
 
 
