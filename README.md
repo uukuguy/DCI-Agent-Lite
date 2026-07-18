@@ -583,7 +583,10 @@ uv run python tools/verify_original_readme.py --level bounded \
 <a name="running-experiments"></a>
 ## 🎯 Benchmark DCI-Agent-Lite 
 
-We benchmark DCI-Agent-Lite on the following benchmark suites using OpenAI `gpt-5.4-nano` with `--thinking high` and a maximum turn budget of 300.
+The launchers below retain their documented dataset, corpus, context, thinking,
+turn, concurrency, and output identities. Agent provider and model now come
+from the shared CLI/environment/`.env` configuration layers; the shell wrappers
+do not source `.env` or inject either value.
 
 | Data | Data Size | Retrieval Corpus | Corpus Size | Avg. Corpus Len. (words) | Corpus Path |
 |------|-----------|------------------|-------------|--------------------------|-------------|
@@ -621,6 +624,54 @@ bash scripts/bright/run_earth_science.sh
 bash scripts/bright/run_economics.sh
 bash scripts/bright/run_robotics.sh
 ```
+
+### Original and Asterion launcher parity
+
+The public benchmark surface consists of one BrowseComp-Plus, six QA, and four
+BRIGHT launchers. Each original launcher has one independent Asterion
+counterpart:
+
+| Experiment | Original DCI | Asterion DCI |
+|---|---|---|
+| BrowseComp-Plus | `scripts/bcplus_eval/run_bcplus_eval_openai.sh` | `asterion/scripts/bcplus_eval/run_bcplus_eval_openai.sh` |
+| 2WikiMultiHopQA | `scripts/qa/run_2wikimultihopqa_dev_sample50.sh` | `asterion/scripts/qa/run_2wikimultihopqa_dev_sample50.sh` |
+| Bamboogle | `scripts/qa/run_bamboogle_test_sample50.sh` | `asterion/scripts/qa/run_bamboogle_test_sample50.sh` |
+| HotpotQA | `scripts/qa/run_hotpotqa_dev_sample50.sh` | `asterion/scripts/qa/run_hotpotqa_dev_sample50.sh` |
+| MuSiQue | `scripts/qa/run_musique_dev_sample50.sh` | `asterion/scripts/qa/run_musique_dev_sample50.sh` |
+| Natural Questions | `scripts/qa/run_nq_test_sample50.sh` | `asterion/scripts/qa/run_nq_test_sample50.sh` |
+| TriviaQA | `scripts/qa/run_triviaqa_test_sample50.sh` | `asterion/scripts/qa/run_triviaqa_test_sample50.sh` |
+| BRIGHT Biology | `scripts/bright/run_bio.sh` | `asterion/scripts/bright/run_bio.sh` |
+| BRIGHT Earth Science | `scripts/bright/run_earth_science.sh` | `asterion/scripts/bright/run_earth_science.sh` |
+| BRIGHT Economics | `scripts/bright/run_economics.sh` | `asterion/scripts/bright/run_economics.sh` |
+| BRIGHT Robotics | `scripts/bright/run_robotics.sh` | `asterion/scripts/bright/run_robotics.sh` |
+
+Use a literal limit for bounded launcher checks:
+
+```bash
+bash scripts/bcplus_eval/run_bcplus_eval_openai.sh level3 high --limit 1
+bash scripts/qa/run_hotpotqa_dev_sample50.sh --limit 1
+bash scripts/bright/run_bio.sh --limit 1
+
+bash asterion/scripts/bcplus_eval/run_bcplus_eval_openai.sh level3 high --limit 1
+bash asterion/scripts/qa/run_hotpotqa_dev_sample50.sh --limit 1
+bash asterion/scripts/bright/run_bio.sh --limit 1
+```
+
+The unmodified commands expose the full-dataset surface, but invoking a
+launcher is not full execution authorization, and `--limit 1` is not a full
+result. Full execution is delegated only through the explicit AF-340 verifier
+with an invocation-level authorization, profile, fresh output root, and budget:
+
+```bash
+uv run python tools/verify_af340_reproduction.py full \
+  --profile current-default/pi \
+  --output-root outputs/verification/af340-full \
+  --estimated-budget-usd 0 \
+  --authorize-full
+```
+
+`scripts/bcplus_eval/run_L3.sh` and its Asterion counterpart remain compatibility
+helpers; they are outside the eleven primary launcher pairs.
 
 ## 🤝 Core Contributors
 

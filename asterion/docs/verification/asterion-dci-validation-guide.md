@@ -290,7 +290,7 @@ uv run --project asterion asterion-dci terminal \
 Pass: Pi opens interactively and the command returns its exit status. Non-TTY
 use fails before Pi starts.
 
-## 8. Tier 3 — batch profiles, exports, and twelve launchers
+## 8. Tier 3 — batch profiles, exports, and eleven primary launcher pairs
 
 Command class: **provider-free**
 
@@ -300,32 +300,39 @@ uv run --project asterion asterion-dci export bright --help
 uv run --project asterion asterion-dci export bcplus-qa --help
 ```
 
-The twelve Pi-default Asterion launchers, paired one-to-one with the original
-launchers, are:
+The eleven primary launchers are paired one-to-one:
 
-- `asterion/scripts/bcplus_eval/run_L3.sh`
-- `asterion/scripts/bcplus_eval/run_bcplus_eval_openai.sh`
-- `asterion/scripts/bright/run_bio.sh`
-- `asterion/scripts/bright/run_earth_science.sh`
-- `asterion/scripts/bright/run_economics.sh`
-- `asterion/scripts/bright/run_robotics.sh`
-- `asterion/scripts/qa/run_2wikimultihopqa_dev_sample50.sh`
-- `asterion/scripts/qa/run_bamboogle_test_sample50.sh`
-- `asterion/scripts/qa/run_hotpotqa_dev_sample50.sh`
-- `asterion/scripts/qa/run_musique_dev_sample50.sh`
-- `asterion/scripts/qa/run_nq_test_sample50.sh`
-- `asterion/scripts/qa/run_triviaqa_test_sample50.sh`
+| Original DCI | Asterion DCI |
+|---|---|
+| `scripts/bcplus_eval/run_bcplus_eval_openai.sh` | `asterion/scripts/bcplus_eval/run_bcplus_eval_openai.sh` |
+| `scripts/qa/run_2wikimultihopqa_dev_sample50.sh` | `asterion/scripts/qa/run_2wikimultihopqa_dev_sample50.sh` |
+| `scripts/qa/run_bamboogle_test_sample50.sh` | `asterion/scripts/qa/run_bamboogle_test_sample50.sh` |
+| `scripts/qa/run_hotpotqa_dev_sample50.sh` | `asterion/scripts/qa/run_hotpotqa_dev_sample50.sh` |
+| `scripts/qa/run_musique_dev_sample50.sh` | `asterion/scripts/qa/run_musique_dev_sample50.sh` |
+| `scripts/qa/run_nq_test_sample50.sh` | `asterion/scripts/qa/run_nq_test_sample50.sh` |
+| `scripts/qa/run_triviaqa_test_sample50.sh` | `asterion/scripts/qa/run_triviaqa_test_sample50.sh` |
+| `scripts/bright/run_bio.sh` | `asterion/scripts/bright/run_bio.sh` |
+| `scripts/bright/run_earth_science.sh` | `asterion/scripts/bright/run_earth_science.sh` |
+| `scripts/bright/run_economics.sh` | `asterion/scripts/bright/run_economics.sh` |
+| `scripts/bright/run_robotics.sh` | `asterion/scripts/bright/run_robotics.sh` |
+
+`scripts/bcplus_eval/run_L3.sh` and
+`asterion/scripts/bcplus_eval/run_L3.sh` remain compatibility helpers outside
+the eleven-primary count. The 22 primary wrappers forward `"$@"` exactly once,
+do not source `.env`, and do not inject provider/model; their Python entry
+points load repository `.env` without replacing exported process values.
 
 These launchers resolve the mixed-repository root from their own file location,
 so their internal root/config setup does not depend on the operator's CWD.
 
-Use `--limit 1` or `ASTERION_DCI_BATCH_LIMIT=1` for bounded verification.
+Use literal `--limit 1` for bounded verification.
 
 Command class: **bounded provider-backed**
 
 ```bash
 bash asterion/scripts/qa/run_hotpotqa_dev_sample50.sh --limit 1
 bash asterion/scripts/bcplus_eval/run_bcplus_eval_openai.sh level3 high --limit 1
+bash asterion/scripts/bright/run_bio.sh --limit 1
 ```
 
 Pass: each row has completed native and Judge artifacts, one settled protocol
@@ -340,8 +347,12 @@ Command class: **full-dataset**
 bash asterion/scripts/bright/run_bio.sh
 ```
 
-Omitting `--limit` can issue many Pi/Judge requests and requires explicit
-operator authorization, full data, time, and budget.
+Omitting `--limit` exposes the full-dataset surface and can issue many Pi/Judge
+requests, but a launcher invocation is not full execution authorization.
+`--limit 1` is bounded evidence, never a full result. Full execution delegates
+only through `uv run python tools/verify_af340_reproduction.py full ...
+--authorize-full`, with the explicit profile, fresh output root, and budget
+required by that verifier.
 
 ## 9. Tier 4 — public and private product acceptance
 

@@ -311,22 +311,42 @@ Bundled profile 定义在 `asterion/dci/resources/batch-profiles.json`：
 | `beir.arguana` | IR | BEIR ArguAna |
 | `beir.scifact` | IR | BEIR SciFact |
 
-12 个 Asterion launcher：
+11 个主要 launcher 是一一对应的独立产品入口；`run_L3.sh` 保留为兼容 helper，
+不计入这 11 对：
 
-```text
-scripts/bcplus_eval/run_L3.sh
-scripts/bcplus_eval/run_bcplus_eval_openai.sh
-scripts/bright/run_bio.sh
-scripts/bright/run_earth_science.sh
-scripts/bright/run_economics.sh
-scripts/bright/run_robotics.sh
-scripts/qa/run_2wikimultihopqa_dev_sample50.sh
-scripts/qa/run_bamboogle_test_sample50.sh
-scripts/qa/run_hotpotqa_dev_sample50.sh
-scripts/qa/run_musique_dev_sample50.sh
-scripts/qa/run_nq_test_sample50.sh
-scripts/qa/run_triviaqa_test_sample50.sh
+| 实验 | 原始 DCI | Asterion DCI |
+|---|---|---|
+| BrowseComp-Plus | `scripts/bcplus_eval/run_bcplus_eval_openai.sh` | `asterion/scripts/bcplus_eval/run_bcplus_eval_openai.sh` |
+| 2WikiMultiHopQA | `scripts/qa/run_2wikimultihopqa_dev_sample50.sh` | `asterion/scripts/qa/run_2wikimultihopqa_dev_sample50.sh` |
+| Bamboogle | `scripts/qa/run_bamboogle_test_sample50.sh` | `asterion/scripts/qa/run_bamboogle_test_sample50.sh` |
+| HotpotQA | `scripts/qa/run_hotpotqa_dev_sample50.sh` | `asterion/scripts/qa/run_hotpotqa_dev_sample50.sh` |
+| MuSiQue | `scripts/qa/run_musique_dev_sample50.sh` | `asterion/scripts/qa/run_musique_dev_sample50.sh` |
+| Natural Questions | `scripts/qa/run_nq_test_sample50.sh` | `asterion/scripts/qa/run_nq_test_sample50.sh` |
+| TriviaQA | `scripts/qa/run_triviaqa_test_sample50.sh` | `asterion/scripts/qa/run_triviaqa_test_sample50.sh` |
+| BRIGHT Biology | `scripts/bright/run_bio.sh` | `asterion/scripts/bright/run_bio.sh` |
+| BRIGHT Earth Science | `scripts/bright/run_earth_science.sh` | `asterion/scripts/bright/run_earth_science.sh` |
+| BRIGHT Economics | `scripts/bright/run_economics.sh` | `asterion/scripts/bright/run_economics.sh` |
+| BRIGHT Robotics | `scripts/bright/run_robotics.sh` | `asterion/scripts/bright/run_robotics.sh` |
+
+所有 22 个主要 wrapper 都把参数原样透传一次，由 Python 配置层非覆盖地读取
+仓库 `.env`；wrapper 不 `source` `.env`，也不写死 provider/model。代表性有界命令：
+
+```bash
+bash scripts/bcplus_eval/run_bcplus_eval_openai.sh level3 high --limit 1
+bash scripts/qa/run_hotpotqa_dev_sample50.sh --limit 1
+bash scripts/bright/run_bio.sh --limit 1
+bash asterion/scripts/bcplus_eval/run_bcplus_eval_openai.sh level3 high --limit 1
+bash asterion/scripts/qa/run_hotpotqa_dev_sample50.sh --limit 1
+bash asterion/scripts/bright/run_bio.sh --limit 1
 ```
+
+不带 `--limit` 的命令是 full-dataset surface，不等于 full execution
+authorization；`--limit 1` 也不能被称为完整结果。完整执行只能由 Task 8 的显式
+verifier 授权：`uv run python tools/verify_af340_reproduction.py full ...
+--authorize-full`。
+
+兼容 helper 是 `scripts/bcplus_eval/run_L3.sh` 与
+`asterion/scripts/bcplus_eval/run_L3.sh`。
 
 AF-320 另提供两个 paper-inventory launcher；它们没有原始/Asterion
 一对一迁移计数声明。它们对应 `paper-full` scope，在 AF-320 会于 provider

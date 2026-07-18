@@ -575,6 +575,13 @@ class AsterionDciProductParityTests(unittest.TestCase):
     def test_exact_twelve_source_asterion_launcher_pairs_are_required(self) -> None:
         pairs = product_verifier.validate_launcher_pairs(ROOT)
         self.assertEqual(len(pairs), 12)
+        primary_pairs = tuple(
+            pair for pair in pairs if not pair[0].endswith("/run_L3.sh")
+        )
+        self.assertEqual(len(primary_pairs), 11)
+        self.assertTrue(
+            all("/run_L3.sh" not in path for pair in primary_pairs for path in pair)
+        )
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             for source, target in pairs:

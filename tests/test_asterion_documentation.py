@@ -142,6 +142,43 @@ class AsterionDocumentationTests(unittest.TestCase):
         self.assertEqual(len(launchers), 12)
         for launcher in launchers:
             self.assertIn(launcher.relative_to(PROJECT).as_posix(), text)
+        self.assertIn("11 个主要 launcher", text)
+        self.assertIn("run_L3.sh", text)
+        self.assertIn("兼容 helper", text)
+
+        readme = read("README.md")
+        validation_guide = read(
+            "asterion/docs/verification/asterion-dci-validation-guide.md"
+        )
+        primary_relatives = (
+            "bcplus_eval/run_bcplus_eval_openai.sh",
+            "qa/run_2wikimultihopqa_dev_sample50.sh",
+            "qa/run_bamboogle_test_sample50.sh",
+            "qa/run_hotpotqa_dev_sample50.sh",
+            "qa/run_musique_dev_sample50.sh",
+            "qa/run_nq_test_sample50.sh",
+            "qa/run_triviaqa_test_sample50.sh",
+            "bright/run_bio.sh",
+            "bright/run_earth_science.sh",
+            "bright/run_economics.sh",
+            "bright/run_robotics.sh",
+        )
+        for relative in primary_relatives:
+            self.assertIn(f"scripts/{relative}", readme)
+            self.assertIn(f"asterion/scripts/{relative}", readme)
+            self.assertIn(f"scripts/{relative}", text)
+            self.assertIn(f"scripts/{relative}", validation_guide)
+            self.assertIn(f"asterion/scripts/{relative}", validation_guide)
+        for representative in (
+            "bash scripts/bcplus_eval/run_bcplus_eval_openai.sh level3 high --limit 1",
+            "bash scripts/qa/run_hotpotqa_dev_sample50.sh --limit 1",
+            "bash scripts/bright/run_bio.sh --limit 1",
+        ):
+            self.assertIn(representative, readme)
+        self.assertIn("tools/verify_af340_reproduction.py full", readme)
+        self.assertIn("is not full execution authorization", readme)
+        self.assertIn("tools/verify_af340_reproduction.py full", validation_guide)
+        self.assertIn("is not full execution authorization", validation_guide)
 
         for source in (
             "../../src/asterion/dci/run.py",
