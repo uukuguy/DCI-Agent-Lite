@@ -964,3 +964,14 @@
 - 00:02 Task 6 最终复审仍拒绝：整数 issuer 身份存在生命周期复用。
 - 00:09 registry 强引用原 issuer，移除整数身份信任。 [375aafa]
 - 00:12 Task 6 四轮安全复审清零，full 授权契约通过。
+- 00:13 固化 Task 6 恢复边界，支持比较证据接续。 [ecc565a]
+- 00:41 Task 7 新增严格 per-query evidence 与确定性比较。 [418fbeb]
+- 00:52 Task 7 初审拒绝：report 未绑定 paired sample 且构造器可绕过校验。
+- 01:16 加固 paired evidence、产品角色与 exclusion metric 契约。 [6490240]
+- 01:25 Task 7 复审仍拒绝：report 未从 retained pairs 重算统计。
+- 01:39 从 retained pairs 重算并验证完整统计报告。 [d467f3d]
+- 01:47 Task 7 最终复审仍拒绝：report 未绑定 expected metrics/exclusions/target。
+- 02:01 绑定 report metric、exclusion 与 Claude target 契约。 [061445a]
+- 02:10 Task 7 复审仍拒绝：非 completed pair 可携带成功 metric。
+- 02:17 拒绝失败 pair 携带 Judge/NDCG 成功证据。 [5e16861]
+- 02:22 Task 7 五轮复审清零，统计比较契约通过。
