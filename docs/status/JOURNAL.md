@@ -921,3 +921,7 @@
 ## 2026-07-18
 
 - 17:07 AF-340 design approved; lifecycle reopened for layered configuration, README reproduction, and original/Asterion result parity.
+- 17:11 AF-340 设计与治理边界提交，等待用户复核后规划实现。 [46dd773]
+- 17:29 AF-340 规划阶段读取批处理脚本文本触发长任务正则误报；未启动评测、无 PID、无 provider 调用。
+- 17:31 project-state check 通过：AF-340 唯一活动，状态/工作表一致，无存活评测进程，工作树仅含预期日志追加。
+- 17:47 AF-340 八任务 TDD 实施计划完成自检；scope preflight、14 项治理测试、占位/接口扫描与 diff check 均通过，未启动 provider 或 full dataset。
