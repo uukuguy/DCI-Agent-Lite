@@ -164,11 +164,43 @@ run_dci_context_dimension() {
 run_af340_evidence_dimension() {
     name="$1"
     dimension="$2"
+    if [ "$dimension" = "full_comparison_evidence" ]; then
+        : "${AF340_FULL_REPORT:?set AF340_FULL_REPORT to the authorized full report}"
+        if run_python tools/verify_af340_reproduction.py inspect-full \
+            --report "$AF340_FULL_REPORT" >"$RUN_DIR/$name.log" 2>&1 \
+            && grep -Fqx "Authorized full comparison evidence: yes" "$RUN_DIR/$name.log"; then
+            printf '1'
+        else
+            printf '0'
+        fi
+        return
+    fi
+    : "${AF340_PI_REPORT:?set AF340_PI_REPORT to the retained Pi bounded report}"
+    : "${AF340_CLAUDE_SUBSCRIPTION_REPORT:?set AF340_CLAUDE_SUBSCRIPTION_REPORT to the retained Claude subscription report}"
+    : "${AF340_CLAUDE_MINIMAX_REPORT:?set AF340_CLAUDE_MINIMAX_REPORT to the retained Claude MiniMax report}"
     if run_python tools/verify_af340_reproduction.py inspect \
-        --report "$RUN_DIR/af340-reproduction-report.json" \
-        --dimension "$dimension" \
+        --report "$AF340_PI_REPORT" \
+        --report "$AF340_CLAUDE_SUBSCRIPTION_REPORT" \
+        --report "$AF340_CLAUDE_MINIMAX_REPORT" \
         >"$RUN_DIR/$name.log" 2>&1; then
-        printf '1'
+        dimension_ok=false
+        case "$dimension" in
+            bounded_original_pi)
+                if grep -Fqx "Retained dimension: original-pi" "$RUN_DIR/$name.log"; then dimension_ok=true; fi
+                ;;
+            bounded_asterion_pi)
+                if grep -Fqx "Retained dimension: asterion-pi" "$RUN_DIR/$name.log"; then dimension_ok=true; fi
+                ;;
+            bounded_claude_modes)
+                if grep -Fqx "Retained dimension: asterion-claude-subscription" "$RUN_DIR/$name.log" \
+                    && grep -Fqx "Retained dimension: asterion-claude-minimax" "$RUN_DIR/$name.log"; then dimension_ok=true; fi
+                ;;
+        esac
+        if [ "$dimension_ok" = true ]; then
+            printf '1'
+        else
+            printf '0'
+        fi
     else
         printf '0'
     fi

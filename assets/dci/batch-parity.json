@@ -1041,6 +1041,52 @@
       }
     },
     {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--rpc-timeout-seconds",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--rpc-timeout-seconds",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--rpc-timeout-seconds",
+      "implementation_status": "implemented",
+      "current_symbol": "_parser",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_rpc_timeout_seconds"
+      ],
+      "target_task": "AF-240 Task 3",
+      "future_acceptance": {
+        "task": "AF-240 Task 3",
+        "test_file": "tests/test_asterion_dci_batch.py",
+        "test_class": "AsterionDciBatchTests",
+        "test_method": "test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_rpc_timeout_seconds",
+        "assertion_id": "AF-240-Task-3:scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--rpc-timeout-seconds",
+        "assertion_summary": "Verify cli_flag --rpc-timeout-seconds from scripts/bcplus_eval/run_bcplus_eval.py against --rpc-timeout-seconds."
+      }
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--runtime",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "cli_flag",
+      "source_name": "--runtime",
+      "current_asterion_owner": "asterion.dci.cli",
+      "target_asterion_owner": "asterion.dci.cli",
+      "target_symbol": "--runtime",
+      "implementation_status": "implemented",
+      "current_symbol": "_parser",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_runtime"
+      ],
+      "target_task": "AF-240 Task 3",
+      "future_acceptance": {
+        "task": "AF-240 Task 3",
+        "test_file": "tests/test_asterion_dci_batch.py",
+        "test_class": "AsterionDciBatchTests",
+        "test_method": "test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_runtime",
+        "assertion_id": "AF-240-Task-3:scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--runtime",
+        "assertion_summary": "Verify cli_flag --runtime from scripts/bcplus_eval/run_bcplus_eval.py against --runtime."
+      }
+    },
+    {
       "id": "scripts.bcplus-eval.run-bcplus-eval.py:cli-flag:--runtime-context-level",
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "cli_flag",
@@ -1938,6 +1984,29 @@
       }
     },
     {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:effective-config-for-batch",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "effective_config_for_batch",
+      "current_asterion_owner": "asterion.dci.effective_config",
+      "target_asterion_owner": "asterion.dci.effective_config",
+      "target_symbol": "AsterionEffectiveConfig",
+      "implementation_status": "implemented",
+      "current_symbol": "AsterionEffectiveConfig",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_effective_config_for_batch"
+      ],
+      "target_task": "AF-240 Task 3",
+      "future_acceptance": {
+        "task": "AF-240 Task 3",
+        "test_file": "tests/test_asterion_dci_batch.py",
+        "test_class": "AsterionDciBatchTests",
+        "test_method": "test_scripts_bcplus_eval_run_bcplus_eval_py_function_effective_config_for_batch",
+        "assertion_id": "AF-240-Task-3:scripts.bcplus-eval.run-bcplus-eval.py:function:effective-config-for-batch",
+        "assertion_summary": "Verify function effective_config_for_batch from scripts/bcplus_eval/run_bcplus_eval.py against AsterionEffectiveConfig."
+      }
+    },
+    {
       "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:enrich-results",
       "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
       "source_kind": "function",
@@ -2694,6 +2763,29 @@
         "test_method": "test_scripts_bcplus_eval_run_bcplus_eval_py_function_resolve_repo_relative_path",
         "assertion_id": "AF-240-Task-3:scripts.bcplus-eval.run-bcplus-eval.py:function:resolve-repo-relative-path",
         "assertion_summary": "Verify function resolve_repo_relative_path from scripts/bcplus_eval/run_bcplus_eval.py against resolve_repo_relative_path."
+      }
+    },
+    {
+      "id": "scripts.bcplus-eval.run-bcplus-eval.py:function:resolve-runtime-args",
+      "source_path": "scripts/bcplus_eval/run_bcplus_eval.py",
+      "source_kind": "function",
+      "source_name": "resolve_runtime_args",
+      "current_asterion_owner": "asterion.dci.config",
+      "target_asterion_owner": "asterion.dci.config",
+      "target_symbol": "resolve_asterion_runtime",
+      "implementation_status": "implemented",
+      "current_symbol": "resolve_asterion_runtime",
+      "current_verification_tests": [
+        "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_resolve_runtime_args"
+      ],
+      "target_task": "AF-240 Task 3",
+      "future_acceptance": {
+        "task": "AF-240 Task 3",
+        "test_file": "tests/test_asterion_dci_batch.py",
+        "test_class": "AsterionDciBatchTests",
+        "test_method": "test_scripts_bcplus_eval_run_bcplus_eval_py_function_resolve_runtime_args",
+        "assertion_id": "AF-240-Task-3:scripts.bcplus-eval.run-bcplus-eval.py:function:resolve-runtime-args",
+        "assertion_summary": "Verify function resolve_runtime_args from scripts/bcplus_eval/run_bcplus_eval.py against resolve_asterion_runtime."
       }
     },
     {

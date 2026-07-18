@@ -876,8 +876,18 @@ elif [ "$1" = "AF-340-H-003" ]; then
         exit 1
     fi
 elif [ "$1" = "AF-340-H-004" ]; then
-    if ! uv run python tools/verify_af340_reproduction.py bounded --report "$run_dir/af340-reproduction-report.json" \
-        >"$run_dir/train.log" 2>&1; then
+    : "${AF340_PI_REPORT:?set AF340_PI_REPORT to the retained Pi bounded report}"
+    : "${AF340_CLAUDE_SUBSCRIPTION_REPORT:?set AF340_CLAUDE_SUBSCRIPTION_REPORT to the retained Claude subscription report}"
+    : "${AF340_CLAUDE_MINIMAX_REPORT:?set AF340_CLAUDE_MINIMAX_REPORT to the retained Claude MiniMax report}"
+    : "${AF340_FULL_REPORT:?set AF340_FULL_REPORT to the authorized full report}"
+    if ! {
+        uv run python tools/verify_af340_reproduction.py inspect \
+            --report "$AF340_PI_REPORT" \
+            --report "$AF340_CLAUDE_SUBSCRIPTION_REPORT" \
+            --report "$AF340_CLAUDE_MINIMAX_REPORT"
+        uv run python tools/verify_af340_reproduction.py inspect-full \
+            --report "$AF340_FULL_REPORT"
+    } >"$run_dir/train.log" 2>&1; then
         echo "ERROR: $1 measured runtime parity acceptance failed; see $run_dir/train.log" >&2
         exit 1
     fi

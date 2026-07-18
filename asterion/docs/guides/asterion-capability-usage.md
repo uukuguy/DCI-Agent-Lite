@@ -147,7 +147,7 @@ uv run asterion verify \
   --level acceptance
 ```
 
-它验证已经迁移的完整产品面：8 个产品功能组、533 项批处理/指标/导出检查、12 对原始与 Asterion 启动脚本、6 项额外语义检查、7 项有界验收记录，以及安装 wheel 后的应用边界。它会运行本地测试和构建隔离 wheel，因此可能需要几十秒，但模型请求数始终为 0，也不会运行完整数据集。
+它验证已经迁移的完整产品面：8 个产品功能组、537 项批处理/指标/导出检查、12 对原始与 Asterion 启动脚本、6 项额外语义检查、7 项有界验收记录，以及安装 wheel 后的应用边界。它会运行本地测试和构建隔离 wheel，因此可能需要几十秒，但模型请求数始终为 0，也不会运行完整数据集。
 
 ## 一条命令全部验证：--level complete
 
@@ -171,7 +171,7 @@ uv run asterion verify \
 | 交互终端 | `asterion-dci terminal --cwd ...` | `asterion describe` 查看入口；TTY 中直接运行 |
 | 中断后继续 | `asterion-dci resume --output-dir ...` | `verify --level acceptance` 覆盖恢复语义 |
 | 对已保存结果评测 | `asterion-dci evaluate --output-dir ... --gold-answer ...` | `basic` 的 Judge 案例和 `acceptance` 的缓存检查 |
-| QA、IR、BC+、BRIGHT 批处理 | `asterion-dci benchmark --profile ... --limit 1` | `acceptance` 验证 533 项完整清单；不会启动全量数据集 |
+| QA、IR、BC+、BRIGHT 批处理 | `asterion-dci benchmark --profile ... --limit 1` | `acceptance` 验证 537 项完整清单；不会启动全量数据集 |
 | 结果导出 | `asterion-dci export bcplus|bright|bcplus-qa ...` | `acceptance` 验证导出语义 |
 | 安装后的 Pi 应用 | `asterion run --provider dci-agent-lite --application dci.research-capability@1.0.0 --runtime pi.reference ...` | `acceptance` 在仓库外构建并验证 wheel |
 | 整体迁移完整性 | 无需拼接内部测试命令 | `asterion verify --provider dci-agent-lite --level complete` |

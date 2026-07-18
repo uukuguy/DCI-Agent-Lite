@@ -100,7 +100,7 @@ uv run python tools/verify_asterion_dci_product.py
 ```
 
 It executes the eight checked-in local/model-free product rows, resolves and
-executes all 533 delegated batch selectors, verifies the twelve source/Asterion
+executes all 537 delegated batch selectors, verifies the twelve source/Asterion
 launcher pairs, proves the installed wheel/application boundary with a local
 fixture, and validates the digest-bound seven-case bounded-real record. It
 deliberately executes zero Pi or Judge provider calls.
@@ -675,6 +675,88 @@ uv run python tools/verify_af340_reproduction.py full \
 
 `scripts/bcplus_eval/run_L3.sh` and its Asterion counterpart remain compatibility
 helpers; they are outside the eleven primary launcher pairs.
+
+### AF-340 reproduction coordinator
+
+Run the complete provider-free matrix first:
+
+```bash
+uv run python tools/verify_af340_reproduction.py local
+```
+
+Each bounded command requires the repository environment file and a fresh output
+root. Run Pi, Claude Code subscription, and explicit MiniMax as separate retained
+variants:
+
+```bash
+uv run python tools/verify_af340_reproduction.py bounded --variant pi \
+  --env-file .env --output-root outputs/verification/af340-bounded-pi
+uv run python tools/verify_af340_reproduction.py bounded --variant claude-subscription \
+  --env-file .env --output-root outputs/verification/af340-bounded-claude-subscription
+uv run python tools/verify_af340_reproduction.py bounded --variant claude-minimax \
+  --provider minimax --model MiniMax-M3 --env-file .env \
+  --output-root outputs/verification/af340-bounded-claude-minimax
+```
+
+Inspect the three retained 0600 reports without contacting a provider; the
+inspection passes only when original Pi, Asterion Pi, Claude subscription, and
+Claude MiniMax form the exact four-dimensional evidence set:
+
+```bash
+uv run python tools/verify_af340_reproduction.py inspect \
+  --report outputs/verification/af340-bounded-pi/af340-bounded-report.json \
+  --report outputs/verification/af340-bounded-claude-subscription/af340-bounded-report.json \
+  --report outputs/verification/af340-bounded-claude-minimax/af340-bounded-report.json
+```
+
+Print the immutable profile digest, selected-query counts, operation maxima, and
+budget before requesting authority:
+
+```bash
+uv run python tools/verify_af340_reproduction.py full --profile current-default/pi \
+  --output-root outputs/verification/af340-full-pi \
+  --estimated-budget-usd 0 --dry-run
+```
+
+Actual full execution is a separate cost boundary and is never inferred from
+`.env`, cache state, local checks, or bounded evidence. After reviewing the dry
+plan and explicitly authorizing its named profile and budget, use:
+
+```bash
+uv run python tools/verify_af340_reproduction.py full --profile current-default/pi \
+  --output-root outputs/verification/af340-full-pi \
+  --estimated-budget-usd 0 --authorize-full
+```
+
+The coordinator writes one strict Task 7 manifest in each product/scope private
+root and immediately performs the matched Pi or target-only Claude comparison.
+Body-free comparison reports are retained under the full root's `comparisons/`
+directory; no separate manual comparison command is required.
+
+Validate that the retained full report was explicitly authorized, covered every
+profile scope, matched the exact operation maxima, and contains no rejected
+comparison:
+
+```bash
+uv run python tools/verify_af340_reproduction.py inspect-full \
+  --report outputs/verification/af340-full-pi/af340-full-report.json
+```
+
+To re-run one retained comparison explicitly, use the Task 7 ready command:
+
+```bash
+uv run --project asterion asterion-dci paper compare \
+  --baseline path/to/original/af340-run-manifest.json \
+  --candidate path/to/asterion/af340-run-manifest.json \
+  --profile current-default/pi \
+  --output path/to/private-comparison.json
+```
+
+Operator credentials live only in `.env` or exported environment variables;
+full authorization is always an explicit CLI action. Reports contain hashes,
+counts, safe identities, and status classes—not credentials, prompts, answers,
+private paths, or child process bodies.
+
 
 ## 🤝 Core Contributors
 

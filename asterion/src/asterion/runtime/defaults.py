@@ -134,14 +134,32 @@ def _create_claude_code_runtime(
     default_timeout_seconds = _configured_timeout_option(
         context.options.get("timeout_seconds")
     )
+    raw_max_turns = os.environ.get("DCI_MAX_TURNS", "4").strip()
+    try:
+        max_turns = int(raw_max_turns)
+    except ValueError:
+        raise RuntimeFactoryError("Claude Code max turns configuration is invalid") from None
+    if max_turns <= 0 or str(max_turns) != raw_max_turns:
+        raise RuntimeFactoryError("Claude Code max turns configuration is invalid")
+    tools = _claude_tools(_option_text(context, "tools"))
+    reasoning = _option_text(context, "thinking_level")
+    if reasoning not in {None, "low", "medium", "high"}:
+        raise RuntimeFactoryError("Claude Code reasoning configuration is invalid")
+    context_profile = _option_text(context, "context_profile")
+    if context_profile not in {None, "level3"}:
+        raise RuntimeFactoryError("Claude Code context configuration is invalid")
     return ClaudeCodeRuntimeClient(
         executable=executable,
         cwd=runtime_cwd,
         environment=environment,
         default_timeout_seconds=default_timeout_seconds,
+        max_turns=max_turns,
+        tools=tools,
         evidence_root=evidence_root,
         agent_provider=provider,
         agent_model=model,
+        reasoning=reasoning,
+        context_profile=context_profile,
     )
 
 
@@ -159,7 +177,7 @@ def _claude_provider_environment(
         for name in _CLAUDE_OPERATIONAL_ENVIRONMENT_NAMES
         if environment.get(name)
     }
-    if provider is None and model is None:
+    if provider is None:
         if any(
             environment.get(name, "").strip()
             for name in (
@@ -216,6 +234,18 @@ def _option_text(context: RuntimeFactoryContext, name: str) -> str | None:
         return None
     normalized = str(value).strip()
     return normalized or None
+
+
+def _claude_tools(value: str | None) -> tuple[str, ...]:
+    if value is None:
+        return ("Read", "Grep", "Glob")
+    normalized = tuple(part.strip().lower() for part in value.split(","))
+    if not normalized or any(not part for part in normalized):
+        raise RuntimeFactoryError("Claude Code tools configuration is invalid")
+    mapping = {"read": "Read", "grep": "Grep", "glob": "Glob"}
+    if any(part not in mapping for part in normalized) or len(set(normalized)) != len(normalized):
+        raise RuntimeFactoryError("Claude Code tools configuration is invalid")
+    return tuple(mapping[part] for part in normalized)
 
 
 def _configured_timeout_option(value: object) -> float | None:

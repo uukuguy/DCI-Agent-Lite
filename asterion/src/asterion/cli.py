@@ -239,6 +239,8 @@ async def _run(
             "provider": resolved_runtime.provider,
             "model": resolved_runtime.model,
             "tools": resolved_runtime.tools,
+            "thinking_level": resolved_runtime.thinking_level,
+            "context_profile": resolved_runtime.context_profile,
             "timeout_seconds": resolved_runtime.timeout_seconds,
             "authentication_mode": resolved_runtime.authentication_mode,
         },

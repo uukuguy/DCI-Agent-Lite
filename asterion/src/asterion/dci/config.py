@@ -137,24 +137,30 @@ def load_asterion_dci_env(
     return env_path
 
 
-def resolve_dci_paths(repo_root: Path) -> DciPaths:
+def resolve_dci_paths(
+    repo_root: Path, *, environment: Mapping[str, str] | None = None
+) -> DciPaths:
     """Resolve shared DCI Pi paths and Asterion-compatible aliases."""
 
     root = Path(repo_root).resolve()
+    configured_environment = os.environ if environment is None else environment
     pi_dir = _configured_path_shared(
-        "DCI_PI_DIR", "ASTERION_DCI_PI_DIR", root / "pi", root=root
+        "DCI_PI_DIR", "ASTERION_DCI_PI_DIR", root / "pi", root=root,
+        environment=configured_environment,
     )
     package_dir = _configured_path_shared(
         "DCI_PI_PACKAGE_DIR",
         "ASTERION_DCI_PI_PACKAGE_DIR",
         pi_dir / "packages" / "coding-agent",
         root=root,
+        environment=configured_environment,
     )
     agent_dir = _configured_path_shared(
         "DCI_PI_AGENT_DIR",
         "ASTERION_DCI_PI_AGENT_DIR",
         pi_dir / ".pi" / "agent",
         root=root,
+        environment=configured_environment,
     )
     output_root = _configured_output_path(
         "ASTERION_DCI_OUTPUT_ROOT", root / "outputs" / "asterion-dci-runs", root=root
@@ -219,10 +225,11 @@ def resolve_asterion_runtime(
 
     provider_default = PI_DEFAULT_PROVIDER if runtime == "pi" else None
     model_default = PI_DEFAULT_MODEL if runtime == "pi" else None
+    tools_default = PI_DEFAULT_TOOLS if runtime == "pi" else "read,grep,glob"
     specs = (
         ("provider", "DCI_PROVIDER", provider_default, "agent.provider", False),
         ("model", "DCI_MODEL", model_default, "agent.model", False),
-        ("tools", "DCI_TOOLS", PI_DEFAULT_TOOLS, "agent.tools", False),
+        ("tools", "DCI_TOOLS", tools_default, "agent.tools", False),
         ("max_turns", "DCI_MAX_TURNS", PI_DEFAULT_MAX_TURNS, "agent.max_turns", False),
         (
             "timeout_seconds",
@@ -265,7 +272,7 @@ def resolve_asterion_runtime(
         model = model or PI_DEFAULT_MODEL
         authentication_mode = "saved-auth"
     else:
-        if provider is None and model is None:
+        if provider is None:
             authentication_mode = "subscription"
         elif provider in {"minimax", "minimax-cn"} and model is not None:
             authentication_mode = (
@@ -289,7 +296,7 @@ def resolve_asterion_runtime(
         runtime=runtime,
         provider=provider,
         model=model,
-        tools=_required_text(values["tools"], default=PI_DEFAULT_TOOLS),
+        tools=_required_text(values["tools"], default=tools_default),
         max_turns=_positive_int(values["max_turns"], default=PI_DEFAULT_MAX_TURNS),
         timeout_seconds=_timeout_value(values["timeout_seconds"]),
         thinking_level=_optional_text(values["thinking_level"]),
@@ -386,11 +393,16 @@ def _configured_output_path(name: str, default: Path, *, root: Path) -> Path:
 
 
 def _configured_path_shared(
-    shared_name: str, alias_name: str, default: Path, *, root: Path
+    shared_name: str,
+    alias_name: str,
+    default: Path,
+    *,
+    root: Path,
+    environment: Mapping[str, str] = os.environ,
 ) -> Path:
     value = (
-        os.environ.get(shared_name, "").strip()
-        or os.environ.get(alias_name, "").strip()
+        environment.get(shared_name, "").strip()
+        or environment.get(alias_name, "").strip()
     )
     path = Path(value).expanduser() if value else default
     if not path.is_absolute():

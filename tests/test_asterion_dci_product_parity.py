@@ -525,7 +525,7 @@ class AsterionDciProductParityTests(unittest.TestCase):
         inventory = self.document["batch_inventory"]
         path = ROOT / inventory["path"]
         self.assertEqual(inventory["path"], "assets/dci/batch-parity.json")
-        self.assertEqual(inventory["row_count"], 533)
+        self.assertEqual(inventory["row_count"], 537)
         self.assertEqual(
             inventory["sha256"], hashlib.sha256(path.read_bytes()).hexdigest()
         )
@@ -553,12 +553,12 @@ class AsterionDciProductParityTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, error):
                     validate_product_matrix(ROOT, document)
 
-    def test_inventory_requires_all_533_resolvable_executable_selectors(self) -> None:
+    def test_inventory_requires_all_537_resolvable_executable_selectors(self) -> None:
         selectors = product_verifier.validate_batch_inventory(
             ROOT, self.document["batch_inventory"]
         )
-        self.assertEqual(len(selectors), 533)
-        self.assertEqual(len(set(selectors)), 533)
+        self.assertEqual(len(selectors), 537)
+        self.assertEqual(len(set(selectors)), 537)
         rejected = selectors[17]
         with mock.patch.object(
             product_verifier,
@@ -636,7 +636,7 @@ class AsterionDciProductParityTests(unittest.TestCase):
         with mock.patch("subprocess.run", side_effect=execute):
             result = run_local_evidence(ROOT, rows)
         self.assertEqual(result["bounded_acceptance"], "7/7")
-        self.assertEqual(result["delegated_inventory"], "0/533")
+        self.assertEqual(result["delegated_inventory"], "0/537")
         self.assertEqual(result["launcher_pairs"], "0/12")
         self.assertEqual(result["batch_extra_selectors"], "0/6")
 
@@ -840,7 +840,7 @@ class AsterionDciProductParityTests(unittest.TestCase):
         self.assertEqual(result["provider_backed_executed"], 0)
         self.assertNotIn("private body", json.dumps(result))
         self.assertNotIn("secret", json.dumps(result))
-        self.assertEqual(result["delegated_inventory"], "533/533")
+        self.assertEqual(result["delegated_inventory"], "537/537")
         self.assertEqual(result["launcher_pairs"], "12/12")
         self.assertEqual(result["batch_extra_selectors"], "6/6")
         for call in run.call_args_list:
@@ -867,7 +867,7 @@ class AsterionDciProductParityTests(unittest.TestCase):
     def test_default_cli_prints_the_exact_product_row_aggregate(self) -> None:
         summary = product_verifier.ProductAcceptanceSummary(
             product_rows=(8, 8),
-            delegated_inventory=(533, 533),
+            delegated_inventory=(537, 537),
             launcher_pairs=(12, 12),
             batch_extras=(6, 6),
             bounded_acceptance=(7, 7),

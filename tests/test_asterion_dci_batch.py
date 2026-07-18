@@ -11,6 +11,7 @@ import unittest
 from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import scripts.bcplus_eval.run_bcplus_eval as source_batch
@@ -39,7 +40,13 @@ from asterion.dci.benchmark import (
     run_benchmark_async,
 )
 from asterion.dci.artifacts import DciConversationFeatures
-from asterion.dci.config import DciRuntimeOptions, resolve_dci_paths
+from asterion.dci.config import (
+    ConfigLayers,
+    DciRuntimeOptions,
+    resolve_asterion_runtime,
+    resolve_dci_paths,
+)
+from asterion.dci.effective_config import AsterionEffectiveConfig
 from asterion.dci.context_extension import resolve_context_extension
 from asterion.dci.context_profiles import resolve_context_profile
 from asterion.dci.judge import JudgeConfig, judge_public_identity
@@ -1003,6 +1010,75 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(arguments.command, "benchmark")
         self.assertEqual(arguments.dataset, Path("fixture.jsonl"))
         self.assertEqual(arguments.max_concurrency, 3)
+
+    def test_scripts_bcplus_eval_run_bcplus_eval_py_function_effective_config_for_batch(self) -> None:
+        invocation = {
+            "runtime": "pi",
+            "provider": "fixture-provider",
+            "model": "fixture-model",
+            "tools": "read,bash",
+            "max_turns": 7,
+            "timeout_seconds": 12,
+            "thinking_level": "high",
+            "context_profile": "level3",
+        }
+        runtime = resolve_asterion_runtime(invocation, ConfigLayers({}, {}))
+        projection = AsterionEffectiveConfig(runtime).to_public_dict()
+        self.assertEqual(projection["runtime"], "pi")
+        self.assertEqual(projection["agent"]["provider"], "fixture-provider")
+        self.assertEqual(projection["agent"]["model"], "fixture-model")
+
+    def test_scripts_bcplus_eval_run_bcplus_eval_py_function_resolve_runtime_args(self) -> None:
+        arguments = SimpleNamespace(
+            runtime=None,
+            provider=None,
+            model=None,
+            tools="read,bash",
+            max_turns=7,
+            rpc_timeout_seconds=None,
+            pi_thinking_level=None,
+            runtime_context_level=None,
+        )
+        resolved = source_batch.resolve_runtime_args(
+            arguments,
+            source_batch.ConfigLayers(
+                {"DCI_PROVIDER": "fixture-provider"}, {"DCI_MODEL": "fixture-model"}
+            ),
+        )
+        asterion = resolve_asterion_runtime(
+            {"tools": "read,bash", "max_turns": 7},
+            ConfigLayers(
+                {"DCI_PROVIDER": "fixture-provider"}, {"DCI_MODEL": "fixture-model"}
+            ),
+        )
+        self.assertEqual((resolved.runtime, resolved.provider, resolved.model), (asterion.runtime, asterion.provider, asterion.model))
+
+    def test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_runtime(self) -> None:
+        from asterion.dci.cli import _parser
+
+        source = SimpleNamespace(
+            runtime="pi",
+            provider=None,
+            model=None,
+            tools="read,bash",
+            max_turns=7,
+            rpc_timeout_seconds=None,
+            pi_thinking_level=None,
+            runtime_context_level=None,
+        )
+        resolved = source_batch.resolve_runtime_args(
+            source, source_batch.ConfigLayers({}, {})
+        )
+        target = _parser().parse_args(["benchmark", "--runtime", "pi"])
+        self.assertEqual(resolved.runtime, target.runtime)
+
+    def test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_rpc_timeout_seconds(self) -> None:
+        from asterion.dci.cli import _parser
+
+        target = _parser().parse_args(
+            ["benchmark", "--rpc-timeout-seconds", "12"]
+        )
+        self.assertEqual(target.rpc_timeout_seconds, 12)
 
     def test_scripts_bcplus_eval_run_bcplus_eval_py_function_parse_iso8601(self) -> None:
         self.assertEqual(

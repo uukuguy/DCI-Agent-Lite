@@ -32,8 +32,10 @@ AF240_OWNERS = {
     "asterion.dci.artifacts",
     "asterion.dci.benchmark",
     "asterion.dci.cli",
+    "asterion.dci.config",
     "asterion.dci.datasets",
     "asterion.dci.evaluation",
+    "asterion.dci.effective_config",
     "asterion.dci.export",
     "asterion.dci.judge",
     "asterion.dci.metrics",
@@ -3443,8 +3445,9 @@ class ClimbToolTests(unittest.TestCase):
                     self.assertEqual(
                         verifier_calls,
                         [
-                            "uv run python tools/verify_af340_reproduction.py bounded "
-                            '--report "$run_dir/af340-reproduction-report.json" '
+                            "uv run python tools/verify_af340_reproduction.py inspect "
+                            ,
+                            "uv run python tools/verify_af340_reproduction.py inspect-full "
                         ],
                     )
                 else:
@@ -3462,16 +3465,16 @@ class ClimbToolTests(unittest.TestCase):
 
         self.assertIsNotNone(runner)
         self.assertIn("inspect", runner.group(1))
-        self.assertIn(
-            '--report "$RUN_DIR/af340-reproduction-report.json"', runner.group(1)
-        )
-        self.assertIn('--dimension "$dimension"', runner.group(1))
-        self.assertNotIn("bounded", runner.group(1))
+        self.assertIn("inspect-full", runner.group(1))
+        self.assertEqual(runner.group(1).count('--report "$AF340_'), 4)
+        self.assertIn("AF340_FULL_REPORT", runner.group(1))
+        self.assertNotIn('--dimension "$dimension"', runner.group(1))
+        self.assertNotIn("verify_af340_reproduction.py bounded", runner.group(1))
         self.assertNotIn('="bounded"', h004_eval)
         self.assertEqual(
             train_script.count("verify_af340_reproduction.py bounded")
             + eval_script.count("verify_af340_reproduction.py bounded"),
-            1,
+            0,
         )
 
     def test_af340_h001_eval_is_provider_free_and_scores_four(self) -> None:

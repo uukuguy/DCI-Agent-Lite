@@ -194,6 +194,10 @@ class DciCompleteResearchImplementation:
         question, gold = _envelope(invocation.input_text)
         if invocation.runtime.manifest.runtime_id == "pi.reference":
             try:
+                raw_max_turns = os.environ.get("DCI_MAX_TURNS", "4").strip()
+                max_turns = int(raw_max_turns)
+                if max_turns <= 0 or str(max_turns) != raw_max_turns:
+                    raise ValueError
                 native = await _run_native_cancellable(
                     self._native_executor,
                     DciRunRequest(
@@ -201,7 +205,7 @@ class DciCompleteResearchImplementation:
                         question=question,
                         cwd=Path.cwd(),
                         tools="read,grep",
-                        max_turns=4,
+                        max_turns=max_turns,
                     ),
                     invocation.signal,
                 )

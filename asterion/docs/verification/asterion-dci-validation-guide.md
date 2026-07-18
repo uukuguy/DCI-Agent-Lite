@@ -176,7 +176,7 @@ uv run --project asterion python tools/verify_asterion_dci_product.py
 ```
 
 Pass: every command exits zero. The verifier reports 8/8 checked-in product
-rows, 533/533 delegated selectors, 12/12 launcher pairs, 6/6 batch extras, and
+rows, 537/537 delegated selectors, 12/12 launcher pairs, 6/6 batch extras, and
 bounded acceptance 7/7 while executing zero Pi or Judge requests.
 
 ## 4. Tier 2 — original DCI examples
@@ -357,6 +357,88 @@ only through `uv run python tools/verify_af340_reproduction.py full ...
 --authorize-full`, with the explicit profile, fresh output root, and budget
 required by that verifier.
 
+### AF-340 reproduction coordinator
+
+Run the complete provider-free matrix first:
+
+```bash
+uv run python tools/verify_af340_reproduction.py local
+```
+
+Each bounded command requires the repository environment file and a fresh output
+root. Run Pi, Claude Code subscription, and explicit MiniMax as separate retained
+variants:
+
+```bash
+uv run python tools/verify_af340_reproduction.py bounded --variant pi \
+  --env-file .env --output-root outputs/verification/af340-bounded-pi
+uv run python tools/verify_af340_reproduction.py bounded --variant claude-subscription \
+  --env-file .env --output-root outputs/verification/af340-bounded-claude-subscription
+uv run python tools/verify_af340_reproduction.py bounded --variant claude-minimax \
+  --provider minimax --model MiniMax-M3 --env-file .env \
+  --output-root outputs/verification/af340-bounded-claude-minimax
+```
+
+Inspect the three retained 0600 reports without contacting a provider; the
+inspection passes only when original Pi, Asterion Pi, Claude subscription, and
+Claude MiniMax form the exact four-dimensional evidence set:
+
+```bash
+uv run python tools/verify_af340_reproduction.py inspect \
+  --report outputs/verification/af340-bounded-pi/af340-bounded-report.json \
+  --report outputs/verification/af340-bounded-claude-subscription/af340-bounded-report.json \
+  --report outputs/verification/af340-bounded-claude-minimax/af340-bounded-report.json
+```
+
+Print the immutable profile digest, selected-query counts, operation maxima, and
+budget before requesting authority:
+
+```bash
+uv run python tools/verify_af340_reproduction.py full --profile current-default/pi \
+  --output-root outputs/verification/af340-full-pi \
+  --estimated-budget-usd 0 --dry-run
+```
+
+Actual full execution is a separate cost boundary and is never inferred from
+`.env`, cache state, local checks, or bounded evidence. After reviewing the dry
+plan and explicitly authorizing its named profile and budget, use:
+
+```bash
+uv run python tools/verify_af340_reproduction.py full --profile current-default/pi \
+  --output-root outputs/verification/af340-full-pi \
+  --estimated-budget-usd 0 --authorize-full
+```
+
+The coordinator writes one strict Task 7 manifest in each product/scope private
+root and immediately performs the matched Pi or target-only Claude comparison.
+Body-free comparison reports are retained under the full root's `comparisons/`
+directory; no separate manual comparison command is required.
+
+Validate that the retained full report was explicitly authorized, covered every
+profile scope, matched the exact operation maxima, and contains no rejected
+comparison:
+
+```bash
+uv run python tools/verify_af340_reproduction.py inspect-full \
+  --report outputs/verification/af340-full-pi/af340-full-report.json
+```
+
+To re-run one retained comparison explicitly, use the Task 7 ready command:
+
+```bash
+uv run --project asterion asterion-dci paper compare \
+  --baseline path/to/original/af340-run-manifest.json \
+  --candidate path/to/asterion/af340-run-manifest.json \
+  --profile current-default/pi \
+  --output path/to/private-comparison.json
+```
+
+Operator credentials live only in `.env` or exported environment variables;
+full authorization is always an explicit CLI action. Reports contain hashes,
+counts, safe identities, and status classes—not credentials, prompts, answers,
+private paths, or child process bodies.
+
+
 ## 9. Tier 4 — public and private product acceptance
 
 Command class: **provider-free**
@@ -365,7 +447,7 @@ Command class: **provider-free**
 uv run --project asterion python tools/verify_asterion_dci_product.py
 ```
 
-Pass: 8/8 rows, 533/533 selectors, 12/12 launcher pairs, 6/6 extras, bounded
+Pass: 8/8 rows, 537/537 selectors, 12/12 launcher pairs, 6/6 extras, bounded
 acceptance 7/7, and zero provider-backed execution.
 
 Validate retained native evidence without another provider request. Never put

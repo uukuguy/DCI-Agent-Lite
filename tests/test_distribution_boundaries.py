@@ -147,7 +147,7 @@ class SourceDistributionBoundaryTests(unittest.TestCase):
             "asterion-dci benchmark",
             "verify_asterion_dci_product.py",
             "--acceptance-root",
-            "533/533",
+            "537/537",
             "7/7",
             "provider-free",
             "bounded provider-backed",

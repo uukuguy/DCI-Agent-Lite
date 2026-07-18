@@ -98,7 +98,7 @@ class AsterionDocumentationTests(unittest.TestCase):
             "External-limited",
             "Not rerun",
             "provider-backed operations",
-            "533/533",
+            "537/537",
             "12/12",
             "runtime_context_control",
         )
@@ -203,6 +203,31 @@ class AsterionDocumentationTests(unittest.TestCase):
             text,
             re.compile(r"AF-290.{0,30}(?:已经|成功|完整)(?:重跑|复现).{0,30}62\.9%"),
         )
+
+    def test_af340_coordinator_ready_commands_and_authority_boundary(self) -> None:
+        documents = (
+            read("README.md"),
+            read("asterion/docs/guides/asterion-dci-complete-reference.md"),
+            read("asterion/docs/verification/asterion-dci-validation-guide.md"),
+        )
+        required = (
+            "tools/verify_af340_reproduction.py local",
+            "bounded --variant pi",
+            "bounded --variant claude-subscription",
+            "bounded --variant claude-minimax",
+            "full --profile current-default/pi",
+            "--dry-run",
+            "--authorize-full",
+            "asterion-dci paper compare",
+            "strict Task 7 manifest",
+            "`comparisons/`",
+            "tools/verify_af340_reproduction.py inspect",
+            "credentials live only in `.env` or exported environment variables",
+            "full authorization is always an explicit CLI action",
+        )
+        for document in documents:
+            for literal in required:
+                self.assertIn(literal, document)
 
     def test_framework_guide_explains_layers_and_complete_integration(self) -> None:
         relative = "asterion/docs/architecture/asterion-framework-capability-integration.md"

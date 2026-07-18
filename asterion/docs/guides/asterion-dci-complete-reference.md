@@ -281,9 +281,9 @@ profile、mode、limit、tools、context 或 resolution override 都会在读取
 都在不修改 Climb 状态的情况下失败。GPT-4.1 是论文实验 provenance；只有 AF-340
 声称论文分数可比时才要求该实验配置。完整数据集和论文分数复现仍属于 AF-340。
 
-完整实现的模型外验收包括 533/533 个细粒度 selector、6/6 个额外 batch 语义和 12/12 个原始/Asterion launcher 对。迁移期间还运行过一条有界 Pi+Judge batch 及精确 reuse 证明；AF-320 的三操作 terminal evidence 只有在上述 verifier 成功且 binder 重哈希后才可标记为 bounded provider verified。
+完整实现的模型外验收包括 537/537 个细粒度 selector、6/6 个额外 batch 语义和 12/12 个原始/Asterion launcher 对。迁移期间还运行过一条有界 Pi+Judge batch 及精确 reuse 证明；AF-320 的三操作 terminal evidence 只有在上述 verifier 成功且 binder 重哈希后才可标记为 bounded provider verified。
 
-但 AF-290 没有重新运行完整 benchmark 数据集，也没有重新复现 62.9% 或 README 中其他历史分数。这些分数属于原始 DCI 的历史实验结果，当前状态为 **Not rerun**，不能由 533 个模型外 selector 推导出来。
+但 AF-290 没有重新运行完整 benchmark 数据集，也没有重新复现 62.9% 或 README 中其他历史分数。这些分数属于原始 DCI 的历史实验结果，当前状态为 **Not rerun**，不能由 537 个模型外 selector 推导出来。
 
 ## 数据集、Profile 与 Launcher
 
@@ -347,6 +347,88 @@ bash asterion/scripts/bright/run_bio.sh --limit 1
 authorization；`--limit 1` 也不能被称为完整结果。完整执行只能由 Task 8 的显式
 verifier 授权：`uv run python tools/verify_af340_reproduction.py full ...
 --authorize-full`。
+
+### AF-340 reproduction coordinator
+
+Run the complete provider-free matrix first:
+
+```bash
+uv run python tools/verify_af340_reproduction.py local
+```
+
+Each bounded command requires the repository environment file and a fresh output
+root. Run Pi, Claude Code subscription, and explicit MiniMax as separate retained
+variants:
+
+```bash
+uv run python tools/verify_af340_reproduction.py bounded --variant pi \
+  --env-file .env --output-root outputs/verification/af340-bounded-pi
+uv run python tools/verify_af340_reproduction.py bounded --variant claude-subscription \
+  --env-file .env --output-root outputs/verification/af340-bounded-claude-subscription
+uv run python tools/verify_af340_reproduction.py bounded --variant claude-minimax \
+  --provider minimax --model MiniMax-M3 --env-file .env \
+  --output-root outputs/verification/af340-bounded-claude-minimax
+```
+
+Inspect the three retained 0600 reports without contacting a provider; the
+inspection passes only when original Pi, Asterion Pi, Claude subscription, and
+Claude MiniMax form the exact four-dimensional evidence set:
+
+```bash
+uv run python tools/verify_af340_reproduction.py inspect \
+  --report outputs/verification/af340-bounded-pi/af340-bounded-report.json \
+  --report outputs/verification/af340-bounded-claude-subscription/af340-bounded-report.json \
+  --report outputs/verification/af340-bounded-claude-minimax/af340-bounded-report.json
+```
+
+Print the immutable profile digest, selected-query counts, operation maxima, and
+budget before requesting authority:
+
+```bash
+uv run python tools/verify_af340_reproduction.py full --profile current-default/pi \
+  --output-root outputs/verification/af340-full-pi \
+  --estimated-budget-usd 0 --dry-run
+```
+
+Actual full execution is a separate cost boundary and is never inferred from
+`.env`, cache state, local checks, or bounded evidence. After reviewing the dry
+plan and explicitly authorizing its named profile and budget, use:
+
+```bash
+uv run python tools/verify_af340_reproduction.py full --profile current-default/pi \
+  --output-root outputs/verification/af340-full-pi \
+  --estimated-budget-usd 0 --authorize-full
+```
+
+The coordinator writes one strict Task 7 manifest in each product/scope private
+root and immediately performs the matched Pi or target-only Claude comparison.
+Body-free comparison reports are retained under the full root's `comparisons/`
+directory; no separate manual comparison command is required.
+
+Validate that the retained full report was explicitly authorized, covered every
+profile scope, matched the exact operation maxima, and contains no rejected
+comparison:
+
+```bash
+uv run python tools/verify_af340_reproduction.py inspect-full \
+  --report outputs/verification/af340-full-pi/af340-full-report.json
+```
+
+To re-run one retained comparison explicitly, use the Task 7 ready command:
+
+```bash
+uv run --project asterion asterion-dci paper compare \
+  --baseline path/to/original/af340-run-manifest.json \
+  --candidate path/to/asterion/af340-run-manifest.json \
+  --profile current-default/pi \
+  --output path/to/private-comparison.json
+```
+
+Operator credentials live only in `.env` or exported environment variables;
+full authorization is always an explicit CLI action. Reports contain hashes,
+counts, safe identities, and status classes—not credentials, prompts, answers,
+private paths, or child process bodies.
+
 
 兼容 helper 是 `scripts/bcplus_eval/run_L3.sh` 与
 `asterion/scripts/bcplus_eval/run_L3.sh`。
@@ -424,7 +506,7 @@ make asterion-describe
 |---|---|---:|---|---|
 | 环境准备 | `make asterion-verify-preflight` | 0 | `.env`、Pi、Node、corpus、Judge | **Verified** |
 | 两个基础案例 | `make asterion-verify-basic` | 3 个调度操作 | 两个各 6 轮的 Pi 案例和一个 Judge | **Verified** |
-| 完整模型外产品面 | `make asterion-verify-acceptance` | 0 | 8/8、533/533、12/12、6/6、7/7、wheel/application | **Verified** |
+| 完整模型外产品面 | `make asterion-verify-acceptance` | 0 | 8/8、537/537、12/12、6/6、7/7、wheel/application | **Verified** |
 | 综合有界验证 | `make asterion-verify-complete` | 3 个调度操作 | preflight → basic → acceptance；不跑完整数据集 | **Verified** |
 | Pi runtime `level0`–`level4` | `--runtime-context-level` | 模型外或有界 | 同一 extension/profile identity 与 body-free counters | **Implemented / Model-free verified** |
 | 全量 benchmark 与历史分数 | 操作者显式 launcher | 很高 | 没有在迁移关闭或 AF-290 中重跑 | **Not rerun** |
