@@ -3261,6 +3261,143 @@ class ClimbToolTests(unittest.TestCase):
                 self.assertEqual(evaluation["total"], 4)
                 self.assertEqual(set(evaluation["per_task"]), dimensions)
 
+    def test_af340_train_registers_exact_hypotheses_and_paradigms(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+        expected = {
+            "AF-340-H-001": "dci-layered-runtime-configuration",
+            "AF-340-H-002": "dci-documented-product-surfaces",
+            "AF-340-H-003": "dci-versioned-reproduction-contract",
+            "AF-340-H-004": "dci-measured-runtime-parity",
+        }
+
+        for hypothesis_id, paradigm in expected.items():
+            with self.subTest(hypothesis_id=hypothesis_id):
+                self.assertIn(hypothesis_id, train_script)
+                self.assertRegex(
+                    train_script,
+                    rf'elif \[ "\$1" = "{hypothesis_id}" \]; then\n'
+                    rf'    paradigm="{paradigm}"',
+                )
+
+    def test_af340_eval_registers_exact_dimension_names(self) -> None:
+        eval_script = (REPO_ROOT / "tools/climb/eval-local.sh").read_text()
+        expected = {
+            "AF-340-H-001": {
+                "layered_precedence",
+                "runtime_mapping",
+                "claude_authentication",
+                "judge_cache_identity",
+            },
+            "AF-340-H-002": {
+                "quick_start_context",
+                "source_launchers",
+                "asterion_launchers",
+                "documentation_contract",
+            },
+            "AF-340-H-003": {
+                "immutable_profiles",
+                "full_authorization",
+                "query_evidence",
+                "local_orchestration",
+            },
+            "AF-340-H-004": {
+                "bounded_original_pi",
+                "bounded_asterion_pi",
+                "bounded_claude_modes",
+                "full_comparison_evidence",
+            },
+        }
+
+        for hypothesis_id, dimensions in expected.items():
+            with self.subTest(hypothesis_id=hypothesis_id):
+                branch_marker = f"    {hypothesis_id})"
+                self.assertIn(branch_marker, eval_script)
+                branch = eval_script.split(branch_marker, 1)[1].split("        ;;", 1)[0]
+                self.assertEqual(
+                    set(
+                        re.findall(
+                            r'^\s*(?:first|second|third|fourth)_dimension="([^"]+)"',
+                            branch,
+                            re.M,
+                        )
+                    ),
+                    dimensions,
+                )
+
+    def test_af340_train_uses_only_tracked_acceptance_commands(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+        for command_fragment in (
+            "tests.test_config",
+            "tests.test_effective_config",
+            "tests.test_judge",
+            "tests.test_asterion_dci_config",
+            "tests.test_asterion_dci_judge",
+            "tests.test_default_runtime_factory",
+            "tests.test_original_readme_acceptance",
+            "tests.test_asterion_dci_batch_launchers",
+            "tests.test_asterion_documentation",
+            "tests.test_asterion_dci_experiment_profiles",
+            "tests.test_asterion_dci_reproduction",
+            "tests.test_af340_reproduction_verifier",
+            "uv run python tools/verify_af340_reproduction.py bounded",
+        ):
+            with self.subTest(command_fragment=command_fragment):
+                self.assertIn(command_fragment, train_script)
+
+    def test_af340_h001_eval_is_provider_free_and_scores_four(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            env = os.environ.copy()
+            env["DCI_CLIMB_HYPOTHESIS_ID"] = "AF-340-H-001"
+            env.pop("OPENAI_API_KEY", None)
+            env.pop("ANTHROPIC_API_KEY", None)
+            env.pop("DEEPSEEK_API_KEY", None)
+            env.pop("MINIMAX_API_KEY", None)
+
+            result = subprocess.run(
+                ["bash", "tools/climb/eval-local.sh", str(run_dir)],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            evaluation = json.loads((run_dir / "local-eval.json").read_text())
+            self.assertEqual(evaluation["hypothesis_id"], "AF-340-H-001")
+            self.assertEqual(evaluation["total"], 4)
+            self.assertEqual(
+                evaluation["per_task"],
+                {
+                    "layered_precedence": 1,
+                    "runtime_mapping": 1,
+                    "claude_authentication": 1,
+                    "judge_cache_identity": 1,
+                },
+            )
+
+    def test_af340_h001_shell_syntax_and_scope_preflight_pass(self) -> None:
+        syntax = subprocess.run(
+            ["bash", "-n", "tools/climb/train.sh", "tools/climb/eval-local.sh"],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+        )
+        scope = subprocess.run(
+            [
+                "python3",
+                "tools/project_scope_check.py",
+                "--climb-hypothesis",
+                "AF-340-H-001",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+        )
+
+        self.assertEqual(syntax.returncode, 0, syntax.stderr)
+        self.assertEqual(scope.returncode, 0, scope.stderr)
+
     def test_af310_h005_provider_binding_is_digest_bound_and_body_free(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

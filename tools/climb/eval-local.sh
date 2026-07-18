@@ -161,6 +161,17 @@ run_dci_context_dimension() {
     fi
 }
 
+run_af340_reproduction_dimension() {
+    name="$1"
+    mode="$2"
+    if run_python tools/verify_af340_reproduction.py "$mode" \
+        >"$RUN_DIR/$name.log" 2>&1; then
+        printf '1'
+    else
+        printf '0'
+    fi
+}
+
 dimension_runner="run_dimension"
 rust_suite="authorization"
 case "$HYPOTHESIS_ID" in
@@ -1118,6 +1129,47 @@ case "$HYPOTHESIS_ID" in
         repeat_test="tests.test_dci_complete_application.DciCompleteApplicationExecutionTests.test_claude_run_is_judged_and_exports_without_private_bodies"
         dirty_test="tests.test_dci_complete_application.DciRestrictedClaudeEvidenceTests.test_outside_path_is_rejected"
         override_test="tests.test_dci_complete_application.DciRestrictedClaudeEvidenceTests.test_tracked_claude_evidence_is_body_free_and_bounded"
+        ;;
+    AF-340-H-001)
+        first_dimension="layered_precedence"
+        second_dimension="runtime_mapping"
+        third_dimension="claude_authentication"
+        fourth_dimension="judge_cache_identity"
+        immutable_test="tests.test_config.PiPathConfigTests.test_original_runtime_precedence_and_sources"
+        repeat_test="tests.test_asterion_dci_config.AsterionDciConfigTests.test_runtime_resolution_is_runtime_first_and_layered"
+        dirty_test="tests.test_default_runtime_factory.DefaultRuntimeFactoryTests.test_claude_subscription_injects_no_provider_credentials"
+        override_test="tests.test_asterion_dci_judge.AsterionDciJudgeTests.test_every_public_request_shaping_field_changes_fingerprint"
+        ;;
+    AF-340-H-002)
+        first_dimension="quick_start_context"
+        second_dimension="source_launchers"
+        third_dimension="asterion_launchers"
+        fourth_dimension="documentation_contract"
+        immutable_test="tests.test_original_readme_acceptance"
+        repeat_test="tests.test_asterion_dci_batch_launchers"
+        dirty_test="tests.test_asterion_dci_batch_launchers"
+        override_test="tests.test_asterion_documentation"
+        ;;
+    AF-340-H-003)
+        first_dimension="immutable_profiles"
+        second_dimension="full_authorization"
+        third_dimension="query_evidence"
+        fourth_dimension="local_orchestration"
+        immutable_test="tests.test_asterion_dci_experiment_profiles"
+        repeat_test="tests.test_asterion_dci_experiment_profiles"
+        dirty_test="tests.test_asterion_dci_reproduction"
+        override_test="tests.test_af340_reproduction_verifier"
+        ;;
+    AF-340-H-004)
+        dimension_runner="run_af340_reproduction_dimension"
+        first_dimension="bounded_original_pi"
+        second_dimension="bounded_asterion_pi"
+        third_dimension="bounded_claude_modes"
+        fourth_dimension="full_comparison_evidence"
+        immutable_test="bounded"
+        repeat_test="bounded"
+        dirty_test="bounded"
+        override_test="bounded"
         ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2
