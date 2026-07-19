@@ -948,3 +948,5 @@
 - 11:15 AF-340 `tools/verify_original_readme.py --level bounded` was executed and failed only on provider-side quota (`Codex error: The usage limit has been reached`), so no bounded proof was recorded in this environment.
 - 11:17 AF-340 复现验证补强：补齐原始 README 契约验证器并新增 acceptance 测试，覆盖 launcher 合约与 bounded 命令形状。
 - 11:22 AF-340 更新 RESUME checkpoint，记录 verifier 交付状态并维持 AF-340 的下一步有界验证路径。
+- 12:24 AF-340 Task5 launcher 与文档对齐交付（`6385d58`）：11个核心 source/Asterion launcher 均去除硬编码 provider/model/sourcing，并复用显式传参，验证命令/文档一致性重整。
+- 12:24 AF-340 本地验证：`python3 tools/verify_original_readme.py --level local` 与 `uv run python -m unittest -v tests.test_asterion_dci_batch_launchers tests.test_asterion_dci_product_parity tests.test_asterion_documentation tests.test_original_readme_acceptance` 均通过。
