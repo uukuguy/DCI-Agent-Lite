@@ -925,3 +925,9 @@
 - 17:29 AF-340 规划阶段读取批处理脚本文本触发长任务正则误报；未启动评测、无 PID、无 provider 调用。
 - 17:31 project-state check 通过：AF-340 唯一活动，状态/工作表一致，无存活评测进程，工作树仅含预期日志追加。
 - 17:47 AF-340 八任务 TDD 实施计划完成自检；scope preflight、14 项治理测试、占位/接口扫描与 diff check 均通过，未启动 provider 或 full dataset。
+- 17:51 AF-340 实施计划固化配置、验证与 full 授权边界。 [83f424a]
+
+## 2026-07-19
+
+- 10:02 AF-340 复现实验在统一环境层次下通过：`variant=claude-minimax`，`--provider minimax --model MiniMax-M3 --env-file .../.env`，`DCI_MAX_TURNS=20`，未使用 `.env` 外的覆盖路径，结果 PASS，`Agent operations: 2`，`Judge operations: 2`，`Full dataset ran: no`。报告位于
+  `/Users/sujiangwen/sandbox/agentic-2026/DCI-Agent-Lite/.worktrees/af-340-implementation/outputs/verification/af340-bounded-claude-minimax-r6/af340-bounded-report.json`，`report_sha256=efabac9ad548f1530de76017195c174ffdcf05d4a3841dc815a6ff92e15c9039`。

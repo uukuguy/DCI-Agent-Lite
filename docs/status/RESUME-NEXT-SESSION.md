@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-18 17:44 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-19 10:10 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-340
 
@@ -13,7 +13,7 @@ Currently running: no repository-owned process.
 - The user approved AF-340's complete design: one layered CLI/application → `.env`/environment → runtime/Judge-default configuration contract.
 - Pi defaults to `openai-codex`/`gpt-5.6-luna`; Claude Code defaults to local subscription login and supports explicit compatible MiniMax Coding Plan translation; Judge defaults independently to DeepSeek V4 Flash.
 - Original DCI README Quick Start, Context Management Strategies, and all eleven Benchmark DCI-Agent-Lite launchers are the baseline acceptance paths. Asterion must run the same Pi experiment contract and the paper Claude Code path through source, application, and installed-wheel surfaces.
-- The design review gate passed and the eight-task test-first implementation plan is written. No implementation has started; the next action is to choose inline or user-authorized subagent-driven execution.
+- Bounded AF-340 verification has started and passed for the Claude-Minimax path: `af340-bounded-claude-minimax-r6` (`agent:installed-claude-minimax` + `agent:wheel-claude-minimax`), with no full dataset.
 
 ## Where things stand
 
@@ -21,15 +21,15 @@ Currently running: no repository-owned process.
 - Lifecycle: active.
 - Active package: AF-340.
 - Dependencies: AF-330 completed.
-- No provider request or dataset run occurred while preparing the design.
+- A bounded AF-340 provider-backed verification run has completed (no full dataset). Process and `.env` precedence was explicitly aligned during execution.
 - External `pi/` remains untouched; `.env` credentials were not read or printed.
 
 ## Next action
 
-1. Run `python3 tools/project_scope_check.py` before implementation execution.
-2. Start Task 1 in `docs/superpowers/plans/2026-07-18-af-340-readme-reproduction-runtime-parity.md` with RED configuration tests.
-3. Execute each task test-first and commit/journal its verified boundary.
-4. Stop after the full dry-run manifest unless the user separately authorizes the named profiles and estimated budget; `.env` never supplies that authority.
+1. Run `python3 tools/project_scope_check.py` before resuming Task 1 implementation.
+2. Continue AF-340 Task 1 (Original DCI layered config) test-first, then Tasks 2–6 in order, logging each verified boundary in `JOURNAL`.
+3. Add explicit `.env` + CLI precedence verification evidence for other runtime combinations before any full dataset authorization.
+4. Continue to `AF-340 Task 7` comparison evidence only after explicit `--authorize-full` profile and budget review.
 
 ## Accepted boundaries
 
@@ -48,6 +48,8 @@ Currently running: no repository-owned process.
 - Do not claim full or comparable results from bounded `--limit 1` evidence.
 - Do not make Asterion import or launch original DCI to manufacture parity.
 - Do not let `.env`, generic verification, or cache presence authorize full-dataset cost.
+
+- Latest verifier output: `/Users/sujiangwen/sandbox/agentic-2026/DCI-Agent-Lite/.worktrees/af-340-implementation/outputs/verification/af340-bounded-claude-minimax-r6/af340-bounded-report.json` (status pass, agent ops 2, judge ops 2).
 
 ## Ready command
 
