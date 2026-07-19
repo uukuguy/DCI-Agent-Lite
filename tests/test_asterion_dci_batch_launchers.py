@@ -106,7 +106,7 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
         for relative in sorted(TARGET_LAUNCHERS):
             text = (ASTERION_LAUNCHER_ROOT / relative).read_text(encoding="utf-8")
             with self.subTest(launcher=relative):
-                self.assertIn('source "$REPO_ROOT/.env"', text)
+                self.assertNotIn('source "$REPO_ROOT/.env"', text)
                 self.assertIn("asterion-dci benchmark", text)
                 self.assertIn('"$@"', text)
                 self.assertIn("--profile", text)
@@ -126,7 +126,7 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
             text = launcher.read_text(encoding="utf-8")
             with self.subTest(relative=relative):
                 self.assertIn(f"--profile {profile_name}", text)
-                self.assertIn('source "$REPO_ROOT/.env"', text)
+                self.assertNotIn('source "$REPO_ROOT/.env"', text)
                 self.assertEqual(
                     subprocess.run(
                         ["bash", "-n", str(launcher)], capture_output=True, text=True
@@ -416,7 +416,7 @@ for _relative, (_profile_slug, _profile_name) in {
         self.assertIn(profile["dataset"], text)
         self.assertIn(profile["corpus"], text)
         self.assertIn("asterion-dci benchmark", text)
-        self.assertIn('source "$REPO_ROOT/.env"', text)
+        self.assertNotIn('source "$REPO_ROOT/.env"', text)
         self.assertNotIn("run_bcplus_eval.py", text)
         syntax = subprocess.run(
             ["bash", "-n", str(launcher)], capture_output=True, text=True

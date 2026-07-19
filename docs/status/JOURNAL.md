@@ -940,3 +940,10 @@
 - 20:12 AF-340 parse-layer correction: `tests.test_judge.test_parse_args_preserves_runtime_defaults_for_layered_resolution` now keeps CLI/environment assertions in the same patch scope so env-driven runtime resolution is asserted from the exact effective layers.
 - 20:12 AF-340 verification check: `uv run python -m unittest -v tests.test_judge tests.test_asterion_dci_judge tests.test_check_judge tests.test_asterion_dci_product_parity` 全部通过；`python3 -m py_compile` + `ruff check` on touched files通过；`python3 tools/project_scope_check.py` OK。
 - 20:14 Journal one-liner: AF-340 judge defaults and parity-shape handling aligned; commit b7cf40d.
+- 11:11 AF-340 added `tools/verify_original_readme.py` to lock Quick Start + context-management literal contract and bounded provider-backed command-shape checks.
+- 11:11 AF-340 test-suite parity update: `tests/test_original_readme_acceptance.py` added and `tests/test_asterion_dci_batch_launchers.py` aligned with launcher contract (`source "$REPO_ROOT/.env"` no longer expected).
+- 11:12 AF-340 verification passes: `uv run python -m unittest -v tests.test_original_readme_acceptance tests.test_asterion_dci_batch_launchers tests.test_asterion_documentation tests.test_asterion_dci_product_parity` (121 tests).
+- 11:13 AF-340 verification check: `python3 tools/project_scope_check.py`、`ruff check`（`tools/verify_original_readme.py`、`tests/test_original_readme_acceptance.py`、`tests/test_asterion_dci_batch_launchers.py`）和 `git diff --check` 都通过。
+- 11:14 AF-340 commit prepared: `acbd5e2` after passing `py_compile` for touched files and shell `bash -n` across changed launcher scripts.
+- 11:15 AF-340 `tools/verify_original_readme.py --level bounded` was executed and failed only on provider-side quota (`Codex error: The usage limit has been reached`), so no bounded proof was recorded in this environment.
+- 11:17 AF-340 提交 ca90316：补齐原始 README 契约验证器与新增接受测试，覆盖 launcher 合约与 bounded 命令形状。
