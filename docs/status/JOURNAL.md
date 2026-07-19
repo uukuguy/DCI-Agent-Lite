@@ -939,3 +939,4 @@
 - 20:12 AF-340 finish-line hardening: fixed judge parity request-shape coverage by removing API-key-name influence from both judge fingerprints and adding parity-safe request token assertions (`max_output_tokens` vs `max_tokens` based on API shape).
 - 20:12 AF-340 parse-layer correction: `tests.test_judge.test_parse_args_preserves_runtime_defaults_for_layered_resolution` now keeps CLI/environment assertions in the same patch scope so env-driven runtime resolution is asserted from the exact effective layers.
 - 20:12 AF-340 verification check: `uv run python -m unittest -v tests.test_judge tests.test_asterion_dci_judge tests.test_check_judge tests.test_asterion_dci_product_parity` 全部通过；`python3 -m py_compile` + `ruff check` on touched files通过；`python3 tools/project_scope_check.py` OK。
+- 20:14 Journal one-liner: AF-340 judge defaults and parity-shape handling aligned; commit b7cf40d.
