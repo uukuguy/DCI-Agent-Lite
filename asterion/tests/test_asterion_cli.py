@@ -530,6 +530,74 @@ class AsterionCliTests(unittest.TestCase):
         self.assertEqual(len(contexts), 1)
         self.assertEqual(contexts[0].assembly_path.name, "claude.json")
 
+    def test_run_defaults_runtime_selection_from_environment_alias(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            value = provider(root)
+            application = value.applications[0]
+            pi_assembly = application.assembly_paths[0]
+            claude_assembly = pi_assembly.with_name("claude.json")
+            claude_manifest = json.loads(pi_assembly.read_text())
+            claude_manifest["runtime_id"] = "claude-code.reference"
+            claude_assembly.write_text(json.dumps(claude_manifest))
+            compatible = InstalledApplicationProvider(
+                protocol=value.protocol,
+                provider_id=value.provider_id,
+                resource_root=value.resource_root,
+                applications=(
+                    InstalledApplication(
+                        application_id=application.application_id,
+                        version=application.version,
+                        assembly_paths=(pi_assembly, claude_assembly),
+                        catalog_roots=application.catalog_roots,
+                        implementations=application.implementations,
+                        runtime_ids=("claude-code.reference", "pi.reference"),
+                    ),
+                ),
+            )
+            entry = FakeEntryPoint(name="example-app", factory=lambda: compatible)
+            contexts = []
+            registry = RuntimeFactoryRegistry(
+                (
+                    RuntimeFactoryBinding(
+                        runtime_id="claude-code.reference",
+                        capabilities=(),
+                        factory=lambda context: contexts.append(context)
+                        or ClaudeFixtureRuntime(),
+                    ),
+                )
+            )
+
+            with patch.dict(
+                os.environ,
+                {
+                    "DCI_RUNTIME": "claude-code.reference",
+                    "DCI_PROVIDER": "minimax",
+                    "DCI_MODEL": "MiniMax-M2.7",
+                },
+                clear=True,
+            ):
+                code = main(
+                    [
+                        "run",
+                        "--provider",
+                        "example-app",
+                        "--application",
+                        "example.research@1.0.0",
+                        "--input",
+                        "SECRET-INPUT",
+                    ],
+                    entry_points=(entry,),
+                    runtime_factories=registry,
+                    stdout=io.StringIO(),
+                    stderr=io.StringIO(),
+                )
+
+        self.assertEqual(code, 0)
+        self.assertEqual(len(contexts), 1)
+        self.assertEqual(contexts[0].runtime_id, "claude-code.reference")
+        self.assertEqual(contexts[0].assembly_path.name, "claude.json")
+
     def test_run_rejects_ambiguous_runtime_assemblies_before_factory(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

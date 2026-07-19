@@ -27,6 +27,7 @@ from asterion.applications.selection import (
     select_installed_application,
 )
 from asterion.assembly.protocol import AssemblyError, resolve_assembly
+from asterion.dci.config import resolve_dci_runtime_options
 from asterion.packages.catalog import discover_packages
 from asterion.packages.execution import (
     PackageExecutionError,
@@ -191,6 +192,10 @@ async def _run(
     provider = load_application_provider(
         args.provider, entry_points=entry_points
     )
+    runtime = resolve_dci_runtime_options(
+        {"runtime": _public_runtime_from_cli(args.runtime)}
+    )
+    runtime_id = _runtime_id_from_runtime(runtime.runtime)
     if args.application is not None:
         application = select_installed_application(
             provider, parse_application_selector(args.application)
@@ -208,11 +213,11 @@ async def _run(
         if len(matches) != 1:
             raise ApplicationProviderError("application assembly selection is invalid")
         application = matches[0]
-    if args.runtime not in application.runtime_ids:
+    if runtime_id not in application.runtime_ids:
         raise ApplicationProviderError("application runtime selection is invalid")
     if args.application is not None:
-        assembly_path = _select_application_assembly(application, args.runtime)
-    runtime_binding = registry.select(args.runtime)
+        assembly_path = _select_application_assembly(application, runtime_id)
+    runtime_binding = registry.select(runtime_id)
     assembly = json.loads(assembly_path.read_text())
     plan = resolve_assembly(
         assembly,
@@ -225,9 +230,13 @@ async def _run(
         provider_id=provider.provider_id,
         application_id=application.application_id,
         application_version=application.version,
-        runtime_id=args.runtime,
+        runtime_id=runtime_id,
         assembly_path=assembly_path,
-        options={},
+        options={
+            key: value
+            for key, value in runtime.__dict__.items()
+            if value is not None
+        },
     )
     runtime = runtime_binding.factory(context)
     input_text = args.input if args.input is not None else stdin.read()
@@ -252,6 +261,39 @@ async def _run(
             )
     stdout.write(json.dumps(_thaw(result.__dict__), sort_keys=True) + "\n")
     return 0
+
+
+def _public_runtime_from_cli(selection: str | None) -> str:
+    """Normalize CLI runtime selection into config-runtime keys."""
+
+    if selection is None:
+        return resolve_dci_runtime_options().runtime
+    normalized = _normalize_runtime_name(selection)
+    if normalized is None:
+        raise ValueError("application runtime selection is invalid")
+    return normalized
+
+
+def _runtime_id_from_runtime(runtime: str) -> str:
+    if runtime == "pi":
+        return "pi.reference"
+    if runtime == "claude-code":
+        return "claude-code.reference"
+    raise ValueError("application runtime selection is invalid")
+
+
+def _normalize_runtime_name(value: str) -> str | None:
+    normalized = value.strip().lower()
+    if normalized in {"", "pi", "pi.reference", "pi-ref", "pi_reference"}:
+        return "pi"
+    if normalized in {
+        "claude-code",
+        "claude-code.reference",
+        "claude_code",
+        "claudecode",
+    }:
+        return "claude-code"
+    return None
 
 
 def _select_application_assembly(
@@ -294,7 +336,7 @@ def _parser() -> argparse.ArgumentParser:
     verify.add_argument("--json", action="store_true")
     run = subparsers.add_parser("run")
     run.add_argument("--provider", required=True)
-    run.add_argument("--runtime", required=True)
+    run.add_argument("--runtime")
     run.add_argument("--run-id", default="asterion-run")
     run.add_argument("--input")
     run.add_argument("--application")

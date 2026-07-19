@@ -1113,8 +1113,9 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory).resolve()
             runtime = DciRuntimeOptions(
-                "openai",
-                "fixture-model",
+                runtime="pi",
+                provider="openai",
+                model="fixture-model",
                 tools="read,bash",
                 runtime_context_level="level3",
                 thinking_level="high",
@@ -1556,7 +1557,13 @@ class AsterionDciBatchValidationTests(unittest.TestCase):
             root = Path(temporary_directory)
             dataset = root / "dataset.jsonl"
             dataset.write_text("\n".join(json.dumps({"query_id": qid, "query": qid, "answer": "gold"}) for qid in ("Q-01", "q-1")) + "\n")
-            request = BenchmarkRequest(dataset=dataset, output_root=root / "out", cwd=root, judge_config=JudgeConfig(base_url="https://judge.example.test/v1"), runtime_options=DciRuntimeOptions(None, None))
+            request = BenchmarkRequest(
+                dataset=dataset,
+                output_root=root / "out",
+                cwd=root,
+                judge_config=JudgeConfig(base_url="https://judge.example.test/v1"),
+                runtime_options=DciRuntimeOptions(runtime="pi"),
+            )
             with self.assertRaisesRegex(DciBenchmarkError, "dataset"):
                 asyncio.run(run_benchmark_async(request, paths=Mock()))
             self.assertFalse(request.output_root.exists())
@@ -1777,7 +1784,15 @@ def _request(root: Path, *, rows: int = 1, max_concurrency: int = 1, mode: str =
         value["gold_docs" if ir else "answer"] = [f"doc-{index}"] if ir else "gold"
         values.append(value)
     dataset.write_text("\n".join(json.dumps(value) for value in values) + "\n")
-    return BenchmarkRequest(dataset=dataset, output_root=root / "out", cwd=root, judge_config=JudgeConfig(base_url="https://judge.example.test/v1"), runtime_options=DciRuntimeOptions(None, None, extra_args=extra_args), mode=mode, max_concurrency=max_concurrency)
+    return BenchmarkRequest(
+        dataset=dataset,
+        output_root=root / "out",
+        cwd=root,
+        judge_config=JudgeConfig(base_url="https://judge.example.test/v1"),
+        runtime_options=DciRuntimeOptions(runtime="pi", extra_args=extra_args),
+        mode=mode,
+        max_concurrency=max_concurrency,
+    )
 
 
 def _result(output_dir: Path) -> DciRunResult:

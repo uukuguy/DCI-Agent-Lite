@@ -929,6 +929,9 @@
 
 ## 2026-07-19
 
+- 11:57 AF-340: unified runtime-aware DCI configuration stack implemented end-to-end for Asterion `run` and runtime factories. `DCI_RUNTIME` now normalizes `pi`/`claude-code` aliases; Pi default runtime/profile is now `openai-codex`/`gpt-5.6-luna`; Claude Code requires runtime-aware provider/model pairs (anthropic/minimax/minimax-cn) and supports compatible MiniMax translation; Judge defaults changed to DeepSeek `deepseek-v4-flash`.
+- 11:58 AF-340 regression fix: `asterion run --runtime` remains optional; runtime default now resolves through `resolve_dci_runtime_options` and runtime selection is validated consistently via public/runtime-id normalization.
+- 11:59 AF-340 verification: `uv run python -m unittest discover -v tests -p 'test_asterion_dci_batch.py'` passed 94 tests (33.8s); `uv run python -m unittest discover -v tests -p 'test_asterion_dci_config.py'` passed 11 tests; `uv run python -m unittest discover -v asterion/tests -p 'test_asterion_cli.py'`/`test_default_runtime_factory.py`/`test_asterion_dci_product_parity.py` passed in full.
 - 10:02 AF-340 复现实验在统一环境层次下通过：`variant=claude-minimax`，`--provider minimax --model MiniMax-M3 --env-file .../.env`，`DCI_MAX_TURNS=20`，未使用 `.env` 外的覆盖路径，结果 PASS，`Agent operations: 2`，`Judge operations: 2`，`Full dataset ran: no`。报告位于
   `/Users/sujiangwen/sandbox/agentic-2026/DCI-Agent-Lite/.worktrees/af-340-implementation/outputs/verification/af340-bounded-claude-minimax-r6/af340-bounded-report.json`，`report_sha256=efabac9ad548f1530de76017195c174ffdcf05d4a3841dc815a6ff92e15c9039`。
 - 08:26 AF-340 Task 1 推进：落地原始层 `ConfigLayers` 与 `resolve_original_runtime`，添加 `src/dci/effective_config.py` 与 `src/dci/effective-config.schema.json`，并切换 `load_project_env`、`pi_rpc_runner`、`bcplus_eval` 到统一三层配置解析路径；`effective-config` 公共投影写入 `outputs/effective-config.json`。

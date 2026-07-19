@@ -8,8 +8,6 @@ import shutil
 from collections.abc import Mapping
 from pathlib import Path
 
-from dotenv import load_dotenv
-
 from asterion.runtime.factory import (
     RuntimeFactoryBinding,
     RuntimeFactoryContext,
@@ -61,7 +59,6 @@ _CLAUDE_OPERATIONAL_ENVIRONMENT_NAMES = (
 def default_runtime_factory_registry() -> RuntimeFactoryRegistry:
     """Return the host-owned runtime bindings shipped with Asterion."""
 
-    load_dotenv(Path.cwd() / ".env", override=False)
     return RuntimeFactoryRegistry(
         (
             RuntimeFactoryBinding(
@@ -81,6 +78,7 @@ def default_runtime_factory_registry() -> RuntimeFactoryRegistry:
 def _create_pi_runtime(context: RuntimeFactoryContext) -> PiRuntimeClient:
     if context.runtime_id != "pi.reference":
         raise RuntimeFactoryError("runtime factory context is invalid")
+    options = context.options
     working_root = Path.cwd()
     pi_dir = _configured_path("DCI_PI_DIR", working_root / "pi", root=working_root)
     package_dir = _configured_path(
@@ -94,12 +92,13 @@ def _create_pi_runtime(context: RuntimeFactoryContext) -> PiRuntimeClient:
         raise RuntimeFactoryError("Pi reference runtime is unavailable")
 
     command = [node, str(cli), "--mode", "rpc"]
-    for option, environment_name in (
-        ("--provider", "DCI_PROVIDER"),
-        ("--model", "DCI_MODEL"),
-        ("--tools", "DCI_TOOLS"),
+    for option, option_name, env_name in (
+        ("--provider", "provider", "DCI_PROVIDER"),
+        ("--model", "model", "DCI_MODEL"),
+        ("--tools", "tools", "DCI_TOOLS"),
     ):
-        value = os.environ.get(environment_name, "").strip()
+        raw = options.get(option_name)
+        value = str(raw).strip() if raw not in (None, "") else os.environ.get(env_name, "").strip()
         if value:
             command.extend((option, value))
     environment = os.environ.copy()
@@ -117,6 +116,7 @@ def _create_claude_code_runtime(
 ) -> ClaudeCodeRuntimeClient:
     if context.runtime_id != "claude-code.reference":
         raise RuntimeFactoryError("runtime factory context is invalid")
+    options = context.options
     executable = _configured_executable("ASTERION_CLAUDE_EXECUTABLE", "claude")
     runtime_cwd = _configured_path("ASTERION_RUNTIME_CWD", Path.cwd(), root=Path.cwd())
     evidence_root = _configured_path(
@@ -126,24 +126,56 @@ def _create_claude_code_runtime(
     )
     if executable is None or not runtime_cwd.is_dir():
         raise RuntimeFactoryError("Claude Code runtime is unavailable")
-    environment = _claude_provider_environment(os.environ)
-    default_timeout_seconds = _configured_timeout_seconds(os.environ)
+    provider = _resolve_options_with_environment(options, "provider", "DCI_PROVIDER")
+    model = _resolve_options_with_environment(options, "model", "DCI_MODEL")
+    environment, _auth_mode = _claude_provider_environment(
+        os.environ,
+        provider=provider,
+        model=model,
+    )
+    timeout_seconds = _coerce_timeout_seconds(options.get("timeout_seconds"))
+    if timeout_seconds is None:
+        timeout_seconds = _configured_timeout_seconds(os.environ)
     return ClaudeCodeRuntimeClient(
         executable=executable,
         cwd=runtime_cwd,
         environment=environment,
-        default_timeout_seconds=default_timeout_seconds,
+        default_timeout_seconds=timeout_seconds,
         evidence_root=evidence_root,
-        agent_provider=os.environ.get("DCI_PROVIDER", "").strip(),
-        agent_model=os.environ.get("DCI_MODEL", "").strip(),
+        agent_provider=provider,
+        agent_model=model,
     )
+def _coerce_timeout_seconds(value: object) -> float | None:
+    if value is None:
+        return None
+    try:
+        timeout_seconds = float(value)
+    except (TypeError, ValueError) as error:
+        raise RuntimeFactoryError("Claude Code timeout configuration is invalid") from error
+    if not math.isfinite(timeout_seconds) or timeout_seconds < 0:
+        raise RuntimeFactoryError("Claude Code timeout configuration is invalid")
+    return timeout_seconds or None
 
 
-def _claude_provider_environment(environment: Mapping[str, str]) -> dict[str, str]:
-    provider = environment.get("DCI_PROVIDER", "").strip()
-    model = environment.get("DCI_MODEL", "").strip()
+def _claude_provider_environment(
+    environment: Mapping[str, str], *, provider: str | None, model: str | None
+) -> tuple[dict[str, str], str]:
+    if provider is None or model is None:
+        return {
+            name: value
+            for name, value in environment.items()
+            if name in _CLAUDE_OPERATIONAL_ENVIRONMENT_NAMES and value
+        }, "subscription"
+
+    if not provider or not model:
+        return {
+            name: value
+            for name, value in environment.items()
+            if name in _CLAUDE_OPERATIONAL_ENVIRONMENT_NAMES and value
+        }, "subscription"
+
     provider_config = _CLAUDE_PROVIDER_CONFIG.get(provider)
-    if provider_config is None or not model:
+    if provider_config is None:
         raise RuntimeFactoryError("Claude Code provider configuration is unavailable")
 
     base_url, key_name = provider_config
@@ -173,7 +205,25 @@ def _claude_provider_environment(environment: Mapping[str, str]) -> dict[str, st
         native_environment.pop(name, None)
     native_environment["API_TIMEOUT_MS"] = "3000000"
     native_environment["CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"] = "1"
-    return native_environment
+    auth_mode = (
+        "minimax-cn-coding-plan"
+        if provider == "minimax-cn"
+        else "minimax-coding-plan"
+        if provider == "minimax"
+        else "subscription"
+    )
+    return native_environment, auth_mode
+
+
+def _resolve_options_with_environment(
+    options: Mapping[str, object], key: str, environment_name: str
+) -> str | None:
+    option_value = options.get(key)
+    if option_value is not None:
+        value = str(option_value).strip()
+        return None if not value else value
+    value = os.environ.get(environment_name, "").strip()
+    return None if not value else value
 
 
 def _configured_timeout_seconds(environment: Mapping[str, str]) -> float | None:

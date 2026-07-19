@@ -44,7 +44,11 @@ from asterion.dci.config import (
 )
 from asterion.dci.evaluation import evaluate_run_directory
 from asterion.dci.artifacts import DciConversationFeatures
-from asterion.dci.judge import JudgeConfig, build_judge_request
+from asterion.dci.judge import (
+    DEFAULT_JUDGE_MODEL,
+    JudgeConfig,
+    build_judge_request,
+)
 from asterion.dci.context_profiles import context_profile_names
 from asterion.dci.paper_benchmarks import (
     paper_benchmark_ids,
@@ -193,7 +197,7 @@ DCI_PRODUCT_DESCRIPTION = CapabilityProductDescription(
             "Judge model used for the evaluated basic case",
             ("basic", "complete", "preflight"),
             False,
-            "gpt-5.4-nano",
+            DEFAULT_JUDGE_MODEL,
             "Use the same Judge settings as original DCI",
         ),
         ConfigurationRequirement(
@@ -1107,7 +1111,7 @@ class DciProductVerifier:
         judge_ready = bool(
             os.environ.get("DCI_EVAL_JUDGE_MODEL", "").strip()
             or os.environ.get("ASTERION_DCI_JUDGE_MODEL", "").strip()
-            or "gpt-5.4-nano"
+            or DEFAULT_JUDGE_MODEL
         ) and bool(
             os.environ.get("DCI_EVAL_JUDGE_API_KEY", "").strip()
             or os.environ.get("ASTERION_DCI_JUDGE_API_KEY", "").strip()

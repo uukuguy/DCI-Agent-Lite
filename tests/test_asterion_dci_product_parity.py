@@ -462,7 +462,7 @@ class AsterionDciProductParityTests(unittest.TestCase):
             output_root=output_root,
             cwd=root,
             judge_config=config,
-            runtime_options=DciRuntimeOptions(None, None),
+            runtime_options=DciRuntimeOptions(runtime="pi"),
             mode=mode,
             corpus=corpus if mode == "ir" else None,
             analysis=False,

@@ -33,8 +33,9 @@ class DciPaths:
 class DciRuntimeOptions:
     """Resolved shared DCI Pi runtime settings."""
 
-    provider: str | None
-    model: str | None
+    runtime: str = "pi"
+    provider: str | None = None
+    model: str | None = None
     tools: str = "read,bash"
     timeout_seconds: float | None = 3600.0
     runtime_context_level: str | None = None
@@ -101,12 +102,31 @@ def resolve_dci_runtime_options(
     values = {} if overrides is None else dict(overrides)
     from asterion.dci.context_profiles import resolve_context_profile
 
+    runtime = _resolve_runtime(
+        _override_or_env(values, "runtime", "DCI_RUNTIME", "pi")
+    )
+    if not runtime:
+        runtime = "pi"
+    if runtime not in {"pi", "claude-code"}:
+        raise ValueError("DCI runtime is unsupported")
+    provider_default: str | None = (
+        "openai-codex" if runtime == "pi" else None
+    )
+    model_default: str | None = (
+        "gpt-5.6-luna" if runtime == "pi" else None
+    )
+    provider = _override_or_env(values, "provider", "DCI_PROVIDER", provider_default)
+    model = _override_or_env(values, "model", "DCI_MODEL", model_default)
+    if runtime == "claude-code":
+        provider, model = _resolve_claude_pair(provider=provider, model=model)
+
     context_profile = resolve_context_profile(
         _override_or_env(values, "runtime_context_level", "DCI_RUNTIME_CONTEXT_LEVEL")
     )
     return DciRuntimeOptions(
-        provider=_override_or_env(values, "provider", "DCI_PROVIDER"),
-        model=_override_or_env(values, "model", "DCI_MODEL"),
+        runtime=runtime,
+        provider=None if provider is None else str(provider),
+        model=None if model is None else str(model),
         tools=str(_override_or_env(values, "tools", "DCI_TOOLS", "read,bash")),
         timeout_seconds=_timeout_value(
             _override_or_env(
@@ -127,6 +147,22 @@ def resolve_dci_runtime_options(
     )
 
 
+def _resolve_claude_pair(
+    provider: object, model: object
+) -> tuple[None | str, None | str]:
+    if (provider is None and model is None) or (provider == "" and model == ""):
+        return None, None
+    if provider is None or provider == "":
+        raise ValueError("Claude Code runtime requires provider and model together")
+    if model is None or model == "":
+        raise ValueError("Claude Code runtime requires provider and model together")
+    provider_value = str(provider).strip()
+    model_value = str(model).strip()
+    if provider_value not in {"anthropic", "minimax", "minimax-cn"}:
+        raise ValueError("Claude Code runtime provider is unsupported")
+    return provider_value, model_value
+
+
 def _override_or_env(
     values: Mapping[str, object],
     key: str,
@@ -136,6 +172,15 @@ def _override_or_env(
     if key in values:
         return values[key]
     return os.environ.get(environment_name, default)
+
+
+def _resolve_runtime(value: object) -> str:
+    normalized = str(value).strip().lower()
+    if normalized in {"", "pi", "pi.reference", "pi-ref", "pi_reference"}:
+        return "pi"
+    if normalized in {"claude-code", "claude-code.reference", "claude_code", "claudecode"}:
+        return "claude-code"
+    raise ValueError("DCI runtime is unsupported")
 
 
 def _timeout_value(value: object) -> float | None:

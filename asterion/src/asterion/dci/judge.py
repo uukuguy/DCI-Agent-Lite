@@ -19,8 +19,8 @@ from email.utils import parsedate_to_datetime
 from typing import Any
 
 
-DEFAULT_JUDGE_BASE_URL = "https://api.openai.com/v1"
-DEFAULT_JUDGE_MODEL = "gpt-5.4-nano"
+DEFAULT_JUDGE_BASE_URL = "https://api.deepseek.com/v1"
+DEFAULT_JUDGE_MODEL = "deepseek-v4-flash"
 JUDGE_VERDICT_SCHEMA: dict[str, object] = {
     "type": "object",
     "properties": {

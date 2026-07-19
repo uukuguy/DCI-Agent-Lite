@@ -28,7 +28,6 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
                     },
                     clear=True,
                 ),
-                patch("asterion.runtime.defaults.load_dotenv"),
                 patch("asterion.runtime.defaults.shutil.which", return_value="/tool/claude"),
             ):
                 binding = default_runtime_factory_registry().select(
@@ -90,7 +89,6 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
                 }
                 with (
                     patch.dict(os.environ, environment, clear=True),
-                    patch("asterion.runtime.defaults.load_dotenv"),
                     patch(
                         "asterion.runtime.defaults.shutil.which",
                         return_value="/tool/claude",
@@ -142,7 +140,6 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
             }
             with (
                 patch.dict(os.environ, environment, clear=True),
-                patch("asterion.runtime.defaults.load_dotenv"),
                 patch("asterion.runtime.defaults.shutil.which", return_value="/tool/claude"),
             ):
                 binding = default_runtime_factory_registry().select(
@@ -171,7 +168,6 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
             }
             with (
                 patch.dict(os.environ, environment, clear=True),
-                patch("asterion.runtime.defaults.load_dotenv"),
                 patch("asterion.runtime.defaults.shutil.which", return_value="/tool/claude"),
                 patch("asterion.runtime.defaults.ClaudeCodeRuntimeClient") as client,
             ):
@@ -201,7 +197,6 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
             }
             with (
                 patch.dict(os.environ, environment, clear=True),
-                patch("asterion.runtime.defaults.load_dotenv"),
                 patch("asterion.runtime.defaults.shutil.which", return_value="/tool/claude"),
             ):
                 binding = default_runtime_factory_registry().select(
@@ -233,7 +228,6 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
             }
             with (
                 patch.dict(os.environ, environment, clear=True),
-                patch("asterion.runtime.defaults.load_dotenv"),
                 patch("asterion.runtime.defaults.shutil.which", return_value="/tool/claude"),
             ):
                 binding = default_runtime_factory_registry().select(
@@ -260,7 +254,6 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
             }
             with (
                 patch.dict(os.environ, environment, clear=True),
-                patch("asterion.runtime.defaults.load_dotenv"),
                 patch("asterion.runtime.defaults.shutil.which", return_value="/tool/claude"),
             ):
                 binding = default_runtime_factory_registry().select(

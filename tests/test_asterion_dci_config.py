@@ -63,6 +63,43 @@ class AsterionDciConfigTests(unittest.TestCase):
             ("openai", "explicit-model", 45.0),
         )
 
+    def test_runtime_options_default_to_pi_openai_codex_and_default_model(self) -> None:
+        with patch.dict(os.environ, {}, clear=True):
+            options = resolve_dci_runtime_options()
+
+        self.assertEqual(
+            (options.runtime, options.provider, options.model),
+            ("pi", "openai-codex", "gpt-5.6-luna"),
+        )
+
+    def test_runtime_aliases_normalize_to_runtime_contract(self) -> None:
+        with patch.dict(
+            os.environ,
+            {
+                "DCI_RUNTIME": "pi.reference",
+                "DCI_PROVIDER": "openai",
+                "DCI_MODEL": "gpt-test",
+            },
+            clear=True,
+        ):
+            options = resolve_dci_runtime_options()
+        self.assertEqual(options.runtime, "pi")
+        self.assertEqual((options.provider, options.model), ("openai", "gpt-test"))
+
+        with patch.dict(
+            os.environ,
+            {
+                "DCI_RUNTIME": "claude-code.reference",
+                "DCI_PROVIDER": "minimax",
+                "DCI_MODEL": "MiniMax-M2.7",
+            },
+            clear=True,
+        ):
+            options = resolve_dci_runtime_options()
+
+        self.assertEqual(options.runtime, "claude-code")
+        self.assertEqual((options.provider, options.model), ("minimax", "MiniMax-M2.7"))
+
     def test_runtime_options_reject_invalid_timeout_and_heap(self) -> None:
         with patch.dict(os.environ, {"DCI_RPC_TIMEOUT_SECONDS": "not-a-number"}, clear=True):
             with self.assertRaises(ValueError):
