@@ -947,3 +947,4 @@
 - 11:14 AF-340 commit prepared: `acbd5e2` after passing `py_compile` for touched files and shell `bash -n` across changed launcher scripts.
 - 11:15 AF-340 `tools/verify_original_readme.py --level bounded` was executed and failed only on provider-side quota (`Codex error: The usage limit has been reached`), so no bounded proof was recorded in this environment.
 - 11:17 AF-340 复现验证补强：补齐原始 README 契约验证器并新增 acceptance 测试，覆盖 launcher 合约与 bounded 命令形状。
+- 11:22 AF-340 更新 RESUME checkpoint，记录 verifier 交付状态并维持 AF-340 的下一步有界验证路径。
