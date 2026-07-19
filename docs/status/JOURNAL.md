@@ -931,3 +931,5 @@
 
 - 10:02 AF-340 复现实验在统一环境层次下通过：`variant=claude-minimax`，`--provider minimax --model MiniMax-M3 --env-file .../.env`，`DCI_MAX_TURNS=20`，未使用 `.env` 外的覆盖路径，结果 PASS，`Agent operations: 2`，`Judge operations: 2`，`Full dataset ran: no`。报告位于
   `/Users/sujiangwen/sandbox/agentic-2026/DCI-Agent-Lite/.worktrees/af-340-implementation/outputs/verification/af340-bounded-claude-minimax-r6/af340-bounded-report.json`，`report_sha256=efabac9ad548f1530de76017195c174ffdcf05d4a3841dc815a6ff92e15c9039`。
+- 08:26 AF-340 Task 1 推进：落地原始层 `ConfigLayers` 与 `resolve_original_runtime`，添加 `src/dci/effective_config.py` 与 `src/dci/effective-config.schema.json`，并切换 `load_project_env`、`pi_rpc_runner`、`bcplus_eval` 到统一三层配置解析路径；`effective-config` 公共投影写入 `outputs/effective-config.json`。
+- 08:26 验证：`uv run python -m py_compile src/dci/config.py src/dci/effective_config.py src/dci/benchmark/pi_rpc_runner.py scripts/bcplus_eval/run_bcplus_eval.py`、`uv run ruff check`（同文件）通过；`uv run python -m unittest -v tests.test_config tests.test_effective_config tests.test_pi_rpc_runner` 27/27 通过。

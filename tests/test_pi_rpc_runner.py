@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -11,6 +12,7 @@ from unittest.mock import MagicMock, call, patch
 
 from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
 import dci.benchmark.pi_rpc_runner as rpc_runner
+from dci.effective_config import ConfigLayers, resolve_original_runtime
 from dci.benchmark.pi_rpc_runner import PiRpcClient, parse_args
 from dci.framework.protocol import validate_event_stream, validate_run_request
 
@@ -522,8 +524,35 @@ class PiRpcLifecycleTests(unittest.TestCase):
             patch("sys.argv", ["dci-agent-lite"]),
         ):
             args = parse_args()
+            resolved = resolve_original_runtime(
+                vars(args),
+                ConfigLayers.from_repo(rpc_runner.REPO_ROOT, os.environ),
+            )
 
-        self.assertEqual(args.rpc_timeout_seconds, 42.0)
+        self.assertEqual(args.rpc_timeout_seconds, None)
+        self.assertEqual(resolved.timeout_seconds, 42.0)
+
+    def test_runtime_resolution_prefers_invocation_before_defaults(self) -> None:
+        with (
+            patch.dict(
+                "os.environ",
+                {"DCI_PROVIDER": "env-provider", "DCI_MODEL": "env-model"},
+                clear=True,
+            ),
+            patch("sys.argv", ["dci-agent-lite", "--provider", "cli-provider"]),
+        ):
+            args = parse_args()
+            resolved = resolve_original_runtime(
+                vars(args),
+                ConfigLayers.from_repo(rpc_runner.REPO_ROOT, os.environ),
+            )
+
+        self.assertEqual(args.provider, "cli-provider")
+        self.assertIsNone(args.model)
+        self.assertEqual(resolved.provider, "cli-provider")
+        self.assertEqual(resolved.model, "env-model")
+        self.assertEqual(resolved.sources["agent.provider"], "invocation")
+        self.assertEqual(resolved.sources["agent.model"], "environment")
 
 
 if __name__ == "__main__":

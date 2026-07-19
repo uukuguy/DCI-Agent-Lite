@@ -6,14 +6,15 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from dotenv import load_dotenv
+from dci.effective_config import ConfigLayers
 
 
 def load_project_env(repo_root: Path) -> Path:
     """Load ``.env`` from *repo_root* without overriding the process environment."""
 
     env_path = repo_root / ".env"
-    load_dotenv(env_path, override=False)
+    layers = ConfigLayers.from_repo(repo_root)
+    layers.materialize(os.environ)
     return env_path
 
 

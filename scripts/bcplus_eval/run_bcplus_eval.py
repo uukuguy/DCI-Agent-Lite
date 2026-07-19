@@ -33,6 +33,7 @@ from dci.benchmark.judge import (  # noqa: E402
     judge_answer_sync,
 )
 from dci.config import load_project_env, resolve_pi_paths  # noqa: E402
+from dci.effective_config import ConfigLayers, resolve_original_runtime  # noqa: E402
 
 DEFAULT_DATASET_PATH = REPO_ROOT / "data" / "bcplus_qa.jsonl"
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / "outputs" / "bcplus_eval"
@@ -105,16 +106,19 @@ def parse_args() -> argparse.Namespace:
         default=pi_paths.agent_dir,
         help=f"Pi agent config directory. Default from DCI_PI_DIR: {pi_paths.agent_dir}",
     )
-    default_provider = os.environ.get("DCI_PROVIDER", DEFAULT_PROVIDER)
-    default_model = os.environ.get("DCI_MODEL", DEFAULT_MODEL)
+    parser.add_argument(
+        "--runtime",
+        default=None,
+        help="Runtime name. Defaults to DCI_RUNTIME / pi.",
+    )
     parser.add_argument(
         "--provider",
-        default=default_provider,
+        default=None,
         help=f"Pi provider. Defaults to DCI_PROVIDER from .env, otherwise {DEFAULT_PROVIDER}.",
     )
     parser.add_argument(
         "--model",
-        default=default_model,
+        default=None,
         help=f"Pi model. Defaults to DCI_MODEL from .env, otherwise {DEFAULT_MODEL}.",
     )
     parser.add_argument("--tools", default=DEFAULT_TOOLS, help=f"Pi tool list. Default: {DEFAULT_TOOLS}")
@@ -650,6 +654,8 @@ def build_run_command(
         "python",
         "-m",
         "dci.benchmark.pi_rpc_runner",
+        "--runtime",
+        args.runtime,
         "--provider",
         args.provider,
         "--model",
@@ -683,6 +689,27 @@ def build_run_command(
         cmd.append(f"--extra-arg={extra_arg}")
     cmd.append(question_text)
     return cmd
+
+
+def build_effective_config_payload(
+    args: argparse.Namespace,
+    *,
+    effective_runtime,
+    judge_config: Optional[JudgeConfig] = None,
+) -> dict:
+    experiment = {
+        "dataset": args.dataset.name,
+        "corpus_dir": args.corpus_dir.name,
+        "max_turns": args.max_turns,
+        "max_concurrency": args.max_concurrency,
+        "runtime_context_level": args.runtime_context_level,
+        "pi_thinking_level": args.pi_thinking_level,
+        "limit": args.limit,
+    }
+    judge_payload: dict[str, object] = {}
+    if judge_config is not None:
+        judge_payload = judge_config.public_dict()
+    return effective_runtime.to_public_dict(judge=judge_payload, experiment=experiment)
 
 
 def load_existing_query_result(query_dir: Path) -> Optional[Dict[str, Any]]:
@@ -1677,6 +1704,12 @@ async def run_single_query(
 async def main_async() -> int:
     load_project_env(REPO_ROOT)
     args = parse_args()
+    effective_runtime = resolve_original_runtime(vars(args), ConfigLayers.from_repo(REPO_ROOT, os.environ))
+    args.runtime = effective_runtime.runtime
+    args.provider = effective_runtime.provider
+    args.model = effective_runtime.model
+    args.tools = effective_runtime.tools
+    args.max_turns = 100 if effective_runtime.max_turns is None else effective_runtime.max_turns
     if args.max_concurrency <= 0:
         print("--max-concurrency must be >= 1", file=sys.stderr)
         return 2
@@ -1742,6 +1775,12 @@ async def main_async() -> int:
     if judge_config is not None:
         run_config.update(judge_config.public_dict())
     write_json(args.output_root / "config.json", run_config)
+    write_json(
+        args.output_root / "effective-config.json",
+        build_effective_config_payload(
+            args, effective_runtime=effective_runtime, judge_config=judge_config
+        ),
+    )
 
     semaphore = asyncio.Semaphore(args.max_concurrency)
     results_by_query_id: Dict[str, Dict[str, Any]] = {}

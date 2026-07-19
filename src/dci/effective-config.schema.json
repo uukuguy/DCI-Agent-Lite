@@ -1,0 +1,109 @@
+{
+  "$id": "dci.effective-config/v1",
+  "type": "object",
+  "required": [
+    "schema",
+    "product",
+    "runtime",
+    "agent",
+    "context",
+    "judge",
+    "experiment",
+    "sources",
+    "identity_sha256"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "type": "string",
+      "const": "dci.effective-config/v1"
+    },
+    "product": {
+      "type": "string",
+      "enum": ["original-dci"]
+    },
+    "runtime": {
+      "type": "object",
+      "required": [
+        "runtime"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "runtime": {
+          "type": "string"
+        }
+      }
+    },
+    "agent": {
+      "type": "object",
+      "required": [
+        "provider",
+        "model",
+        "tools",
+        "max_turns",
+        "timeout_seconds",
+        "thinking_level",
+        "context_profile"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "tools": {
+          "type": "string"
+        },
+        "max_turns": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "timeout_seconds": {
+          "type": ["number", "null"],
+          "minimum": 0
+        },
+        "thinking_level": {
+          "type": ["string", "null"]
+        },
+        "context_profile": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "required": [
+        "context_profile",
+        "thinking_level"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "context_profile": {
+          "type": ["string", "null"]
+        },
+        "thinking_level": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "judge": {
+      "type": "object"
+    },
+    "experiment": {
+      "type": "object"
+    },
+    "sources": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "enum": ["invocation", "environment", "runtime-default"]
+      }
+    },
+    "identity_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

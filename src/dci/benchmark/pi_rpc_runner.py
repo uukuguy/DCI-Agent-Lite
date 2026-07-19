@@ -45,6 +45,7 @@ from dci.framework.protocol import (
     validate_event_stream,
     validate_run_request,
 )
+from dci.effective_config import ConfigLayers, resolve_original_runtime
 
 
 SCRIPT_PATH = Path(__file__).resolve()
@@ -1529,14 +1530,19 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--question-file", type=Path, help="Read the question from a UTF-8 text file.")
     parser.add_argument(
+        "--runtime",
+        default=None,
+        help="Runtime name. Defaults to DCI_RUNTIME / pi.",
+    )
+    parser.add_argument(
         "--provider",
-        default=os.environ.get("DCI_PROVIDER"),
-        help="Provider passed to pi. Defaults to DCI_PROVIDER from .env when set.",
+        default=None,
+        help="Provider passed to pi. Defaults to DCI_PROVIDER / runtime-default openai-codex.",
     )
     parser.add_argument(
         "--model",
-        default=os.environ.get("DCI_MODEL"),
-        help="Model id or pattern passed to pi. Defaults to DCI_MODEL from .env when set.",
+        default=None,
+        help="Model id or pattern passed to pi. Defaults to DCI_MODEL / runtime-default openai-codex model.",
     )
     parser.add_argument(
         "--package-dir",
@@ -1572,11 +1578,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--rpc-timeout-seconds",
         type=non_negative_float,
-        default=os.environ.get("DCI_RPC_TIMEOUT_SECONDS", str(DEFAULT_RPC_TIMEOUT_SECONDS)),
-        help=(
-            "Wall-clock deadline for one RPC prompt. Defaults to DCI_RPC_TIMEOUT_SECONDS "
-            f"or {DEFAULT_RPC_TIMEOUT_SECONDS:g}; set to 0 to disable."
-        ),
+        default=None,
+        help="Wall-clock deadline for one RPC prompt. Defaults to DCI_RPC_TIMEOUT_SECONDS or runtime default.",
     )
     parser.add_argument(
         "--system-prompt-file",
@@ -1873,6 +1876,13 @@ def run_terminal_mode(args: argparse.Namespace) -> int:
 def main() -> int:
     load_project_env(REPO_ROOT)
     args = parse_args()
+    effective_runtime = resolve_original_runtime(vars(args), ConfigLayers.from_repo(REPO_ROOT, os.environ))
+    args.runtime = effective_runtime.runtime
+    args.provider = effective_runtime.provider
+    args.model = effective_runtime.model
+    args.tools = effective_runtime.tools
+    args.max_turns = effective_runtime.max_turns
+    args.rpc_timeout_seconds = effective_runtime.timeout_seconds
     if args.terminal:
         try:
             return run_terminal_mode(args)
