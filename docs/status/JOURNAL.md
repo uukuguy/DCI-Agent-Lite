@@ -946,4 +946,4 @@
 - 11:13 AF-340 verification check: `python3 tools/project_scope_check.py`、`ruff check`（`tools/verify_original_readme.py`、`tests/test_original_readme_acceptance.py`、`tests/test_asterion_dci_batch_launchers.py`）和 `git diff --check` 都通过。
 - 11:14 AF-340 commit prepared: `acbd5e2` after passing `py_compile` for touched files and shell `bash -n` across changed launcher scripts.
 - 11:15 AF-340 `tools/verify_original_readme.py --level bounded` was executed and failed only on provider-side quota (`Codex error: The usage limit has been reached`), so no bounded proof was recorded in this environment.
-- 11:17 AF-340 提交 ca90316：补齐原始 README 契约验证器与新增接受测试，覆盖 launcher 合约与 bounded 命令形状。
+- 11:17 AF-340 复现验证补强：补齐原始 README 契约验证器并新增 acceptance 测试，覆盖 launcher 合约与 bounded 命令形状。
