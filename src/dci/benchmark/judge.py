@@ -14,14 +14,15 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 
-DEFAULT_JUDGE_BASE_URL = "https://api.openai.com/v1"
-DEFAULT_JUDGE_API = "responses"
-DEFAULT_JUDGE_MODEL = "gpt-5.4-nano"
+DEFAULT_JUDGE_BASE_URL = "https://api.deepseek.com/v1"
+DEFAULT_JUDGE_API = "chat-completions"
+DEFAULT_JUDGE_MODEL = "deepseek-v4-flash"
+DEFAULT_JUDGE_API_KEY_ENV = "DEEPSEEK_API_KEY"
 DEFAULT_JUDGE_TIMEOUT_SECONDS = 120
 DEFAULT_JUDGE_MAX_OUTPUT_TOKENS = 1024
-DEFAULT_JUDGE_INPUT_PRICE_PER_1M = 0.20
-DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M = 0.02
-DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M = 1.25
+DEFAULT_JUDGE_INPUT_PRICE_PER_1M = 0.0
+DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M = 0.0
+DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M = 0.0
 JUDGE_ENV_PREFIX = "DCI_EVAL_JUDGE_"
 JUDGE_VERDICT_SCHEMA = {
     "type": "object",
@@ -103,7 +104,7 @@ class JudgeConfig:
     input_price_per_1m: float = DEFAULT_JUDGE_INPUT_PRICE_PER_1M
     cached_input_price_per_1m: float = DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M
     output_price_per_1m: float = DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M
-    api_key_env: str = "OPENAI_API_KEY"
+    api_key_env: str = DEFAULT_JUDGE_API_KEY_ENV
     api_key: str = field(default="", repr=False)
 
     def __post_init__(self) -> None:
@@ -174,25 +175,17 @@ class JudgeConfig:
         output_price_per_1m: Optional[float] = None,
         api_key_env: Optional[str] = None,
     ) -> "JudgeConfig":
-        resolved_base_url = (
-            base_url
-            if base_url is not None
-            else os.environ.get(f"{JUDGE_ENV_PREFIX}BASE_URL", DEFAULT_JUDGE_BASE_URL)
+        resolved_base_url = base_url or os.environ.get(
+            f"{JUDGE_ENV_PREFIX}BASE_URL", DEFAULT_JUDGE_BASE_URL
         )
-        uses_official_openai = (
-            resolved_base_url.strip().rstrip("/") == DEFAULT_JUDGE_BASE_URL
+        resolved_api = api if api is not None else os.environ.get(
+            f"{JUDGE_ENV_PREFIX}API", DEFAULT_JUDGE_API
         )
-        default_input_price = (
-            DEFAULT_JUDGE_INPUT_PRICE_PER_1M if uses_official_openai else 0.0
-        )
-        default_cached_input_price = (
-            DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M if uses_official_openai else 0.0
-        )
-        default_output_price = (
-            DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M if uses_official_openai else 0.0
+        resolved_model = model if model is not None else os.environ.get(
+            f"{JUDGE_ENV_PREFIX}MODEL", DEFAULT_JUDGE_MODEL
         )
         resolved_api_key_env = api_key_env or os.environ.get(
-            f"{JUDGE_ENV_PREFIX}API_KEY_ENV", "OPENAI_API_KEY"
+            f"{JUDGE_ENV_PREFIX}API_KEY_ENV", DEFAULT_JUDGE_API_KEY_ENV
         )
         api_key = os.environ.get(f"{JUDGE_ENV_PREFIX}API_KEY", "").strip()
         if not api_key and resolved_api_key_env:
@@ -200,12 +193,8 @@ class JudgeConfig:
 
         return cls(
             base_url=resolved_base_url,
-            api=api
-            if api is not None
-            else os.environ.get(f"{JUDGE_ENV_PREFIX}API", DEFAULT_JUDGE_API),
-            model=model
-            if model is not None
-            else os.environ.get(f"{JUDGE_ENV_PREFIX}MODEL", DEFAULT_JUDGE_MODEL),
+            api=resolved_api,
+            model=resolved_model,
             timeout_seconds=timeout_seconds
             if timeout_seconds is not None
             else _env_int(
@@ -227,21 +216,18 @@ class JudgeConfig:
             thinking=os.environ.get(f"{JUDGE_ENV_PREFIX}THINKING", "auto"),
             input_price_per_1m=input_price_per_1m
             if input_price_per_1m is not None
-            else _env_float(
-                f"{JUDGE_ENV_PREFIX}INPUT_PRICE_PER_1M",
-                default_input_price,
-            ),
+            else _env_float(f"{JUDGE_ENV_PREFIX}INPUT_PRICE_PER_1M", DEFAULT_JUDGE_INPUT_PRICE_PER_1M),
             cached_input_price_per_1m=cached_input_price_per_1m
             if cached_input_price_per_1m is not None
             else _env_float(
                 f"{JUDGE_ENV_PREFIX}CACHED_INPUT_PRICE_PER_1M",
-                default_cached_input_price,
+                DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M,
             ),
             output_price_per_1m=output_price_per_1m
             if output_price_per_1m is not None
             else _env_float(
                 f"{JUDGE_ENV_PREFIX}OUTPUT_PRICE_PER_1M",
-                default_output_price,
+                DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M,
             ),
             api_key_env=resolved_api_key_env,
             api_key=api_key,
@@ -507,10 +493,12 @@ def _judge_request_fingerprint(
     *, config: JudgeConfig, request_payload: Dict[str, Any]
 ) -> str:
     """Fingerprint an already-built request without retaining its contents."""
+    public_config = dict(config.public_dict())
+    public_config.pop("judge_api_key_env", None)
 
     canonical_request = json.dumps(
         {
-            "configuration": config.public_dict(),
+            "configuration": public_config,
             "endpoint": config.endpoint,
             "request": request_payload,
         },

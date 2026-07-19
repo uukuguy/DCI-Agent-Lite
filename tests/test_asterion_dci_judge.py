@@ -101,6 +101,34 @@ class AsterionDciJudgeTests(unittest.TestCase):
             ),
         )
 
+    def test_fingerprint_is_stable_against_api_key_value_or_name_changes(self) -> None:
+        baseline = judge_request_fingerprint(
+            config=JudgeConfig(
+                base_url="https://judge.example.test/v1",
+                model="fixture",
+                api="responses",
+                api_key_env="DEEPSEEK_API_KEY",
+                api_key="one",
+            ),
+            question="question",
+            gold_answer="gold",
+            predicted_answer="prediction",
+        )
+        with_env_name = judge_request_fingerprint(
+            config=JudgeConfig(
+                base_url="https://judge.example.test/v1",
+                model="fixture",
+                api="responses",
+                api_key_env="CUSTOM_JUDGE_KEY",
+                api_key="two",
+            ),
+            question="question",
+            gold_answer="gold",
+            predicted_answer="prediction",
+        )
+
+        self.assertEqual(baseline, with_env_name)
+
     def test_every_public_request_shaping_field_changes_fingerprint(self) -> None:
         baseline_config = _config()
         baseline = judge_request_fingerprint(
@@ -108,7 +136,7 @@ class AsterionDciJudgeTests(unittest.TestCase):
         )
         changes = {
             "base_url": "https://other.example.test/v2",
-            "api": "chat-completions",
+            "api": "responses",
             "model": "other",
             "timeout_seconds": 9,
             "max_output_tokens": 99,
@@ -119,7 +147,6 @@ class AsterionDciJudgeTests(unittest.TestCase):
             "input_price_per_1m": 9.0,
             "cached_input_price_per_1m": 8.0,
             "output_price_per_1m": 7.0,
-            "api_key_env": "OTHER_KEY",
         }
         for field_name, value in changes.items():
             with self.subTest(field_name=field_name):
@@ -136,7 +163,12 @@ class AsterionDciJudgeTests(unittest.TestCase):
 
     def test_responses_and_chat_requests_include_configured_shaping(self) -> None:
         responses = build_judge_request(
-            replace(_config(), strict_json_schema=True, responses_store=True),
+            replace(
+                _config(),
+                api="responses",
+                strict_json_schema=True,
+                responses_store=True,
+            ),
             question="q",
             gold_answer="g",
             predicted_answer="p",
@@ -168,7 +200,9 @@ class AsterionDciJudgeTests(unittest.TestCase):
         with patch("asterion.dci.judge._open_judge_request", return_value=response):
             result = judge_answer_sync(
                 config=JudgeConfig(
-                    base_url="https://judge.example.test/v1", api_key="secret-key"
+                    base_url="https://judge.example.test/v1",
+                    api="responses",
+                    api_key="secret-key",
                 ),
                 question="question",
                 gold_answer="gold",
@@ -177,7 +211,7 @@ class AsterionDciJudgeTests(unittest.TestCase):
 
         self.assertTrue(result["is_correct"])
         self.assertEqual(result["usage"]["total_tokens"], 5)
-        self.assertGreater(result["cost_estimate_usd"]["total_cost"], 0)
+        self.assertEqual(result["cost_estimate_usd"]["total_cost"], 0.0)
         self.assertRegex(str(result["judge_request_fingerprint"]), r"^[0-9a-f]{64}$")
         self.assertNotIn("secret-key", repr(result))
 
@@ -223,7 +257,7 @@ class AsterionDciJudgeTests(unittest.TestCase):
         ) as opened:
             with patch("asterion.dci.judge._wait_before_retry"):
                 result = judge_answer_sync(
-                    config=_config(),
+                    config=replace(_config(), api="responses"),
                     question="q",
                     gold_answer="g",
                     predicted_answer="a",

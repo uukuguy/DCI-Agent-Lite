@@ -21,6 +21,11 @@ from typing import Any
 
 DEFAULT_JUDGE_BASE_URL = "https://api.deepseek.com/v1"
 DEFAULT_JUDGE_MODEL = "deepseek-v4-flash"
+DEFAULT_JUDGE_API = "chat-completions"
+DEFAULT_JUDGE_API_KEY_ENV = "DEEPSEEK_API_KEY"
+DEFAULT_JUDGE_INPUT_PRICE_PER_1M = 0.0
+DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M = 0.0
+DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M = 0.0
 JUDGE_VERDICT_SCHEMA: dict[str, object] = {
     "type": "object",
     "properties": {
@@ -42,7 +47,7 @@ class JudgeConfig:
     """Validated public judge settings with an environment-only credential."""
 
     base_url: str = DEFAULT_JUDGE_BASE_URL
-    api: str = "responses"
+    api: str = DEFAULT_JUDGE_API
     model: str = DEFAULT_JUDGE_MODEL
     timeout_seconds: int = 120
     max_output_tokens: int = 1024
@@ -50,10 +55,10 @@ class JudgeConfig:
     strict_json_schema: bool = False
     responses_store: bool = False
     thinking: str = "auto"
-    input_price_per_1m: float = 0.20
-    cached_input_price_per_1m: float = 0.02
-    output_price_per_1m: float = 1.25
-    api_key_env: str = "OPENAI_API_KEY"
+    input_price_per_1m: float = DEFAULT_JUDGE_INPUT_PRICE_PER_1M
+    cached_input_price_per_1m: float = DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M
+    output_price_per_1m: float = DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M
+    api_key_env: str = DEFAULT_JUDGE_API_KEY_ENV
     api_key: str = field(default="", repr=False)
 
     def __post_init__(self) -> None:
@@ -103,10 +108,10 @@ class JudgeConfig:
     def from_env(cls) -> "JudgeConfig":
         """Load shared judge settings with Asterion compatibility aliases."""
 
-        api_key_env = _judge_env("API_KEY_ENV", "OPENAI_API_KEY")
+        api_key_env = _judge_env("API_KEY_ENV", DEFAULT_JUDGE_API_KEY_ENV)
         return cls(
             base_url=_judge_env("BASE_URL", DEFAULT_JUDGE_BASE_URL),
-            api=_judge_env("API", "responses"),
+            api=_judge_env("API", DEFAULT_JUDGE_API),
             model=_judge_env("MODEL", DEFAULT_JUDGE_MODEL),
             timeout_seconds=_judge_env_int("TIMEOUT_SECONDS", 120),
             max_output_tokens=_judge_env_int("MAX_OUTPUT_TOKENS", 1024),
@@ -114,11 +119,15 @@ class JudgeConfig:
             strict_json_schema=_judge_env_bool("STRICT_JSON_SCHEMA", False),
             responses_store=_judge_env_bool("RESPONSES_STORE", False),
             thinking=_judge_env("THINKING", "auto"),
-            input_price_per_1m=_judge_env_float("INPUT_PRICE_PER_1M", 0.20),
-            cached_input_price_per_1m=_judge_env_float(
-                "CACHED_INPUT_PRICE_PER_1M", 0.02
+            input_price_per_1m=_judge_env_float(
+                "INPUT_PRICE_PER_1M", DEFAULT_JUDGE_INPUT_PRICE_PER_1M
             ),
-            output_price_per_1m=_judge_env_float("OUTPUT_PRICE_PER_1M", 1.25),
+            cached_input_price_per_1m=_judge_env_float(
+                "CACHED_INPUT_PRICE_PER_1M", DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M
+            ),
+            output_price_per_1m=_judge_env_float(
+                "OUTPUT_PRICE_PER_1M", DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M
+            ),
             api_key_env=api_key_env,
             api_key=os.environ.get("DCI_EVAL_JUDGE_API_KEY", "").strip()
             or os.environ.get("ASTERION_DCI_JUDGE_API_KEY", "").strip()
@@ -425,9 +434,11 @@ def _judge_env_bool(name: str, default: bool) -> bool:
 
 
 def _fingerprint(config: JudgeConfig, request_payload: dict[str, object]) -> str:
+    public_config = dict(config.public_dict())
+    public_config.pop("judge_api_key_env", None)
     canonical = json.dumps(
         {
-            "configuration": config.public_dict(),
+            "configuration": public_config,
             "endpoint": config.endpoint,
             "request": request_payload,
         },

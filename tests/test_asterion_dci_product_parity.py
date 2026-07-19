@@ -1096,6 +1096,11 @@ class AsterionDciProductParityTests(unittest.TestCase):
         asterion_config = AsterionJudgeConfig(
             base_url="https://judge.example.test/v1", model="fixture-judge"
         )
+        token_key = (
+            "max_output_tokens"
+            if source_config.api == "responses"
+            else "max_tokens"
+        )
         fields = {
             "question": "question",
             "gold_answer": "gold",
@@ -1106,8 +1111,8 @@ class AsterionDciProductParityTests(unittest.TestCase):
         self.assertEqual(source_config.public_dict(), asterion_config.public_dict())
         self.assertEqual(source_request["model"], asterion_request["model"])
         self.assertEqual(
-            source_request["max_output_tokens"],
-            asterion_request["max_output_tokens"],
+            source_request[token_key],
+            asterion_request[token_key],
         )
         for value in fields.values():
             self.assertIn(value, json.dumps(source_request))

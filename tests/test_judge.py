@@ -10,7 +10,9 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
+import dci.benchmark.pi_rpc_runner as source_runner
 import dci.benchmark.judge as judge_module
+from dci.effective_config import ConfigLayers, resolve_original_runtime
 from dci.benchmark.judge import (
     JudgeConfig,
     build_judge_request,
@@ -46,12 +48,26 @@ class JudgeConfigTests(unittest.TestCase):
 
         self.assertEqual(
             JudgeConfig(base_url="https://judge.example.test/v1").endpoint,
-            "https://judge.example.test/v1/responses",
+            "https://judge.example.test/v1/chat/completions",
         )
         self.assertEqual(
             JudgeConfig(base_url="http://127.0.0.1:8000/v1").endpoint,
-            "http://127.0.0.1:8000/v1/responses",
+            "http://127.0.0.1:8000/v1/chat/completions",
         )
+
+    def test_judge_config_has_deepseek_defaults_without_env(self) -> None:
+        with patch.dict(os.environ, {}, clear=True):
+            config = JudgeConfig.from_env()
+
+        self.assertEqual(config.base_url, "https://api.deepseek.com/v1")
+        self.assertEqual(config.api, "chat-completions")
+        self.assertEqual(config.model, "deepseek-v4-flash")
+        self.assertEqual(config.api_key_env, "DEEPSEEK_API_KEY")
+        self.assertEqual(config.endpoint, "https://api.deepseek.com/v1/chat/completions")
+        self.assertEqual(config.effective_thinking, "disabled")
+        self.assertEqual(config.input_price_per_1m, 0)
+        self.assertEqual(config.cached_input_price_per_1m, 0)
+        self.assertEqual(config.output_price_per_1m, 0)
 
     def test_deepseek_config_is_loaded_from_environment(self) -> None:
         environment = {
@@ -127,7 +143,7 @@ class JudgeConfigTests(unittest.TestCase):
                 self.assertEqual(os.environ["DCI_TEST_EXISTING"], "from-process")
                 self.assertEqual(os.environ["DCI_TEST_NEW"], "loaded")
 
-    def test_main_entry_uses_agent_provider_and_model_from_environment(self) -> None:
+    def test_parse_args_preserves_runtime_defaults_for_layered_resolution(self) -> None:
         with (
             patch.dict(
                 os.environ,
@@ -137,9 +153,14 @@ class JudgeConfigTests(unittest.TestCase):
             patch("sys.argv", ["dci-agent-lite"]),
         ):
             args = parse_args()
+            effective_runtime = resolve_original_runtime(
+                vars(args), ConfigLayers.from_repo(source_runner.REPO_ROOT, os.environ)
+            )
 
-        self.assertEqual(args.provider, "custom-provider")
-        self.assertEqual(args.model, "custom-model")
+        self.assertIsNone(args.provider)
+        self.assertIsNone(args.model)
+        self.assertEqual(effective_runtime.provider, "custom-provider")
+        self.assertEqual(effective_runtime.model, "custom-model")
 
 
 class JudgeTransportTests(unittest.TestCase):
@@ -258,6 +279,70 @@ class JudgeTransportTests(unittest.TestCase):
         self.assertRegex(fingerprint, r"^[0-9a-f]{64}$")
         self.assertEqual(fingerprint, repeated)
         self.assertNotEqual(fingerprint, changed_endpoint)
+
+    def test_judge_request_fingerprint_ignores_api_key_and_shares_request_shape_semantics(self) -> None:
+        config = JudgeConfig(
+            base_url="https://api.deepseek.com/v1",
+            api="chat-completions",
+            model="deepseek-v4-flash",
+            api_key="first-secret",
+            api_key_env="DEEPSEEK_API_KEY",
+        )
+        alternate = JudgeConfig(
+            base_url="https://api.deepseek.com/v1",
+            api="chat-completions",
+            model="deepseek-v4-flash",
+            api_key="second-secret",
+            api_key_env="TASK6_JUDGE_KEY",
+        )
+        changing_shape = JudgeConfig(
+            base_url="https://api.deepseek.com/v1",
+            api="responses",
+            model="deepseek-v4-flash",
+            api_key="first-secret",
+        )
+
+        fields = {
+            "question": "Question",
+            "gold_answer": "Gold",
+            "predicted_answer": "Prediction",
+        }
+        baseline = judge_module.judge_request_fingerprint(config=config, **fields)
+
+        self.assertEqual(
+            baseline,
+            judge_module.judge_request_fingerprint(config=alternate, **fields),
+        )
+        self.assertNotEqual(
+            baseline,
+            judge_module.judge_request_fingerprint(config=changing_shape, **fields),
+        )
+
+    def test_judge_request_fingerprint_ignores_api_key_configuration_name_changes(self) -> None:
+        fields = {
+            "question": "Question",
+            "gold_answer": "Gold",
+            "predicted_answer": "Prediction",
+        }
+        default = JudgeConfig(
+            base_url="https://api.deepseek.com/v1",
+            api="chat-completions",
+            model="deepseek-v4-flash",
+            api_key="secret-key",
+            api_key_env="DEEPSEEK_API_KEY",
+        )
+        alternate = JudgeConfig(
+            base_url="https://api.deepseek.com/v1",
+            api="chat-completions",
+            model="deepseek-v4-flash",
+            api_key="secret-key",
+            api_key_env="ALT_JUDGE_KEY",
+        )
+
+        self.assertEqual(
+            judge_module.judge_request_fingerprint(config=default, **fields),
+            judge_module.judge_request_fingerprint(config=alternate, **fields),
+        )
 
     def test_chat_completions_request_and_response_are_normalized(self) -> None:
         config = JudgeConfig(
