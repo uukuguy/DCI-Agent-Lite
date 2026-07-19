@@ -2,7 +2,7 @@
 set -euo pipefail
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../../.." && pwd)
-if [ -f "$REPO_ROOT/.env" ]; then set -a; source "$REPO_ROOT/.env"; set +a; fi
+
 dataset="$REPO_ROOT/data/bcplus_qa.jsonl"
 corpus="$REPO_ROOT/corpus/bc_plus_docs"
 [ -f "$dataset" ] || { echo "Asterion DCI dataset is unavailable" >&2; exit 2; }

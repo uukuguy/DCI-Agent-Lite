@@ -148,8 +148,6 @@ For an interactive Pi session, use the independent terminal command:
 ```bash
 asterion-dci terminal \
   --cwd "$PWD/corpus/wiki_corpus" \
-  --provider openai \
-  --model gpt-5.4-nano \
   --tools read,bash \
   --thinking-level high \
   "Answer using only the local corpus."
@@ -457,6 +455,13 @@ The example below illustrates DCI-Agent-Lite in action: the deep research agent 
 set -a; source .env 2>/dev/null; set +a
 
 PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner --terminal \
+  --cwd "corpus/wiki_corpus" \
+  --extra-arg="--thinking high"
+```
+该命令默认使用仓库根目录 `.env` 中的 `DCI_PROVIDER`/`DCI_MODEL`（建议缺省为 `openai-codex` 与 `gpt-5.6-luna`）。要显式固定 provider/backend 时可加上：
+
+```bash
+PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner --terminal \
   --provider openai \
   --model gpt-5.4-nano \
   --cwd "corpus/wiki_corpus" \
@@ -474,6 +479,14 @@ Answer the following question using only wiki_dump.jsonl in the current director
 ```bash
 set -a; source .env 2>/dev/null; set +a
 
+PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
+  --cwd "corpus/wiki_corpus" \
+  --extra-arg="--thinking high" \
+  "Answer the following question using only wiki_dump.jsonl in the current directory. Do not use web search. Use rg instead of grep for fast searching. Question: In which street did the Great Fire of London originate?"
+```
+如需固定 provider/backend，示例如下：
+
+```bash
 PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
   --provider openai \
   --model gpt-5.4-nano \
@@ -523,6 +536,20 @@ records the full profile identity, extension version/digest, body-free counters,
 and—when `--keep-session` is enabled—the original Pi session identity used by
 resume.
 
+To reproduce each live profile deterministically, run one short bounded command
+for each level:
+
+```bash
+for profile in level0 level1 level2 level3 level4; do
+  PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
+    --runtime-context-level "$profile" \
+    --cwd "corpus/wiki_corpus" \
+    --max-turns 6 \
+    --extra-arg="--thinking high" \
+    "Answer the following question using only wiki_dump.jsonl in the current directory. Question: In which street did the Great Fire of London originate?"
+done
+```
+
 Evidence labels are intentionally narrow:
 
 - **Implemented**: extension, transport, artifacts, CLI, benchmark, resume, and installed application are present.
@@ -545,6 +572,14 @@ Set Pi thinking explicitly:
 set -a; source .env 2>/dev/null; set +a
 
 PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
+  --cwd "corpus/wiki_corpus" \
+  --extra-arg="--thinking high" \
+  "Answer the following question using only wiki_dump.jsonl in the current directory. Do not use web search. Use rg instead of grep for fast searching. Question: In which street did the Great Fire of London originate?"
+```
+要显式指定 provider/backend，可在命令中附加：
+
+```bash
+PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
   --provider openai \
   --model gpt-5.4-nano \
   --cwd "corpus/wiki_corpus" \
@@ -556,7 +591,7 @@ PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
 <a name="running-experiments"></a>
 ## 🎯 Benchmark DCI-Agent-Lite 
 
-We benchmark DCI-Agent-Lite on the following benchmark suites using OpenAI `gpt-5.4-nano` with `--thinking high` and a maximum turn budget of 300.
+We benchmark DCI-Agent-Lite on the following benchmark suites using the configured runtime context defaults (commonly `openai-codex` + `gpt-5.6-luna`) with `--thinking high` and a maximum turn budget of 300.
 
 | Data | Data Size | Retrieval Corpus | Corpus Size | Avg. Corpus Len. (words) | Corpus Path |
 |------|-----------|------------------|-------------|--------------------------|-------------|

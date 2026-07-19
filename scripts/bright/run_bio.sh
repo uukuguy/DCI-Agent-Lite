@@ -1,19 +1,5 @@
 #!/usr/bin/env bash
 
-# Auto-load .env from repo root if present
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && git rev-parse --show-toplevel 2>/dev/null)"
-if [ -z "$REPO_ROOT" ]; then
-    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    while [ "$REPO_ROOT" != "/" ] && [ ! -d "$REPO_ROOT/.git" ]; do
-        REPO_ROOT="$(dirname "$REPO_ROOT")"
-    done
-fi
-if [ -f "$REPO_ROOT/.env" ]; then
-    set -a
-    source "$REPO_ROOT/.env"
-    set +a
-fi
-
 set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -24,8 +10,6 @@ uv run python "$REPO_ROOT/scripts/bcplus_eval/run_bcplus_eval.py" \
   --dataset "$REPO_ROOT/data/dci-bench/data/bright_biology/bright_biology.jsonl" \
   --output-root "$REPO_ROOT/outputs/bright/bio" \
   --corpus-dir "$REPO_ROOT/corpus/bright_corpus/biology" \
-  --provider openai \
-  --model gpt-5.4-nano \
   --tools read,bash \
   --max-turns 300 \
   --max-concurrency 20 \

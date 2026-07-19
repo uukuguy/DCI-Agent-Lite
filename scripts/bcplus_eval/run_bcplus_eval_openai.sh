@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-# Auto-load .env from repo root if present
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && git rev-parse --show-toplevel 2>/dev/null)"
 if [ -z "$REPO_ROOT" ]; then
     REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -8,12 +7,6 @@ if [ -z "$REPO_ROOT" ]; then
         REPO_ROOT="$(dirname "$REPO_ROOT")"
     done
 fi
-if [ -f "$REPO_ROOT/.env" ]; then
-    set -a
-    source "$REPO_ROOT/.env"
-    set +a
-fi
-
 set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -31,14 +24,13 @@ uv run python "$REPO_ROOT/scripts/bcplus_eval/run_bcplus_eval.py" \
   --dataset "$REPO_ROOT/data/bcplus_qa.jsonl" \
   --output-root "$output_root" \
   --corpus-dir "$REPO_ROOT/corpus/bc_plus_docs" \
-  --provider openai \
-  --model gpt-5.4-nano \
   --tools read,bash \
   --max-turns 100 \
   --max-concurrency "$concurrency" \
   --pi-thinking-level "$thinking_level" \
   --runtime-context-level "$level" \
-  --node-max-old-space-size-mb "$node_heap_mb"
+  --node-max-old-space-size-mb "$node_heap_mb" \
+  "$@"
 
 
 # bash scripts/bcplus_eval/run_bcplus_eval_openai.sh level0 > logs/bcplus_eval_openai_level0.log 2>&1 &
