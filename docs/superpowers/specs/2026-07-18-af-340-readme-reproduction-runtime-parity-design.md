@@ -223,6 +223,16 @@ Code variants are assessed against their exact versioned profile and, for
 `paper-reference/claude-code`, the published DCI-Agent-CC targets. They are not
 misreported as source-product parity.
 
+The paper target is a separate immutable `dci.reproduction-target/v1` resource
+rather than an in-place mutation of `dci.experiment-profile/v1`. It binds
+arXiv:2605.05242v1 and the paper's DCI-Agent-CC main-result rows: BrowseComp-Plus
+accuracy `0.800`; QA accuracy NQ `0.78`, TriviaQA `0.96`, Bamboogle `0.80`,
+HotpotQA `0.88`, 2WikiMultiHopQA `0.82`, MuSiQue `0.74`, aggregate `0.830`; and
+IR NDCG@10 Biology `0.771`, Earth Science `0.690`, Economics `0.468`, Robotics
+`0.568`, ArguAna `0.853`, SciFact `0.757`, aggregate `0.685`. A current-default
+Claude profile has no published numeric target and must report that fact instead
+of inheriting the paper-reference values.
+
 The verifier preserves query-level pairs and exclusions so a summary cannot
 hide divergent samples, systematic failures, or selection drift. Failed,
 cancelled, timed-out, or missing rows remain failures unless the versioned

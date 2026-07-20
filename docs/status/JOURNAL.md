@@ -959,3 +959,4 @@
 - 13:01 AF-340 Task6 recovery state 对齐 CURRENT/WORKLIST/RESUME，并清除 Open Problems 中已完成条目。 [3f0cd03]
 - 13:34 AF-340 Climb 五假设链激活，恢复树重新绑定当前工作包。 [0fd6168]
 - 13:41 AF-340-H-001 confirmed 4/4; package acceptance recorded.
+- 13:42 H001 严格逐题证据与 manifest 合同落地，阻止漂移和敏感正文。 [aa7421e]

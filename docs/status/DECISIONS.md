@@ -499,3 +499,13 @@
 - Evidence boundary: both products emit `dci.effective-config/v1` without secrets, private paths, prompts, answers, or bodies. Full comparison retains query-level evidence and versioned confidence/non-inferiority criteria.
 - Rationale: one precedence framework preserves simple `.env` defaults and precise CLI overrides while allowing runtime-specific provider capabilities and authentication. Runtime-specific public variable families would fragment the contract; a universal provider compatibility claim would be false.
 - Revalidation trigger: change the public precedence order, runtime defaults, Judge default, full-run authorization, or result-comparison margins only through a versioned configuration/evidence migration and renewed README/Asterion parity acceptance.
+
+## D-052 — Bind paper result targets in a separate versioned registry
+
+- Status: ✅ accepted design clarification
+- Decided: 2026-07-20
+- Decision: AF-340 stores published DCI-Agent-CC main-result values in a separate immutable `dci.reproduction-target/v1` resource keyed by `paper-reference/claude-code`; comparison reports bind both the existing experiment-profile identity and this target identity. The experiment-profile/v1 shape and the Task 6 profile digests are not silently redefined.
+- Primary-source boundary: the registry binds arXiv:2605.05242v1 and records BrowseComp-Plus accuracy `0.800`, the six QA per-dataset values plus aggregate `0.830`, and the six IR NDCG@10 values plus aggregate `0.685`. Dataset IDs map only to the AF-320 inventory identities.
+- Current-default boundary: Claude subscription and MiniMax profiles have no published numeric targets. Their reports remain `target-comparison` against exact profile identity and explicitly record `published_target_status: not-applicable`; they never inherit Sonnet 4.6 paper values or claim source parity.
+- Statistical boundary: Claude reports retain single-run point estimates and 95% intervals without manufacturing original-product pairs. Pi remains the only paired original/Asterion non-inferiority comparison.
+- Revalidation trigger: change target values, source revision, dataset mapping, or target aggregation only after reconciling a newer primary paper artifact and versioning the target registry.
