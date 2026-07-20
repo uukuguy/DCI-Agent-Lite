@@ -179,6 +179,11 @@ def _parser() -> argparse.ArgumentParser:
     paper_reproduce.add_argument("--estimated-budget-usd", type=float, required=True)
     paper_reproduce.add_argument("--authorize-full", action="store_true")
     paper_reproduce.add_argument("--dry-run", action="store_true")
+    paper_compare = paper_commands.add_parser("compare")
+    paper_compare.add_argument("--baseline", type=Path)
+    paper_compare.add_argument("--candidate", type=Path, required=True)
+    paper_compare.add_argument("--profile", required=True)
+    paper_compare.add_argument("--output", type=Path, required=True)
     return parser
 
 
@@ -328,6 +333,7 @@ def main(
         try:
             from asterion.dci.verification import (
                 paper_benchmark_acceptance_main,
+                paper_compare_main,
                 paper_product_contract,
                 paper_reproduce_main,
             )
@@ -358,6 +364,22 @@ def main(
                     stdout=stdout,
                     stderr=stderr,
                     repo_root=root,
+                )
+            if args.paper_command == "compare":
+                compare_argv = [
+                    "--candidate",
+                    str(args.candidate),
+                    "--profile",
+                    args.profile,
+                    "--output",
+                    str(args.output),
+                ]
+                if args.baseline is not None:
+                    compare_argv.extend(("--baseline", str(args.baseline)))
+                return paper_compare_main(
+                    compare_argv,
+                    stdout=stdout,
+                    stderr=stderr,
                 )
             reproduce_argv = [
                 "--profile",

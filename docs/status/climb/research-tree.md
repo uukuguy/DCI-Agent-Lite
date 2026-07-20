@@ -1,19 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (103 runs).
+> Deterministic summary generated from tracked state (104 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 104
-- Next hypothesis: AF-340-H-002
+- Last cycle: 105
+- Next hypothesis: AF-340-H-003
 - In flight: none
-- Next action: Start AF-340-H-002.
+- Next action: Start AF-340-H-003.
 
 ## Active hypotheses
 
-- **AF-340-H-002** (pending, rank 0.90): Prove deterministic paired-bootstrap accuracy and NDCG comparison, Pi non-inferiority margins, and separately labeled Claude target comparison.
 - **AF-340-H-003** (pending, rank 0.80): Prove one provider-free coordinator executes the literal local matrix, reports zero operations, and preserves private-output and documentation boundaries.
 - **AF-340-H-004** (pending, rank 0.70): Prove retained bounded original, Asterion Pi, Claude subscription, and Claude MiniMax evidence covers every user-facing path without full execution.
 - **AF-340-H-005** (pending, rank 0.60): After explicit invocation authorization, prove matched original/Asterion Pi non-inferiority, exact Claude target comparison, privacy, and terminal closure gates.
@@ -125,6 +124,7 @@
 | 20260717-182523-dci-climb-af330h004 | AF-330-H-004 | 4 | confirmed 4/4 |
 | 20260717-184511-dci-climb-af330h004 | AF-330-H-004 | 4 | confirmed 4/4 |
 | 20260720-134103-dci-climb-af340h001 | AF-340-H-001 | 4 | confirmed 4/4 |
+| 20260720-135450-dci-climb-af340h002 | AF-340-H-002 | 4 | confirmed 4/4 |
 
 ## Negative cache
 

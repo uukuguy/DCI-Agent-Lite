@@ -5,9 +5,11 @@ from __future__ import annotations
 import json
 import math
 import os
+import random
 import re
 import stat
 from dataclasses import dataclass
+from functools import lru_cache
 from importlib import resources
 from pathlib import Path
 from types import MappingProxyType
@@ -25,6 +27,8 @@ from asterion.dci.paper_benchmarks import (
 RUN_MANIFEST_SCHEMA = "dci.reproduction-run-manifest/v1"
 QUERY_EVIDENCE_SCHEMA = "dci.reproduction-query-evidence/v1"
 _SCHEMA_RESOURCE = "reproduction-result.schema.json"
+_TARGET_RESOURCE = "reproduction-targets.json"
+_TARGET_SCHEMA_RESOURCE = "reproduction-target.schema.json"
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _PUBLIC_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$")
 _FAILURE_CLASS = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
@@ -133,19 +137,25 @@ def _require_float(
     return parsed
 
 
-def _validate_schema_resource() -> None:
+def _load_mapping_resource(name: str, *, kind: str) -> dict[str, object]:
     try:
         value = json.loads(
             resources.files("asterion.dci.resources")
-            .joinpath(_SCHEMA_RESOURCE)
+            .joinpath(name)
             .read_text(encoding="utf-8"),
             object_pairs_hook=_unique_object,
         )
     except (OSError, UnicodeError, ValueError) as error:
-        raise RuntimeError("DCI reproduction schema is invalid") from error
+        raise RuntimeError(f"DCI reproduction {kind} is invalid") from error
+    if type(value) is not dict:
+        raise RuntimeError(f"DCI reproduction {kind} is invalid")
+    return value
+
+
+def _validate_schema_resource() -> dict[str, object]:
+    value = _load_mapping_resource(_SCHEMA_RESOURCE, kind="schema")
     if (
-        type(value) is not dict
-        or value.get("$schema") != "https://json-schema.org/draft/2020-12/schema"
+        value.get("$schema") != "https://json-schema.org/draft/2020-12/schema"
         or value.get("$id") != RUN_MANIFEST_SCHEMA
         or value.get("additionalProperties") is not False
         or set(value.get("required", ())) != _MANIFEST_FIELDS
@@ -153,6 +163,175 @@ def _validate_schema_resource() -> None:
         or set(value.get("$defs", ())) != {"query", "aggregates"}
     ):
         raise RuntimeError("DCI reproduction schema is invalid")
+    return value
+
+
+@dataclass(frozen=True, slots=True)
+class ReproductionTarget:
+    """One primary-source result target without query or answer bodies."""
+
+    target_id: str
+    profile_id: str
+    source_id: str
+    source_url: str
+    agentic_search_accuracy: float
+    qa_accuracy: float
+    ir_ndcg_at_10: float
+    dataset_targets: Mapping[str, float]
+    identity_sha256: str
+
+    def __post_init__(self) -> None:
+        if self.target_id != "paper.2605.05242v1/dci-agent-cc/main":
+            raise ValueError("DCI reproduction target ID is invalid")
+        if self.profile_id != "paper-reference/claude-code":
+            raise ValueError("DCI reproduction target profile is invalid")
+        if self.source_id != "arxiv:2605.05242v1" or self.source_url != (
+            "https://arxiv.org/pdf/2605.05242v1"
+        ):
+            raise ValueError("DCI reproduction target source is invalid")
+        for field in (
+            "agentic_search_accuracy",
+            "qa_accuracy",
+            "ir_ndcg_at_10",
+        ):
+            object.__setattr__(
+                self,
+                field,
+                _require_float(getattr(self, field), field=field, maximum=1.0),
+            )
+        expected_datasets = {
+            "beir.arguana",
+            "beir.scifact",
+            "bright.biology",
+            "bright.earth-science",
+            "bright.economics",
+            "bright.robotics",
+            "browsecomp-plus",
+            "qa.2wikimultihopqa",
+            "qa.bamboogle",
+            "qa.hotpotqa",
+            "qa.musique",
+            "qa.nq",
+            "qa.triviaqa",
+        }
+        if set(self.dataset_targets) != expected_datasets:
+            raise ValueError("DCI reproduction target dataset set is invalid")
+        normalized_targets = {
+            dataset_id: _require_float(
+                value, field="dataset target", maximum=1.0
+            )
+            for dataset_id, value in sorted(self.dataset_targets.items())
+        }
+        object.__setattr__(
+            self, "dataset_targets", MappingProxyType(normalized_targets)
+        )
+        mapping = self.to_mapping()
+        identity = mapping.pop("identity_sha256")
+        if identity != _canonical_sha256(mapping):
+            raise ValueError("DCI reproduction target identity drifted")
+
+    def to_mapping(self) -> dict[str, object]:
+        return {
+            "schema": "dci.reproduction-target/v1",
+            "target_id": self.target_id,
+            "profile_id": self.profile_id,
+            "source_id": self.source_id,
+            "source_url": self.source_url,
+            "agentic_search_accuracy": self.agentic_search_accuracy,
+            "qa_accuracy": self.qa_accuracy,
+            "ir_ndcg_at_10": self.ir_ndcg_at_10,
+            "dataset_targets": dict(self.dataset_targets),
+            "identity_sha256": self.identity_sha256,
+        }
+
+
+@lru_cache(maxsize=1)
+def _reproduction_targets() -> Mapping[str, ReproductionTarget]:
+    schema = _load_mapping_resource(_TARGET_SCHEMA_RESOURCE, kind="target registry")
+    payload = _load_mapping_resource(_TARGET_RESOURCE, kind="target registry")
+    if (
+        type(schema) is not dict
+        or schema.get("$id") != "dci.reproduction-target/v1"
+        or schema.get("additionalProperties") is not False
+        or type(payload) is not dict
+        or set(payload) != {"schema", "targets"}
+        or payload.get("schema") != "dci.reproduction-target/v1"
+        or type(payload.get("targets")) is not list
+        or len(payload["targets"]) != 1
+    ):
+        raise RuntimeError("DCI reproduction target registry is invalid")
+    parsed: dict[str, ReproductionTarget] = {}
+    for item in payload["targets"]:
+        if type(item) is not dict or set(item) != {
+            "target_id",
+            "profile_id",
+            "source_id",
+            "source_url",
+            "agentic_search_accuracy",
+            "qa_accuracy",
+            "ir_ndcg_at_10",
+            "dataset_targets",
+        }:
+            raise RuntimeError("DCI reproduction target registry is invalid")
+        base = {"schema": "dci.reproduction-target/v1", **item}
+        try:
+            target = ReproductionTarget(
+                target_id=item["target_id"],
+                profile_id=item["profile_id"],
+                source_id=item["source_id"],
+                source_url=item["source_url"],
+                agentic_search_accuracy=item["agentic_search_accuracy"],
+                qa_accuracy=item["qa_accuracy"],
+                ir_ndcg_at_10=item["ir_ndcg_at_10"],
+                dataset_targets=item["dataset_targets"],
+                identity_sha256=_canonical_sha256(base),
+            )
+        except (TypeError, ValueError) as error:
+            raise RuntimeError("DCI reproduction target registry is invalid") from error
+        if target.profile_id in parsed:
+            raise RuntimeError("DCI reproduction target registry is invalid")
+        parsed[target.profile_id] = target
+    return MappingProxyType(parsed)
+
+
+def resolve_reproduction_target(profile_id: str) -> ReproductionTarget | None:
+    """Resolve the published target for a profile, if the paper reports one."""
+
+    resolve_experiment_profile(profile_id)
+    return _reproduction_targets().get(profile_id)
+
+
+def reproduction_result_schema_sha256() -> str:
+    """Return the canonical identity of the installed result schema."""
+
+    return _canonical_sha256(_validate_schema_resource())
+
+
+def reproduction_target_schema_sha256() -> str:
+    """Return the canonical identity of the installed target schema."""
+
+    schema = _load_mapping_resource(_TARGET_SCHEMA_RESOURCE, kind="target schema")
+    if schema.get("$id") != "dci.reproduction-target/v1":
+        raise RuntimeError("DCI reproduction target schema is invalid")
+    return _canonical_sha256(schema)
+
+
+def reproduction_targets_sha256() -> str:
+    """Return the canonical identity of the validated target registry."""
+
+    targets = _reproduction_targets()
+    return _canonical_sha256(
+        {
+            "schema": "dci.reproduction-target/v1",
+            "targets": [
+                {
+                    "profile_id": target.profile_id,
+                    "identity_sha256": target.identity_sha256,
+                }
+                for target in targets.values()
+            ],
+        }
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -475,3 +654,534 @@ def load_run_manifest(path: Path | str | os.PathLike[str]) -> RunManifest:
     except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as error:
         raise ValueError("DCI reproduction manifest is invalid") from error
     return RunManifest.from_mapping(value)
+
+
+def _safe_query_projection(row: QueryEvidence) -> dict[str, object]:
+    return {
+        "query_id": row.query_id,
+        "dataset_id": row.dataset_id,
+        "scope_id": row.scope_id,
+        "status": row.status,
+        "judge_verdict": row.judge_verdict,
+        "ndcg_at_10": row.ndcg_at_10,
+        "evidence_sha256": row.evidence_sha256,
+        "failure_class": row.failure_class,
+        "exclusion_reason": row.exclusion_reason,
+    }
+
+
+def _totals(manifest: RunManifest) -> dict[str, int | float]:
+    return {
+        field: manifest.aggregates[field]
+        for field in (
+            "agent_operations",
+            "judge_operations",
+            "input_tokens",
+            "output_tokens",
+            "cost_usd",
+        )
+    }
+
+
+def _completion_rates(queries: Sequence[QueryEvidence]) -> tuple[float, float]:
+    if not queries:
+        return 0.0, 0.0
+    completion = sum(row.status == "completed" for row in queries) / len(queries)
+    return completion, 1.0 - completion
+
+
+def _sample_sha256(
+    query_ids: Sequence[str], baseline: Sequence[float], candidate: Sequence[float]
+) -> str:
+    return canonical_sha256(
+        {
+            "query_ids": list(query_ids),
+            "baseline": list(baseline),
+            "candidate": list(candidate),
+        }
+    )
+
+
+def _bootstrap_metric(
+    *,
+    query_ids: Sequence[str],
+    baseline: Sequence[float],
+    candidate: Sequence[float],
+    margin: float,
+    seed: int,
+    resamples: int,
+) -> dict[str, int | float | bool | str]:
+    if not query_ids or len(query_ids) != len(baseline) or len(baseline) != len(candidate):
+        raise ValueError("DCI reproduction comparison sample is invalid")
+    differences = tuple(
+        candidate_value - baseline_value
+        for baseline_value, candidate_value in zip(baseline, candidate, strict=True)
+    )
+    point_delta = sum(differences) / len(differences)
+    rng = random.Random(seed)
+    bootstrapped = [
+        sum(rng.choices(differences, k=len(differences))) / len(differences)
+        for _ in range(resamples)
+    ]
+    bootstrapped.sort()
+    lower = bootstrapped[int((resamples - 1) * 0.025)]
+    upper = bootstrapped[int((resamples - 1) * 0.975)]
+    return {
+        "pair_count": len(query_ids),
+        "baseline_mean": sum(baseline) / len(baseline),
+        "candidate_mean": sum(candidate) / len(candidate),
+        "delta": point_delta,
+        "lower_bound": lower,
+        "upper_bound": upper,
+        "margin": margin,
+        "passes": lower >= -margin,
+        "sample_sha256": _sample_sha256(query_ids, baseline, candidate),
+    }
+
+
+def _bootstrap_single_metric(
+    *,
+    query_ids: Sequence[str],
+    values: Sequence[float],
+    seed: int,
+    resamples: int,
+) -> dict[str, int | float | str]:
+    if not query_ids or len(query_ids) != len(values):
+        raise ValueError("DCI reproduction target sample is invalid")
+    rng = random.Random(seed)
+    bootstrapped = [
+        sum(rng.choices(values, k=len(values))) / len(values)
+        for _ in range(resamples)
+    ]
+    bootstrapped.sort()
+    return {
+        "sample_count": len(query_ids),
+        "candidate_mean": sum(values) / len(values),
+        "lower_bound": bootstrapped[int((resamples - 1) * 0.025)],
+        "upper_bound": bootstrapped[int((resamples - 1) * 0.975)],
+        "sample_sha256": canonical_sha256(
+            {"query_ids": list(query_ids), "candidate": list(values)}
+        ),
+    }
+
+
+@dataclass(frozen=True, slots=True)
+class ComparisonReport:
+    """Versioned result of a paired Pi or unpaired Claude comparison."""
+
+    comparison_kind: str
+    profile_id: str
+    profile_identity_sha256: str
+    baseline_manifest_identity_sha256: str | None
+    candidate_manifest_identity_sha256: str
+    estimator: Mapping[str, object]
+    accuracy: Mapping[str, object] | None
+    ndcg_at_10: Mapping[str, object] | None
+    completion: Mapping[str, float]
+    totals: Mapping[str, Mapping[str, int | float]]
+    retained_pair_ids: tuple[str, ...]
+    excluded_query_ids: tuple[str, ...]
+    pairs: tuple[Mapping[str, object], ...]
+    target_rows: tuple[Mapping[str, object], ...]
+    target_identity: Mapping[str, object] | None
+    accepted: bool | None
+    identity_sha256: str
+
+    def __post_init__(self) -> None:
+        if self.comparison_kind not in {"paired-noninferiority", "target-comparison"}:
+            raise ValueError("DCI reproduction comparison kind is invalid")
+        profile = resolve_experiment_profile(self.profile_id)
+        if self.profile_identity_sha256 != profile.identity_sha256:
+            raise ValueError("DCI reproduction comparison profile drifted")
+        if self.comparison_kind == "paired-noninferiority":
+            if (
+                self.baseline_manifest_identity_sha256 is None
+                or self.target_identity is not None
+                or self.target_rows
+                or type(self.accepted) is not bool
+            ):
+                raise ValueError("DCI reproduction paired comparison is invalid")
+        elif (
+            self.baseline_manifest_identity_sha256 is not None
+            or self.pairs
+            or self.retained_pair_ids
+            or self.target_identity is None
+            or self.accepted is not None
+        ):
+            raise ValueError("DCI reproduction target comparison is invalid")
+        for digest in (
+            self.candidate_manifest_identity_sha256,
+            self.identity_sha256,
+            *(
+                (self.baseline_manifest_identity_sha256,)
+                if self.baseline_manifest_identity_sha256 is not None
+                else ()
+            ),
+        ):
+            _require_digest(digest, field="comparison identity")
+        mapping = self.to_mapping()
+        identity = mapping.pop("identity_sha256")
+        if identity != _canonical_sha256(mapping):
+            raise ValueError("DCI reproduction comparison identity drifted")
+
+    def to_mapping(self) -> dict[str, object]:
+        return {
+            "schema": "dci.reproduction-comparison/v1",
+            "comparison_kind": self.comparison_kind,
+            "profile_id": self.profile_id,
+            "profile_identity_sha256": self.profile_identity_sha256,
+            "baseline_manifest_identity_sha256": self.baseline_manifest_identity_sha256,
+            "candidate_manifest_identity_sha256": self.candidate_manifest_identity_sha256,
+            "estimator": dict(self.estimator),
+            "accuracy": None if self.accuracy is None else dict(self.accuracy),
+            "ndcg_at_10": None if self.ndcg_at_10 is None else dict(self.ndcg_at_10),
+            "completion": dict(self.completion),
+            "totals": {
+                name: dict(values) for name, values in self.totals.items()
+            },
+            "retained_pair_ids": list(self.retained_pair_ids),
+            "excluded_query_ids": list(self.excluded_query_ids),
+            "pairs": [
+                {
+                    "query_id": pair["query_id"],
+                    "dataset_id": pair["dataset_id"],
+                    "scope_id": pair["scope_id"],
+                    "baseline": dict(pair["baseline"]),
+                    "candidate": dict(pair["candidate"]),
+                }
+                for pair in self.pairs
+            ],
+            "target_rows": [dict(row) for row in self.target_rows],
+            "target_identity": (
+                None if self.target_identity is None else dict(self.target_identity)
+            ),
+            "accepted": self.accepted,
+            "identity_sha256": self.identity_sha256,
+        }
+
+
+def _comparison_report(**values: object) -> ComparisonReport:
+    base = {
+        "schema": "dci.reproduction-comparison/v1",
+        **values,
+    }
+    return ComparisonReport(
+        comparison_kind=values["comparison_kind"],
+        profile_id=values["profile_id"],
+        profile_identity_sha256=values["profile_identity_sha256"],
+        baseline_manifest_identity_sha256=values[
+            "baseline_manifest_identity_sha256"
+        ],
+        candidate_manifest_identity_sha256=values[
+            "candidate_manifest_identity_sha256"
+        ],
+        estimator=MappingProxyType(dict(values["estimator"])),
+        accuracy=(
+            None
+            if values["accuracy"] is None
+            else MappingProxyType(dict(values["accuracy"]))
+        ),
+        ndcg_at_10=(
+            None
+            if values["ndcg_at_10"] is None
+            else MappingProxyType(dict(values["ndcg_at_10"]))
+        ),
+        completion=MappingProxyType(dict(values["completion"])),
+        totals=MappingProxyType(
+            {
+                name: MappingProxyType(dict(total))
+                for name, total in values["totals"].items()
+            }
+        ),
+        retained_pair_ids=tuple(values["retained_pair_ids"]),
+        excluded_query_ids=tuple(values["excluded_query_ids"]),
+        pairs=tuple(
+            MappingProxyType(
+                {
+                    **dict(pair),
+                    "baseline": MappingProxyType(dict(pair["baseline"])),
+                    "candidate": MappingProxyType(dict(pair["candidate"])),
+                }
+            )
+            for pair in values["pairs"]
+        ),
+        target_rows=tuple(
+            MappingProxyType(dict(row)) for row in values["target_rows"]
+        ),
+        target_identity=(
+            None
+            if values["target_identity"] is None
+            else MappingProxyType(dict(values["target_identity"]))
+        ),
+        accepted=values["accepted"],
+        identity_sha256=_canonical_sha256(base),
+    )
+
+
+def _validate_candidate(candidate: RunManifest, profile: ExperimentProfile) -> None:
+    if (
+        candidate.product != "asterion-dci"
+        or candidate.profile_id != profile.profile_id
+        or candidate.profile_identity_sha256 != profile.identity_sha256
+        or candidate.runtime_id != profile.runtime_id
+    ):
+        raise ValueError("DCI reproduction candidate identity drifted")
+
+
+def compare_reproduction_runs(
+    baseline: RunManifest | None,
+    candidate: RunManifest,
+    profile: ExperimentProfile,
+) -> ComparisonReport:
+    """Compare matched Pi rows or label one Claude run as target-comparison."""
+
+    _validate_candidate(candidate, profile)
+    if profile.runtime_id == "claude-code":
+        if baseline is not None:
+            raise ValueError("DCI Claude reproduction has no source baseline")
+        included = tuple(
+            row for row in candidate.queries if row.exclusion_reason is None
+        )
+        completion_rate, failure_rate = _completion_rates(included)
+        qa_rows = tuple(
+            row
+            for row in included
+            if resolve_paper_benchmark(row.dataset_id).mode == "qa"
+        )
+        ir_rows = tuple(
+            row
+            for row in included
+            if resolve_paper_benchmark(row.dataset_id).mode == "ir"
+        )
+        accuracy = (
+            _bootstrap_single_metric(
+                query_ids=[row.query_id for row in qa_rows],
+                values=[float(row.judge_verdict is True) for row in qa_rows],
+                seed=340,
+                resamples=10_000,
+            )
+            if qa_rows
+            else None
+        )
+        ndcg = (
+            _bootstrap_single_metric(
+                query_ids=[row.query_id for row in ir_rows],
+                values=[float(row.ndcg_at_10 or 0.0) for row in ir_rows],
+                seed=341,
+                resamples=10_000,
+            )
+            if ir_rows
+            else None
+        )
+        published_target = resolve_reproduction_target(profile.profile_id)
+        target_identity = {
+            "profile_id": profile.profile_id,
+            "profile_identity_sha256": profile.identity_sha256,
+            "qa_accuracy_drop_margin": dict(profile.comparison_targets)[
+                "qa_accuracy_drop_margin"
+            ],
+            "ir_ndcg_drop_margin": dict(profile.comparison_targets)[
+                "ir_ndcg_drop_margin"
+            ],
+            "published_target_status": (
+                "available" if published_target is not None else "not-applicable"
+            ),
+            "target_id": (
+                None if published_target is None else published_target.target_id
+            ),
+            "target_identity_sha256": (
+                None if published_target is None else published_target.identity_sha256
+            ),
+            "source_id": (
+                None if published_target is None else published_target.source_id
+            ),
+        }
+        return _comparison_report(
+            comparison_kind="target-comparison",
+            profile_id=profile.profile_id,
+            profile_identity_sha256=profile.identity_sha256,
+            baseline_manifest_identity_sha256=None,
+            candidate_manifest_identity_sha256=candidate.identity_sha256,
+            estimator={
+                "name": "single-run-bootstrap-percentile/v1",
+                "seed": 340,
+                "resamples": 10_000,
+                "query_set_sha256": canonical_sha256(
+                    [row.query_id for row in included]
+                ),
+                "accuracy_sample_sha256": (
+                    None if accuracy is None else accuracy["sample_sha256"]
+                ),
+                "ndcg_sample_sha256": (
+                    None if ndcg is None else ndcg["sample_sha256"]
+                ),
+            },
+            accuracy=accuracy,
+            ndcg_at_10=ndcg,
+            completion={
+                "candidate_rate": completion_rate,
+                "candidate_failure_rate": failure_rate,
+            },
+            totals={"candidate": _totals(candidate)},
+            retained_pair_ids=(),
+            excluded_query_ids=tuple(
+                row.query_id
+                for row in candidate.queries
+                if row.exclusion_reason is not None
+            ),
+            pairs=(),
+            target_rows=tuple(_safe_query_projection(row) for row in included),
+            target_identity=target_identity,
+            accepted=None,
+        )
+
+    if baseline is None:
+        raise ValueError("DCI Pi reproduction requires a source baseline")
+    if (
+        baseline.product != "original-dci"
+        or baseline.profile_id != profile.profile_id
+        or baseline.profile_identity_sha256 != profile.identity_sha256
+        or baseline.runtime_id != "pi"
+        or candidate.runtime_id != "pi"
+        or baseline.scope_ids != candidate.scope_ids
+        or baseline.effective_config_identity_sha256
+        != candidate.effective_config_identity_sha256
+    ):
+        raise ValueError("DCI reproduction baseline identity drifted")
+    baseline_by_id = {row.query_id: row for row in baseline.queries}
+    candidate_by_id = {row.query_id: row for row in candidate.queries}
+    if set(baseline_by_id) != set(candidate_by_id):
+        raise ValueError("DCI reproduction query selection drifted")
+
+    retained: list[tuple[QueryEvidence, QueryEvidence]] = []
+    excluded_ids: list[str] = []
+    for query_id in sorted(baseline_by_id):
+        baseline_row = baseline_by_id[query_id]
+        candidate_row = candidate_by_id[query_id]
+        if (
+            baseline_row.dataset_id != candidate_row.dataset_id
+            or baseline_row.scope_id != candidate_row.scope_id
+            or baseline_row.exclusion_reason != candidate_row.exclusion_reason
+        ):
+            raise ValueError("DCI reproduction paired row drifted")
+        if baseline_row.exclusion_reason is not None:
+            excluded_ids.append(query_id)
+        else:
+            retained.append((baseline_row, candidate_row))
+    if not retained:
+        raise ValueError("DCI reproduction comparison has no retained pairs")
+
+    qa_pairs = tuple(
+        pair
+        for pair in retained
+        if resolve_paper_benchmark(pair[0].dataset_id).mode == "qa"
+    )
+    ir_pairs = tuple(
+        pair
+        for pair in retained
+        if resolve_paper_benchmark(pair[0].dataset_id).mode == "ir"
+    )
+    targets = dict(profile.comparison_targets)
+    accuracy = (
+        _bootstrap_metric(
+            query_ids=[pair[0].query_id for pair in qa_pairs],
+            baseline=[float(pair[0].judge_verdict is True) for pair in qa_pairs],
+            candidate=[float(pair[1].judge_verdict is True) for pair in qa_pairs],
+            margin=targets["qa_accuracy_drop_margin"],
+            seed=340,
+            resamples=10_000,
+        )
+        if qa_pairs
+        else None
+    )
+    ndcg = (
+        _bootstrap_metric(
+            query_ids=[pair[0].query_id for pair in ir_pairs],
+            baseline=[float(pair[0].ndcg_at_10 or 0.0) for pair in ir_pairs],
+            candidate=[float(pair[1].ndcg_at_10 or 0.0) for pair in ir_pairs],
+            margin=targets["ir_ndcg_drop_margin"],
+            seed=341,
+            resamples=10_000,
+        )
+        if ir_pairs
+        else None
+    )
+    baseline_completion, baseline_failure = _completion_rates(
+        [pair[0] for pair in retained]
+    )
+    candidate_completion, candidate_failure = _completion_rates(
+        [pair[1] for pair in retained]
+    )
+    accepted = all(
+        metric["passes"] for metric in (accuracy, ndcg) if metric is not None
+    )
+    retained_ids = tuple(pair[0].query_id for pair in retained)
+    estimator = {
+        "name": "paired-bootstrap-percentile/v1",
+        "seed": 340,
+        "resamples": 10_000,
+        "query_set_sha256": canonical_sha256(list(retained_ids)),
+        "accuracy_sample_sha256": (
+            None if accuracy is None else accuracy["sample_sha256"]
+        ),
+        "ndcg_sample_sha256": None if ndcg is None else ndcg["sample_sha256"],
+    }
+    pairs = tuple(
+        {
+            "query_id": baseline_row.query_id,
+            "dataset_id": baseline_row.dataset_id,
+            "scope_id": baseline_row.scope_id,
+            "baseline": _safe_query_projection(baseline_row),
+            "candidate": _safe_query_projection(candidate_row),
+        }
+        for baseline_row, candidate_row in retained
+    )
+    return _comparison_report(
+        comparison_kind="paired-noninferiority",
+        profile_id=profile.profile_id,
+        profile_identity_sha256=profile.identity_sha256,
+        baseline_manifest_identity_sha256=baseline.identity_sha256,
+        candidate_manifest_identity_sha256=candidate.identity_sha256,
+        estimator=estimator,
+        accuracy=accuracy,
+        ndcg_at_10=ndcg,
+        completion={
+            "baseline_rate": baseline_completion,
+            "baseline_failure_rate": baseline_failure,
+            "candidate_rate": candidate_completion,
+            "candidate_failure_rate": candidate_failure,
+        },
+        totals={"baseline": _totals(baseline), "candidate": _totals(candidate)},
+        retained_pair_ids=retained_ids,
+        excluded_query_ids=tuple(excluded_ids),
+        pairs=pairs,
+        target_rows=(),
+        target_identity=None,
+        accepted=accepted,
+    )
+
+
+def write_comparison_report(path: Path, report: ComparisonReport) -> None:
+    """Create one exclusive 0600 report below an existing private parent."""
+
+    output = Path(os.path.abspath(os.path.normpath(path)))
+    parent = output.parent
+    try:
+        parent_metadata = parent.lstat()
+    except OSError as error:
+        raise ValueError("DCI reproduction report parent is invalid") from error
+    if (
+        parent.is_symlink()
+        or not stat.S_ISDIR(parent_metadata.st_mode)
+        or stat.S_IMODE(parent_metadata.st_mode) != 0o700
+        or output.exists()
+        or output.is_symlink()
+    ):
+        raise ValueError("DCI reproduction report path is invalid")
+    raw = (
+        json.dumps(report.to_mapping(), sort_keys=True, indent=2, allow_nan=False)
+        + "\n"
+    ).encode()
+    descriptor = os.open(output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, "wb") as stream:
+        stream.write(raw)

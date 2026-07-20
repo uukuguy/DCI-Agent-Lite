@@ -286,6 +286,11 @@ class PaperBenchmarkProductParityTests(unittest.TestCase):
             experiment_profile_schema_sha256,
             experiment_profiles_sha256,
         )
+        from asterion.dci.reproduction import (
+            reproduction_result_schema_sha256,
+            reproduction_target_schema_sha256,
+            reproduction_targets_sha256,
+        )
         from asterion.dci.verification import (
             DCI_PRODUCT_DESCRIPTION,
             paper_product_contract,
@@ -320,6 +325,18 @@ class PaperBenchmarkProductParityTests(unittest.TestCase):
         self.assertEqual(
             contract["resources"]["experiment-profile.schema.json"],
             experiment_profile_schema_sha256(),
+        )
+        self.assertEqual(
+            contract["resources"]["reproduction-result.schema.json"],
+            reproduction_result_schema_sha256(),
+        )
+        self.assertEqual(
+            contract["resources"]["reproduction-target.schema.json"],
+            reproduction_target_schema_sha256(),
+        )
+        self.assertEqual(
+            contract["resources"]["reproduction-targets.json"],
+            reproduction_targets_sha256(),
         )
         self.assertEqual(
             contract["paper_full_authorization"],

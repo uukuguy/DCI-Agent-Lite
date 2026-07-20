@@ -68,6 +68,14 @@ from asterion.dci.paper_benchmarks import (
     resolve_paper_experiment_scope,
 )
 from asterion.dci.run import DciRunRequest, DciRunResult, run_pi_research
+from asterion.dci.reproduction import (
+    compare_reproduction_runs,
+    load_run_manifest,
+    reproduction_result_schema_sha256,
+    reproduction_target_schema_sha256,
+    reproduction_targets_sha256,
+    write_comparison_report,
+)
 
 
 PAPER_BENCHMARK_REPORT_SCHEMA = "asterion.dci.paper-benchmark-acceptance/v2"
@@ -331,6 +339,9 @@ def paper_product_contract() -> dict[str, object]:
             "paper-ablation-matrix.json": matrix_sha256,
             "paper-benchmarks.json": inventory_sha256,
             "paper-experiment-scopes.json": scopes_sha256,
+            "reproduction-result.schema.json": reproduction_result_schema_sha256(),
+            "reproduction-target.schema.json": reproduction_target_schema_sha256(),
+            "reproduction-targets.json": reproduction_targets_sha256(),
         },
         "paper_full_executable": False,
         "paper_full_authorization": {
@@ -467,6 +478,17 @@ def _paper_reproduce_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _paper_compare_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="asterion-dci paper compare", exit_on_error=False
+    )
+    parser.add_argument("--baseline", type=Path)
+    parser.add_argument("--candidate", type=Path, required=True)
+    parser.add_argument("--profile", required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    return parser
+
+
 def _paper_profile_operations(profile_id: str) -> dict[str, int]:
     profile = resolve_experiment_profile(profile_id)
     max_agents = 0
@@ -550,6 +572,38 @@ def paper_reproduce_main(
     stdout.write("operation_count=0\n")
     stdout.write("full execution is deferred\n")
     return 0
+
+
+def paper_compare_main(
+    argv: Sequence[str] | None = None,
+    *,
+    stdout: TextIO | None = None,
+    stderr: TextIO | None = None,
+) -> int:
+    """Write one private versioned comparison report without exposing row bodies."""
+
+    stdout = sys.stdout if stdout is None else stdout
+    stderr = sys.stderr if stderr is None else stderr
+    try:
+        args = _paper_compare_parser().parse_args(argv)
+        profile = resolve_experiment_profile(args.profile)
+        baseline = (
+            None if args.baseline is None else load_run_manifest(args.baseline)
+        )
+        candidate = load_run_manifest(args.candidate)
+        report = compare_reproduction_runs(baseline, candidate, profile)
+        write_comparison_report(args.output, report)
+    except (argparse.ArgumentError, OSError, RuntimeError, TypeError, ValueError):
+        stderr.write("DCI paper reproduction comparison failed\n")
+        return 2
+    stdout.write(f"comparison_kind={report.comparison_kind}\n")
+    stdout.write(f"profile={report.profile_id}\n")
+    stdout.write(f"report_identity_sha256={report.identity_sha256}\n")
+    if report.accepted is None:
+        stdout.write("acceptance=not-applicable\n")
+        return 0
+    stdout.write(f"acceptance={'pass' if report.accepted else 'fail'}\n")
+    return 0 if report.accepted else 1
 
 
 def _private_regular(path: Path) -> bool:
