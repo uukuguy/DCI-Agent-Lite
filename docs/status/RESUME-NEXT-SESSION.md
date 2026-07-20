@@ -1,43 +1,36 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-19 12:24 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-20 12:58 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-340
 
 ## TL;DR
 
-- AF-340 已完成一轮交付：`verify_original_readme.py` 与 `tests/test_original_readme_acceptance.py` 已提交，完成
-  README 契约与 launcher 合约的可验证钩子。
-- Added `tests/test_original_readme_acceptance.py` to enforce literal README commands and bounded entry-point command shape.
-- Updated launcher tests to match current contract (`source "$REPO_ROOT/.env"` is no longer expected in generated launcher scripts).
-- AF-340 Task5 已落地：统一 source 与 Asterion 的 11 套 benchmark launcher 为薄封装，去除硬编码 provider/model 与脚本内 `.env` 注入，同时同步 `README` 与 Asterion 指南示例。
-- Local 复现与 launcher/文档契约回归全部通过：`tools/verify_original_readme.py --level local` 与 `test_asterion_dci_*` 套件。
+- The quota-interrupted Task 6 work was recovered, completed, verified, and committed as `ec4d1e9`.
+- Five immutable profiles now bind runtime/Judge plus AF-320 inventory, scope, selection, corpus, metric, and context identities; `current-default/claude-minimax` is locked to the verified `MiniMax-M3` configuration and paper variants use `level3`.
+- Full execution remains fail-closed behind an invocation-only authorization, finite budget, fresh 0700 root, 0600 record, and matching profile/scope/batch identity. No provider operation or full dataset ran.
 
 ## Where things stand
 
-- Project route: managed.
-- Lifecycle: active.
-- Active package: AF-340.
-- Work in-flight: continue AF-340 Task6（immutable experiment profile 与显式 `--authorize-full` 门控）的实现与 Task8 协调器准备。
-- Confirmed:
-  - `python3 tools/project_scope_check.py` (AF-340 active, scope clean).
-  - `uv run python -m unittest -v tests.test_original_readme_acceptance tests.test_asterion_dci_batch_launchers tests.test_asterion_dci_product_parity tests.test_asterion_documentation` (121 tests, all pass).
-  - `python3 tools/verify_original_readme.py --level local` passes (`Agent operations: 0`, `Judge operations: 0`, `Full dataset ran: no`).
-  - `ruff check` on touched files and `python3 -m py_compile` for touched files pass.
-  - `git diff --check` clean.
-- Bounded execution in this environment is currently blocked by provider quota from `tools/verify_original_readme.py --level bounded` (`Codex error: The usage limit has been reached`), so no new bounded report was produced in this session.
-- External `pi/` remains untouched; credentials were not printed.
+- Project route: managed; lifecycle: active; package: AF-340.
+- Task 6 verification: 130 focused tests and 10 public product tests pass; final source CLI and isolated wheel both resolve all five profiles and report zero dry-run operations.
+- Static/governance gates: Python compile, Ruff, final wheel build/import, `project_scope_check.py`, and `git diff --check` pass.
+- Profile digests:
+  - `current-default/pi`: `25e1f8e50a742fedf9c9027806680db1f8be87be69a9d717325d2d8b95d3df20`
+  - `current-default/claude-subscription`: `458175537ec60de825a2f8deac0638267a15293440f5ad6a4d6876d45e417ede`
+  - `current-default/claude-minimax`: `ab22c083bedc6ccb003cb7f72a1454faeb783fb4e06fb50c72bbc8141c25c64d`
+  - `paper-reference/pi`: `4d1bdde65381c6cfd93aab672e96246fd3438cdaa9a980e22ff157d2405f096e`
+  - `paper-reference/claude-code`: `fa3b0ec9b7225ca6c058000088e0b28f171f871427e64fa548888f783ffaa934`
+- External `pi/` was not edited; no evaluator, Climb cycle, provider verifier, or full execution is running.
 
 ## Next action
 
-1. Continue `AF-340` Task6（immutable profile/授权）与 Task8（统一协调器）实现，并保持 bounded/full 与授权解耦。
-2. 确认并推动 commit `6385d58` 已纳入流水线后，继续 `AF-340` 的有界验证与全量授权门前置准备。
-3. 若后续配额可用，执行有界复现：
-   `python3 tools/verify_original_readme.py --level bounded --env-file .env --output-root /tmp/verify-readme-run`。
-3. Keep all future evidence updates in `JOURNAL` and keep unrelated working tree files untouched.
+1. Begin AF-340 Task 7 with RED manifest-validation and statistical-comparison tests.
+2. Bind normalized per-query evidence to the Task 6 profile/effective-config identities and preserve failed/cancelled/timed-out/missing rows.
+3. Do not begin Task 8 full coordination or request full-cost authority until Task 7 is committed and provider-free verification passes.
 
 ## Ready command
 
 ```bash
-git diff --cached -- tools/verify_original_readme.py tests/test_original_readme_acceptance.py tests/test_asterion_dci_batch_launchers.py tests/test_asterion_dci_product_parity.py tests/test_asterion_documentation.py
+uv run python -m unittest -v tests.test_asterion_dci_reproduction tests.test_asterion_dci_paper_resolution_analysis tests.test_asterion_dci_paper_product
 ```

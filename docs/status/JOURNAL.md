@@ -950,3 +950,9 @@
 - 11:22 AF-340 更新 RESUME checkpoint，记录 verifier 交付状态并维持 AF-340 的下一步有界验证路径。
 - 12:24 AF-340 Task5 launcher 与文档对齐交付（`6385d58`）：11个核心 source/Asterion launcher 均去除硬编码 provider/model/sourcing，并复用显式传参，验证命令/文档一致性重整。
 - 12:24 AF-340 本地验证：`python3 tools/verify_original_readme.py --level local` 与 `uv run python -m unittest -v tests.test_asterion_dci_batch_launchers tests.test_asterion_dci_product_parity tests.test_asterion_documentation tests.test_original_readme_acceptance` 均通过。
+
+## 2026-07-20
+
+- 12:42 中断恢复：AF-340 Task6 有 10 个未提交文件；scope 通过，聚焦 30 tests 通过，尚未完成计划验收。
+- 12:58 AF-340 Task6 immutable profiles 与显式 full authorization 落地；full evidence 仍须 invocation gate。 [ec4d1e9]
+- 12:58 Task6 验证：130 focused、10 product tests 及 final wheel/compile/Ruff/scope/diff 全通过；零 provider 操作。
