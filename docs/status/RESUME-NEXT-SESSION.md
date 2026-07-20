@@ -40,7 +40,7 @@ Currently running: no evaluator process. H004 Pi bounded r14 passed all 30 Agent
 
 ## Next action
 
-1. Recheck Claude subscription login without a provider request; it was still logged out at 22:50 on 2026-07-20.
+1. Recheck Claude subscription login without a provider request; it was still logged out at 00:11 on 2026-07-21.
 2. If authentication is restored, collect one fresh `claude-subscription` bounded report in a new private root.
 3. Run public `inspect` with exactly MiniMax r6, Pi r14, and the fresh subscription report to close H-004.
 4. Do not start H-005 without explicit profile/budget authorization.
