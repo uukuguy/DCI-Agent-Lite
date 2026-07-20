@@ -38,7 +38,7 @@ Currently running: no evaluator process. H004 Pi bounded r13 ended failed after 
 
 ## Next action
 
-1. Commit the verified BRIGHT normalizer, then run Pi bounded r14 in a fresh root; never stitch r10-r13.
+1. Run Pi bounded r14 from `ec21de8` in a fresh root; never stitch r10-r13.
 2. Inspect the retained r14 report and native evidence before accepting it.
 3. Recheck Claude subscription login without a provider request and collect its fresh bounded report only if authentication is restored.
 4. Inspect the MiniMax, Pi, and subscription reports together to close H-004. Do not start H-005 without explicit profile/budget authorization.
