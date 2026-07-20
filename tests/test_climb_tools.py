@@ -3261,6 +3261,53 @@ class ClimbToolTests(unittest.TestCase):
                 self.assertEqual(evaluation["total"], 4)
                 self.assertEqual(set(evaluation["per_task"]), dimensions)
 
+    def test_af340_climb_session_maps_the_reproduction_plan_to_governed_hypotheses(self) -> None:
+        state_dir = REPO_ROOT / "docs/status/climb"
+        config = yaml.safe_load((state_dir / "config.yaml").read_text())
+        session = json.loads((state_dir / "session-state.json").read_text())
+        hypotheses = yaml.safe_load((state_dir / "hypotheses.yaml").read_text())[
+            "hypotheses"
+        ]
+        indexed = {item["id"]: item for item in hypotheses}
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+        eval_script = (REPO_ROOT / "tools/climb/eval-local.sh").read_text()
+
+        self.assertEqual(config["score_name"], "af340_reproduction_acceptance")
+        self.assertEqual(
+            config["subscores"],
+            [
+                "normalized_evidence",
+                "statistical_comparison",
+                "local_coordination",
+                "bounded_evidence",
+                "full_reproduction",
+            ],
+        )
+        self.assertEqual(session["work_package_id"], "AF-340")
+        self.assertEqual(session["next_hypothesis"], "AF-340-H-001")
+        self.assertEqual(session["phase"], "implementation")
+
+        expected = {
+            "AF-340-H-001": "dci-reproduction-evidence",
+            "AF-340-H-002": "dci-reproduction-statistics",
+            "AF-340-H-003": "dci-reproduction-local-coordinator",
+            "AF-340-H-004": "dci-reproduction-bounded-evidence",
+            "AF-340-H-005": "dci-reproduction-full-closure",
+        }
+        for hypothesis_id, paradigm in expected.items():
+            with self.subTest(hypothesis_id=hypothesis_id):
+                hypothesis = indexed[hypothesis_id]
+                self.assertEqual(hypothesis["work_package_id"], "AF-340")
+                self.assertEqual(hypothesis["parent_paradigm"], paradigm)
+                self.assertEqual(hypothesis["status"], "pending")
+                self.assertIn(hypothesis_id, train_script)
+                self.assertIn(f"    {hypothesis_id})", eval_script)
+
+        target = (state_dir / "session-target.md").read_text()
+        self.assertIn("AF-340", target)
+        self.assertIn("explicit", target.lower())
+        self.assertIn("authorization", target.lower())
+
     def test_af310_h005_provider_binding_is_digest_bound_and_body_free(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

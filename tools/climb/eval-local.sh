@@ -1119,6 +1119,56 @@ case "$HYPOTHESIS_ID" in
         dirty_test="tests.test_dci_complete_application.DciRestrictedClaudeEvidenceTests.test_outside_path_is_rejected"
         override_test="tests.test_dci_complete_application.DciRestrictedClaudeEvidenceTests.test_tracked_claude_evidence_is_body_free_and_bounded"
         ;;
+    AF-340-H-001)
+        first_dimension="immutable_rows"
+        second_dimension="strict_manifest"
+        third_dimension="status_preservation"
+        fourth_dimension="body_free_schema"
+        immutable_test="tests.test_asterion_dci_reproduction.ReproductionManifestValidationTests.test_rejects_duplicate_and_missing_query_ids"
+        repeat_test="tests.test_asterion_dci_reproduction.ReproductionManifestValidationTests.test_rejects_profile_effective_config_and_aggregate_drift"
+        dirty_test="tests.test_asterion_dci_reproduction.ReproductionManifestValidationTests.test_preserves_noncompleted_rows_and_versioned_exclusions"
+        override_test="tests.test_asterion_dci_reproduction.ReproductionManifestValidationTests.test_rejects_bodies_credentials_and_private_paths"
+        ;;
+    AF-340-H-002)
+        first_dimension="paired_accuracy"
+        second_dimension="paired_ndcg"
+        third_dimension="deterministic_estimator"
+        fourth_dimension="target_comparison_cli"
+        immutable_test="tests.test_asterion_dci_reproduction.ReproductionComparisonTests.test_accuracy_margin_uses_deterministic_paired_bootstrap"
+        repeat_test="tests.test_asterion_dci_reproduction.ReproductionComparisonTests.test_ndcg_margin_uses_deterministic_paired_bootstrap"
+        dirty_test="tests.test_asterion_dci_reproduction.ReproductionComparisonTests.test_report_binds_estimator_seed_pairs_exclusions_and_costs"
+        override_test="tests.test_asterion_dci_reproduction.ReproductionComparisonTests.test_claude_uses_target_comparison_without_manufactured_pairs"
+        ;;
+    AF-340-H-003)
+        first_dimension="literal_local_matrix"
+        second_dimension="zero_operations"
+        third_dimension="private_output_boundary"
+        fourth_dimension="documented_commands"
+        immutable_test="tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_local_matrix_uses_literal_source_and_asterion_commands"
+        repeat_test="tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_local_mode_performs_zero_provider_operations"
+        dirty_test="tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_public_report_excludes_secrets_bodies_and_private_paths"
+        override_test="tests.test_asterion_documentation.AsterionDocumentationTests.test_af340_reproduction_commands_are_documented"
+        ;;
+    AF-340-H-004)
+        first_dimension="original_bounded_matrix"
+        second_dimension="asterion_pi_matrix"
+        third_dimension="claude_authentication_modes"
+        fourth_dimension="retained_body_free_evidence"
+        immutable_test="tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_bounded_matrix_limits_every_launcher_to_one_query"
+        repeat_test="tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_bounded_matrix_covers_source_application_and_wheel_pi"
+        dirty_test="tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_bounded_matrix_keeps_claude_subscription_and_minimax_distinct"
+        override_test="tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_retained_bounded_evidence_is_body_free"
+        ;;
+    AF-340-H-005)
+        first_dimension="explicit_authorization"
+        second_dimension="matched_pi_noninferiority"
+        third_dimension="claude_target_comparison"
+        fourth_dimension="terminal_repository_gates"
+        immutable_test="tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_full_mode_requires_matching_explicit_authorization"
+        repeat_test="tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_full_report_binds_matched_pi_comparison"
+        dirty_test="tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_full_report_labels_claude_as_target_comparison"
+        override_test="tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_full_closure_requires_terminal_repository_gates"
+        ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2
         exit 2

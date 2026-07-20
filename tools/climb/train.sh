@@ -6,7 +6,7 @@ if [ "$#" -ne 1 ]; then
     exit 2
 fi
 case "$1" in
-    H-001|H-002|H-003|H-004|H-005|H-006|H-007|H-008|H-009|H-010|H-011|H-012|H-013|H-014|H-015|H-016|H-017|H-018|H-019|AF-050-H-001|AF-050-H-002|AF-050-H-003|AF-050-H-004|AF-050-H-005|AF-060-H-001|AF-060-H-002|AF-060-H-003|AF-060-H-004|AF-060-H-005|AF-070-H-001|AF-070-H-002|AF-070-H-003|AF-070-H-004|AF-080-H-001|AF-080-H-002|AF-080-H-003|AF-080-H-004|AF-090-H-001|AF-090-H-002|AF-090-H-003|AF-090-H-004|AF-095-H-001|AF-095-H-002|AF-095-H-003|AF-095-H-004|AF-100-H-001|AF-100-H-002|AF-100-H-003|AF-100-H-004|AF-180-H-001|AF-180-H-002|AF-180-H-003|AF-180-H-004|AF-190-H-001|AF-190-H-002|AF-190-H-003|AF-190-H-004|AF-200-H-001|AF-200-H-002|AF-200-H-003|AF-200-H-004|AF-210-H-001|AF-210-H-002|AF-210-H-003|AF-210-H-004|AF-220-H-001|AF-220-H-002|AF-220-H-003|AF-220-H-004|AF-230-H-001|AF-230-H-002|AF-230-H-003|AF-230-H-004|AF-240-H-001|AF-240-H-002|AF-240-H-003|AF-240-H-004|AF-250-H-001|AF-250-H-002|AF-250-H-003|AF-250-H-004|AF-250-H-005|AF-310-H-001|AF-310-H-002|AF-310-H-003|AF-310-H-004|AF-310-H-005|AF-320-H-001|AF-320-H-002|AF-320-H-003|AF-330-H-001|AF-330-H-002|AF-330-H-003|AF-330-H-004) ;;
+    H-001|H-002|H-003|H-004|H-005|H-006|H-007|H-008|H-009|H-010|H-011|H-012|H-013|H-014|H-015|H-016|H-017|H-018|H-019|AF-050-H-001|AF-050-H-002|AF-050-H-003|AF-050-H-004|AF-050-H-005|AF-060-H-001|AF-060-H-002|AF-060-H-003|AF-060-H-004|AF-060-H-005|AF-070-H-001|AF-070-H-002|AF-070-H-003|AF-070-H-004|AF-080-H-001|AF-080-H-002|AF-080-H-003|AF-080-H-004|AF-090-H-001|AF-090-H-002|AF-090-H-003|AF-090-H-004|AF-095-H-001|AF-095-H-002|AF-095-H-003|AF-095-H-004|AF-100-H-001|AF-100-H-002|AF-100-H-003|AF-100-H-004|AF-180-H-001|AF-180-H-002|AF-180-H-003|AF-180-H-004|AF-190-H-001|AF-190-H-002|AF-190-H-003|AF-190-H-004|AF-200-H-001|AF-200-H-002|AF-200-H-003|AF-200-H-004|AF-210-H-001|AF-210-H-002|AF-210-H-003|AF-210-H-004|AF-220-H-001|AF-220-H-002|AF-220-H-003|AF-220-H-004|AF-230-H-001|AF-230-H-002|AF-230-H-003|AF-230-H-004|AF-240-H-001|AF-240-H-002|AF-240-H-003|AF-240-H-004|AF-250-H-001|AF-250-H-002|AF-250-H-003|AF-250-H-004|AF-250-H-005|AF-310-H-001|AF-310-H-002|AF-310-H-003|AF-310-H-004|AF-310-H-005|AF-320-H-001|AF-320-H-002|AF-320-H-003|AF-330-H-001|AF-330-H-002|AF-330-H-003|AF-330-H-004|AF-340-H-001|AF-340-H-002|AF-340-H-003|AF-340-H-004|AF-340-H-005) ;;
     *)
         echo "ERROR: train adapter has no acceptance suite for $1." >&2
         exit 2
@@ -170,6 +170,16 @@ elif [ "$1" = "AF-330-H-003" ]; then
     paradigm="dci-restricted-pi-application"
 elif [ "$1" = "AF-330-H-004" ]; then
     paradigm="dci-restricted-claude-application"
+elif [ "$1" = "AF-340-H-001" ]; then
+    paradigm="dci-reproduction-evidence"
+elif [ "$1" = "AF-340-H-002" ]; then
+    paradigm="dci-reproduction-statistics"
+elif [ "$1" = "AF-340-H-003" ]; then
+    paradigm="dci-reproduction-local-coordinator"
+elif [ "$1" = "AF-340-H-004" ]; then
+    paradigm="dci-reproduction-bounded-evidence"
+elif [ "$1" = "AF-340-H-005" ]; then
+    paradigm="dci-reproduction-full-closure"
 elif [ "$1" = "H-003" ]; then
     paradigm="rpc-contract-probe"
 elif [ "$1" = "H-004" ] || [ "$1" = "H-005" ]; then
@@ -833,6 +843,49 @@ elif [ "$1" = "AF-330-H-004" ]; then
             --record "$ROOT/docs/status/climb/provider-evidence/af-330-h-004.json"
     } >"$run_dir/train.log" 2>&1; then
         echo "ERROR: $1 restricted Claude acceptance failed; see $run_dir/train.log" >&2
+        exit 1
+    fi
+elif [ "$1" = "AF-340-H-001" ]; then
+    if ! uv run python -m unittest -v \
+        tests.test_asterion_dci_reproduction >"$run_dir/train.log" 2>&1; then
+        echo "ERROR: $1 normalized reproduction evidence failed; see $run_dir/train.log" >&2
+        exit 1
+    fi
+elif [ "$1" = "AF-340-H-002" ]; then
+    if ! uv run python -m unittest -v \
+        tests.test_asterion_dci_reproduction \
+        tests.test_asterion_dci_paper_resolution_analysis \
+        tests.test_asterion_dci_paper_product >"$run_dir/train.log" 2>&1; then
+        echo "ERROR: $1 statistical reproduction comparison failed; see $run_dir/train.log" >&2
+        exit 1
+    fi
+elif [ "$1" = "AF-340-H-003" ]; then
+    if ! uv run python -m unittest -v \
+        tests.test_af340_reproduction_verifier \
+        tests.test_original_readme_acceptance \
+        tests.test_asterion_documentation >"$run_dir/train.log" 2>&1; then
+        echo "ERROR: $1 local reproduction coordinator failed; see $run_dir/train.log" >&2
+        exit 1
+    fi
+elif [ "$1" = "AF-340-H-004" ]; then
+    if [ -z "${AF340_BOUNDED_REPORT:-}" ]; then
+        echo "ERROR: $1 requires a retained bounded AF-340 report." >&2
+        exit 2
+    fi
+    if ! uv run python -m unittest -v \
+        tests.test_af340_reproduction_verifier >"$run_dir/train.log" 2>&1; then
+        echo "ERROR: $1 bounded reproduction evidence failed; see $run_dir/train.log" >&2
+        exit 1
+    fi
+elif [ "$1" = "AF-340-H-005" ]; then
+    if [ -z "${AF340_FULL_AUTHORIZATION_RECORD:-}" ] || [ -z "${AF340_FULL_REPORT:-}" ]; then
+        echo "ERROR: $1 requires retained explicit authorization and full reports." >&2
+        exit 2
+    fi
+    if ! uv run python -m unittest -v \
+        tests.test_af340_reproduction_verifier \
+        tests.test_asterion_dci_reproduction >"$run_dir/train.log" 2>&1; then
+        echo "ERROR: $1 authorized full reproduction closure failed; see $run_dir/train.log" >&2
         exit 1
     fi
 elif [ "$1" = "H-003" ]; then

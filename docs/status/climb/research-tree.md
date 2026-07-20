@@ -5,14 +5,19 @@
 
 ## In-flight / session state
 
-- Phase: completed
+- Phase: implementation
 - Last cycle: 103
-- Next hypothesis: None
+- Next hypothesis: AF-340-H-001
 - In flight: none
-- Next action: Project lifecycle complete; await explicit governance reopening.
+- Next action: Implement AF-340-H-001 with provider-free RED/GREEN tests.
 
 ## Active hypotheses
 
+- **AF-340-H-001** (pending, rank 1.00): Prove normalized per-query evidence is immutable, body-free, profile-bound, and preserves every completed, failed, cancelled, timed-out, missing, or explicitly excluded row.
+- **AF-340-H-002** (pending, rank 0.90): Prove deterministic paired-bootstrap accuracy and NDCG comparison, Pi non-inferiority margins, and separately labeled Claude target comparison.
+- **AF-340-H-003** (pending, rank 0.80): Prove one provider-free coordinator executes the literal local matrix, reports zero operations, and preserves private-output and documentation boundaries.
+- **AF-340-H-004** (pending, rank 0.70): Prove retained bounded original, Asterion Pi, Claude subscription, and Claude MiniMax evidence covers every user-facing path without full execution.
+- **AF-340-H-005** (pending, rank 0.60): After explicit invocation authorization, prove matched original/Asterion Pi non-inferiority, exact Claude target comparison, privacy, and terminal closure gates.
 
 ## Run ladder
 
@@ -139,3 +144,4 @@
 - reuse the completed AF-250 session or its hypotheses under AF-310
 - collapse BrowseComp all-830, analysis n=100, context-ablation n=100, and Appendix random-50 into one dataset default
 - make paper-full profiles executable before AF-340 authorization
+- treat local or bounded AF-340 evidence as authorization for full execution

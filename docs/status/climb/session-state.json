@@ -1,11 +1,11 @@
 {
-  "session": "2026-07-17-af-330-complete-application-dual-runtime",
-  "phase": "completed",
-  "work_package_id": "AF-330",
+  "session": "2026-07-20-af-340-reproduction-runtime-parity",
+  "phase": "implementation",
+  "work_package_id": "AF-340",
   "last_cycle": 103,
-  "next_hypothesis": null,
+  "next_hypothesis": "AF-340-H-001",
   "in_flight": null,
-  "next_action": "Project lifecycle complete; await explicit governance reopening.",
+  "next_action": "Implement AF-340-H-001 with provider-free RED/GREEN tests.",
   "falsified_routes": [
     "duplicate the authoritative Pi commit across setup.sh and .env.template",
     "convert the independent Pi checkout to vendored or submodule ownership",
@@ -22,6 +22,7 @@
     "modify the external pi checkout instead of using Asterion's extension boundary",
     "reuse the completed AF-250 session or its hypotheses under AF-310",
     "collapse BrowseComp all-830, analysis n=100, context-ablation n=100, and Appendix random-50 into one dataset default",
-    "make paper-full profiles executable before AF-340 authorization"
+    "make paper-full profiles executable before AF-340 authorization",
+    "treat local or bounded AF-340 evidence as authorization for full execution"
   ]
 }

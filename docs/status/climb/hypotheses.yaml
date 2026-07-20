@@ -2344,3 +2344,67 @@ hypotheses:
       path: provider-evidence/af-330-h-004.json
       sha256: a62e62cd7ac85679828f17ff8236e605dd167b54e7f99f8141c3cdca9ac8ae89
       report_sha256: 07a69074b3af2f3ad69fa4aa738c1dbeda7a97ef77d77515d6256ed6a18bdce2
+- id: AF-340-H-001
+  work_package_id: AF-340
+  description: Prove normalized per-query evidence is immutable, body-free, profile-bound,
+    and preserves every completed, failed, cancelled, timed-out, missing, or explicitly
+    excluded row.
+  parent_paradigm: dci-reproduction-evidence
+  expected_lift: +1 strict reproduction manifest contract
+  cost_h: 1.5
+  ranking: 1.0
+  status: pending
+  created_at: '2026-07-20T13:30:37+08:00'
+  verification_command: uv run python -m unittest -v tests.test_asterion_dci_reproduction
+  results: []
+- id: AF-340-H-002
+  work_package_id: AF-340
+  description: Prove deterministic paired-bootstrap accuracy and NDCG comparison,
+    Pi non-inferiority margins, and separately labeled Claude target comparison.
+  parent_paradigm: dci-reproduction-statistics
+  expected_lift: +1 versioned statistical comparison contract
+  cost_h: 1.5
+  ranking: 0.9
+  status: pending
+  created_at: '2026-07-20T13:30:37+08:00'
+  verification_command: uv run python -m unittest -v tests.test_asterion_dci_reproduction
+    tests.test_asterion_dci_paper_resolution_analysis tests.test_asterion_dci_paper_product
+  results: []
+- id: AF-340-H-003
+  work_package_id: AF-340
+  description: Prove one provider-free coordinator executes the literal local matrix,
+    reports zero operations, and preserves private-output and documentation boundaries.
+  parent_paradigm: dci-reproduction-local-coordinator
+  expected_lift: +1 unified zero-operation local acceptance
+  cost_h: 1.5
+  ranking: 0.8
+  status: pending
+  created_at: '2026-07-20T13:30:37+08:00'
+  verification_command: uv run python -m unittest -v tests.test_af340_reproduction_verifier
+    tests.test_original_readme_acceptance tests.test_asterion_documentation
+  results: []
+- id: AF-340-H-004
+  work_package_id: AF-340
+  description: Prove retained bounded original, Asterion Pi, Claude subscription,
+    and Claude MiniMax evidence covers every user-facing path without full execution.
+  parent_paradigm: dci-reproduction-bounded-evidence
+  expected_lift: +1 complete bounded reproduction matrix
+  cost_h: 3.0
+  ranking: 0.7
+  status: pending
+  created_at: '2026-07-20T13:30:37+08:00'
+  verification_command: uv run python -m unittest -v tests.test_af340_reproduction_verifier
+  results: []
+- id: AF-340-H-005
+  work_package_id: AF-340
+  description: After explicit invocation authorization, prove matched original/Asterion
+    Pi non-inferiority, exact Claude target comparison, privacy, and terminal closure gates.
+  parent_paradigm: dci-reproduction-full-closure
+  expected_lift: +1 authorized full reproduction closure
+  cost_h: 8.0
+  ranking: 0.6
+  status: pending
+  created_at: '2026-07-20T13:30:37+08:00'
+  verification_command: explicit authorization plus tools/verify_af340_reproduction.py
+    full and terminal repository gates
+  results: []
