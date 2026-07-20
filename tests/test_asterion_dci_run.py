@@ -14,7 +14,11 @@ from pathlib import Path
 from unittest.mock import patch
 
 from asterion.dci.config import DciRuntimeOptions, resolve_dci_paths
-from asterion.dci.artifacts import DciConversationFeatures
+from asterion.dci.artifacts import (
+    DciConversationFeatures,
+    DciRunLock,
+    validate_completed_run_evidence,
+)
 from asterion.dci.pi_rpc import PiRpcClient
 from asterion.dci.run import (
     DciRunError,
@@ -1340,9 +1344,13 @@ class AsterionDciRunTests(unittest.TestCase):
     def test_bounded_prelude_questions_share_one_pi_process(self) -> None:
         class SequenceClient(FixturePiClient):
             prompts: list[str] = []
+            recovery_flags: list[bool] = []
 
             def prompt_and_wait(self, message: str, *, on_event, **kwargs: object) -> str:
                 type(self).prompts.append(message)
+                type(self).recovery_flags.append(
+                    kwargs.get("recover_empty_final") is True
+                )
                 return super().prompt_and_wait(message, on_event=on_event, **kwargs)
 
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -1360,6 +1368,7 @@ class AsterionDciRunTests(unittest.TestCase):
                 result = run_pi_research(paths, request)
 
             self.assertEqual(SequenceClient.prompts, ["prelude"] * 12 + ["pressure"])
+            self.assertEqual(SequenceClient.recovery_flags, [False] * 12 + [True])
             state = json.loads((result.output_dir / "state.json").read_text())
             self.assertEqual(state["prelude_question_count"], 12)
             self.assertEqual(len(state["prelude_questions_fingerprint"]), 64)
@@ -1758,6 +1767,50 @@ class AsterionDciRunTests(unittest.TestCase):
                     (result.output_dir / "final.txt").read_bytes()
                 ).hexdigest(),
             )
+
+    def test_whitespace_recovery_remains_valid_completed_evidence(self) -> None:
+        class WhitespaceRecoveryClient(FixturePiClient):
+            def prompt_and_wait(self, _: str, *, on_event, **kwargs: object) -> str:
+                if kwargs.get("recover_empty_final") is not True:
+                    raise AssertionError("final prompt did not enable empty recovery")
+                for event in (
+                    {"type": "response", "id": "py-1", "success": True},
+                    {"type": "agent_start"},
+                    {
+                        "type": "message_update",
+                        "assistantMessageEvent": {
+                            "type": "text_delta",
+                            "delta": " \n",
+                        },
+                    },
+                    {"type": "agent_end"},
+                    {"type": "response", "id": "py-2", "success": True},
+                    {"type": "agent_start"},
+                    {
+                        "type": "message_update",
+                        "assistantMessageEvent": {
+                            "type": "text_delta",
+                            "delta": "recovered answer",
+                        },
+                    },
+                    {"type": "agent_end"},
+                ):
+                    on_event(event)
+                return " \nrecovered answer"
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            paths = resolve_dci_paths(root)
+            request = DciRunRequest(run_id="recovered", question="question", cwd=root)
+            with patch("asterion.dci.run.PiRpcClient", WhitespaceRecoveryClient):
+                result = run_pi_research(paths, request)
+
+            lock = DciRunLock.acquire_existing(result.output_dir)
+            try:
+                _state, _question, final_text = validate_completed_run_evidence(lock)
+            finally:
+                lock.release()
+            self.assertEqual(final_text, " \nrecovered answer")
 
     def test_attempt_provenance_warning_and_command_summary_never_store_credentials(
         self,

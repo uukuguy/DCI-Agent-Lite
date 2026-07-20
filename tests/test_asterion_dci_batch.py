@@ -53,6 +53,10 @@ from asterion.dci.config import (
 from asterion.dci.effective_config import AsterionEffectiveConfig
 from asterion.dci.context_extension import resolve_context_extension
 from asterion.dci.context_profiles import resolve_context_profile
+from asterion.dci.datasets import (
+    BENCHMARK_PROMPT_CONTRACT,
+    BENCHMARK_PROMPT_CONTRACT_SHA256,
+)
 from asterion.dci.judge import JudgeConfig, judge_public_identity
 from asterion.dci.evaluation import evaluate_run_directory_async as _real_evaluate
 from asterion.dci.pi_rpc import _pi_child_environment, expand_extra_args
@@ -1273,6 +1277,22 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
             _validate_config_document(
                 config, expected_execution_class="paper-bounded"
             )
+            for prompt_mutation in ("missing", "schema", "sha256"):
+                with self.subTest(prompt_mutation=prompt_mutation):
+                    forged = json.loads(json.dumps(config))
+                    if prompt_mutation == "missing":
+                        forged.pop("benchmark_prompt_contract_sha256")
+                    elif prompt_mutation == "schema":
+                        forged["benchmark_prompt_contract"] = "attacker/v1"
+                    else:
+                        forged["benchmark_prompt_contract_sha256"] = "0" * 64
+                    _refingerprint_config(forged)
+                    with self.assertRaisesRegex(
+                        DciBenchmarkError, "configuration evidence is invalid"
+                    ):
+                        _validate_config_document(
+                            forged, expected_execution_class="paper-bounded"
+                        )
             for claim, value in (
                 ("full_dataset", True),
                 ("comparable", True),
@@ -1965,6 +1985,17 @@ class AsterionDciBatchValidationTests(unittest.TestCase):
             _rows, _output, base_config, base_items, _snapshots = _prepare(base)
             base_run = base_config["run_fingerprint"]
             base_row = base_items[0]["row_fingerprint"]
+            self.assertEqual(
+                base_config["benchmark_prompt_contract"], BENCHMARK_PROMPT_CONTRACT
+            )
+            self.assertEqual(
+                base_config["benchmark_prompt_contract_sha256"],
+                BENCHMARK_PROMPT_CONTRACT_SHA256,
+            )
+            self.assertEqual(
+                base_items[0]["identity"]["benchmark_prompt_contract_sha256"],
+                BENCHMARK_PROMPT_CONTRACT_SHA256,
+            )
             runtime = base.runtime_options
             mutations = {
                 "profile": replace(base, profile="profile-b"),
@@ -2005,6 +2036,15 @@ class AsterionDciBatchValidationTests(unittest.TestCase):
             _rows, _output, config, items, _snapshots = _prepare(base)
             self.assertNotEqual(config["run_fingerprint"], base_run)
             self.assertNotEqual(items[0]["row_fingerprint"], base_row)
+            with patch(
+                "asterion.dci.benchmark.BENCHMARK_PROMPT_CONTRACT_SHA256",
+                "0" * 64,
+            ):
+                _rows, _output, changed_config, changed_items, _snapshots = _prepare(
+                    base
+                )
+            self.assertNotEqual(changed_config["run_fingerprint"], base_run)
+            self.assertNotEqual(changed_items[0]["row_fingerprint"], base_row)
             ir = replace(_request(root, mode="ir", ir=True), corpus=corpus_a)
             _rows, _output, ir_config, ir_items, _snapshots = _prepare(ir)
             self.assertNotEqual(ir_config["run_fingerprint"], base_run)

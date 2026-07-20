@@ -13,6 +13,8 @@ from pathlib import Path
 from pathlib import PurePosixPath
 from typing import Any
 
+from asterion.dci.pi_rpc import FINAL_ANSWER_RECOVERY_PROMPT
+
 
 class DatasetError(ValueError):
     """Safe public error for malformed or ambiguous benchmark input."""
@@ -534,6 +536,7 @@ BENCHMARK_PROMPT_CONTRACT_SHA256 = hashlib.sha256(
                 Path("/__dci_prompt_contract_corpus__"),
                 "__DCI_CORPUS_HINT__",
             ),
+            "final_answer_recovery": FINAL_ANSWER_RECOVERY_PROMPT,
         },
         ensure_ascii=False,
         separators=(",", ":"),

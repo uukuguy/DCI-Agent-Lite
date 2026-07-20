@@ -1051,3 +1051,11 @@
 - A compile-only command mentioning the batch script path triggered the long-task regex; it finished in 0.5 seconds with no evaluator PID, and scope check passed.
 - H004 runtime repair now rejects empty finals, binds exact prompt/cache identity, and hashes every executed Python/shell implementation path.
 - Repair closure passes 1447 root, 134 Asterion, 153 Climb, product 8/8, local coordinator, static gates, and independent 0/0/0 review.
+- H004 prompt and implementation identities now fail closed before cache reuse or completed evidence. [9dd3e70]
+- 21:29 H004 Pi bounded r11 completed original 14 Agent/7 Judge; first Asterion run settled tool-only without text and failed closed; full no.
+- 21:46 空-final 单轮恢复通过 1450 root、134 Asterion、153 Climb、375 focused、static、scope 与 local coordinator。
+- 21:48 产品验证通过 8/8、delegated 538/538、launchers 12/12、extras 6/6、bounded 7/7；provider 0。
+- 21:51 首轮复审拒绝：空白 delta 会破坏 completed 投影，且 Asterion cache 未消费 recovery prompt 身份。
+- 21:54 保留空白文本投影并将 prompt contract 绑定 Asterion config/run/row fingerprint；17 个定向回归通过。
+- 22:01 复审修正通过 1453 root、134 Asterion、153 Climb、378 focused、product、local、static 与 scope；provider 0。
+- 22:05 空-final 恢复二轮复审清零：Critical 0、Important 0、Minor 0，批准提交。

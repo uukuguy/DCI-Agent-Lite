@@ -549,7 +549,8 @@ def run_pi_research(
             else None
         )
         final_text = ""
-        for prompt in (*request.prelude_questions, request.question):
+        prompts = (*request.prelude_questions, request.question)
+        for prompt_index, prompt in enumerate(prompts):
             if _cancel_event is not None and _cancel_event.is_set():
                 raise RuntimeError("RPC prompt was cancelled")
             remaining = (
@@ -565,6 +566,7 @@ def run_pi_research(
                 timeout_seconds=remaining,
                 on_event=recorder.record_event,
                 cancel_event=_cancel_event,
+                recover_empty_final=prompt_index == len(prompts) - 1,
             )
         if not final_text.strip():
             raise RuntimeError("Pi provider returned no final answer")

@@ -11,6 +11,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from asterion.dci.pi_rpc import (
+    FINAL_ANSWER_RECOVERY_PROMPT,
     PiRpcClient,
     build_pi_command,
     expand_extra_args,
@@ -699,13 +700,88 @@ class PiRpcLifecycleTests(unittest.TestCase):
             ),
             patch("sys.stdout", new=stdout),
         ):
-            result = client.prompt_and_wait("question", timeout_seconds=30)
+            result = client.prompt_and_wait(
+                "question", timeout_seconds=30, recover_empty_final=True
+            )
 
         self.assertEqual(result, "answer")
         self.assertEqual(stdout.getvalue(), "answer")
         send.assert_called_once_with(
             {"id": "py-1", "type": "prompt", "message": "question"}
         )
+
+    def test_empty_final_uses_one_text_only_recovery_prompt(self) -> None:
+        client = make_client()
+        events = [
+            {"type": "response", "id": "py-1", "success": True},
+            {"type": "agent_start"},
+            {"type": "agent_end"},
+            {"type": "response", "id": "py-2", "success": True},
+            {"type": "agent_start"},
+            {
+                "type": "message_update",
+                "assistantMessageEvent": {
+                    "type": "text_delta",
+                    "delta": "recovered answer",
+                },
+            },
+            {"type": "agent_end"},
+        ]
+        with (
+            patch.object(client, "_send") as send,
+            patch.object(client, "_read_json_line", side_effect=events),
+            patch("sys.stdout", new=io.StringIO()),
+        ):
+            result = client.prompt_and_wait(
+                "question", timeout_seconds=30, recover_empty_final=True
+            )
+
+        self.assertEqual(result, "recovered answer")
+        self.assertEqual(
+            [call.args[0] for call in send.call_args_list],
+            [
+                {"id": "py-1", "type": "prompt", "message": "question"},
+                {
+                    "id": "py-2",
+                    "type": "prompt",
+                    "message": FINAL_ANSWER_RECOVERY_PROMPT,
+                },
+            ],
+        )
+
+    def test_whitespace_final_recovery_preserves_the_recorded_text_projection(
+        self,
+    ) -> None:
+        client = make_client()
+        events = [
+            {"type": "response", "id": "py-1", "success": True},
+            {"type": "agent_start"},
+            {
+                "type": "message_update",
+                "assistantMessageEvent": {"type": "text_delta", "delta": " \n"},
+            },
+            {"type": "agent_end"},
+            {"type": "response", "id": "py-2", "success": True},
+            {"type": "agent_start"},
+            {
+                "type": "message_update",
+                "assistantMessageEvent": {
+                    "type": "text_delta",
+                    "delta": "recovered answer",
+                },
+            },
+            {"type": "agent_end"},
+        ]
+        with (
+            patch.object(client, "_send"),
+            patch.object(client, "_read_json_line", side_effect=events),
+            patch("sys.stdout", new=io.StringIO()),
+        ):
+            result = client.prompt_and_wait(
+                "question", timeout_seconds=30, recover_empty_final=True
+            )
+
+        self.assertEqual(result, " \nrecovered answer")
 
     def test_agent_settled_waits_for_async_extension_compaction(self) -> None:
         client = make_client()

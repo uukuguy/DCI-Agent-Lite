@@ -35,6 +35,8 @@ from asterion.dci.context_profiles import (
     resolve_context_profile,
 )
 from asterion.dci.datasets import (
+    BENCHMARK_PROMPT_CONTRACT,
+    BENCHMARK_PROMPT_CONTRACT_SHA256,
     BenchmarkRow,
     DatasetError,
     build_ir_prompt,
@@ -648,6 +650,8 @@ def _prepare(
         "figures": request.figures,
         "judge": judge,
         "judge_configuration_fingerprint": judge_fingerprint,
+        "benchmark_prompt_contract": BENCHMARK_PROMPT_CONTRACT,
+        "benchmark_prompt_contract_sha256": BENCHMARK_PROMPT_CONTRACT_SHA256,
         "prompt_resources": prompt_resources,
     }
     if bounded_paper_selection:
@@ -712,6 +716,8 @@ def _prepare(
             "runtime": runtime,
             "conversation_features": config["conversation_features"],
             "max_turns": request.max_turns,
+            "benchmark_prompt_contract": BENCHMARK_PROMPT_CONTRACT,
+            "benchmark_prompt_contract_sha256": BENCHMARK_PROMPT_CONTRACT_SHA256,
             "prompt_resources": config["prompt_resources"],
         }
         if resolution_config:
@@ -1107,6 +1113,7 @@ def _validate_config_document(
         "schema", "dataset", "mode", "profile", "corpus_identity", "corpus_hint",
         "cwd", "runtime", "conversation_features", "max_concurrency", "max_turns",
         "analysis", "figures", "judge", "judge_configuration_fingerprint",
+        "benchmark_prompt_contract", "benchmark_prompt_contract_sha256",
         "prompt_resources", "run_fingerprint", "batch_fingerprint",
     }
     optional = {"resolution", "ablation", "paper_full_authorization", "selection"}
@@ -1114,6 +1121,9 @@ def _validate_config_document(
         not expected.issubset(value)
         or not set(value).issubset(expected | optional)
         or value.get("schema") != "asterion.dci.batch/v1"
+        or value.get("benchmark_prompt_contract") != BENCHMARK_PROMPT_CONTRACT
+        or value.get("benchmark_prompt_contract_sha256")
+        != BENCHMARK_PROMPT_CONTRACT_SHA256
     ):
         raise DciBenchmarkError("DCI benchmark configuration evidence is invalid")
     paper_authorization = value.get("paper_full_authorization")
@@ -1254,6 +1264,12 @@ def _validate_item_document(value: dict[str, Any]) -> None:
         raise DciBenchmarkError("DCI benchmark item evidence is invalid")
     identity = value.get("identity")
     if not isinstance(identity, dict):
+        raise DciBenchmarkError("DCI benchmark item evidence is invalid")
+    if (
+        identity.get("benchmark_prompt_contract") != BENCHMARK_PROMPT_CONTRACT
+        or identity.get("benchmark_prompt_contract_sha256")
+        != BENCHMARK_PROMPT_CONTRACT_SHA256
+    ):
         raise DciBenchmarkError("DCI benchmark item evidence is invalid")
     if value.get("row_fingerprint") != _fingerprint(identity):
         raise DciBenchmarkError("DCI benchmark item evidence is invalid")

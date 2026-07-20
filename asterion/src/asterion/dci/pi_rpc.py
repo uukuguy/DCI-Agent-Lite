@@ -17,6 +17,10 @@ from typing import Any, TextIO
 
 
 _STDOUT_EOF = object()
+FINAL_ANSWER_RECOVERY_PROMPT = (
+    "Stop using tools. Based only on the evidence already gathered in this session, "
+    "provide the requested final answer now as non-empty text."
+)
 
 
 _NODE_FAILURE = "compatible Node runtime is unavailable (Node >=20 required)"
@@ -684,6 +688,7 @@ class PiRpcClient:
         timeout_seconds: float | None = None,
         on_event: Callable[[dict[str, Any]], None] | None = None,
         cancel_event: threading.Event | None = None,
+        recover_empty_final: bool = False,
     ) -> str:
         if cancel_event is not None and cancel_event.is_set():
             raise RuntimeError("RPC prompt was cancelled")
@@ -844,7 +849,21 @@ class PiRpcClient:
                 raise RuntimeError(
                     "Pi RPC agent_settled postcondition failed: session is not idle"
                 )
-        return "".join(text_parts)
+        final_text = "".join(text_parts)
+        if recover_empty_final and not final_text.strip():
+            remaining = None if deadline is None else deadline - time.monotonic()
+            if remaining is not None and remaining <= 0:
+                raise RuntimeError(
+                    f"RPC prompt timed out after {timeout_seconds:g} seconds"
+                )
+            return final_text + self.prompt_and_wait(
+                FINAL_ANSWER_RECOVERY_PROMPT,
+                max_turns=1,
+                timeout_seconds=remaining,
+                on_event=on_event,
+                cancel_event=cancel_event,
+            )
+        return final_text
 
     def get_stderr(self) -> str:
         return "".join(self.stderr_chunks)

@@ -15,7 +15,11 @@ from unittest.mock import MagicMock, call, patch
 from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
 import dci.benchmark.pi_rpc_runner as rpc_runner
 from dci.benchmark.judge import JudgeConfig, judge_public_identity
-from dci.benchmark.pi_rpc_runner import PiRpcClient, parse_args
+from dci.benchmark.pi_rpc_runner import (
+    FINAL_ANSWER_RECOVERY_PROMPT,
+    PiRpcClient,
+    parse_args,
+)
 from dci.config import ConfigLayers
 from dci.framework.protocol import validate_event_stream, validate_run_request
 import scripts.bcplus_eval.run_bcplus_eval as bcplus_runner
@@ -65,6 +69,81 @@ def make_recorder(output_dir: Path, *, resume: bool = False) -> rpc_runner.RunRe
 
 
 class PiRpcLifecycleTests(unittest.TestCase):
+    def test_main_rejects_empty_recovery_before_completed_evidence(self) -> None:
+        class EmptyFinalClient:
+            command: list[str] = []
+            recovery_flags: list[bool] = []
+
+            def __init__(self, **_: object) -> None:
+                return None
+
+            def start(self) -> None:
+                return None
+
+            def stop(self) -> None:
+                return None
+
+            def get_stderr(self) -> str:
+                return ""
+
+            def prompt_and_wait(self, _: str, **kwargs: object) -> str:
+                type(self).recovery_flags.append(
+                    kwargs.get("recover_empty_final") is True
+                )
+                return " \n"
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            package_dir = root / "pi/packages/coding-agent"
+            agent_dir = root / "pi/.pi/agent"
+            package_dir.mkdir(parents=True)
+            agent_dir.mkdir(parents=True)
+            output_dir = root / "run"
+            argv = [
+                "pi_rpc_runner.py",
+                "question",
+                "--output-dir",
+                str(output_dir),
+                "--cwd",
+                str(root),
+                "--package-dir",
+                str(package_dir),
+                "--agent-dir",
+                str(agent_dir),
+                "--provider",
+                "test-provider",
+                "--model",
+                "test-model",
+                "--tools",
+                "read,bash",
+                "--max-turns",
+                "2",
+                "--rpc-timeout-seconds",
+                "30",
+            ]
+            with (
+                patch("sys.argv", argv),
+                patch.object(
+                    rpc_runner.ConfigLayers,
+                    "from_repo",
+                    return_value=ConfigLayers(process={}, dotenv={}),
+                ),
+                patch.object(rpc_runner, "PiRpcClient", EmptyFinalClient),
+                patch.object(
+                    rpc_runner,
+                    "collect_pi_source_provenance",
+                    return_value={"commit": "fixture", "dirty": False},
+                ),
+                patch("sys.stdout", new=io.StringIO()),
+                patch("sys.stderr", new=io.StringIO()),
+            ):
+                self.assertEqual(rpc_runner.main(), 1)
+
+            state = json.loads((output_dir / "state.json").read_text())
+            self.assertEqual(state["status"], "failed")
+            self.assertEqual(EmptyFinalClient.recovery_flags, [True])
+            self.assertFalse((output_dir / "final.txt").exists())
+
     def test_programmatic_required_artifacts_are_private(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output_dir = Path(temp_dir) / "run"
@@ -475,10 +554,89 @@ class PiRpcLifecycleTests(unittest.TestCase):
             ),
             patch("sys.stdout", new=io.StringIO()),
         ):
-            result = client.prompt_and_wait("question", timeout_seconds=30)
+            result = client.prompt_and_wait(
+                "question", timeout_seconds=30, recover_empty_final=True
+            )
 
         self.assertEqual(result, "final")
         send.assert_called_once_with({"id": "py-1", "type": "prompt", "message": "question"})
+
+    def test_empty_final_uses_one_text_only_recovery_prompt(self) -> None:
+        client = make_client()
+        events = [
+            {"type": "response", "id": "py-1", "success": True},
+            {"type": "agent_start"},
+            {"type": "agent_end"},
+            {"type": "response", "id": "py-2", "success": True},
+            {"type": "agent_start"},
+            {
+                "type": "message_update",
+                "assistantMessageEvent": {
+                    "type": "text_delta",
+                    "delta": "recovered answer",
+                },
+            },
+            {"type": "agent_end"},
+        ]
+
+        with (
+            patch.object(client, "_send") as send,
+            patch.object(client, "_read_json_line", side_effect=events),
+            patch("sys.stdout", new=io.StringIO()),
+        ):
+            result = client.prompt_and_wait(
+                "question", timeout_seconds=30, recover_empty_final=True
+            )
+
+        self.assertEqual(result, "recovered answer")
+        self.assertEqual(
+            send.call_args_list,
+            [
+                call({"id": "py-1", "type": "prompt", "message": "question"}),
+                call(
+                    {
+                        "id": "py-2",
+                        "type": "prompt",
+                        "message": FINAL_ANSWER_RECOVERY_PROMPT,
+                    }
+                ),
+            ],
+        )
+
+    def test_whitespace_final_recovery_preserves_the_recorded_text_projection(
+        self,
+    ) -> None:
+        client = make_client()
+        events = [
+            {"type": "response", "id": "py-1", "success": True},
+            {"type": "agent_start"},
+            {
+                "type": "message_update",
+                "assistantMessageEvent": {"type": "text_delta", "delta": " \n"},
+            },
+            {"type": "agent_end"},
+            {"type": "response", "id": "py-2", "success": True},
+            {"type": "agent_start"},
+            {
+                "type": "message_update",
+                "assistantMessageEvent": {
+                    "type": "text_delta",
+                    "delta": "recovered answer",
+                },
+            },
+            {"type": "agent_end"},
+        ]
+
+        with (
+            patch.object(client, "_send"),
+            patch.object(client, "_read_json_line", side_effect=events),
+            patch("sys.stdout", new=io.StringIO()),
+        ):
+            result = client.prompt_and_wait(
+                "question", timeout_seconds=30, recover_empty_final=True
+            )
+
+        self.assertEqual(result, " \nrecovered answer")
 
     def test_terminal_assistant_error_fails_prompt(self) -> None:
         client = make_client()

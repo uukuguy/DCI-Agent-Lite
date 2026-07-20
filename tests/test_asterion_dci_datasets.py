@@ -411,6 +411,10 @@ class AsterionDciDatasetTests(unittest.TestCase):
         )
 
     def test_prompt_corpus_identity_and_hint_branch_are_source_compatible(self) -> None:
+        from asterion.dci.pi_rpc import FINAL_ANSWER_RECOVERY_PROMPT
+        from dci.benchmark.pi_rpc_runner import (
+            FINAL_ANSWER_RECOVERY_PROMPT as source_final_answer_recovery_prompt,
+        )
         from scripts.bcplus_eval.run_bcplus_eval import (
             BENCHMARK_PROMPT_CONTRACT as source_prompt_contract,
             BENCHMARK_PROMPT_CONTRACT_SHA256 as source_prompt_contract_sha256,
@@ -429,6 +433,9 @@ class AsterionDciDatasetTests(unittest.TestCase):
             build_ir_prompt("Q", corpus, "   "), source_ir_prompt("Q", corpus, "   ")
         )
         self.assertEqual(BENCHMARK_PROMPT_CONTRACT, source_prompt_contract)
+        self.assertEqual(
+            FINAL_ANSWER_RECOVERY_PROMPT, source_final_answer_recovery_prompt
+        )
         self.assertEqual(
             BENCHMARK_PROMPT_CONTRACT_SHA256, source_prompt_contract_sha256
         )

@@ -61,6 +61,10 @@ DEFAULT_EVAL_INPUT_PRICE_PER_1M = DEFAULT_JUDGE_INPUT_PRICE_PER_1M
 DEFAULT_EVAL_CACHED_INPUT_PRICE_PER_1M = DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M
 DEFAULT_EVAL_OUTPUT_PRICE_PER_1M = DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M
 DEFAULT_RPC_TIMEOUT_SECONDS = 3600.0
+FINAL_ANSWER_RECOVERY_PROMPT = (
+    "Stop using tools. Based only on the evidence already gathered in this session, "
+    "provide the requested final answer now as non-empty text."
+)
 _RPC_STDOUT_EOF = object()
 
 
@@ -1418,6 +1422,7 @@ class PiRpcClient:
         recorder: Optional[RunRecorder] = None,
         max_turns: Optional[int] = None,
         timeout_seconds: Optional[float] = None,
+        recover_empty_final: bool = False,
     ) -> str:
         request_id = self._next_id()
         self._send({"id": request_id, "type": "prompt", "message": message})
@@ -1563,7 +1568,20 @@ class PiRpcClient:
                     "Pi RPC agent_settled postcondition failed: session is not idle"
                 )
 
-        return "".join(text_parts)
+        final_text = "".join(text_parts)
+        if recover_empty_final and not final_text.strip():
+            remaining = None if deadline is None else deadline - time.monotonic()
+            if remaining is not None and remaining <= 0:
+                raise RuntimeError(
+                    f"RPC prompt timed out after {timeout_seconds:g} seconds"
+                )
+            return final_text + self.prompt_and_wait(
+                FINAL_ANSWER_RECOVERY_PROMPT,
+                recorder=recorder,
+                max_turns=1,
+                timeout_seconds=remaining,
+            )
+        return final_text
 
     def get_stderr(self) -> str:
         return "".join(self.stderr_chunks)
@@ -2192,7 +2210,10 @@ def main() -> int:
             recorder=recorder,
             max_turns=args.max_turns,
             timeout_seconds=args.rpc_timeout_seconds,
+            recover_empty_final=True,
         )
+        if not final_text.strip():
+            raise RuntimeError("Pi provider returned no final answer")
         if not final_text.endswith("\n"):
             sys.stdout.write("\n")
         recorder.finalize(status="completed", final_text=final_text, stderr_text=client.get_stderr())

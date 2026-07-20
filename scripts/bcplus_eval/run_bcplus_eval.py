@@ -34,6 +34,7 @@ from dci.benchmark.judge import (  # noqa: E402
     judge_answer_sync,
     judge_public_identity,
 )
+from dci.benchmark.pi_rpc_runner import FINAL_ANSWER_RECOVERY_PROMPT  # noqa: E402
 from dci.config import (  # noqa: E402
     ConfigLayers,
     OriginalRuntimeConfig,
@@ -555,6 +556,7 @@ BENCHMARK_PROMPT_CONTRACT_SHA256 = hashlib.sha256(
                 Path("/__dci_prompt_contract_corpus__"),
                 "__DCI_CORPUS_HINT__",
             ),
+            "final_answer_recovery": FINAL_ANSWER_RECOVERY_PROMPT,
         },
         ensure_ascii=False,
         separators=(",", ":"),
