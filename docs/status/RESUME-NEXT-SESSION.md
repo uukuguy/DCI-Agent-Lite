@@ -1,12 +1,12 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-20 22:05 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-20 22:06 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-340
 
 Package: README reproduction and runtime-result parity
 
-Currently running: no live provider or evaluator process. The empty-final recovery repair is uncommitted while expanded regressions and re-review run. No full dataset is authorized.
+Currently running: no live provider or evaluator process. Empty-final recovery and cache identity are committed at `0f8094e`; fresh Pi bounded r12 is the next action. No full dataset is authorized.
 
 ## TL;DR
 
@@ -34,8 +34,8 @@ Currently running: no live provider or evaluator process. The empty-final recove
 
 ## Next action
 
-1. Re-run expanded and full local acceptance gates, obtain independent re-review, and commit the empty-final recovery repair.
-2. Run Pi bounded into a fresh private root; never reuse or stitch r10/r11.
+1. Run Pi bounded r12 into a fresh private root from commit `0f8094e`; never reuse or stitch r10/r11.
+2. Inspect the retained report and native evidence before accepting it for H-004.
 3. Recheck Claude subscription login without a provider request and collect its fresh bounded report only if authentication is restored.
 4. Inspect the MiniMax, Pi, and subscription reports together to close H-004. Do not start H-005 without explicit profile/budget authorization.
 
