@@ -1,12 +1,12 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-20 23:26 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-21 00:08 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-340
 
 Package: README reproduction and runtime-result parity
 
-Currently running: no evaluator process. H004 Pi bounded r13 ended failed after 21 Agent/14 Judge operations; it completed all original and Asterion QA paths, then exposed missing strict normalization for the published BRIGHT source row shape before the first Asterion BRIGHT provider call. No full dataset is authorized.
+Currently running: no evaluator process. H004 Pi bounded r14 passed all 30 Agent/16 Judge operations and independently revalidates as the retained Pi report. No full dataset is authorized.
 
 ## TL;DR
 
@@ -19,6 +19,7 @@ Currently running: no evaluator process. H004 Pi bounded r13 ended failed after 
 - r12 exposed dataset parity as the next blocker: public QA rows may encode `answer` as a non-empty string array of aliases, while Asterion accepted only a scalar string. The source runner accepts these rows and sends `str(row["answer"])` to Judge.
 - The dataset-parity repair now accepts strict non-empty string aliases, preserves the source JSON array in row/cache identity, and uses the source runner's exact Judge string in initial evaluation and exact reuse. Six public QA datasets and the full local/product boundaries pass; independent review is 0/0/0.
 - r13 proves that repair in all seven real Asterion QA paths. Its next local blocker is the published BRIGHT schema: exact source rows contain integer/string query IDs plus source-only metadata and must normalize to immutable IR rows without weakening the generic dataset loader.
+- The strict BRIGHT normalizer is committed at `ec21de8`; r14 proves all four Asterion BRIGHT launchers and every preceding original/Asterion path complete against real Pi.
 
 ## Where things stand
 
@@ -32,16 +33,17 @@ Currently running: no evaluator process. H004 Pi bounded r13 ended failed after 
 - BRIGHT normalization verification: 1459 root business tests, 134 Asterion tests, 129 dataset/batch tests, all four complete public BRIGHT sources, product 8/8+538/538+12/12+6/6+7/7, AF-340 local, TypeScript, Rust, static, scope, and diff gates pass; review is 0/0/0.
 - First incremental review found two Important gaps: whitespace protocol projection and missing Asterion cache consumption of the recovery prompt identity. Both are repaired; second review reports 0 Critical, 0 Important, and 0 Minor findings and approves the change.
 - Valid retained bounded evidence: `claude-minimax` r6, report file SHA-256 `792c8767c936935d9cf0aca5a50422ff195fecc33ed41c3d8c65b0451612b62c`, canonical report SHA-256 `efabac9ad548f1530de76017195c174ffdcf05d4a3841dc815a6ff92e15c9039`, 2 agent and 2 Judge operations, no full dataset.
+- Valid retained bounded evidence: Pi r14, report file SHA-256 `5c293b0149ba5dfff01a06f210cce2a271d879e3a357a5099897cbb1eeae9f3e`, canonical report SHA-256 `74ccd39aeadcd3cabf5fd6b223d0e40d32ffda753af98631fdd3b94cac6aaeaa`, 30 Agent and 16 Judge operations, no full dataset.
 - Pi diagnostic r12 is rejected evidence: original paths and first Asterion launcher completed, then the second Asterion QA launcher failed locally before provider construction; 15 Agent/8 Judge, no full dataset. Its first Asterion native evidence proves the empty-final recovery works against real Pi.
 - Pi diagnostic r13 is rejected evidence: all original and seven Asterion QA paths completed; first Asterion BRIGHT failed locally before provider construction, for 21 Agent/14 Judge and no full dataset. It proves empty-final and answer-alias repairs against real Pi/Judge.
 - External `pi/` remains untouched; `.env` values were loaded only for body-free credential-presence checks and were never printed.
 
 ## Next action
 
-1. Run Pi bounded r14 from `ec21de8` in a fresh root; never stitch r10-r13.
-2. Inspect the retained r14 report and native evidence before accepting it.
-3. Recheck Claude subscription login without a provider request and collect its fresh bounded report only if authentication is restored.
-4. Inspect the MiniMax, Pi, and subscription reports together to close H-004. Do not start H-005 without explicit profile/budget authorization.
+1. Recheck Claude subscription login without a provider request; it was still logged out at 22:50 on 2026-07-20.
+2. If authentication is restored, collect one fresh `claude-subscription` bounded report in a new private root.
+3. Run public `inspect` with exactly MiniMax r6, Pi r14, and the fresh subscription report to close H-004.
+4. Do not start H-005 without explicit profile/budget authorization.
 
 ## Accepted boundaries
 

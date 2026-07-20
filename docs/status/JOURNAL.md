@@ -1074,3 +1074,10 @@
 - 23:26 BRIGHT strict normalizer 通过 1459 root business、134 Asterion、129 batch/dataset、四份公开 BRIGHT、产品 8/8、538/538、12/12、6/6、7/7、local coordinator、static 与 scope；provider 0。
 - 23:26 BRIGHT 增量复审清零：Critical 0、Important 0、Minor 0，批准提交。
 - 23:27 严格规范化 BRIGHT 源行并保持缓存身份，解除 H004 r13 阻塞。 [ec21de8]
+- 23:28 r14 恢复边界固化 BRIGHT 修复与 fresh 运行命令。 [8e95838]
+- 23:28 启动 H004 Pi bounded r14，PID 35326，fresh 私有根、修复提交 ec21de8；full 未授权。
+
+## 2026-07-21 — AF-340 bounded Pi acceptance
+
+- 00:08 H004 Pi r14 PASS：全部 30 Agent/16 Judge bounded 路径完成，original/Asterion 各十一 launcher 全绿，full no；报告 file SHA `5c293b01…f3e`、canonical SHA `74ccd39a…eaa`。
+- 00:08 公开 `inspect` 单报告按三变体闭包规则预期拒绝；同一底层 validator 完整重哈希 r14 为 `pi` 两维通过，并重验 MiniMax r6 当前仍有效。H004 仅余 logged-out Claude subscription 报告。
