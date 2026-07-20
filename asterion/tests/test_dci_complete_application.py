@@ -8,6 +8,7 @@ import tempfile
 import unittest
 from collections.abc import AsyncIterator
 from pathlib import Path
+from unittest.mock import patch
 
 from asterion.assembly.protocol import resolve_assembly
 from asterion.adapters.claude_code import ClaudeCodeProtocolAdapter
@@ -238,6 +239,27 @@ class _ClaudeRuntime:
 
 
 class DciCompleteApplicationExecutionTests(unittest.IsolatedAsyncioTestCase):
+    async def test_native_pi_profile_max_turns_reaches_dci_request(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            native = _NativeExecutor(Path(directory))
+            implementation = DciCompleteResearchImplementation(
+                store=DciCompleteAttemptStore(), native_executor=native
+            )
+            invocation = PackageInvocation(
+                package_ref=PackageRef("dci.research", "1.0.0"),
+                manifest={},
+                run_id="profile-native",
+                input_text=json.dumps(
+                    {"protocol": INPUT_PROTOCOL, "question": "q", "gold_answer": "g"}
+                ),
+                upstream_artifacts=(),
+                runtime=_UnusedPiRuntime(),
+                host_services={},
+            )
+            with patch.dict("os.environ", {"DCI_MAX_TURNS": "100"}):
+                await implementation.execute(invocation)
+            self.assertEqual(native.requests[0].max_turns, 100)
+
     async def test_native_research_forwards_inflight_cancellation(self) -> None:
         class Signal:
             cancelled = False

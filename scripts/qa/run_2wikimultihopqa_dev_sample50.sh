@@ -1,12 +1,5 @@
 #!/usr/bin/env bash
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && git rev-parse --show-toplevel 2>/dev/null)"
-if [ -z "$REPO_ROOT" ]; then
-    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    while [ "$REPO_ROOT" != "/" ] && [ ! -d "$REPO_ROOT/.git" ]; do
-        REPO_ROOT="$(dirname "$REPO_ROOT")"
-    done
-fi
 set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)

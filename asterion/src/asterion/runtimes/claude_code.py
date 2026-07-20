@@ -45,18 +45,34 @@ class ClaudeCodeRuntimeClient:
         cwd: Path,
         environment: Mapping[str, str],
         default_timeout_seconds: float | None = 30,
+        max_turns: int = 4,
+        tools: tuple[str, ...] = ("Read", "Grep", "Glob"),
         evidence_root: Path | None = None,
         agent_provider: str | None = None,
         agent_model: str | None = None,
+        reasoning: str | None = None,
+        context_profile: str | None = None,
         run_process: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
     ) -> None:
         self._executable = executable
         self._cwd = Path(cwd)
         self._environment = dict(environment)
+        if isinstance(max_turns, bool) or not isinstance(max_turns, int) or max_turns <= 0:
+            raise ValueError("Claude Code max turns is invalid")
         self._default_timeout_seconds = default_timeout_seconds
+        self._max_turns = max_turns
+        if not tools or any(tool not in {"Read", "Grep", "Glob"} for tool in tools):
+            raise ValueError("Claude Code tools are invalid")
+        if reasoning not in {None, "low", "medium", "high"}:
+            raise ValueError("Claude Code reasoning is invalid")
+        if context_profile not in {None, "level3"}:
+            raise ValueError("Claude Code context profile is invalid")
+        self._tools = tuple(tools)
         self._evidence_root = Path(evidence_root) if evidence_root is not None else None
         self._agent_provider = agent_provider
         self._agent_model = agent_model
+        self._reasoning = reasoning
+        self._context_profile = context_profile
         self._run_process = run_process
         self._completed_runs: dict[str, Path] = {}
 
@@ -105,12 +121,15 @@ class ClaudeCodeRuntimeClient:
                         prompt=request.input_text,
                         output_dir=output_dir,
                         cwd=self._cwd,
-                        tools=["Read", "Grep", "Glob"],
+                        tools=list(self._tools),
                         timeout_seconds=timeout_seconds,
+                        max_turns=self._max_turns,
                         executable=self._executable,
                         environment=self._environment,
                         agent_provider=self._agent_provider,
                         agent_model=self._agent_model,
+                        reasoning=self._reasoning,
+                        context_profile=self._context_profile,
                         run_process=self._run_process,
                         cancelled=lambda: local_cancel.is_set()
                         or (signal is not None and signal.cancelled),
@@ -162,7 +181,17 @@ async def _drain_cancelled_process(work: asyncio.Task[object]) -> None:
         pass
 
 
-def build_claude_command(*, executable: str, tools: list[str]) -> list[str]:
+def build_claude_command(
+    *,
+    executable: str,
+    tools: list[str],
+    max_turns: int = 4,
+    agent_model: str | None = None,
+    reasoning: str | None = None,
+    context_profile: str | None = None,
+) -> list[str]:
+    if isinstance(max_turns, bool) or not isinstance(max_turns, int) or max_turns <= 0:
+        raise ValueError("Claude Code max turns is invalid")
     settings = _restricted_settings()
     command = [
         executable,
@@ -181,7 +210,7 @@ def build_claude_command(*, executable: str, tools: list[str]) -> list[str]:
         "--disable-slash-commands",
         "--no-chrome",
         "--max-turns",
-        "4",
+        str(max_turns),
         "--settings",
         json.dumps(settings, sort_keys=True, separators=(",", ":")),
     ]
@@ -190,6 +219,21 @@ def build_claude_command(*, executable: str, tools: list[str]) -> list[str]:
         command.extend(["--tools", joined, "--allowedTools", joined])
     else:
         command.extend(["--tools", ""])
+    if agent_model:
+        command.extend(("--model", agent_model))
+    if reasoning:
+        command.extend(("--effort", reasoning))
+    if context_profile:
+        if context_profile != "level3":
+            raise ValueError("Claude Code context profile is invalid")
+        command.extend(
+            (
+                "--append-system-prompt",
+                "DCI context profile level3 is active: cap tool results at 20000 "
+                "characters; at 240000 context characters compact earlier context "
+                "while retaining the 12 most recent turns.",
+            )
+        )
     return command
 
 
@@ -228,10 +272,13 @@ def run_claude_code(
     cwd: Path,
     tools: list[str],
     timeout_seconds: float | None,
+    max_turns: int = 4,
     executable: str = "claude",
     environment: Mapping[str, str] | None = None,
     agent_provider: str | None = None,
     agent_model: str | None = None,
+    reasoning: str | None = None,
+    context_profile: str | None = None,
     run_process: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
     cancelled: Callable[[], bool] | None = None,
 ) -> dict[str, Any]:
@@ -262,9 +309,11 @@ def run_claude_code(
             "runtime_cwd": str(cwd.resolve()),
             "agent_provider": agent_provider,
             "agent_model": agent_model,
+            "reasoning": reasoning,
+            "context_profile": context_profile,
             "tools": tools,
             "allowed_tools": tools,
-            "max_turns": 4,
+            "max_turns": max_turns,
             "permission_mode": "dontAsk",
             "strict_mcp": True,
             "mcp_servers": {},
@@ -275,7 +324,14 @@ def run_claude_code(
     )
 
     process_environment = dict(os.environ if environment is None else environment)
-    command = build_claude_command(executable=executable, tools=tools)
+    command = build_claude_command(
+        executable=executable,
+        tools=tools,
+        max_turns=max_turns,
+        agent_model=agent_model,
+        reasoning=reasoning,
+        context_profile=context_profile,
+    )
     if run_process is subprocess.run:
         completed = _run_owned_process(
             command,

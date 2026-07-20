@@ -166,7 +166,7 @@ class AsterionDciProductAcceptanceTests(unittest.TestCase):
             "rows": [{"id": row["id"], "status": "PASS", "exit_status": 0} for row in rows],
             "provider_backed_executed": 0,
             "bounded_acceptance": "7/7",
-            "delegated_inventory": "533/533",
+            "delegated_inventory": "538/538",
             "launcher_pairs": "12/12",
             "batch_extra_selectors": "6/6",
         }
@@ -184,7 +184,7 @@ class AsterionDciProductAcceptanceTests(unittest.TestCase):
 
         self.assertIsInstance(summary, ProductAcceptanceSummary)
         self.assertEqual(summary.product_rows, (8, 8))
-        self.assertEqual(summary.delegated_inventory, (533, 533))
+        self.assertEqual(summary.delegated_inventory, (538, 538))
         self.assertEqual(summary.launcher_pairs, (12, 12))
         self.assertEqual(summary.batch_extras, (6, 6))
         self.assertEqual(summary.bounded_acceptance, (7, 7))

@@ -2,19 +2,23 @@ from __future__ import annotations
 
 import io
 import json
-import os
+import stat
 import subprocess
 import sys
 import tempfile
 import unittest
+from argparse import Namespace
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, call, patch
 
 from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
 import dci.benchmark.pi_rpc_runner as rpc_runner
-from dci.effective_config import ConfigLayers, resolve_original_runtime
+from dci.benchmark.judge import JudgeConfig, judge_public_identity
 from dci.benchmark.pi_rpc_runner import PiRpcClient, parse_args
+from dci.config import ConfigLayers
 from dci.framework.protocol import validate_event_stream, validate_run_request
+import scripts.bcplus_eval.run_bcplus_eval as bcplus_runner
 
 
 def make_client() -> PiRpcClient:
@@ -61,6 +65,145 @@ def make_recorder(output_dir: Path, *, resume: bool = False) -> rpc_runner.RunRe
 
 
 class PiRpcLifecycleTests(unittest.TestCase):
+    def test_programmatic_required_artifacts_are_private(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "run"
+            with patch.object(
+                rpc_runner,
+                "collect_pi_source_provenance",
+                return_value={"commit": "abc123", "dirty": False},
+            ):
+                recorder = make_recorder(output_dir)
+            rpc_runner.write_effective_config(
+                output_dir / "effective-config.json", {"schema": "fixture"}
+            )
+            recorder.finalize(status="completed", final_text="answer")
+
+            required = (
+                output_dir / "question.txt",
+                output_dir / "final.txt",
+                output_dir / "conversation_full.json",
+                output_dir / "effective-config.json",
+                output_dir / "protocol/attempt-0001.request.json",
+                output_dir / "protocol/attempt-0001.events.jsonl",
+            )
+            self.assertEqual(stat.S_IMODE(output_dir.stat().st_mode), 0o700)
+            for path in required:
+                with self.subTest(path=path.name):
+                    self.assertTrue(path.is_file())
+                    self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
+
+    def test_all_run_artifact_files_are_private(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "run"
+            with patch.object(
+                rpc_runner,
+                "collect_pi_source_provenance",
+                return_value={"commit": "abc123", "dirty": False},
+            ):
+                recorder = make_recorder(output_dir)
+            recorder.record_event({"type": "agent_start"})
+            recorder.append_stderr("provider stderr body")
+            recorder.finalize(
+                status="failed",
+                error="provider error body",
+                stderr_text="final provider stderr body",
+            )
+
+            for path in output_dir.rglob("*"):
+                with self.subTest(path=path.relative_to(output_dir)):
+                    expected = 0o700 if path.is_dir() else 0o600
+                    self.assertEqual(stat.S_IMODE(path.stat().st_mode), expected)
+
+    def test_context_profile_uses_original_extension_arguments(self) -> None:
+        args = Namespace(
+            extra_arg=[],
+            pi_thinking_level="high",
+            runtime_context_level="level3",
+        )
+
+        expanded = rpc_runner.resolved_pi_extra_args(args)
+
+        self.assertIn("--extension", expanded)
+        self.assertIn("--dci-context-profile", expanded)
+        self.assertIn("level3", expanded)
+        self.assertIn("--dci-context-contract", expanded)
+        self.assertIn("--dci-context-extension-sha256", expanded)
+        digest_index = expanded.index("--dci-context-extension-sha256") + 1
+        self.assertRegex(expanded[digest_index], r"^[0-9a-f]{64}$")
+        self.assertNotIn("--context-management-level", expanded)
+
+    def test_batch_context_profile_is_consumed_by_runner_before_external_pi(self) -> None:
+        args = Namespace(
+            runtime="pi",
+            provider="fixture-provider",
+            model="fixture-model",
+            package_dir=Path("/private/pi/packages/coding-agent"),
+            agent_dir=Path("/private/pi-agent"),
+            corpus_dir=Path("/private/corpus"),
+            tools="read,bash",
+            rpc_timeout_seconds=30,
+            max_turns=7,
+            system_prompt_file=None,
+            append_system_prompt_file=None,
+            pi_extra_arg=["--custom-flag=value"],
+            pi_thinking_level="high",
+            runtime_context_level="level3",
+        )
+        batch_command = bcplus_runner.build_run_command(
+            args=args,
+            question_text="fixture question",
+            query_output_dir=Path("/private/output"),
+            resume_run=False,
+        )
+
+        self.assertEqual(
+            batch_command[-5:],
+            [
+                "--runtime-context-level",
+                "level3",
+                "--extra-arg=--custom-flag=value",
+                "--extra-arg=--thinking high",
+                "fixture question",
+            ],
+        )
+        runner_argv = batch_command[
+            batch_command.index("dci.benchmark.pi_rpc_runner") + 1:
+        ]
+        with patch("sys.argv", ["pi_rpc_runner.py", *runner_argv]):
+            runner_args = rpc_runner.parse_args()
+        self.assertEqual(runner_args.runtime_context_level, "level3")
+
+        with (
+            patch.object(
+                rpc_runner,
+                "ensure_built_pi_cli",
+                return_value=Path("/private/pi/dist/cli.js"),
+            ),
+            patch.object(rpc_runner, "_node_bin", return_value="/private/node"),
+        ):
+            external_pi_argv = rpc_runner.build_pi_command(
+                package_dir=runner_args.package_dir,
+                mode="rpc",
+                provider=runner_args.provider,
+                model=runner_args.model,
+                tools=runner_args.tools,
+                no_session=True,
+                system_prompt_file=None,
+                append_system_prompt_file=None,
+                extra_args=rpc_runner.resolved_pi_extra_args(runner_args),
+            )
+
+        self.assertIn("--custom-flag=value", external_pi_argv)
+        thinking_index = external_pi_argv.index("--thinking")
+        self.assertEqual(external_pi_argv[thinking_index + 1], "high")
+        self.assertIn("--extension", external_pi_argv)
+        self.assertIn("--dci-context-profile", external_pi_argv)
+        self.assertIn("--dci-context-contract", external_pi_argv)
+        self.assertIn("--dci-context-extension-sha256", external_pi_argv)
+        self.assertNotIn("--runtime-context-level", external_pi_argv)
+        self.assertNotIn("--context-management-level", " ".join(external_pi_argv))
+
     def test_run_recorder_writes_a_conformant_protocol_attempt(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output_dir = Path(temp_dir) / "run"
@@ -337,6 +480,33 @@ class PiRpcLifecycleTests(unittest.TestCase):
         self.assertEqual(result, "final")
         send.assert_called_once_with({"id": "py-1", "type": "prompt", "message": "question"})
 
+    def test_terminal_assistant_error_fails_prompt(self) -> None:
+        client = make_client()
+        events = [
+            {"type": "response", "id": "py-1", "success": True},
+            {"type": "agent_start"},
+            {
+                "type": "message_end",
+                "message": {
+                    "role": "assistant",
+                    "content": [],
+                    "stopReason": "error",
+                    "errorMessage": "private provider detail",
+                },
+            },
+            {"type": "agent_end", "willRetry": False},
+            {"type": "agent_settled"},
+        ]
+
+        with (
+            patch.object(client, "_send"),
+            patch.object(client, "_read_json_line", side_effect=events),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "assistant error") as raised:
+                client.prompt_and_wait("question", timeout_seconds=30)
+
+        self.assertNotIn("private provider detail", str(raised.exception))
+
     def test_agent_settled_requires_an_idle_state_postcondition(self) -> None:
         client = make_client()
         events = [
@@ -359,7 +529,70 @@ class PiRpcLifecycleTests(unittest.TestCase):
 
         probe.assert_called_once()
 
-    def test_agent_settled_rejects_non_idle_state(self) -> None:
+    def test_agent_settled_waits_for_async_extension_compaction(self) -> None:
+        client = make_client()
+        events = [
+            {"type": "response", "id": "py-1", "success": True},
+            {"type": "agent_settled"},
+        ]
+        compacting = {
+            "isStreaming": False,
+            "isCompacting": True,
+            "messageCount": 1,
+            "pendingMessageCount": 0,
+        }
+        idle = {**compacting, "isCompacting": False}
+
+        with (
+            patch.object(client, "_send"),
+            patch.object(client, "_read_json_line", side_effect=events),
+            patch.object(
+                client, "probe_protocol", side_effect=(compacting, idle)
+            ) as probe,
+            patch("dci.benchmark.pi_rpc_runner.time.sleep") as sleep,
+        ):
+            result = client.prompt_and_wait("question", timeout_seconds=30)
+
+        self.assertEqual(result, "")
+        self.assertEqual(
+            probe.call_args_list,
+            [call(timeout_seconds=10.0), call(timeout_seconds=10.0)],
+        )
+        sleep.assert_called_once_with(0.05)
+
+    def test_async_compaction_timeout_sends_abort(self) -> None:
+        client = make_client()
+        events = [
+            {"type": "response", "id": "py-1", "success": True},
+            {"type": "agent_settled"},
+        ]
+        compacting = {
+            "isStreaming": False,
+            "isCompacting": True,
+            "messageCount": 1,
+            "pendingMessageCount": 0,
+        }
+        clock = SimpleNamespace(value=0.0)
+
+        def monotonic() -> float:
+            return clock.value
+
+        def sleep(seconds: float) -> None:
+            clock.value += seconds
+
+        with (
+            patch.object(client, "_send") as send,
+            patch.object(client, "_read_json_line", side_effect=events),
+            patch.object(client, "probe_protocol", return_value=compacting),
+            patch("dci.benchmark.pi_rpc_runner.time.monotonic", side_effect=monotonic),
+            patch("dci.benchmark.pi_rpc_runner.time.sleep", side_effect=sleep),
+        ):
+            with self.assertRaisesRegex(RuntimeError, "timed out after 0.01 seconds"):
+                client.prompt_and_wait("question", timeout_seconds=0.01)
+
+        self.assertEqual(send.call_args_list[-1], call({"id": "py-2", "type": "abort"}))
+
+    def test_agent_settled_rejects_non_compaction_pending_state_without_waiting(self) -> None:
         client = make_client()
         events = [
             {"type": "response", "id": "py-1", "success": True},
@@ -375,10 +608,16 @@ class PiRpcLifecycleTests(unittest.TestCase):
         with (
             patch.object(client, "_send"),
             patch.object(client, "_read_json_line", side_effect=events),
-            patch.object(client, "probe_protocol", return_value=active_state),
+            patch.object(
+                client, "probe_protocol", return_value=active_state
+            ) as probe,
+            patch("dci.benchmark.pi_rpc_runner.time.sleep") as sleep,
         ):
             with self.assertRaisesRegex(RuntimeError, "not idle"):
                 client.prompt_and_wait("question", timeout_seconds=30)
+
+        probe.assert_called_once()
+        sleep.assert_not_called()
 
     def test_retry_discards_failed_run_text(self) -> None:
         client = make_client()
@@ -518,41 +757,147 @@ class PiRpcLifecycleTests(unittest.TestCase):
         ):
             client._read_json_line(timeout_seconds=0)
 
-    def test_rpc_timeout_defaults_from_environment(self) -> None:
+    def test_layered_agent_values_remain_unresolved_until_runtime_resolution(self) -> None:
+        environment = {
+            "DCI_TOOLS": "read,grep",
+            "DCI_MAX_TURNS": "7",
+            "DCI_RPC_TIMEOUT_SECONDS": "42",
+        }
         with (
-            patch.dict("os.environ", {"DCI_RPC_TIMEOUT_SECONDS": "42"}, clear=True),
+            patch.dict("os.environ", environment, clear=True),
             patch("sys.argv", ["dci-agent-lite"]),
         ):
             args = parse_args()
-            resolved = resolve_original_runtime(
-                vars(args),
-                ConfigLayers.from_repo(rpc_runner.REPO_ROOT, os.environ),
-            )
+        self.assertIsNone(args.tools)
+        self.assertIsNone(args.max_turns)
+        self.assertIsNone(args.rpc_timeout_seconds)
 
-        self.assertEqual(args.rpc_timeout_seconds, None)
+        resolved = rpc_runner.resolve_runtime_args(
+            args, ConfigLayers(process=environment, dotenv={})
+        )
+
+        self.assertEqual(resolved.tools, "read,grep")
+        self.assertEqual(resolved.max_turns, 7)
         self.assertEqual(resolved.timeout_seconds, 42.0)
+        self.assertEqual(resolved.sources["agent.tools"], "environment")
+        self.assertEqual(resolved.sources["agent.max_turns"], "environment")
+        self.assertEqual(resolved.sources["agent.timeout_seconds"], "environment")
 
-    def test_runtime_resolution_prefers_invocation_before_defaults(self) -> None:
+    def test_batch_parser_preserves_layered_agent_omission(self) -> None:
         with (
             patch.dict(
                 "os.environ",
-                {"DCI_PROVIDER": "env-provider", "DCI_MODEL": "env-model"},
+                {
+                    "DCI_TOOLS": "read,grep",
+                    "DCI_MAX_TURNS": "7",
+                    "DCI_RPC_TIMEOUT_SECONDS": "42",
+                },
                 clear=True,
             ),
-            patch("sys.argv", ["dci-agent-lite", "--provider", "cli-provider"]),
+            patch("sys.argv", ["run_bcplus_eval.py"]),
+        ):
+            args = bcplus_runner.parse_args()
+
+        self.assertIsNone(args.tools)
+        self.assertIsNone(args.max_turns)
+        self.assertIsNone(args.rpc_timeout_seconds)
+
+    def test_parser_leaves_layered_runtime_values_unresolved(self) -> None:
+        with (
+            patch.dict(
+                "os.environ",
+                {"DCI_PROVIDER": "environment-provider", "DCI_MODEL": "environment-model"},
+                clear=True,
+            ),
+            patch("sys.argv", ["dci-agent-lite", "--runtime", "pi"]),
         ):
             args = parse_args()
-            resolved = resolve_original_runtime(
-                vars(args),
-                ConfigLayers.from_repo(rpc_runner.REPO_ROOT, os.environ),
+
+        self.assertEqual(args.runtime, "pi")
+        self.assertIsNone(args.provider)
+        self.assertIsNone(args.model)
+
+    def test_runtime_defaults_do_not_make_terminal_flags_explicit(self) -> None:
+        with (
+            patch.dict("os.environ", {}, clear=True),
+            patch("sys.argv", ["dci-agent-lite", "--terminal"]),
+        ):
+            args = parse_args()
+        resolved = rpc_runner.resolve_runtime_args(args, ConfigLayers({}, {}))
+
+        with (
+            patch("sys.stdin.isatty", return_value=True),
+            patch("sys.stdout.isatty", return_value=True),
+        ):
+            error = rpc_runner.validate_terminal_mode_args(args)
+
+        self.assertIsNone(error)
+        self.assertEqual(resolved.sources["agent.tools"], "runtime-default")
+        self.assertEqual(resolved.sources["agent.max_turns"], "runtime-default")
+        self.assertEqual(resolved.sources["agent.timeout_seconds"], "runtime-default")
+
+    def test_runner_effective_config_rejects_sensitive_judge_endpoint(self) -> None:
+        runtime = rpc_runner.resolve_original_runtime({}, ConfigLayers({}, {}))
+        args = Namespace(cwd=Path("corpus"))
+        judge = SimpleNamespace(
+            endpoint="https://user:secret@judge.example/v1/chat/completions",
+            api="chat-completions",
+            model="judge-model",
+            effective_thinking=None,
+            json_mode=True,
+        )
+
+        with (
+            patch.object(
+                rpc_runner,
+                "judge_public_identity",
+                return_value={"endpoint": judge.endpoint},
+            ),
+            self.assertRaisesRegex(ValueError, "unsafe judge endpoint"),
+        ):
+            rpc_runner.effective_config_for_run(
+                runtime=runtime, args=args, judge_config=judge
             )
 
-        self.assertEqual(args.provider, "cli-provider")
-        self.assertIsNone(args.model)
-        self.assertEqual(resolved.provider, "cli-provider")
-        self.assertEqual(resolved.model, "env-model")
-        self.assertEqual(resolved.sources["agent.provider"], "invocation")
-        self.assertEqual(resolved.sources["agent.model"], "environment")
+    def test_runner_effective_config_uses_complete_safe_judge_identity(self) -> None:
+        runtime = rpc_runner.resolve_original_runtime({}, ConfigLayers({}, {}))
+        args = Namespace(cwd=Path("corpus"))
+        judge = JudgeConfig(api_key="credential-canary")
+
+        projected = rpc_runner.effective_config_for_run(
+            runtime=runtime, args=args, judge_config=judge
+        )
+
+        self.assertEqual(projected["judge"], judge_public_identity(judge))
+        self.assertNotIn("credential-canary", repr(projected))
+
+    def test_batch_effective_config_rejects_sensitive_judge_endpoint(self) -> None:
+        runtime = rpc_runner.resolve_original_runtime({}, ConfigLayers({}, {}))
+        args = Namespace(
+            dataset=Path("dataset.jsonl"),
+            limit=1,
+            corpus_dir=Path("corpus"),
+            enable_ir=False,
+        )
+        judge = SimpleNamespace(
+            endpoint="https://judge.example/v1/chat/completions?api_key=secret",
+            api="chat-completions",
+            model="judge-model",
+            effective_thinking=None,
+            json_mode=True,
+        )
+
+        with (
+            patch.object(
+                bcplus_runner,
+                "judge_public_identity",
+                return_value={"endpoint": judge.endpoint},
+            ),
+            self.assertRaisesRegex(ValueError, "unsafe judge endpoint"),
+        ):
+            bcplus_runner.effective_config_for_batch(
+                runtime=runtime, args=args, judge_config=judge
+            )
 
 
 if __name__ == "__main__":

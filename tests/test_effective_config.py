@@ -1,83 +1,64 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from dci.effective_config import (
-    DCI_EFFECTIVE_CONFIG_SCHEMA,
-    ConfigLayers,
-    TOP_LEVEL_KEYS,
-    _canonical_json_bytes,
-    resolve_original_runtime,
-)
+from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
+from dci.config import ConfigLayers, resolve_original_runtime
+import dci.effective_config as effective_config_module
+from dci.effective_config import OriginalEffectiveConfig
 
 
-class EffectiveConfigLayerTests(unittest.TestCase):
-    def test_original_runtime_precedence_and_sources(self) -> None:
-        layers = ConfigLayers(
-            process={"DCI_PROVIDER": "environment-provider"},
-            dotenv={
-                "DCI_PROVIDER": "dotenv-provider",
-                "DCI_MODEL": "dotenv-model",
-                "DCI_RPC_TIMEOUT_SECONDS": "12",
-            },
+class OriginalEffectiveConfigTests(unittest.TestCase):
+    def test_judge_allows_only_valid_body_free_identity_digests(self) -> None:
+        runtime = resolve_original_runtime({}, ConfigLayers({}, {}))
+        judge = {
+            "judge_api_key_env": "DEEPSEEK_API_KEY",
+            "request_shape_sha256": "a" * 64,
+            "prompt_contract_sha256": "b" * 64,
+        }
+
+        projected = OriginalEffectiveConfig(runtime=runtime, judge=judge).to_public_dict()
+
+        self.assertEqual(projected["judge"], judge)
+        for field in ("request_shape_sha256", "prompt_contract_sha256"):
+            for malformed in ("A" * 64, "a" * 63, "not-a-digest"):
+                with self.subTest(field=field, malformed=malformed):
+                    with self.assertRaisesRegex(ValueError, "unsafe"):
+                        OriginalEffectiveConfig(
+                            runtime=runtime,
+                            judge={field: malformed},
+                        ).to_public_dict()
+        with self.assertRaisesRegex(ValueError, "unsafe"):
+            OriginalEffectiveConfig(
+                runtime=runtime,
+                judge={"judge_api_key_env": "unsafe env name"},
+            ).to_public_dict()
+        with self.assertRaisesRegex(ValueError, "unsafe"):
+            OriginalEffectiveConfig(
+                runtime=runtime,
+                judge={"prompt_contract": "private prompt body"},
+            ).to_public_dict()
+
+    def test_public_projection_has_exact_keys_and_canonical_identity(self) -> None:
+        runtime = resolve_original_runtime(
+            {"provider": "openai-codex", "model": "gpt-5.6-luna"},
+            ConfigLayers({}, {}),
         )
-        resolved = resolve_original_runtime(
-            {"provider": "invocation-provider", "model": None, "max_turns": None},
-            layers,
-        )
-        self.assertEqual(resolved.runtime, "pi")
-        self.assertEqual(resolved.provider, "invocation-provider")
-        self.assertEqual(resolved.model, "dotenv-model")
-        self.assertEqual(resolved.sources["agent.provider"], "invocation")
-        self.assertEqual(resolved.sources["agent.model"], "environment")
-        self.assertEqual(resolved.sources["agent.max_turns"], "runtime-default")
-        self.assertEqual(resolved.timeout_seconds, 12.0)
-        self.assertEqual(resolved.sources["agent.timeout_seconds"], "environment")
+        projected = OriginalEffectiveConfig(
+            runtime=runtime,
+            context={"profile": "level3", "implementation_sha256": "a" * 64},
+            judge={"model": "deepseek-v4-flash", "api": "chat-completions"},
+            experiment={"dataset": "bcplus", "selection": "limit-1"},
+        ).to_public_dict()
 
-    def test_original_runtime_rejects_claude_code(self) -> None:
-        layers = ConfigLayers(process={"DCI_RUNTIME": "pi"}, dotenv={})
-        with self.assertRaisesRegex(
-            ValueError,
-            "Original DCI runtime is unsupported",
-        ):
-            resolve_original_runtime({"runtime": "claude-code"}, layers)
-
-    def test_from_repo_prefers_process_environment(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory).resolve()
-            env_file = root / ".env"
-            env_file.write_text(
-                "DCI_PROVIDER=dotenv-provider\n"
-                "DCI_MODEL=dotenv-model\n"
-                "DCI_RPC_TIMEOUT_SECONDS=30\n",
-                encoding="utf-8",
-            )
-
-            process = {
-                "DCI_PROVIDER": "process-provider",
-                "DCI_RPC_TIMEOUT_SECONDS": "20",
-            }
-            layers = ConfigLayers.from_repo(root, process_environment=process)
-            resolved = resolve_original_runtime(
-                {"provider": None, "model": None, "max_turns": None},
-                layers,
-            )
-            self.assertEqual(resolved.provider, "process-provider")
-            self.assertEqual(resolved.model, "dotenv-model")
-            self.assertEqual(resolved.timeout_seconds, 20.0)
-
-            public_config = resolved.to_public_dict()
-            self.assertEqual(
-                set(public_config.keys()),
-                set(TOP_LEVEL_KEYS),
-            )
-            self.assertEqual(public_config["product"], "original-dci")
-            self.assertEqual(public_config["schema"], DCI_EFFECTIVE_CONFIG_SCHEMA)
-            self.assertRegex(public_config["identity_sha256"], r"^[0-9a-f]{64}$")
-            expected_fields = {
+        self.assertEqual(
+            set(projected),
+            {
                 "schema",
                 "product",
                 "runtime",
@@ -86,19 +67,70 @@ class EffectiveConfigLayerTests(unittest.TestCase):
                 "judge",
                 "experiment",
                 "sources",
-            }
-            payload_without_identity = {
-                key: public_config[key]
-                for key in expected_fields
-            }
-            expected_hash = hashlib.sha256(
-                _canonical_json_bytes(payload_without_identity)
-            ).hexdigest()
-            self.assertEqual(public_config["identity_sha256"], expected_hash)
-            with self.assertRaisesRegex(ValueError, "private key-like field"):
-                resolved.to_public_dict(experiment={"api_key": "nope"})
-            with self.assertRaisesRegex(ValueError, "absolute private path"):
-                resolved.to_public_dict(experiment={"input_path": "/tmp/sneak"})
+                "identity_sha256",
+            },
+        )
+        self.assertEqual(projected["schema"], "dci.effective-config/v1")
+        self.assertEqual(projected["product"], "original-dci")
+        identity_input = dict(projected)
+        identity_input.pop("identity_sha256")
+        expected = hashlib.sha256(
+            json.dumps(
+                identity_input,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+            ).encode("utf-8")
+        ).hexdigest()
+        self.assertEqual(projected["identity_sha256"], expected)
+
+    def test_public_projection_rejects_private_values(self) -> None:
+        runtime = resolve_original_runtime({}, ConfigLayers({}, {}))
+        unsafe_values = (
+            {"api_key": "secret"},
+            {"prompt": "private question"},
+            {"corpus": "/Users/private/corpus"},
+        )
+        for experiment in unsafe_values:
+            with self.subTest(experiment=experiment):
+                with self.assertRaisesRegex(ValueError, "unsafe"):
+                    OriginalEffectiveConfig(
+                        runtime=runtime,
+                        context={},
+                        judge={},
+                        experiment=experiment,
+                    ).to_public_dict()
+
+    def test_public_projection_rejects_sensitive_judge_endpoints(self) -> None:
+        runtime = resolve_original_runtime({}, ConfigLayers({}, {}))
+        unsafe_endpoints = (
+            "https://user:password@judge.example/v1/chat/completions",
+            "https://judge.example/v1/chat/completions?api_key=secret",
+            "https://judge.example/v1/chat/completions#token=secret",
+        )
+        for endpoint in unsafe_endpoints:
+            with self.subTest(endpoint=endpoint):
+                with self.assertRaisesRegex(ValueError, "unsafe judge endpoint"):
+                    OriginalEffectiveConfig(
+                        runtime=runtime,
+                        judge={"endpoint": endpoint},
+                    ).to_public_dict()
+
+    def test_serializer_validates_projection_against_checked_in_schema(self) -> None:
+        schema = json.loads(
+            effective_config_module.SCHEMA_PATH.read_text(encoding="utf-8")
+        )
+        schema["properties"]["product"]["const"] = "schema-validation-canary"
+        runtime = resolve_original_runtime({}, ConfigLayers({}, {}))
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            schema_path = Path(temporary_directory) / "effective-config.schema.json"
+            schema_path.write_text(json.dumps(schema), encoding="utf-8")
+            with (
+                patch.object(effective_config_module, "SCHEMA_PATH", schema_path),
+                self.assertRaisesRegex(ValueError, "schema"),
+            ):
+                OriginalEffectiveConfig(runtime=runtime).to_public_dict()
 
 
 if __name__ == "__main__":

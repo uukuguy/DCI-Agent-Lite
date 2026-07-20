@@ -47,12 +47,23 @@ from asterion.dci.evaluation import (
     _load_reusable_result,
     evaluate_run_directory_async,
 )
-from asterion.dci.judge import JudgeConfig, judge_request_fingerprint
+from asterion.dci.experiment_profiles import (
+    EXPERIMENT_AUTHORIZATION_SCHEMA,
+    FullExecutionAuthorization,
+    experiment_profiles_sha256,
+    resolve_experiment_profile,
+)
+from asterion.dci.judge import (
+    JudgeConfig,
+    judge_public_identity,
+    judge_request_fingerprint,
+)
 from asterion.dci.paper_benchmarks import (
     paper_scope_for_profile,
     paper_scope_for_selected_ids,
     published_scope_selected_ids,
     require_af320_executable_scope,
+    resolve_paper_experiment_scope,
 )
 from asterion.dci.analysis import (
     aggregate_results,
@@ -116,7 +127,7 @@ class BenchmarkRequest:
     resolution_registry: Path | None = None
     resolution_segment_characters: int | None = None
     ablation_row: str | None = None
-    paper_full_authorization: object | None = None
+    full_execution_authorization: FullExecutionAuthorization | None = None
 
 
 @dataclass(frozen=True)
@@ -159,7 +170,19 @@ async def run_benchmark_async(
     """Run one bounded batch while retaining its writer lock until all work drains."""
 
     rows, output_root, config, row_documents, snapshots = _prepare(request)
-    lock = _BatchLock.acquire(output_root)
+    expected_identity = None
+    if request.full_execution_authorization is not None:
+        from asterion.dci.experiment_profiles import (
+            _consumed_authorized_output_identity,
+        )
+
+        authorized_root, device, inode = _consumed_authorized_output_identity(
+            request.full_execution_authorization
+        )
+        if authorized_root != output_root:
+            raise DciBenchmarkError("DCI benchmark authorization root changed")
+        expected_identity = (device, inode)
+    lock = _BatchLock.acquire(output_root, expected_identity=expected_identity)
     tasks: list[asyncio.Task[tuple[int, dict[str, object]]]] = []
     results: dict[int, dict[str, object]] = {}
     snapshot_authority: _SnapshotAuthority | None = None
@@ -514,21 +537,33 @@ def _prepare(
         }
     paper_authorization_identity: dict[str, object] | None = None
     paper_scope = paper_scope_for_profile(request.profile)
-    if paper_scope is not None:
-        try:
-            require_af320_executable_scope(
-                paper_scope, authorization=request.paper_full_authorization
-            )
-            from asterion.dci.experiment_profiles import (
-                full_execution_authorization_identity,
-            )
-
-            paper_authorization_identity = full_execution_authorization_identity(
-                request.paper_full_authorization,
-                scope_id=paper_scope,
-            )
-        except ValueError as error:
-            raise DciBenchmarkError(str(error)) from error
+    if request.full_execution_authorization is not None:
+        authorization = request.full_execution_authorization
+        if not isinstance(authorization, FullExecutionAuthorization):
+            raise DciBenchmarkError("DCI benchmark requires AF-340 authorization")
+        paper_authorization_identity = {
+            "schema": EXPERIMENT_AUTHORIZATION_SCHEMA,
+            "profile_id": authorization.profile_id,
+            "profile_identity_sha256": authorization.profile_sha256,
+            "experiment_profiles_sha256": experiment_profiles_sha256(),
+            "paper_benchmark_inventory_sha256": authorization.dataset_inventory_sha256,
+            "paper_experiment_scopes_sha256": authorization.experiment_scopes_sha256,
+            "estimated_budget_usd": authorization.estimated_budget_usd,
+        }
+    bounded_paper_selection = (
+        paper_scope is not None
+        and request.full_execution_authorization is None
+        and type(request.limit) is int
+        and request.limit == 1
+    )
+    if (
+        paper_scope is not None
+        and request.full_execution_authorization is None
+        and not bounded_paper_selection
+    ):
+        raise DciBenchmarkError(
+            "DCI paper scope is not executable in AF-320 without AF-340 authorization"
+        )
     try:
         dataset_raw = _read_input_snapshot(request.dataset)
         beir_scope = {
@@ -551,21 +586,12 @@ def _prepare(
                 raise DatasetError("DCI BEIR selected-ID manifest does not match")
     except DatasetError as error:
         raise DciBenchmarkError("DCI benchmark dataset is invalid") from error
-    selected_paper_scope = _reject_af320_paper_rows(
-        rows, authorization=request.paper_full_authorization
-    )
-    if selected_paper_scope is not None and paper_authorization_identity is None:
-        from asterion.dci.experiment_profiles import (
-            full_execution_authorization_identity,
-        )
-
-        paper_authorization_identity = full_execution_authorization_identity(
-            request.paper_full_authorization,
-            scope_id=selected_paper_scope,
-        )
+    source_scope = _paper_scope_for_rows(rows)
+    if paper_scope is not None and source_scope != paper_scope:
+        raise DciBenchmarkError("DCI benchmark paper scope does not match its profile")
     if request.limit is not None:
         rows = rows[: request.limit]
-    _reject_af320_paper_rows(rows, authorization=request.paper_full_authorization)
+    selected_scope = _paper_scope_for_rows(rows)
     if any((row.is_ir if request.mode == "qa" else not row.is_ir) for row in rows):
         raise DciBenchmarkError("DCI benchmark dataset does not match its mode")
     _resolution_paths, resolution_config, resolution_snapshots = (
@@ -573,11 +599,18 @@ def _prepare(
     )
     output_root = Path(os.path.abspath(os.path.normpath(request.output_root)))
     _reject_symlink_components(output_root)
+    authorized_scope = paper_scope or source_scope or selected_scope
+    if (
+        paper_scope is not None
+        and not bounded_paper_selection
+        and selected_scope != paper_scope
+    ):
+        raise DciBenchmarkError("DCI benchmark paper scope does not match its profile")
     corpus_identity = (
         str(canonical_input_identity(request.corpus)) if request.corpus else None
     )
     runtime = _runtime_document(request.runtime_options)
-    judge = request.judge_config.public_dict()
+    judge = judge_public_identity(request.judge_config)
     judge_fingerprint = _fingerprint(judge)
     dataset_identity = canonical_input_identity(request.dataset)
     dataset_digest = hashlib.sha256(dataset_raw).hexdigest()
@@ -617,6 +650,43 @@ def _prepare(
         "judge_configuration_fingerprint": judge_fingerprint,
         "prompt_resources": prompt_resources,
     }
+    if bounded_paper_selection:
+        selection = {
+            "schema": "asterion.dci.selection/v1",
+            "execution_class": "paper-bounded",
+            "id": "limit-1",
+            "paper_scope": paper_scope,
+            "selected_rows": len(rows),
+            "full_dataset": False,
+            "comparable": False,
+            "authorization_profile": None,
+        }
+    elif authorized_scope is not None:
+        authorization = request.full_execution_authorization
+        selection = {
+            "schema": "asterion.dci.selection/v1",
+            "execution_class": "paper-full-authorized",
+            "id": "paper-full",
+            "paper_scope": authorized_scope,
+            "selected_rows": len(rows),
+            "full_dataset": True,
+            "comparable": True,
+            "authorization_profile": (
+                authorization.profile_id if authorization is not None else None
+            ),
+        }
+    else:
+        selection = {
+            "schema": "asterion.dci.selection/v1",
+            "execution_class": "non-paper",
+            "id": "request",
+            "paper_scope": None,
+            "selected_rows": len(rows),
+            "full_dataset": False,
+            "comparable": False,
+            "authorization_profile": None,
+        }
+    config["selection"] = selection
     if resolution_config:
         config["resolution"] = resolution_config
     if ablation_identity is not None:
@@ -663,22 +733,21 @@ def _prepare(
                 "judge_configuration_fingerprint": judge_fingerprint,
             }
         )
+    if authorized_scope is not None and not bounded_paper_selection:
+        authorization = request.full_execution_authorization
+        if authorization is None or authorization.output_root != output_root:
+            raise DciBenchmarkError("DCI benchmark requires AF-340 authorization")
+        try:
+            require_af320_executable_scope(authorized_scope, authorization)
+        except ValueError as error:
+            raise DciBenchmarkError(str(error)) from error
     return rows, output_root, config, tuple(documents), snapshots
 
 
-def _reject_af320_paper_rows(
-    rows: tuple[BenchmarkRow, ...], authorization: object | None
-) -> str | None:
-    selected_scope = paper_scope_for_selected_ids(
+def _paper_scope_for_rows(rows: tuple[BenchmarkRow, ...]) -> str | None:
+    return paper_scope_for_selected_ids(
         tuple(row.query_id for row in rows)
     )
-    if selected_scope is None:
-        return None
-    try:
-        require_af320_executable_scope(selected_scope, authorization=authorization)
-    except ValueError as error:
-        raise DciBenchmarkError(str(error)) from error
-    return selected_scope
 
 
 async def _run_row(
@@ -971,8 +1040,19 @@ def _preflight_locked(
         if names - {lock.LOCK_NAME}:
             raise DciBenchmarkError("DCI benchmark configuration evidence is missing")
     else:
-        _validate_config_document(existing)
-        if existing.get("run_fingerprint") != config["run_fingerprint"]:
+        legacy_nonpaper = "selection" not in existing
+        expected_selection = config.get("selection")
+        if not isinstance(expected_selection, dict):
+            raise DciBenchmarkError("DCI benchmark configuration evidence is invalid")
+        _validate_config_document(
+            existing,
+            expected_execution_class=str(expected_selection.get("execution_class")),
+            allow_legacy_nonpaper=legacy_nonpaper,
+        )
+        compatible_fingerprints = {config["run_fingerprint"]}
+        if legacy_nonpaper:
+            compatible_fingerprints.add(_legacy_nonpaper_run_fingerprint(config))
+        if existing.get("run_fingerprint") not in compatible_fingerprints:
             raise DciBenchmarkError("DCI benchmark configuration is incompatible")
     for item in items:
         query = lock.open_existing_query(str(item["query_id"]))
@@ -990,14 +1070,46 @@ def _preflight_locked(
             raise DciBenchmarkError("DCI benchmark row is incompatible")
 
 
-def _validate_config_document(value: dict[str, Any]) -> None:
+def _legacy_nonpaper_run_fingerprint(config: dict[str, object]) -> str:
+    selection = config.get("selection")
+    if (
+        not isinstance(selection, dict)
+        or selection.get("execution_class") != "non-paper"
+    ):
+        return ""
+    legacy = {key: item for key, item in config.items() if key != "selection"}
+    return _fingerprint(
+        {
+            key: item
+            for key, item in legacy.items()
+            if key
+            not in {
+                "judge",
+                "judge_configuration_fingerprint",
+                "run_fingerprint",
+                "batch_fingerprint",
+            }
+        }
+    )
+
+
+def _validate_config_document(
+    value: dict[str, Any], *, expected_execution_class: str,
+    allow_legacy_nonpaper: bool = False,
+) -> None:
+    if expected_execution_class not in {
+        "paper-bounded",
+        "paper-full-authorized",
+        "non-paper",
+    }:
+        raise DciBenchmarkError("DCI benchmark configuration evidence is invalid")
     expected = {
         "schema", "dataset", "mode", "profile", "corpus_identity", "corpus_hint",
         "cwd", "runtime", "conversation_features", "max_concurrency", "max_turns",
         "analysis", "figures", "judge", "judge_configuration_fingerprint",
         "prompt_resources", "run_fingerprint", "batch_fingerprint",
     }
-    optional = {"resolution", "ablation", "paper_full_authorization"}
+    optional = {"resolution", "ablation", "paper_full_authorization", "selection"}
     if (
         not expected.issubset(value)
         or not set(value).issubset(expected | optional)
@@ -1035,6 +1147,91 @@ def _validate_config_document(value: dict[str, Any]) -> None:
         or float(paper_authorization["estimated_budget_usd"]) < 0
     ):
         raise DciBenchmarkError("DCI benchmark configuration evidence is invalid")
+    if (expected_execution_class == "paper-full-authorized") != (
+        paper_authorization is not None
+    ):
+        raise DciBenchmarkError("DCI benchmark configuration evidence is invalid")
+    selection = value.get("selection")
+    try:
+        selection_profile_scope = paper_scope_for_profile(value.get("profile"))
+    except ValueError:
+        selection_profile_scope = None
+    if selection is None:
+        if (
+            not allow_legacy_nonpaper
+            or expected_execution_class != "non-paper"
+            or selection_profile_scope is not None
+        ):
+            raise DciBenchmarkError(
+                "DCI benchmark configuration evidence is invalid"
+            )
+    elif (
+        not isinstance(selection, dict)
+        or set(selection)
+        != {
+            "schema",
+            "execution_class",
+            "id",
+            "paper_scope",
+            "selected_rows",
+            "full_dataset",
+            "comparable",
+            "authorization_profile",
+        }
+        or selection.get("schema") != "asterion.dci.selection/v1"
+        or type(selection.get("selected_rows")) is not int
+    ):
+        raise DciBenchmarkError("DCI benchmark configuration evidence is invalid")
+    if isinstance(selection, dict):
+        execution_class = selection.get("execution_class")
+        if execution_class != expected_execution_class:
+            valid_selection = False
+        elif execution_class == "paper-bounded":
+            valid_selection = (
+                selection.get("id") == "limit-1"
+                and selection.get("paper_scope") == selection_profile_scope
+                and selection.get("selected_rows") == 1
+                and selection.get("full_dataset") is False
+                and selection.get("comparable") is False
+                and selection.get("authorization_profile") is None
+            )
+        elif execution_class == "paper-full-authorized":
+            authorization_profile = selection.get("authorization_profile")
+            try:
+                authorized_scopes = resolve_experiment_profile(
+                    authorization_profile
+                ).scope_ids
+                expected_rows = resolve_paper_experiment_scope(
+                    selection.get("paper_scope")
+                ).selection_count
+            except ValueError:
+                authorized_scopes = ()
+                expected_rows = None
+            valid_selection = (
+                selection.get("id") == "paper-full"
+                and selection.get("paper_scope") == selection_profile_scope
+                and selection.get("paper_scope") in authorized_scopes
+                and selection.get("selected_rows") == expected_rows
+                and selection.get("full_dataset") is True
+                and selection.get("comparable") is True
+                and type(authorization_profile) is str
+            )
+        elif execution_class == "non-paper":
+            valid_selection = (
+                selection_profile_scope is None
+                and selection.get("id") == "request"
+                and selection.get("paper_scope") is None
+                and selection.get("selected_rows") > 0
+                and selection.get("full_dataset") is False
+                and selection.get("comparable") is False
+                and selection.get("authorization_profile") is None
+            )
+        else:
+            valid_selection = False
+        if not valid_selection:
+            raise DciBenchmarkError(
+                "DCI benchmark configuration evidence is invalid"
+            )
     batch_payload = dict(value)
     batch_fingerprint = batch_payload.pop("batch_fingerprint", None)
     if batch_fingerprint != _fingerprint(batch_payload):
@@ -1873,7 +2070,9 @@ def _reject_symlink_components(path: Path) -> None:
             raise DciBenchmarkError("DCI benchmark destination is unsafe")
 
 
-def _open_or_create_output_directory(path: Path) -> int:
+def _open_or_create_output_directory(
+    path: Path, *, expected_identity: tuple[int, int] | None = None
+) -> int:
     descriptor = os.open("/", os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
     try:
         for component in path.parts[1:]:
@@ -1886,6 +2085,8 @@ def _open_or_create_output_directory(path: Path) -> int:
                     dir_fd=descriptor,
                 )
             except FileNotFoundError:
+                if expected_identity is not None:
+                    raise
                 os.mkdir(component, 0o700, dir_fd=descriptor)
                 next_descriptor = os.open(
                     component,
@@ -1896,6 +2097,14 @@ def _open_or_create_output_directory(path: Path) -> int:
                 )
             os.close(descriptor)
             descriptor = next_descriptor
+        opened = os.fstat(descriptor)
+        if expected_identity is not None and (
+            opened.st_dev,
+            opened.st_ino,
+        ) != expected_identity:
+            raise DciBenchmarkError(
+                "DCI benchmark authorized output root identity changed"
+            )
         os.fchmod(descriptor, 0o700)
         return descriptor
     except BaseException:
@@ -2050,21 +2259,36 @@ class _BatchLock(_Directory):
         self.lock_fd: int | None = None
 
     @classmethod
-    def acquire(cls, path: Path) -> _BatchLock:
+    def acquire(
+        cls, path: Path, *, expected_identity: tuple[int, int] | None = None
+    ) -> _BatchLock:
         if fcntl is None:
             raise DciBenchmarkError("DCI benchmark locking is unavailable")
         _reject_symlink_components(path)
         try:
-            fd = _open_or_create_output_directory(path)
+            fd = _open_or_create_output_directory(
+                path, expected_identity=expected_identity
+            )
         except OSError as error:
             raise DciBenchmarkError("DCI benchmark destination is unsafe") from error
         lock = cls(path, fd)
         try:
+            opened = os.fstat(fd)
+            if expected_identity is not None and (
+                opened.st_dev,
+                opened.st_ino,
+            ) != expected_identity:
+                raise DciBenchmarkError(
+                    "DCI benchmark authorized output root identity changed"
+                )
             os.fchmod(fd, 0o700)
             lock.lock_fd = os.open(cls.LOCK_NAME, os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0), 0o600, dir_fd=fd)
             os.fchmod(lock.lock_fd, 0o600)
             fcntl.flock(lock.lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
             return lock
+        except DciBenchmarkError:
+            lock.release()
+            raise
         except (BlockingIOError, OSError) as error:
             lock.release()
             raise DciBenchmarkError("DCI benchmark is already running") from error

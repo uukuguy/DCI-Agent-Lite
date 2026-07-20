@@ -9,7 +9,7 @@ from collections.abc import AsyncIterator
 from pathlib import Path
 from unittest.mock import patch
 
-from asterion.cli import _parser, main
+from asterion.cli import _parser, main, resolve_public_runtime_id
 from asterion.applications.dci_agent_lite.provider import create_provider as create_dci_provider
 from asterion.applications.provider import InstalledApplication, InstalledApplicationProvider
 from asterion.applications.product import (
@@ -22,6 +22,7 @@ from asterion.applications.product import (
     VerificationResult,
 )
 from asterion.dci.application_executor import EnvironmentDciRunExecutor
+from asterion.dci.config import ConfigLayers
 from asterion.dci.pi_rpc import PiRpcClient
 from asterion.dci.run import DciRunRequest, DciRunResult
 from asterion.runtime.factory import RuntimeFactoryBinding, RuntimeFactoryRegistry
@@ -179,6 +180,130 @@ def configure_manager(manager, config):
 
 
 class AsterionCliTests(unittest.TestCase):
+    def test_public_runtime_names_map_to_exact_installed_ids(self) -> None:
+        self.assertEqual(resolve_public_runtime_id("pi"), "pi.reference")
+        self.assertEqual(
+            resolve_public_runtime_id("claude-code"), "claude-code.reference"
+        )
+        self.assertEqual(resolve_public_runtime_id("pi.reference"), "pi.reference")
+        self.assertEqual(
+            resolve_public_runtime_id("claude-code.reference"),
+            "claude-code.reference",
+        )
+        with self.assertRaises(ValueError):
+            resolve_public_runtime_id("unsupported")
+
+    def test_run_materializes_dotenv_once_without_overriding_exported_values(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            value = provider(root)
+            entry = FakeEntryPoint(name="example-app", factory=lambda: value)
+            (root / ".env").write_text(
+                "\n".join(
+                    (
+                        "DCI_PROVIDER=dotenv-provider",
+                        "MINIMAX_API_KEY=dotenv-minimax-secret",
+                        "MINIMAX_CN_API_KEY=dotenv-minimax-cn-secret",
+                        "DCI_PI_PACKAGE_DIR=dotenv-pi-package",
+                        "DCI_PI_AGENT_DIR=dotenv-pi-agent",
+                        "ASTERION_RUNTIME_CWD=dotenv-runtime-cwd",
+                        "ASTERION_CLAUDE_EXECUTABLE=dotenv-claude",
+                    )
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            contexts = []
+            factory_environment = {}
+
+            def create_runtime(context):
+                contexts.append(context)
+                for name in (
+                    "DCI_PROVIDER",
+                    "MINIMAX_API_KEY",
+                    "MINIMAX_CN_API_KEY",
+                    "DCI_PI_PACKAGE_DIR",
+                    "DCI_PI_AGENT_DIR",
+                    "ASTERION_RUNTIME_CWD",
+                    "ASTERION_CLAUDE_EXECUTABLE",
+                ):
+                    factory_environment[name] = os.environ.get(name)
+                return FixtureRuntime()
+
+            registry = RuntimeFactoryRegistry(
+                (
+                    RuntimeFactoryBinding(
+                        runtime_id="pi.reference",
+                        capabilities=(),
+                        factory=create_runtime,
+                    ),
+                )
+            )
+            original_materialize = ConfigLayers.materialize
+            stdout = io.StringIO()
+            with (
+                patch.dict(
+                    os.environ,
+                    {
+                        "DCI_PROVIDER": "exported-provider",
+                        "ASTERION_RUNTIME_CWD": "exported-runtime-cwd",
+                    },
+                    clear=True,
+                ),
+                patch("asterion.cli.Path.cwd", return_value=root),
+                patch.object(
+                    ConfigLayers,
+                    "materialize",
+                    autospec=True,
+                    side_effect=lambda layers, target: original_materialize(
+                        layers, target
+                    ),
+                ) as materialize,
+            ):
+                code = main(
+                    [
+                        "run",
+                        "--provider",
+                        "example-app",
+                        "--runtime",
+                        "pi",
+                        "--application",
+                        "example.research@1.0.0",
+                        "--input",
+                        "research",
+                    ],
+                    entry_points=(entry,),
+                    runtime_factories=registry,
+                    stdout=stdout,
+                    stderr=io.StringIO(),
+                )
+
+        self.assertEqual(code, 0)
+        materialize.assert_called_once()
+        self.assertEqual(factory_environment["DCI_PROVIDER"], "exported-provider")
+        self.assertEqual(
+            factory_environment["ASTERION_RUNTIME_CWD"], "exported-runtime-cwd"
+        )
+        self.assertEqual(
+            factory_environment["MINIMAX_API_KEY"], "dotenv-minimax-secret"
+        )
+        self.assertEqual(
+            factory_environment["MINIMAX_CN_API_KEY"],
+            "dotenv-minimax-cn-secret",
+        )
+        self.assertEqual(
+            factory_environment["DCI_PI_PACKAGE_DIR"], "dotenv-pi-package"
+        )
+        self.assertEqual(factory_environment["DCI_PI_AGENT_DIR"], "dotenv-pi-agent")
+        self.assertEqual(
+            factory_environment["ASTERION_CLAUDE_EXECUTABLE"], "dotenv-claude"
+        )
+        self.assertEqual(contexts[0].options["provider"], "exported-provider")
+        self.assertNotIn("API_KEY", repr(contexts[0].options))
+        self.assertNotIn("dotenv-minimax-secret", stdout.getvalue())
+
     def _product_provider(self, root: Path, calls: list[object]) -> InstalledApplicationProvider:
         valid = provider(root)
         description = CapabilityProductDescription(

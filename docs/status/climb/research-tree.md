@@ -9,7 +9,7 @@
 - Last cycle: 106
 - Next hypothesis: AF-340-H-004
 - In flight: none
-- Next action: Start AF-340-H-004.
+- Next action: Complete AF-340-H-004 with fresh Pi and Claude-subscription bounded reports; the retained MiniMax report is valid.
 
 ## Active hypotheses
 

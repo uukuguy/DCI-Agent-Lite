@@ -35,6 +35,7 @@ from asterion.packages.execution import (
 )
 from asterion.runner.application import ApplicationRunError
 from asterion.runner.composed import run_composed_application
+from asterion.dci.config import ConfigLayers, resolve_asterion_runtime
 from asterion.runtime.factory import (
     RuntimeFactoryContext,
     RuntimeFactoryError,
@@ -213,6 +214,13 @@ async def _run(
         if len(matches) != 1:
             raise ApplicationProviderError("application assembly selection is invalid")
         application = matches[0]
+    layers = ConfigLayers.from_repo(Path.cwd())
+    resolved_runtime = resolve_asterion_runtime(
+        {"runtime": args.runtime} if args.runtime is not None else {},
+        layers,
+    )
+    layers.materialize(os.environ)
+    runtime_id = resolve_public_runtime_id(resolved_runtime.runtime)
     if runtime_id not in application.runtime_ids:
         raise ApplicationProviderError("application runtime selection is invalid")
     if args.application is not None:
@@ -233,9 +241,13 @@ async def _run(
         runtime_id=runtime_id,
         assembly_path=assembly_path,
         options={
-            key: value
-            for key, value in runtime.__dict__.items()
-            if value is not None
+            "provider": resolved_runtime.provider,
+            "model": resolved_runtime.model,
+            "tools": resolved_runtime.tools,
+            "thinking_level": resolved_runtime.thinking_level,
+            "context_profile": resolved_runtime.context_profile,
+            "timeout_seconds": resolved_runtime.timeout_seconds,
+            "authentication_mode": resolved_runtime.authentication_mode,
         },
     )
     runtime = runtime_binding.factory(context)
@@ -349,6 +361,20 @@ def _parser() -> argparse.ArgumentParser:
     )
     run.add_argument("legacy_assembly", nargs="?")
     return parser
+
+
+def resolve_public_runtime_id(value: str) -> str:
+    """Map a public runtime name to an exact installed runtime identity."""
+
+    try:
+        return {
+            "pi": "pi.reference",
+            "claude-code": "claude-code.reference",
+            "pi.reference": "pi.reference",
+            "claude-code.reference": "claude-code.reference",
+        }[value]
+    except KeyError:
+        raise ValueError("application runtime selection is invalid") from None
 
 
 def _description_payload(description: CapabilityProductDescription) -> dict[str, object]:

@@ -700,7 +700,7 @@ def validate_batch_inventory(root: Path, value: object) -> tuple[str, ...]:
         raise ValueError("batch inventory SHA-256 mismatch")
     parsed = json.loads(path.read_text(encoding="utf-8"))
     rows = parsed.get("rows") if isinstance(parsed, dict) else None
-    if inventory["row_count"] != 533 or not isinstance(rows, list) or len(rows) != 533:
+    if inventory["row_count"] != 538 or not isinstance(rows, list) or len(rows) != 538:
         raise ValueError("batch inventory row count mismatch")
     selectors: list[str] = []
     for row in rows:
@@ -715,7 +715,7 @@ def validate_batch_inventory(root: Path, value: object) -> tuple[str, ...]:
         if not isinstance(selector, str) or not selector.startswith("tests."):
             raise ValueError("batch inventory selector is not executable")
         selectors.append(selector)
-    if len(set(selectors)) != 533:
+    if len(set(selectors)) != 538:
         raise ValueError("batch inventory selectors are not unique")
     unresolved = tuple(
         selector for selector in selectors if not _resolve_selector(root, selector)
@@ -951,7 +951,7 @@ def run_local_evidence(
         "rows": results,
         "provider_backed_executed": 0,
         "bounded_acceptance": f"{accepted}/{len(REQUIRED_PROVIDER_CASES)}",
-        "delegated_inventory": f"{len(delegated) if batch_passed else 0}/533",
+        "delegated_inventory": f"{len(delegated) if batch_passed else 0}/538",
         "launcher_pairs": f"{len(launchers) if batch_passed else 0}/12",
         "batch_extra_selectors": f"{len(BATCH_EXTRA_SELECTORS) if batch_passed else 0}/6",
     }

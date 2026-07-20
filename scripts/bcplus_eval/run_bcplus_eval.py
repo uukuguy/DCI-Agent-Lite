@@ -12,7 +12,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
 import matplotlib
 
@@ -31,16 +31,19 @@ from dci.benchmark.judge import (  # noqa: E402
     DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M,
     JudgeConfig,
     judge_answer_sync,
+    judge_public_identity,
 )
-from dci.config import load_project_env, resolve_pi_paths  # noqa: E402
-from dci.effective_config import ConfigLayers, resolve_original_runtime  # noqa: E402
+from dci.config import (  # noqa: E402
+    ConfigLayers,
+    OriginalRuntimeConfig,
+    resolve_original_runtime,
+    resolve_pi_paths,
+)
+from dci.effective_config import OriginalEffectiveConfig  # noqa: E402
 
 DEFAULT_DATASET_PATH = REPO_ROOT / "data" / "bcplus_qa.jsonl"
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / "outputs" / "bcplus_eval"
 DEFAULT_CORPUS_DIR = REPO_ROOT / "corpus" / "bc_plus_docs"
-DEFAULT_PROVIDER = "anthropic"
-DEFAULT_MODEL = "claude-sonnet-4-20250514"
-DEFAULT_TOOLS = "read,bash"
 # OpenAI API pricing verified on April 5, 2026 from official OpenAI pricing/model pages.
 
 COLOR_CORRECT = "#2E8B57"
@@ -67,7 +70,7 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     pi_paths = resolve_pi_paths(REPO_ROOT)
     parser = argparse.ArgumentParser(
         description=(
@@ -75,6 +78,10 @@ def parse_args() -> argparse.Namespace:
             "grade each final answer with the configured OpenAI-compatible judge, "
             "and write per-question plus aggregate metrics."
         )
+    )
+    parser.add_argument(
+        "--runtime",
+        help="Agent runtime. Original DCI supports exactly 'pi'. Default: pi.",
     )
     parser.add_argument(
         "--dataset",
@@ -107,25 +114,30 @@ def parse_args() -> argparse.Namespace:
         help=f"Pi agent config directory. Default from DCI_PI_DIR: {pi_paths.agent_dir}",
     )
     parser.add_argument(
-        "--runtime",
-        default=None,
-        help="Runtime name. Defaults to DCI_RUNTIME / pi.",
-    )
-    parser.add_argument(
         "--provider",
-        default=None,
-        help=f"Pi provider. Defaults to DCI_PROVIDER from .env, otherwise {DEFAULT_PROVIDER}.",
+        help="Pi provider. Overrides DCI_PROVIDER and the Pi default.",
     )
     parser.add_argument(
         "--model",
-        default=None,
-        help=f"Pi model. Defaults to DCI_MODEL from .env, otherwise {DEFAULT_MODEL}.",
+        help="Pi model. Overrides DCI_MODEL and the Pi default.",
     )
-    parser.add_argument("--tools", default=DEFAULT_TOOLS, help=f"Pi tool list. Default: {DEFAULT_TOOLS}")
-    parser.add_argument("--max-turns", type=int, default=100, help="Pi max turns. Default: 100")
+    parser.add_argument(
+        "--tools",
+        help="Pi tool list. Overrides DCI_TOOLS and the Pi default.",
+    )
+    parser.add_argument(
+        "--max-turns",
+        type=int,
+        help="Pi max turns. Overrides DCI_MAX_TURNS and the Pi default.",
+    )
+    parser.add_argument(
+        "--rpc-timeout-seconds",
+        type=float,
+        help="Wall-clock timeout for each Pi RPC prompt; 0 disables the timeout.",
+    )
     parser.add_argument(
         "--runtime-context-level",
-        help="Optional pi runtime context-management level, such as level0, level3, legacy, or level5.",
+        help="Optional Pi context-management profile, level0 through level4.",
     )
     parser.add_argument(
         "--system-prompt-file",
@@ -234,7 +246,7 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Optional hint about corpus structure, inserted into the IR prompt to guide search strategy.",
     )
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def load_judge_config_from_args(args: argparse.Namespace) -> JudgeConfig:
@@ -248,6 +260,80 @@ def load_judge_config_from_args(args: argparse.Namespace) -> JudgeConfig:
         cached_input_price_per_1m=args.judge_cached_input_price_per_1m,
         output_price_per_1m=args.judge_output_price_per_1m,
     )
+
+
+def require_execution_authorization(
+    args: argparse.Namespace,
+    *,
+    total_rows: int,
+    full_execution_authorizer: Optional[
+        Callable[[argparse.Namespace, int], None]
+    ] = None,
+) -> bool:
+    """Require a coordinator-injected capability before unbounded provider work."""
+
+    full_selection = args.limit is None or args.limit >= total_rows
+    if not full_selection:
+        return False
+    if full_execution_authorizer is None:
+        raise ValueError(
+            "full dataset requires coordinator-issued AF-340 authorization"
+        )
+    full_execution_authorizer(args, total_rows)
+    return True
+
+
+def resolve_runtime_args(
+    args: argparse.Namespace, layers: ConfigLayers
+) -> OriginalRuntimeConfig:
+    resolved = resolve_original_runtime(
+        {
+            "runtime": args.runtime,
+            "provider": args.provider,
+            "model": args.model,
+            "tools": args.tools,
+            "max_turns": args.max_turns,
+            "timeout_seconds": args.rpc_timeout_seconds,
+            "thinking_level": args.pi_thinking_level,
+            "context_profile": args.runtime_context_level,
+        },
+        layers,
+    )
+    args.runtime = resolved.runtime
+    args.provider = resolved.provider
+    args.model = resolved.model
+    args.tools = resolved.tools
+    args.max_turns = resolved.max_turns
+    args.rpc_timeout_seconds = resolved.timeout_seconds
+    args.pi_thinking_level = resolved.thinking_level
+    args.runtime_context_level = resolved.context_profile
+    return resolved
+
+
+def effective_config_for_batch(
+    *,
+    runtime: OriginalRuntimeConfig,
+    args: argparse.Namespace,
+    judge_config: Optional[JudgeConfig],
+) -> Dict[str, object]:
+    judge: Dict[str, object] = {}
+    if judge_config is not None:
+        judge = judge_public_identity(judge_config)
+    return OriginalEffectiveConfig(
+        runtime=runtime,
+        context={
+            "profile": runtime.context_profile,
+            "implementation_sha256": None,
+        },
+        judge=judge,
+        experiment={
+            "dataset": args.dataset.name,
+            "selection": f"limit-{args.limit}" if args.limit is not None else "all",
+            "corpus": args.corpus_dir.name,
+            "metric": "ndcg@10" if args.enable_ir else "judge-correctness",
+            "execution_class": "bounded" if args.limit is not None else "full",
+        },
+    ).to_public_dict()
 
 
 def read_jsonl(path: Path) -> List[Dict[str, Any]]:
@@ -565,18 +651,9 @@ def judge_result_succeeded(
     if judge_result.get("error"):
         return False
     if judge_config is not None:
-        current_config = judge_config.public_dict()
-        for key in (
-            "judge_model",
-            "judge_base_url",
-            "judge_api",
-            "judge_max_output_tokens",
-            "judge_json_mode",
-            "judge_strict_json_schema",
-            "judge_thinking",
-        ):
-            if judge_result.get(key) != current_config.get(key):
-                return False
+        current_config = judge_public_identity(judge_config)
+        if any(judge_result.get(key) != value for key, value in current_config.items()):
+            return False
     return isinstance(judge_result.get("is_correct"), bool)
 
 
@@ -597,7 +674,7 @@ def existing_result_succeeded(
 
 def build_failed_judge_result(*, config: JudgeConfig, error: str, attempts: int) -> Dict[str, Any]:
     return {
-        **config.public_dict(),
+        **judge_public_identity(config),
         "judged_at": utc_now(),
         "judge_status": "failed",
         "is_correct": None,
@@ -625,6 +702,7 @@ async def judge_answer_async(**kwargs: Any) -> Dict[str, Any]:
     for attempt in range(1, max_attempts + 1):
         try:
             result = await asyncio.to_thread(judge_answer_sync, **kwargs)
+            result.update(judge_public_identity(config))
             result["judge_status"] = "completed"
             result["attempt_count"] = attempt
             return result
@@ -671,6 +749,8 @@ def build_run_command(
         "--output-dir",
         str(query_output_dir),
     ]
+    if args.rpc_timeout_seconds is not None:
+        cmd.extend(["--rpc-timeout-seconds", str(args.rpc_timeout_seconds)])
     if resume_run:
         cmd.append("--resume")
     if args.max_turns is not None:
@@ -679,37 +759,16 @@ def build_run_command(
         cmd.extend(["--system-prompt-file", str(args.system_prompt_file)])
     if args.append_system_prompt_file:
         cmd.extend(["--append-system-prompt-file", str(args.append_system_prompt_file)])
+    if args.runtime_context_level:
+        cmd.extend(["--runtime-context-level", args.runtime_context_level])
 
     pi_extra_args = list(args.pi_extra_arg)
     if args.pi_thinking_level:
         pi_extra_args.append(f"--thinking {args.pi_thinking_level}")
-    if args.runtime_context_level:
-        pi_extra_args.append(f"--context-management-level {args.runtime_context_level}")
     for extra_arg in pi_extra_args:
         cmd.append(f"--extra-arg={extra_arg}")
     cmd.append(question_text)
     return cmd
-
-
-def build_effective_config_payload(
-    args: argparse.Namespace,
-    *,
-    effective_runtime,
-    judge_config: Optional[JudgeConfig] = None,
-) -> dict:
-    experiment = {
-        "dataset": args.dataset.name,
-        "corpus_dir": args.corpus_dir.name,
-        "max_turns": args.max_turns,
-        "max_concurrency": args.max_concurrency,
-        "runtime_context_level": args.runtime_context_level,
-        "pi_thinking_level": args.pi_thinking_level,
-        "limit": args.limit,
-    }
-    judge_payload: dict[str, object] = {}
-    if judge_config is not None:
-        judge_payload = judge_config.public_dict()
-    return effective_runtime.to_public_dict(judge=judge_payload, experiment=experiment)
 
 
 def load_existing_query_result(query_dir: Path) -> Optional[Dict[str, Any]]:
@@ -1701,15 +1760,21 @@ async def run_single_query(
     return result
 
 
-async def main_async() -> int:
-    load_project_env(REPO_ROOT)
-    args = parse_args()
-    effective_runtime = resolve_original_runtime(vars(args), ConfigLayers.from_repo(REPO_ROOT, os.environ))
-    args.runtime = effective_runtime.runtime
-    args.provider = effective_runtime.provider
-    args.model = effective_runtime.model
-    args.tools = effective_runtime.tools
-    args.max_turns = 100 if effective_runtime.max_turns is None else effective_runtime.max_turns
+async def main_async(
+    argv: Optional[Sequence[str]] = None,
+    *,
+    full_execution_authorizer: Optional[
+        Callable[[argparse.Namespace, int], None]
+    ] = None,
+) -> int:
+    layers = ConfigLayers.from_repo(REPO_ROOT)
+    layers.materialize(os.environ)
+    args = parse_args(argv)
+    try:
+        runtime_config = resolve_runtime_args(args, layers)
+    except ValueError as exc:
+        print(f"Invalid runtime configuration: {exc}", file=sys.stderr)
+        return 2
     if args.max_concurrency <= 0:
         print("--max-concurrency must be >= 1", file=sys.stderr)
         return 2
@@ -1723,6 +1788,22 @@ async def main_async() -> int:
         print(f"Corpus directory does not exist: {args.corpus_dir}", file=sys.stderr)
         return 2
 
+    rows = read_jsonl(args.dataset)
+    try:
+        full_selection = require_execution_authorization(
+            args,
+            total_rows=len(rows),
+            full_execution_authorizer=full_execution_authorizer,
+        )
+    except ValueError as exc:
+        print(f"Invalid execution authorization: {exc}", file=sys.stderr)
+        return 2
+    if full_selection and not args.output_root.exists():
+        args.output_root.mkdir(parents=True, mode=0o700)
+        args.output_root.chmod(0o700)
+    if args.limit is not None:
+        rows = rows[: args.limit]
+
     judge_config: Optional[JudgeConfig] = None
     if not args.enable_ir:
         try:
@@ -1730,10 +1811,6 @@ async def main_async() -> int:
         except ValueError as exc:
             print(f"Invalid judge configuration: {exc}", file=sys.stderr)
             return 2
-
-    rows = read_jsonl(args.dataset)
-    if args.limit is not None:
-        rows = rows[: args.limit]
 
     query_dirs_requiring_work = [
         args.output_root / str(row["query_id"])
@@ -1746,6 +1823,16 @@ async def main_async() -> int:
     has_pending_work = bool(query_dirs_requiring_work)
 
     args.output_root.mkdir(parents=True, exist_ok=True)
+    effective_config_path = args.output_root / "effective-config.json"
+    write_json(
+        effective_config_path,
+        effective_config_for_batch(
+            runtime=runtime_config,
+            args=args,
+            judge_config=judge_config,
+        ),
+    )
+    effective_config_path.chmod(0o600)
     system_prompt_file = resolve_repo_relative_path(args.system_prompt_file)
     append_system_prompt_file = resolve_repo_relative_path(args.append_system_prompt_file)
     args.system_prompt_file = system_prompt_file
@@ -1773,15 +1860,8 @@ async def main_async() -> int:
         "question_count": len(rows),
     }
     if judge_config is not None:
-        run_config.update(judge_config.public_dict())
+        run_config.update(judge_public_identity(judge_config))
     write_json(args.output_root / "config.json", run_config)
-    write_json(
-        args.output_root / "effective-config.json",
-        build_effective_config_payload(
-            args, effective_runtime=effective_runtime, judge_config=judge_config
-        ),
-    )
-
     semaphore = asyncio.Semaphore(args.max_concurrency)
     results_by_query_id: Dict[str, Dict[str, Any]] = {}
     results_lock = asyncio.Lock()

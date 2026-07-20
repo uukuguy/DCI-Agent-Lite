@@ -18,6 +18,8 @@ DEFAULT_JUDGE_BASE_URL = "https://api.deepseek.com/v1"
 DEFAULT_JUDGE_API = "chat-completions"
 DEFAULT_JUDGE_MODEL = "deepseek-v4-flash"
 DEFAULT_JUDGE_API_KEY_ENV = "DEEPSEEK_API_KEY"
+DEFAULT_JUDGE_THINKING = "disabled"
+OFFICIAL_OPENAI_BASE_URL = "https://api.openai.com/v1"
 DEFAULT_JUDGE_TIMEOUT_SECONDS = 120
 DEFAULT_JUDGE_MAX_OUTPUT_TOKENS = 1024
 DEFAULT_JUDGE_INPUT_PRICE_PER_1M = 0.0
@@ -100,7 +102,7 @@ class JudgeConfig:
     json_mode: bool = True
     strict_json_schema: bool = False
     responses_store: bool = False
-    thinking: str = "auto"
+    thinking: str = DEFAULT_JUDGE_THINKING
     input_price_per_1m: float = DEFAULT_JUDGE_INPUT_PRICE_PER_1M
     cached_input_price_per_1m: float = DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M
     output_price_per_1m: float = DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M
@@ -213,10 +215,15 @@ class JudgeConfig:
             responses_store=responses_store
             if responses_store is not None
             else _env_bool(f"{JUDGE_ENV_PREFIX}RESPONSES_STORE", False),
-            thinking=os.environ.get(f"{JUDGE_ENV_PREFIX}THINKING", "auto"),
+            thinking=os.environ.get(
+                f"{JUDGE_ENV_PREFIX}THINKING", DEFAULT_JUDGE_THINKING
+            ),
             input_price_per_1m=input_price_per_1m
             if input_price_per_1m is not None
-            else _env_float(f"{JUDGE_ENV_PREFIX}INPUT_PRICE_PER_1M", DEFAULT_JUDGE_INPUT_PRICE_PER_1M),
+            else _env_float(
+                f"{JUDGE_ENV_PREFIX}INPUT_PRICE_PER_1M",
+                DEFAULT_JUDGE_INPUT_PRICE_PER_1M,
+            ),
             cached_input_price_per_1m=cached_input_price_per_1m
             if cached_input_price_per_1m is not None
             else _env_float(
@@ -447,7 +454,7 @@ def build_judge_request(
             "max_output_tokens": config.max_output_tokens,
             "input": messages,
         }
-        if config.base_url == DEFAULT_JUDGE_BASE_URL:
+        if config.base_url == OFFICIAL_OPENAI_BASE_URL or config.responses_store:
             payload["store"] = config.responses_store
         if config.strict_json_schema:
             payload["text"] = {
@@ -489,18 +496,72 @@ def judge_request_fingerprint(
     return _judge_request_fingerprint(config=config, request_payload=request_payload)
 
 
+def judge_prompt_contract_sha256(config: JudgeConfig) -> str:
+    """Return the canonical digest of the body-free Judge prompt contract."""
+
+    return _canonical_json_sha256(
+        build_judge_request(
+            config,
+            question="[question]",
+            gold_answer="[gold-answer]",
+            predicted_answer="[predicted-answer]",
+        )
+    )
+
+
+def judge_request_shape_sha256(config: JudgeConfig) -> str:
+    """Return the canonical digest of one sentinel-shaped Judge request."""
+
+    request = build_judge_request(
+        config,
+        question="[question]",
+        gold_answer="[gold-answer]",
+        predicted_answer="[predicted-answer]",
+    )
+    messages_key = "input" if config.api == "responses" else "messages"
+    messages = request.get(messages_key)
+    if isinstance(messages, list):
+        request[messages_key] = [
+            {**message, "content": "[content]"}
+            if isinstance(message, dict) and "content" in message
+            else message
+            for message in messages
+        ]
+    return _canonical_json_sha256(request)
+
+
+def judge_public_identity(config: JudgeConfig) -> Dict[str, Any]:
+    """Return complete credential- and body-free Judge cache evidence."""
+
+    return {
+        **config.public_dict(),
+        "endpoint": config.endpoint,
+        "request_shape_sha256": judge_request_shape_sha256(config),
+        "prompt_contract_sha256": judge_prompt_contract_sha256(config),
+    }
+
+
+def _canonical_json_sha256(value: object) -> str:
+    canonical = json.dumps(
+        value,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
 def _judge_request_fingerprint(
     *, config: JudgeConfig, request_payload: Dict[str, Any]
 ) -> str:
     """Fingerprint an already-built request without retaining its contents."""
-    public_config = dict(config.public_dict())
-    public_config.pop("judge_api_key_env", None)
+    public_identity = judge_public_identity(config)
+    public_identity.pop("judge_api_key_env", None)
 
     canonical_request = json.dumps(
         {
-            "configuration": public_config,
-            "endpoint": config.endpoint,
-            "request": request_payload,
+            "configuration": public_identity,
+            "request_sha256": _canonical_json_sha256(request_payload),
         },
         ensure_ascii=False,
         separators=(",", ":"),
@@ -548,6 +609,7 @@ def judge_answer_sync(
             ) as response:
                 response_payload = json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
+            exc.close()
             raise RuntimeError(
                 f"Judge request to {config.endpoint} failed with HTTP {exc.code}; "
                 "verify the configured endpoint and credentials"

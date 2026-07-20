@@ -6,6 +6,7 @@ import argparse
 import contextlib
 import io
 import json
+import math
 import os
 import secrets
 import stat
@@ -44,7 +45,12 @@ from asterion.dci.export import (
     export_bright,
     export_resolution_summary,
 )
-from asterion.dci.judge import JudgeConfig
+from asterion.dci.judge import (
+    DEFAULT_JUDGE_API,
+    DEFAULT_JUDGE_BASE_URL,
+    DEFAULT_JUDGE_MODEL,
+    JudgeConfig,
+)
 from asterion.dci.pi_rpc import run_pi_terminal, validate_terminal_cwd
 from asterion.dci.run import (
     DciRunError,
@@ -175,21 +181,26 @@ def _parser() -> argparse.ArgumentParser:
     paper_verify.add_argument("--output-root", type=Path)
     paper_reproduce = paper_commands.add_parser("reproduce")
     paper_reproduce.add_argument("--profile", required=True)
-    paper_reproduce.add_argument("--output-root", required=True, type=Path)
+    paper_reproduce.add_argument("--output-root", type=Path, required=True)
     paper_reproduce.add_argument("--estimated-budget-usd", type=float, required=True)
     paper_reproduce.add_argument("--authorize-full", action="store_true")
     paper_reproduce.add_argument("--dry-run", action="store_true")
+    paper_reproduce.add_argument("--provider")
+    paper_reproduce.add_argument("--model")
     paper_compare = paper_commands.add_parser("compare")
     paper_compare.add_argument("--baseline", type=Path)
     paper_compare.add_argument("--candidate", type=Path, required=True)
     paper_compare.add_argument("--profile", required=True)
     paper_compare.add_argument("--output", type=Path, required=True)
+    paper_compare.add_argument("--provider")
+    paper_compare.add_argument("--model")
     return parser
 
 
 def _add_runtime_option_arguments(parser: argparse.ArgumentParser) -> None:
     """Add shared DCI settings with None defaults for environment resolution."""
 
+    parser.add_argument("--runtime")
     parser.add_argument("--provider")
     parser.add_argument("--model")
     parser.add_argument("--tools")
@@ -202,9 +213,19 @@ def _add_runtime_option_arguments(parser: argparse.ArgumentParser) -> None:
 
 
 def _add_judge_arguments(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--judge-base-url")
-    parser.add_argument("--judge-api", choices=("responses", "chat-completions"))
-    parser.add_argument("--judge-model")
+    parser.add_argument(
+        "--judge-base-url",
+        help=f"Override DCI_EVAL_JUDGE_BASE_URL (default: {DEFAULT_JUDGE_BASE_URL}).",
+    )
+    parser.add_argument(
+        "--judge-api",
+        choices=("responses", "chat-completions"),
+        help=f"Override DCI_EVAL_JUDGE_API (default: {DEFAULT_JUDGE_API}).",
+    )
+    parser.add_argument(
+        "--judge-model",
+        help=f"Override DCI_EVAL_JUDGE_MODEL (default: {DEFAULT_JUDGE_MODEL}).",
+    )
     parser.add_argument("--judge-api-key-env")
     parser.add_argument("--judge-timeout-seconds", type=int)
     parser.add_argument("--judge-max-output-tokens", type=int)
@@ -333,9 +354,7 @@ def main(
         try:
             from asterion.dci.verification import (
                 paper_benchmark_acceptance_main,
-                paper_compare_main,
                 paper_product_contract,
-                paper_reproduce_main,
             )
 
             if args.paper_command == "describe":
@@ -346,55 +365,132 @@ def main(
                     + "\n"
                 )
                 return 0
-            if args.paper_command == "verify":
-                verify_argv = []
-                if args.provider_backed:
-                    verify_argv.append("--provider-backed")
-                if args.env_file is not None:
-                    verify_argv.extend(("--env-file", str(args.env_file)))
-                if args.output_root is not None:
-                    verify_argv.extend(("--output-root", str(args.output_root)))
-                root = (
-                    Path.cwd().resolve()
-                    if repo_root is None
-                    else Path(repo_root).resolve()
-                )
-                return paper_benchmark_acceptance_main(
-                    verify_argv,
-                    stdout=stdout,
-                    stderr=stderr,
-                    repo_root=root,
-                )
             if args.paper_command == "compare":
-                compare_argv = [
-                    "--candidate",
-                    str(args.candidate),
-                    "--profile",
-                    args.profile,
-                    "--output",
-                    str(args.output),
-                ]
-                if args.baseline is not None:
-                    compare_argv.extend(("--baseline", str(args.baseline)))
-                return paper_compare_main(
-                    compare_argv,
-                    stdout=stdout,
-                    stderr=stderr,
+                from asterion.dci.experiment_profiles import resolve_experiment_profile
+                from asterion.dci.reproduction import (
+                    compare_reproduction_runs,
+                    load_run_manifest,
+                    write_comparison_report,
                 )
-            reproduce_argv = [
-                "--profile",
-                args.profile,
-                "--output-root",
-                str(args.output_root),
-                "--estimated-budget-usd",
-                str(args.estimated_budget_usd),
-            ]
-            if args.authorize_full:
-                reproduce_argv.append("--authorize-full")
-            if args.dry_run:
-                reproduce_argv.append("--dry-run")
-            return paper_reproduce_main(
-                reproduce_argv,
+
+                profile = resolve_experiment_profile(
+                    args.profile,
+                    invocation_provider=args.provider,
+                    invocation_model=args.model,
+                )
+                baseline = (
+                    None
+                    if args.baseline is None
+                    else load_run_manifest(args.baseline)
+                )
+                candidate = load_run_manifest(args.candidate)
+                report = compare_reproduction_runs(baseline, candidate, profile)
+                write_comparison_report(args.output, report)
+                stdout.write(f"Comparison report: {report.identity_sha256}\n")
+                stdout.write(
+                    "Acceptance: "
+                    + (
+                        "not-applicable\n"
+                        if report.accepted is None
+                        else ("pass\n" if report.accepted else "fail\n")
+                    )
+                )
+                return 0 if report.accepted is not False else 3
+            if args.paper_command == "reproduce":
+                from asterion.dci.experiment_profiles import (
+                    authorize_full_execution,
+                    experiment_profile_sha256,
+                    resolve_experiment_profile,
+                )
+                from asterion.dci.paper_benchmarks import (
+                    paper_benchmark_ids,
+                    resolve_paper_benchmark,
+                    resolve_paper_experiment_scope,
+                )
+
+                profile = resolve_experiment_profile(
+                    args.profile,
+                    invocation_provider=args.provider,
+                    invocation_model=args.model,
+                )
+                profile_sha256 = experiment_profile_sha256(
+                    args.profile,
+                    invocation_provider=args.provider,
+                    invocation_model=args.model,
+                )
+                if (
+                    not math.isfinite(args.estimated_budget_usd)
+                    or args.estimated_budget_usd < 0
+                ):
+                    raise ValueError("DCI full execution budget is invalid")
+                if args.authorize_full and (
+                    args.output_root.exists() or args.output_root.is_symlink()
+                ):
+                    raise ValueError("DCI full output root must be fresh")
+                selected_count = sum(
+                    resolve_paper_experiment_scope(scope_id).selection_count
+                    for scope_id in profile.scope_ids
+                )
+                judge_count = sum(
+                    resolve_paper_experiment_scope(scope_id).selection_count
+                    for scope_id in profile.scope_ids
+                    if resolve_paper_benchmark(
+                        resolve_paper_experiment_scope(scope_id).dataset_id
+                    ).mode == "qa"
+                )
+                stdout.write(f"Profile: {profile.profile_id}\n")
+                stdout.write(f"Profile SHA-256: {profile_sha256}\n")
+                stdout.write(f"Dataset inventory SHA-256: {profile.dataset_inventory_sha256}\n")
+                stdout.write(f"Experiment scopes SHA-256: {profile.experiment_scopes_sha256}\n")
+                stdout.write(f"Datasets: {len(paper_benchmark_ids())}\n")
+                stdout.write(f"Experiment scopes: {len(profile.scope_ids)}\n")
+                stdout.write(f"Selected queries: {selected_count}\n")
+                stdout.write(f"Maximum agent operations: {selected_count}\n")
+                stdout.write(f"Maximum Judge operations: {judge_count}\n")
+                stdout.write(f"Estimated budget USD: {args.estimated_budget_usd:g}\n")
+                stdout.write("Agent operations performed: 0\nJudge operations performed: 0\n")
+                stdout.write(
+                    "Full authorization requested: "
+                    + ("yes\n" if args.authorize_full else "no\n")
+                )
+                if args.dry_run:
+                    stdout.write("Full authorization issued: no\n")
+                    stdout.write("reproduction_authorized=no\n")
+                    stdout.write("operation_count=0\n")
+                    return 0
+                if not args.authorize_full:
+                    stdout.write("Full authorization issued: no\n")
+                    stdout.write("reproduction_authorized=no\n")
+                    stdout.write("operation_count=0\n")
+                    return 2
+                authorize_full_execution(
+                    args.profile,
+                    args.output_root,
+                    args.estimated_budget_usd,
+                    args.authorize_full,
+                    preflight_profile_sha256=profile_sha256,
+                    preflight_dataset_inventory_sha256=profile.dataset_inventory_sha256,
+                    preflight_experiment_scopes_sha256=profile.experiment_scopes_sha256,
+                    invocation_provider=args.provider,
+                    invocation_model=args.model,
+                    preflight_scope_ids=profile.scope_ids,
+                    preflight_selected_ids_sha256=profile.selected_ids_sha256,
+                )
+                stdout.write("Full authorization issued: yes\n")
+                stdout.write("Execution delegated: no\n")
+                stdout.write("reproduction_authorized=yes\n")
+                stdout.write("operation_count=0\n")
+                return 0
+            verify_argv = []
+            if args.provider_backed:
+                verify_argv.append("--provider-backed")
+            if args.env_file is not None:
+                verify_argv.extend(("--env-file", str(args.env_file)))
+            if args.output_root is not None:
+                verify_argv.extend(("--output-root", str(args.output_root)))
+            root = Path.cwd().resolve() if repo_root is None else Path(repo_root).resolve()
+            return paper_benchmark_acceptance_main(
+                verify_argv,
                 stdout=stdout,
                 stderr=stderr,
             )
@@ -899,6 +995,7 @@ _BATCH_PROFILE_FIELDS = frozenset(
         "node_max_old_space_size_mb",
     }
 )
+_BATCH_PROFILE_REQUIRED_FIELDS = _BATCH_PROFILE_FIELDS - {"provider", "model"}
 _BATCH_PROFILE_PATH_FIELDS = frozenset({"dataset", "output_root", "corpus"})
 
 
@@ -918,7 +1015,10 @@ def _load_batch_profiles() -> dict[str, dict[str, object]]:
     for name, value in document["profiles"].items():
         if not isinstance(name, str) or not name or not isinstance(value, dict):
             raise ValueError("batch profile resource is invalid")
-        if set(value) != _BATCH_PROFILE_FIELDS:
+        fields = set(value)
+        if not _BATCH_PROFILE_REQUIRED_FIELDS.issubset(
+            fields
+        ) or not fields.issubset(_BATCH_PROFILE_FIELDS):
             raise ValueError("batch profile resource is invalid")
         for field in _BATCH_PROFILE_PATH_FIELDS:
             path_value = value.get(field)
@@ -929,9 +1029,13 @@ def _load_batch_profiles() -> dict[str, dict[str, object]]:
                 raise ValueError("batch profile resource is invalid")
         if value.get("mode") not in {"qa", "ir"}:
             raise ValueError("batch profile resource is invalid")
-        for field in ("provider", "model", "tools"):
-            if not isinstance(value.get(field), str) or not value[field]:
+        for field in ("provider", "model"):
+            if field in value and (
+                not isinstance(value[field], str) or not value[field]
+            ):
                 raise ValueError("batch profile resource is invalid")
+        if not isinstance(value.get("tools"), str) or not value["tools"]:
+            raise ValueError("batch profile resource is invalid")
         for field in (
             "max_turns",
             "max_concurrency",
@@ -1030,6 +1134,7 @@ def _judge_config(args: argparse.Namespace) -> JudgeConfig:
 
 def _runtime_options(args: argparse.Namespace) -> DciRuntimeOptions:
     values = {
+        "runtime": args.runtime,
         "provider": args.provider,
         "model": args.model,
         "tools": args.tools,

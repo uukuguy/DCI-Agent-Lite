@@ -300,18 +300,24 @@ profile、mode、limit、tools、context 或 resolution override 都会在读取
 都在不修改 Climb 状态的情况下失败。GPT-4.1 是论文实验 provenance；只有 AF-340
 声称论文分数可比时才要求该实验配置。完整数据集和论文分数复现仍属于 AF-340。
 
-完整实现的模型外验收包括 533/533 个细粒度 selector、6/6 个额外 batch 语义和 12/12 个原始/Asterion launcher 对。迁移期间还运行过一条有界 Pi+Judge batch 及精确 reuse 证明；AF-320 的三操作 terminal evidence 只有在上述 verifier 成功且 binder 重哈希后才可标记为 bounded provider verified。
+完整实现的模型外验收包括 538/538 个细粒度 selector、6/6 个额外 batch 语义和 12/12 个原始/Asterion launcher 对。迁移期间还运行过一条有界 Pi+Judge batch 及精确 reuse 证明；AF-320 的三操作 terminal evidence 只有在上述 verifier 成功且 binder 重哈希后才可标记为 bounded provider verified。
 
-但 AF-290 没有重新运行完整 benchmark 数据集，也没有重新复现 62.9% 或 README 中其他历史分数。这些分数属于原始 DCI 的历史实验结果，当前状态为 **Not rerun**，不能由 533 个模型外 selector 推导出来。
+但 AF-290 没有重新运行完整 benchmark 数据集，也没有重新复现 62.9% 或 README 中其他历史分数。这些分数属于原始 DCI 的历史实验结果，当前状态为 **Not rerun**，不能由 538 个模型外 selector 推导出来。
 
 ## 数据集、Profile 与 Launcher
 
 Bundled profile 定义在 `asterion/dci/resources/batch-profiles.json`：
 
-其中绑定 AF-320 `paper-full` inventory 的 12 个 profile 目前只用于配置、清单和
-模型外验证，执行会在读取数据或启动 provider 前失败关闭。`bcplus.level3` 与
-`qa.bamboogle` 是未绑定的既有迁移 profile；后者明确只是 sample-50，不能代表
-论文的 Bamboogle full-125 scope。
+绑定 AF-320 `paper-full` inventory 的 profile，其未修改命令仍会在读取数据或
+启动 provider 前失败关闭，并且只能由 AF-340 的显式 full authorization 执行。
+AF-340 另行开放精确整数 `--limit 1` 的有界 successor gate：系统先验证未截断
+数据与 profile 绑定的完整 paper scope 完全一致，再只执行一行；配置证据固定记录
+versioned `paper-bounded` execution class、`limit-1`、`full_dataset: false` 和
+`comparable: false`。授权完整运行记录独立的 `paper-full-authorized` class；其他
+运行显式记录 `non-paper`，因此删除或跨 class 改写 selection 不能形成有效证据。
+省略 limit、使用布尔值或使用大于 1 的 limit 都不能进入该 gate。
+`qa.bamboogle` 仍是未绑定的 sample-50 迁移 profile，不能代表论文的 Bamboogle
+full-125 scope。
 
 | Profile | 模式 | 数据/语料 |
 |---|---|---|
@@ -330,22 +336,167 @@ Bundled profile 定义在 `asterion/dci/resources/batch-profiles.json`：
 | `beir.arguana` | IR | BEIR ArguAna |
 | `beir.scifact` | IR | BEIR SciFact |
 
-12 个 Asterion launcher：
+11 个主要 launcher 是一一对应的独立产品入口；`run_L3.sh` 保留为兼容 helper，
+不计入这 11 对：
 
-```text
-scripts/bcplus_eval/run_L3.sh
-scripts/bcplus_eval/run_bcplus_eval_openai.sh
-scripts/bright/run_bio.sh
-scripts/bright/run_earth_science.sh
-scripts/bright/run_economics.sh
-scripts/bright/run_robotics.sh
-scripts/qa/run_2wikimultihopqa_dev_sample50.sh
-scripts/qa/run_bamboogle_test_sample50.sh
-scripts/qa/run_hotpotqa_dev_sample50.sh
-scripts/qa/run_musique_dev_sample50.sh
-scripts/qa/run_nq_test_sample50.sh
-scripts/qa/run_triviaqa_test_sample50.sh
+| 实验 | 原始 DCI | Asterion DCI |
+|---|---|---|
+| BrowseComp-Plus | `scripts/bcplus_eval/run_bcplus_eval_openai.sh` | `asterion/scripts/bcplus_eval/run_bcplus_eval_openai.sh` |
+| 2WikiMultiHopQA | `scripts/qa/run_2wikimultihopqa_dev_sample50.sh` | `asterion/scripts/qa/run_2wikimultihopqa_dev_sample50.sh` |
+| Bamboogle | `scripts/qa/run_bamboogle_test_sample50.sh` | `asterion/scripts/qa/run_bamboogle_test_sample50.sh` |
+| HotpotQA | `scripts/qa/run_hotpotqa_dev_sample50.sh` | `asterion/scripts/qa/run_hotpotqa_dev_sample50.sh` |
+| MuSiQue | `scripts/qa/run_musique_dev_sample50.sh` | `asterion/scripts/qa/run_musique_dev_sample50.sh` |
+| Natural Questions | `scripts/qa/run_nq_test_sample50.sh` | `asterion/scripts/qa/run_nq_test_sample50.sh` |
+| TriviaQA | `scripts/qa/run_triviaqa_test_sample50.sh` | `asterion/scripts/qa/run_triviaqa_test_sample50.sh` |
+| BRIGHT Biology | `scripts/bright/run_bio.sh` | `asterion/scripts/bright/run_bio.sh` |
+| BRIGHT Earth Science | `scripts/bright/run_earth_science.sh` | `asterion/scripts/bright/run_earth_science.sh` |
+| BRIGHT Economics | `scripts/bright/run_economics.sh` | `asterion/scripts/bright/run_economics.sh` |
+| BRIGHT Robotics | `scripts/bright/run_robotics.sh` | `asterion/scripts/bright/run_robotics.sh` |
+
+所有 22 个主要 wrapper 都把参数原样透传一次，由 Python 配置层非覆盖地读取
+仓库 `.env`；wrapper 不 `source` `.env`，也不写死 provider/model。对应的 11 个
+主要 Asterion batch profile 同样不携带 provider/model，因此不会把 profile 值提升为
+invocation override；显式 CLI、已导出环境、`.env` 和 runtime default 的层次保持不变。
+代表性有界命令：
+
+```bash
+bash scripts/bcplus_eval/run_bcplus_eval_openai.sh level3 high --limit 1
+bash scripts/qa/run_hotpotqa_dev_sample50.sh --limit 1
+bash scripts/bright/run_bio.sh --limit 1
+bash asterion/scripts/bcplus_eval/run_bcplus_eval_openai.sh level3 high --limit 1
+bash asterion/scripts/qa/run_hotpotqa_dev_sample50.sh --limit 1
+bash asterion/scripts/bright/run_bio.sh --limit 1
 ```
+
+不带 `--limit` 的 source/Asterion 命令会在构造 provider 之前 fail closed；
+launcher invocation 不等于 full execution authorization，`--limit 1` 也不能被称为
+完整结果。完整执行只能由 Task 8 的显式 verifier 授权：`uv run python
+tools/verify_af340_reproduction.py full ... --authorize-full`。
+
+### AF-340 reproduction coordinator
+
+Run the complete provider-free matrix first:
+
+```bash
+uv run python tools/verify_af340_reproduction.py local
+```
+
+Each bounded command requires the repository environment file, a fresh output
+root, and the resource tree used by the README examples. `--resource-root`
+defaults to the code checkout, but worktree runs should set it explicitly to the
+main/shared checkout; the environment-file parent is not guessed. Code executes
+from the current checkout, while Quick Start and launcher sample inputs come
+from the resource root. Pi checks the exact 11 launcher dataset/corpus pairs;
+the Claude variants require only the wiki corpus. The retained plan and report
+bind the exact selected-resource content manifest. Run the variants separately:
+
+```bash
+DCI_RESOURCE_ROOT=/absolute/path/to/main/DCI-Agent-Lite
+uv run python tools/verify_af340_reproduction.py bounded --variant pi \
+  --env-file .env --resource-root "$DCI_RESOURCE_ROOT" \
+  --output-root outputs/verification/af340-bounded-pi
+uv run python tools/verify_af340_reproduction.py bounded --variant claude-subscription \
+  --env-file .env --resource-root "$DCI_RESOURCE_ROOT" \
+  --output-root outputs/verification/af340-bounded-claude-subscription
+uv run python tools/verify_af340_reproduction.py bounded --variant claude-minimax \
+  --provider minimax --model MiniMax-M3 --env-file .env \
+  --resource-root "$DCI_RESOURCE_ROOT" \
+  --output-root outputs/verification/af340-bounded-claude-minimax
+```
+
+Inspect the three retained 0600 reports without contacting a provider; the
+inspection passes only when original Pi, Asterion Pi, Claude subscription, and
+Claude MiniMax form the exact four-dimensional evidence set. Inspection
+rebuilds the exact selected dataset/corpus content manifest from the external
+resource root, so coordinated report-hash rewrites and same-path input mutation
+cannot satisfy the gate:
+
+```bash
+uv run python tools/verify_af340_reproduction.py inspect \
+  --resource-root "$DCI_RESOURCE_ROOT" \
+  --report outputs/verification/af340-bounded-pi/af340-bounded-report.json \
+  --report outputs/verification/af340-bounded-claude-subscription/af340-bounded-report.json \
+  --report outputs/verification/af340-bounded-claude-minimax/af340-bounded-report.json
+```
+
+The AF-340 H004 train/evaluation hooks require
+`AF340_RESOURCE_ROOT="$DCI_RESOURCE_ROOT"` alongside the three retained-report
+variables and forward that external anchor to `inspect`.
+
+Print the immutable profile digest, selected-query counts, operation maxima, and
+budget before requesting authority:
+
+```bash
+uv run python tools/verify_af340_reproduction.py full --profile current-default/pi \
+  --output-root outputs/verification/af340-full-pi \
+  --estimated-budget-usd 0 --dry-run
+```
+
+Actual full execution is a separate cost boundary and is never inferred from
+`.env`, cache state, local checks, or bounded evidence. After reviewing the dry
+plan and explicitly authorizing its named profile and budget, use:
+
+```bash
+uv run python tools/verify_af340_reproduction.py full --profile current-default/pi \
+  --output-root outputs/verification/af340-full-pi \
+  --estimated-budget-usd 0 --authorize-full
+```
+
+The coordinator writes one strict Task 7 manifest in each product/scope private
+root and immediately performs the matched Pi or target-only Claude comparison.
+Body-free comparison reports are retained under the full root's `comparisons/`
+directory; no separate manual comparison command is required. Inspection
+rehashes native bounded evidence and requires consumed Task 6 receipts plus
+exact product/scope Task 7 manifest identities; report JSON alone cannot close
+the gate.
+
+Validate that the retained full report was explicitly authorized, covered every
+profile scope, matched the exact operation maxima, and contains no rejected
+comparison:
+
+```bash
+uv run python tools/verify_af340_reproduction.py inspect-full \
+  --report outputs/verification/af340-full-pi/af340-full-report.json
+```
+
+H005 不能由单个 full report 关闭。它同时要求 accepted Pi full report、accepted
+`paper-reference/claude-code` numeric-target report，以及在 clean repository 上生成的
+terminal-gate report：
+
+```bash
+uv run python tools/verify_af340_reproduction.py terminal \
+  --output-root outputs/verification/af340-terminal
+uv run python tools/verify_af340_reproduction.py inspect-closure \
+  --pi-report outputs/verification/af340-full-pi/af340-full-report.json \
+  --claude-report outputs/verification/af340-full-claude-paper/af340-full-report.json \
+  --terminal-report outputs/verification/af340-terminal/af340-terminal-report.json
+```
+
+paper Claude 比较绑定 exact versioned target row/digest，并保留 candidate-only query
+sample，以 one-sample 95% bootstrap 计算区间，不制造 original-product pair。数值 target
+只适用于 13 个 paper main-result scope；analysis、appendix、context-ablation 三个 scope
+明确为 not applicable。H005 还会从六个 QA 与六个 IR dataset report 重算 paper macro
+row；任一 scope 或 aggregate 拒绝都不能关闭 H005。terminal report 同时绑定完整当前
+Git status，之后新增 tracked 或 untracked drift 都会使其失效。
+
+To re-run one retained comparison explicitly, use the Task 7 ready command:
+
+```bash
+uv run --project asterion asterion-dci paper compare \
+  --baseline path/to/original/af340-run-manifest.json \
+  --candidate path/to/asterion/af340-run-manifest.json \
+  --profile current-default/pi \
+  --output path/to/private-comparison.json
+```
+
+Operator credentials live only in `.env` or exported environment variables;
+full authorization is always an explicit CLI action. Reports contain hashes,
+counts, safe identities, and status classes—not credentials, prompts, answers,
+private paths, or child process bodies.
+
+
+兼容 helper 是 `scripts/bcplus_eval/run_L3.sh` 与
+`asterion/scripts/bcplus_eval/run_L3.sh`。
 
 AF-320 另提供两个 paper-inventory launcher；它们没有原始/Asterion
 一对一迁移计数声明。它们对应 `paper-full` scope，在 AF-320 会于 provider
@@ -431,7 +582,7 @@ uv run python tools/verify_af340_reproduction.py local \
 |---|---|---:|---|---|
 | 环境准备 | `make asterion-verify-preflight` | 0 | `.env`、Pi、Node、corpus、Judge | **Verified** |
 | 两个基础案例 | `make asterion-verify-basic` | 3 个调度操作 | 两个各 6 轮的 Pi 案例和一个 Judge | **Verified** |
-| 完整模型外产品面 | `make asterion-verify-acceptance` | 0 | 8/8、533/533、12/12、6/6、7/7、wheel/application | **Verified** |
+| 完整模型外产品面 | `make asterion-verify-acceptance` | 0 | 8/8、538/538、12/12、6/6、7/7、wheel/application | **Verified** |
 | 综合有界验证 | `make asterion-verify-complete` | 3 个调度操作 | preflight → basic → acceptance；不跑完整数据集 | **Verified** |
 | Pi runtime `level0`–`level4` | `--runtime-context-level` | 模型外或有界 | 同一 extension/profile identity 与 body-free counters | **Implemented / Model-free verified** |
 | 全量 benchmark 与历史分数 | 操作者显式 launcher | 很高 | 没有在迁移关闭或 AF-290 中重跑 | **Not rerun** |

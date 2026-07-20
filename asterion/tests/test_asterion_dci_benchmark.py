@@ -49,6 +49,25 @@ def _recorded_run(_paths: object, request: object, **kwargs: object) -> DciRunRe
 
 
 class AsterionDciBenchmarkTests(unittest.TestCase):
+    def test_persisted_batch_judge_identity_is_prompt_and_request_shape_bound(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            request = _request(root)
+            with patch("asterion.dci.run.PiRpcClient", _FixtureClient), patch(
+                "asterion.dci.evaluation.judge_answer_sync",
+                return_value=_verdict(request.judge_config),
+            ):
+                run_benchmark(request, paths=resolve_dci_paths(root))
+
+            config = json.loads((request.output_root / "config.json").read_text())
+
+        self.assertRegex(
+            config["judge"]["request_shape_sha256"], r"^[0-9a-f]{64}$"
+        )
+        self.assertRegex(
+            config["judge"]["prompt_contract_sha256"], r"^[0-9a-f]{64}$"
+        )
+
     def test_limit_slices_sorted_rows_and_rejects_zero(self) -> None:
         """Compatibility evidence name retained for the closed AF-220 climb case."""
 

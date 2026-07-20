@@ -161,6 +161,71 @@ run_dci_context_dimension() {
     fi
 }
 
+run_af340_evidence_dimension() {
+    name="$1"
+    dimension="$2"
+    : "${AF340_RESOURCE_ROOT:?set AF340_RESOURCE_ROOT to the exact bounded resource tree}"
+    : "${AF340_PI_REPORT:?set AF340_PI_REPORT to the retained Pi bounded report}"
+    : "${AF340_CLAUDE_SUBSCRIPTION_REPORT:?set AF340_CLAUDE_SUBSCRIPTION_REPORT to the retained Claude subscription report}"
+    : "${AF340_CLAUDE_MINIMAX_REPORT:?set AF340_CLAUDE_MINIMAX_REPORT to the retained Claude MiniMax report}"
+    if run_python tools/verify_af340_reproduction.py inspect \
+        --resource-root "$AF340_RESOURCE_ROOT" \
+        --report "$AF340_PI_REPORT" \
+        --report "$AF340_CLAUDE_SUBSCRIPTION_REPORT" \
+        --report "$AF340_CLAUDE_MINIMAX_REPORT" \
+        >"$RUN_DIR/$name.log" 2>&1; then
+        dimension_ok=false
+        case "$dimension" in
+            bounded_original_pi)
+                if grep -Fqx "Retained dimension: original-pi" "$RUN_DIR/$name.log"; then dimension_ok=true; fi
+                ;;
+            bounded_asterion_pi)
+                if grep -Fqx "Retained dimension: asterion-pi" "$RUN_DIR/$name.log"; then dimension_ok=true; fi
+                ;;
+            bounded_claude_modes)
+                if grep -Fqx "Retained dimension: asterion-claude-subscription" "$RUN_DIR/$name.log" \
+                    && grep -Fqx "Retained dimension: asterion-claude-minimax" "$RUN_DIR/$name.log"; then dimension_ok=true; fi
+                ;;
+            retained_body_free_evidence)
+                if grep -Fqx "PASS" "$RUN_DIR/$name.log"; then dimension_ok=true; fi
+                ;;
+        esac
+        if [ "$dimension_ok" = true ]; then
+            printf '1'
+        else
+            printf '0'
+        fi
+    else
+        printf '0'
+    fi
+}
+
+run_af340_full_dimension() {
+    name="$1"
+    dimension="$2"
+    : "${AF340_PI_FULL_REPORT:?set AF340_PI_FULL_REPORT to the authorized Pi full report}"
+    : "${AF340_CLAUDE_FULL_REPORT:?set AF340_CLAUDE_FULL_REPORT to the authorized Claude full report}"
+    : "${AF340_TERMINAL_REPORT:?set AF340_TERMINAL_REPORT to the terminal gate report}"
+    marker=""
+    case "$dimension" in
+        explicit_authorization) marker="Explicit authorization evidence: yes" ;;
+        matched_pi_noninferiority) marker="Matched Pi noninferiority evidence: yes" ;;
+        claude_target_comparison) marker="Claude numeric target evidence: yes" ;;
+        terminal_repository_gates) marker="Terminal repository gates: yes" ;;
+        *) printf '0'; return ;;
+    esac
+    if run_python tools/verify_af340_reproduction.py inspect-closure \
+        --pi-report "$AF340_PI_FULL_REPORT" \
+        --claude-report "$AF340_CLAUDE_FULL_REPORT" \
+        --terminal-report "$AF340_TERMINAL_REPORT" \
+        >"$RUN_DIR/$name.log" 2>&1 \
+        && grep -Fqx "$marker" "$RUN_DIR/$name.log"; then
+        printf '1'
+    else
+        printf '0'
+    fi
+}
+
 dimension_runner="run_dimension"
 rust_suite="authorization"
 case "$HYPOTHESIS_ID" in
@@ -1124,50 +1189,52 @@ case "$HYPOTHESIS_ID" in
         second_dimension="strict_manifest"
         third_dimension="status_preservation"
         fourth_dimension="body_free_schema"
-        immutable_test="tests.test_asterion_dci_reproduction.ReproductionManifestValidationTests.test_rejects_duplicate_and_missing_query_ids"
-        repeat_test="tests.test_asterion_dci_reproduction.ReproductionManifestValidationTests.test_rejects_profile_effective_config_and_aggregate_drift"
-        dirty_test="tests.test_asterion_dci_reproduction.ReproductionManifestValidationTests.test_preserves_noncompleted_rows_and_versioned_exclusions"
-        override_test="tests.test_asterion_dci_reproduction.ReproductionManifestValidationTests.test_rejects_bodies_credentials_and_private_paths"
+        immutable_test="tests.test_asterion_dci_reproduction.ReproductionManifestTests.test_manifest_is_frozen_stably_ordered_and_body_free"
+        repeat_test="tests.test_asterion_dci_reproduction.ReproductionManifestTests.test_manifest_rejects_duplicate_or_missing_query_ids"
+        dirty_test="tests.test_asterion_dci_reproduction.ReproductionManifestTests.test_manifest_rejects_exclusion_without_versioned_reason"
+        override_test="tests.test_asterion_dci_reproduction.ReproductionManifestTests.test_manifest_rejects_unknown_body_or_credential_fields_at_any_depth"
         ;;
     AF-340-H-002)
         first_dimension="paired_accuracy"
         second_dimension="paired_ndcg"
         third_dimension="deterministic_estimator"
         fourth_dimension="target_comparison_cli"
-        immutable_test="tests.test_asterion_dci_reproduction.ReproductionComparisonTests.test_accuracy_margin_uses_deterministic_paired_bootstrap"
-        repeat_test="tests.test_asterion_dci_reproduction.ReproductionComparisonTests.test_ndcg_margin_uses_deterministic_paired_bootstrap"
-        dirty_test="tests.test_asterion_dci_reproduction.ReproductionComparisonTests.test_report_binds_estimator_seed_pairs_exclusions_and_costs"
-        override_test="tests.test_asterion_dci_reproduction.ReproductionComparisonTests.test_claude_uses_target_comparison_without_manufactured_pairs"
+        immutable_test="tests.test_asterion_dci_reproduction.ReproductionStatisticsTests.test_accuracy_minus_point_zero_four_passes_and_is_deterministic"
+        repeat_test="tests.test_asterion_dci_reproduction.ReproductionStatisticsTests.test_ndcg_threshold_fixtures_use_lower_confidence_bound"
+        dirty_test="tests.test_asterion_dci_reproduction.ReproductionStatisticsTests.test_estimator_sample_digest_binds_values_status_and_evidence"
+        override_test="tests.test_asterion_dci_reproduction.ReproductionStatisticsTests.test_target_report_binds_exact_profile_target_and_runtime"
         ;;
     AF-340-H-003)
         first_dimension="literal_local_matrix"
         second_dimension="zero_operations"
         third_dimension="private_output_boundary"
         fourth_dimension="documented_commands"
-        immutable_test="tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_local_matrix_uses_literal_source_and_asterion_commands"
-        repeat_test="tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_local_mode_performs_zero_provider_operations"
-        dirty_test="tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_public_report_excludes_secrets_bodies_and_private_paths"
-        override_test="tests.test_asterion_documentation.AsterionDocumentationTests.test_af340_reproduction_commands_are_documented"
+        immutable_test="tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_local_exact_matrix_has_zero_provider_operations"
+        repeat_test="tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_local_exact_matrix_has_zero_provider_operations"
+        dirty_test="tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_failure_report_preserves_counts_without_command_or_output_bodies"
+        override_test="tests.test_asterion_documentation"
         ;;
     AF-340-H-004)
-        first_dimension="original_bounded_matrix"
-        second_dimension="asterion_pi_matrix"
-        third_dimension="claude_authentication_modes"
+        dimension_runner="run_af340_evidence_dimension"
+        first_dimension="bounded_original_pi"
+        second_dimension="bounded_asterion_pi"
+        third_dimension="bounded_claude_modes"
         fourth_dimension="retained_body_free_evidence"
-        immutable_test="tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_bounded_matrix_limits_every_launcher_to_one_query"
-        repeat_test="tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_bounded_matrix_covers_source_application_and_wheel_pi"
-        dirty_test="tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_bounded_matrix_keeps_claude_subscription_and_minimax_distinct"
-        override_test="tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_retained_bounded_evidence_is_body_free"
+        immutable_test="bounded_original_pi"
+        repeat_test="bounded_asterion_pi"
+        dirty_test="bounded_claude_modes"
+        override_test="retained_body_free_evidence"
         ;;
     AF-340-H-005)
+        dimension_runner="run_af340_full_dimension"
         first_dimension="explicit_authorization"
         second_dimension="matched_pi_noninferiority"
         third_dimension="claude_target_comparison"
         fourth_dimension="terminal_repository_gates"
-        immutable_test="tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_full_mode_requires_matching_explicit_authorization"
-        repeat_test="tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_full_report_binds_matched_pi_comparison"
-        dirty_test="tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_full_report_labels_claude_as_target_comparison"
-        override_test="tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_full_closure_requires_terminal_repository_gates"
+        immutable_test="explicit_authorization"
+        repeat_test="matched_pi_noninferiority"
+        dirty_test="claude_target_comparison"
+        override_test="terminal_repository_gates"
         ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2

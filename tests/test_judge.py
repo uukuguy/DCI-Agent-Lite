@@ -6,24 +6,49 @@ import os
 import tempfile
 import unittest
 import urllib.error
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
-import dci.benchmark.pi_rpc_runner as source_runner
 import dci.benchmark.judge as judge_module
-from dci.effective_config import ConfigLayers, resolve_original_runtime
 from dci.benchmark.judge import (
     JudgeConfig,
     build_judge_request,
     extract_responses_text,
     judge_answer_sync,
+    judge_public_identity,
 )
-from dci.benchmark.pi_rpc_runner import maybe_reuse_existing_eval, parse_args
-from dci.config import load_project_env
+from dci.benchmark.pi_rpc_runner import (
+    maybe_reuse_existing_eval,
+    parse_args,
+    resolve_runtime_args,
+)
+from dci.config import ConfigLayers, load_project_env
 
 
 class JudgeConfigTests(unittest.TestCase):
+    def test_zero_argument_defaults_use_independent_deepseek_judge(self) -> None:
+        with patch.dict(os.environ, {}, clear=True):
+            config = JudgeConfig.from_env()
+
+        self.assertEqual(
+            config.endpoint, "https://api.deepseek.com/v1/chat/completions"
+        )
+        self.assertEqual(config.api, "chat-completions")
+        self.assertEqual(config.model, "deepseek-v4-flash")
+        self.assertEqual(config.api_key_env, "DEEPSEEK_API_KEY")
+        self.assertEqual(config.effective_thinking, "disabled")
+        self.assertTrue(config.json_mode)
+        self.assertEqual(
+            (
+                config.input_price_per_1m,
+                config.cached_input_price_per_1m,
+                config.output_price_per_1m,
+            ),
+            (0.0, 0.0, 0.0),
+        )
+
     def test_base_url_rejects_embedded_credentials_or_query_data(self) -> None:
         for base_url in (
             "https://api-key@example.test/v1",
@@ -47,12 +72,16 @@ class JudgeConfigTests(unittest.TestCase):
                     JudgeConfig(base_url=base_url)
 
         self.assertEqual(
-            JudgeConfig(base_url="https://judge.example.test/v1").endpoint,
-            "https://judge.example.test/v1/chat/completions",
+            JudgeConfig(
+                base_url="https://judge.example.test/v1", api="responses"
+            ).endpoint,
+            "https://judge.example.test/v1/responses",
         )
         self.assertEqual(
-            JudgeConfig(base_url="http://127.0.0.1:8000/v1").endpoint,
-            "http://127.0.0.1:8000/v1/chat/completions",
+            JudgeConfig(
+                base_url="http://127.0.0.1:8000/v1", api="responses"
+            ).endpoint,
+            "http://127.0.0.1:8000/v1/responses",
         )
 
     def test_judge_config_has_deepseek_defaults_without_env(self) -> None:
@@ -153,19 +182,77 @@ class JudgeConfigTests(unittest.TestCase):
             patch("sys.argv", ["dci-agent-lite"]),
         ):
             args = parse_args()
-            effective_runtime = resolve_original_runtime(
-                vars(args), ConfigLayers.from_repo(source_runner.REPO_ROOT, os.environ)
+            resolved = resolve_runtime_args(
+                args,
+                ConfigLayers(dict(os.environ), {}),
             )
 
-        self.assertIsNone(args.provider)
-        self.assertIsNone(args.model)
-        self.assertEqual(effective_runtime.provider, "custom-provider")
-        self.assertEqual(effective_runtime.model, "custom-model")
+        self.assertEqual(resolved.provider, "custom-provider")
+        self.assertEqual(resolved.model, "custom-model")
 
 
 class JudgeTransportTests(unittest.TestCase):
+    def test_complete_request_shaping_changes_fingerprint_but_key_does_not(self) -> None:
+        config = JudgeConfig(
+            base_url="https://judge.example.test/v1",
+            api="responses",
+            model="fixture",
+            api_key="first-secret",
+        )
+        fields = {
+            "base_url": "https://other.example.test/v1",
+            "api": "chat-completions",
+            "model": "other-model",
+            "timeout_seconds": 9,
+            "max_output_tokens": 99,
+            "json_mode": False,
+            "strict_json_schema": True,
+            "responses_store": True,
+            "thinking": "enabled",
+            "input_price_per_1m": 9.0,
+            "cached_input_price_per_1m": 8.0,
+            "output_price_per_1m": 7.0,
+        }
+
+        def fingerprint(candidate: JudgeConfig) -> str:
+            return judge_module.judge_request_fingerprint(
+                config=candidate,
+                question="question",
+                gold_answer="gold",
+                predicted_answer="prediction",
+            )
+
+        baseline = fingerprint(config)
+        for field_name, value in fields.items():
+            with self.subTest(field_name=field_name):
+                self.assertNotEqual(
+                    baseline, fingerprint(replace(config, **{field_name: value}))
+                )
+        self.assertEqual(
+            baseline, fingerprint(replace(config, api_key="second-secret"))
+        )
+
+    def test_public_identity_contains_only_body_free_canonical_digests(self) -> None:
+        config = JudgeConfig(api_key="credential-canary")
+
+        identity = judge_public_identity(config)
+
+        self.assertRegex(str(identity["request_shape_sha256"]), r"^[0-9a-f]{64}$")
+        self.assertRegex(str(identity["prompt_contract_sha256"]), r"^[0-9a-f]{64}$")
+        self.assertNotIn("credential-canary", repr(identity))
+        changed = judge_public_identity(replace(config, max_output_tokens=2048))
+        self.assertNotEqual(
+            identity["request_shape_sha256"], changed["request_shape_sha256"]
+        )
+        self.assertNotEqual(
+            identity["prompt_contract_sha256"], changed["prompt_contract_sha256"]
+        )
+        self.assertEqual(
+            identity, judge_public_identity(replace(config, api_key="other-canary"))
+        )
+
     def test_official_responses_disable_server_storage_by_default(self) -> None:
-        config = JudgeConfig(api="responses")
+        config = JudgeConfig(base_url="https://api.openai.com/v1", api="responses")
 
         payload = build_judge_request(
             config,
@@ -177,7 +264,11 @@ class JudgeTransportTests(unittest.TestCase):
         self.assertIs(payload["store"], False)
         self.assertIs(config.public_dict()["judge_responses_store"], False)
 
-        opted_in = JudgeConfig(api="responses", responses_store=True)
+        opted_in = JudgeConfig(
+            base_url="https://api.openai.com/v1",
+            api="responses",
+            responses_store=True,
+        )
         opted_in_payload = build_judge_request(
             opted_in,
             question="Question",

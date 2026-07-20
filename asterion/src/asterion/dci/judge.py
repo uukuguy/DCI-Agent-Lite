@@ -20,12 +20,11 @@ from typing import Any
 
 
 DEFAULT_JUDGE_BASE_URL = "https://api.deepseek.com/v1"
-DEFAULT_JUDGE_MODEL = "deepseek-v4-flash"
 DEFAULT_JUDGE_API = "chat-completions"
+DEFAULT_JUDGE_MODEL = "deepseek-v4-flash"
 DEFAULT_JUDGE_API_KEY_ENV = "DEEPSEEK_API_KEY"
-DEFAULT_JUDGE_INPUT_PRICE_PER_1M = 0.0
-DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M = 0.0
-DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M = 0.0
+DEFAULT_JUDGE_THINKING = "disabled"
+OFFICIAL_OPENAI_BASE_URL = "https://api.openai.com/v1"
 JUDGE_VERDICT_SCHEMA: dict[str, object] = {
     "type": "object",
     "properties": {
@@ -54,10 +53,10 @@ class JudgeConfig:
     json_mode: bool = True
     strict_json_schema: bool = False
     responses_store: bool = False
-    thinking: str = "auto"
-    input_price_per_1m: float = DEFAULT_JUDGE_INPUT_PRICE_PER_1M
-    cached_input_price_per_1m: float = DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M
-    output_price_per_1m: float = DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M
+    thinking: str = DEFAULT_JUDGE_THINKING
+    input_price_per_1m: float = 0.0
+    cached_input_price_per_1m: float = 0.0
+    output_price_per_1m: float = 0.0
     api_key_env: str = DEFAULT_JUDGE_API_KEY_ENV
     api_key: str = field(default="", repr=False)
 
@@ -118,16 +117,12 @@ class JudgeConfig:
             json_mode=_judge_env_bool("JSON_MODE", True),
             strict_json_schema=_judge_env_bool("STRICT_JSON_SCHEMA", False),
             responses_store=_judge_env_bool("RESPONSES_STORE", False),
-            thinking=_judge_env("THINKING", "auto"),
-            input_price_per_1m=_judge_env_float(
-                "INPUT_PRICE_PER_1M", DEFAULT_JUDGE_INPUT_PRICE_PER_1M
-            ),
+            thinking=_judge_env("THINKING", DEFAULT_JUDGE_THINKING),
+            input_price_per_1m=_judge_env_float("INPUT_PRICE_PER_1M", 0.0),
             cached_input_price_per_1m=_judge_env_float(
-                "CACHED_INPUT_PRICE_PER_1M", DEFAULT_JUDGE_CACHED_INPUT_PRICE_PER_1M
+                "CACHED_INPUT_PRICE_PER_1M", 0.0
             ),
-            output_price_per_1m=_judge_env_float(
-                "OUTPUT_PRICE_PER_1M", DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M
-            ),
+            output_price_per_1m=_judge_env_float("OUTPUT_PRICE_PER_1M", 0.0),
             api_key_env=api_key_env,
             api_key=os.environ.get("DCI_EVAL_JUDGE_API_KEY", "").strip()
             or os.environ.get("ASTERION_DCI_JUDGE_API_KEY", "").strip()
@@ -172,29 +167,14 @@ def build_judge_request(
 ) -> dict[str, object]:
     """Build the complete request whose canonical form is the cache identity."""
 
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "Grade a question-answer benchmark. Return exactly one JSON object with "
-                "is_correct, normalized_prediction, and reason."
-            ),
-        },
-        {
-            "role": "user",
-            "content": (
-                f"Question:\n{question}\n\nGold answer:\n{gold_answer}\n\n"
-                f"Predicted answer:\n{predicted_answer or '[empty]'}"
-            ),
-        },
-    ]
+    messages = _judge_messages(question, gold_answer, predicted_answer)
     if config.api == "responses":
         payload: dict[str, object] = {
             "model": config.model,
             "max_output_tokens": config.max_output_tokens,
             "input": messages,
         }
-        if config.base_url == DEFAULT_JUDGE_BASE_URL or config.responses_store:
+        if config.base_url == OFFICIAL_OPENAI_BASE_URL or config.responses_store:
             payload["store"] = config.responses_store
         if config.strict_json_schema:
             payload["text"] = {
@@ -218,6 +198,33 @@ def build_judge_request(
     return payload
 
 
+def _judge_messages(
+    question: str, gold_answer: str, predicted_answer: str
+) -> list[dict[str, str]]:
+    return [
+        {
+            "role": "system",
+            "content": (
+                "You are grading a question-answer benchmark. "
+                "Mark the prediction correct only if it identifies the same final answer as the gold answer. "
+                "Ignore case, surrounding punctuation, whitespace, and extra explanation or supporting file paths. "
+                "Do not give partial credit. Return exactly one compact JSON object. "
+                'Example JSON: {"is_correct":true,"normalized_prediction":"example",'
+                '"reason":"same answer"}.'
+            ),
+        },
+        {
+            "role": "user",
+            "content": (
+                f"Question:\n{question}\n\n"
+                f"Gold answer:\n{gold_answer}\n\n"
+                f"Predicted answer:\n{predicted_answer or '[empty]'}\n\n"
+                'Return JSON with keys "is_correct" (boolean), "normalized_prediction" (string), and "reason" (string).'
+            ),
+        },
+    ]
+
+
 def judge_request_fingerprint(
     *, config: JudgeConfig, question: str, gold_answer: str, predicted_answer: str
 ) -> str:
@@ -230,6 +237,61 @@ def judge_request_fingerprint(
             predicted_answer=predicted_answer,
         ),
     )
+
+
+def judge_prompt_contract_sha256(config: JudgeConfig) -> str:
+    """Return the canonical digest of the body-free Judge prompt contract."""
+
+    return _canonical_json_sha256(
+        build_judge_request(
+            config,
+            question="[question]",
+            gold_answer="[gold-answer]",
+            predicted_answer="[predicted-answer]",
+        )
+    )
+
+
+def judge_request_shape_sha256(config: JudgeConfig) -> str:
+    """Return the canonical digest of one sentinel-shaped Judge request."""
+
+    request = build_judge_request(
+        config,
+        question="[question]",
+        gold_answer="[gold-answer]",
+        predicted_answer="[predicted-answer]",
+    )
+    messages_key = "input" if config.api == "responses" else "messages"
+    messages = request.get(messages_key)
+    if isinstance(messages, list):
+        request[messages_key] = [
+            {**message, "content": "[content]"}
+            if isinstance(message, dict) and "content" in message
+            else message
+            for message in messages
+        ]
+    return _canonical_json_sha256(request)
+
+
+def judge_public_identity(config: JudgeConfig) -> dict[str, object]:
+    """Return complete credential- and body-free Judge cache evidence."""
+
+    return {
+        **config.public_dict(),
+        "endpoint": config.endpoint,
+        "request_shape_sha256": judge_request_shape_sha256(config),
+        "prompt_contract_sha256": judge_prompt_contract_sha256(config),
+    }
+
+
+def _canonical_json_sha256(value: object) -> str:
+    canonical = json.dumps(
+        value,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def judge_answer_sync(
@@ -434,13 +496,12 @@ def _judge_env_bool(name: str, default: bool) -> bool:
 
 
 def _fingerprint(config: JudgeConfig, request_payload: dict[str, object]) -> str:
-    public_config = dict(config.public_dict())
-    public_config.pop("judge_api_key_env", None)
+    public_identity = judge_public_identity(config)
+    public_identity.pop("judge_api_key_env", None)
     canonical = json.dumps(
         {
-            "configuration": public_config,
-            "endpoint": config.endpoint,
-            "request": request_payload,
+            "configuration": public_identity,
+            "request_sha256": _canonical_json_sha256(request_payload),
         },
         ensure_ascii=False,
         separators=(",", ":"),

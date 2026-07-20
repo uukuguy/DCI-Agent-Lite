@@ -112,6 +112,7 @@ class AsterionDciContextExtensionTests(unittest.TestCase):
                     "from pathlib import Path",
                     "dotenv = types.ModuleType('dotenv')",
                     "dotenv.load_dotenv = lambda *args, **kwargs: False",
+                    "dotenv.dotenv_values = lambda *args, **kwargs: {}",
                     "sys.modules['dotenv'] = dotenv",
                     "from asterion.applications.dci_agent_lite.provider import create_provider",
                     "from asterion.dci.application_executor import EnvironmentDciRunExecutor",

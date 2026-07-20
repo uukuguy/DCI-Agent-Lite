@@ -54,9 +54,9 @@ from asterion.dci.context_profiles import context_profile_names
 from asterion.dci.experiment_profiles import (
     EXPERIMENT_AUTHORIZATION_SCHEMA,
     authorize_full_execution,
-    experiment_profile_ids,
     experiment_profile_schema_sha256,
     experiment_profiles_sha256,
+    experiment_profile_sha256,
     resolve_experiment_profile,
 )
 from asterion.dci.paper_benchmarks import (
@@ -285,7 +285,9 @@ DCI_PRODUCT_DESCRIPTION = CapabilityProductDescription(
 
 
 def paper_product_contract() -> dict[str, object]:
-    """Return the installed, body-free AF-320 product identity."""
+    """Return the installed, body-free paper and AF-340 profile identity."""
+
+    from asterion.dci.experiment_profiles import experiment_profile_ids
 
     dataset_ids = paper_benchmark_ids()
     scope_ids = paper_experiment_scope_ids()
@@ -344,6 +346,7 @@ def paper_product_contract() -> dict[str, object]:
             "reproduction-targets.json": reproduction_targets_sha256(),
         },
         "paper_full_executable": False,
+        "paper_full_requires_invocation_authorization": True,
         "paper_full_authorization": {
             "required": True,
             "schema": EXPERIMENT_AUTHORIZATION_SCHEMA,
@@ -421,6 +424,12 @@ def paper_benchmark_resource_digests() -> tuple[tuple[str, str], ...]:
     values: list[tuple[str, str]] = [
         ("ablation_matrix", paper_ablation_matrix_sha256()),
     ]
+    for identity, relative in (
+        ("experiment_profile_schema", "experiment-profile.schema.json"),
+        ("experiment_profiles", "experiment-profiles.json"),
+        ("reproduction_result_schema", "reproduction-result.schema.json"),
+    ):
+        values.append((identity, hashlib.sha256(root.joinpath(relative).read_bytes()).hexdigest()))
     for identity, relative in (
         ("qa_fixture", "paper-fixtures/qa.jsonl"),
         ("ir_fixture", "paper-fixtures/ir.jsonl"),
@@ -561,6 +570,11 @@ def paper_reproduce_main(
             output_root=args.output_root,
             estimated_budget_usd=args.estimated_budget_usd,
             invocation_authorized=True,
+            preflight_profile_sha256=experiment_profile_sha256(args.profile),
+            preflight_dataset_inventory_sha256=profile.dataset_inventory_sha256,
+            preflight_experiment_scopes_sha256=profile.experiment_scopes_sha256,
+            preflight_scope_ids=profile.scope_ids,
+            preflight_selected_ids_sha256=profile.selected_ids_sha256,
         )
     except (ValueError, OSError):
         stderr.write("DCI paper reproduction authorization failed\n")

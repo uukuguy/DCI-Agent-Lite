@@ -868,23 +868,28 @@ elif [ "$1" = "AF-340-H-003" ]; then
         exit 1
     fi
 elif [ "$1" = "AF-340-H-004" ]; then
-    if [ -z "${AF340_BOUNDED_REPORT:-}" ]; then
-        echo "ERROR: $1 requires a retained bounded AF-340 report." >&2
-        exit 2
-    fi
-    if ! uv run python -m unittest -v \
-        tests.test_af340_reproduction_verifier >"$run_dir/train.log" 2>&1; then
+    : "${AF340_RESOURCE_ROOT:?set AF340_RESOURCE_ROOT to the exact bounded resource tree}"
+    : "${AF340_PI_REPORT:?set AF340_PI_REPORT to the retained Pi bounded report}"
+    : "${AF340_CLAUDE_SUBSCRIPTION_REPORT:?set AF340_CLAUDE_SUBSCRIPTION_REPORT to the retained Claude subscription report}"
+    : "${AF340_CLAUDE_MINIMAX_REPORT:?set AF340_CLAUDE_MINIMAX_REPORT to the retained Claude MiniMax report}"
+    if ! uv run python tools/verify_af340_reproduction.py inspect \
+        --resource-root "$AF340_RESOURCE_ROOT" \
+        --report "$AF340_PI_REPORT" \
+        --report "$AF340_CLAUDE_SUBSCRIPTION_REPORT" \
+        --report "$AF340_CLAUDE_MINIMAX_REPORT" \
+        >"$run_dir/train.log" 2>&1; then
         echo "ERROR: $1 bounded reproduction evidence failed; see $run_dir/train.log" >&2
         exit 1
     fi
 elif [ "$1" = "AF-340-H-005" ]; then
-    if [ -z "${AF340_FULL_AUTHORIZATION_RECORD:-}" ] || [ -z "${AF340_FULL_REPORT:-}" ]; then
-        echo "ERROR: $1 requires retained explicit authorization and full reports." >&2
-        exit 2
-    fi
-    if ! uv run python -m unittest -v \
-        tests.test_af340_reproduction_verifier \
-        tests.test_asterion_dci_reproduction >"$run_dir/train.log" 2>&1; then
+    : "${AF340_PI_FULL_REPORT:?set AF340_PI_FULL_REPORT to the authorized Pi full report}"
+    : "${AF340_CLAUDE_FULL_REPORT:?set AF340_CLAUDE_FULL_REPORT to the authorized Claude full report}"
+    : "${AF340_TERMINAL_REPORT:?set AF340_TERMINAL_REPORT to the terminal gate report}"
+    if ! uv run python tools/verify_af340_reproduction.py inspect-closure \
+        --pi-report "$AF340_PI_FULL_REPORT" \
+        --claude-report "$AF340_CLAUDE_FULL_REPORT" \
+        --terminal-report "$AF340_TERMINAL_REPORT" \
+        >"$run_dir/train.log" 2>&1; then
         echo "ERROR: $1 authorized full reproduction closure failed; see $run_dir/train.log" >&2
         exit 1
     fi

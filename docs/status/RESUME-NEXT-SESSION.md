@@ -1,32 +1,61 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-20 13:57 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-20 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-340
 
+Package: README reproduction and runtime-result parity
+
+Currently running: no live provider or evaluator process. The interrupted implementation branch is being merged into `main`; focused and full local regressions pass. No full dataset is authorized.
+
 ## TL;DR
 
-- Task 7 is complete at `cc47393`; Climb H-001/H-002 are confirmed 4/4 and the next hypothesis is AF-340-H-003.
-- Strict body-free manifests now preserve completed/failed/cancelled/timed-out/missing rows and bind profile, effective configuration, selection, metric, operation, token, cost, and evidence identities.
-- Pi comparison uses deterministic 10,000-resample paired bootstrap with 5pp accuracy and 0.02 NDCG margins; Claude is separately labeled target-comparison against the versioned `arxiv:2605.05242v1` registry and never claims source parity.
-- Full execution remains fail-closed behind an invocation-only authorization, finite budget, fresh 0700 root, 0600 record, and matching profile/scope/batch identity. No provider operation or full dataset ran.
+- The user approved AF-340's complete design: one layered CLI/application → `.env`/environment → runtime/Judge-default configuration contract.
+- Pi defaults to `openai-codex`/`gpt-5.6-luna`; Claude Code defaults to local subscription login and supports explicit compatible MiniMax Coding Plan translation; Judge defaults independently to DeepSeek V4 Flash.
+- Original DCI README Quick Start, Context Management Strategies, and all eleven Benchmark DCI-Agent-Lite launchers are the baseline acceptance paths. Asterion must run the same Pi experiment contract and the paper Claude Code path through source, application, and installed-wheel surfaces.
+- The eight-task implementation is recovered from `codex/af-340-implementation` onto `main`; Task 8's three hardening rounds and subsequent bounded fixes are preserved.
+- AF-340-H-001 through H-003 are confirmed 4/4. H-004 requires exactly three retained bounded reports; one valid MiniMax report exists. H-005 is the separate full-result hypothesis and remains explicitly authorization/budget gated.
 
 ## Where things stand
 
-- Project route: managed; lifecycle: active; package: AF-340.
-- Task 7 verification: 25 reproduction/resolution/product tests pass; deterministic report bytes, Python compile, Ruff, scope, and diff gates pass.
-- Packaged product contract exposes the reproduction result schema plus target registry/schema identities; comparison reports require a 0700 parent and are created exclusively as 0600 files.
-- Climb cycle 105 confirmed H-002 and regenerated the research tree with H-003 next.
-- External `pi/` was not edited; no evaluator, provider verifier, or full execution is running.
+- Project route: managed.
+- Lifecycle: active.
+- Active package: AF-340.
+- Active Climb hypothesis: AF-340-H-004.
+- Preserved evidence worktree: `.worktrees/af-340-implementation` (do not remove until H-004 evidence is relocated or closed).
+- Dependencies: AF-330 completed.
+- Recovered verification: 127 AF-340 focused tests, 1443 root Python tests, 134 Asterion tests, and 153 Climb adapter tests pass; the provider-free local coordinator, scope preflight, Ruff, compile, shell, JSON, and diff gates pass. Final independent review reports 0 Critical and 0 Important findings.
+- Valid retained bounded evidence: `claude-minimax` r6, report file SHA-256 `792c8767c936935d9cf0aca5a50422ff195fecc33ed41c3d8c65b0451612b62c`, canonical report SHA-256 `efabac9ad548f1530de76017195c174ffdcf05d4a3841dc815a6ff92e15c9039`, 2 agent and 2 Judge operations, no full dataset.
+- External `pi/` remains untouched; `.env` values were loaded only for body-free credential-presence checks and were never printed.
 
 ## Next action
 
-1. Begin AF-340 Task 8 / H-003 with RED tests for the provider-free local coordinator and literal command matrix.
-2. Implement `tools/verify_af340_reproduction.py local`, preserving zero agent/Judge operations, private evidence, and body/path-free public output.
-3. Keep bounded-provider evidence distinct from local acceptance; do not execute full profiles without a fresh explicit invocation authorization and budget.
+1. Commit the fully verified recovered merge, then record its exact commit identity in this checkpoint.
+2. Recheck Pi saved-auth quota and Claude subscription login without making provider requests.
+3. When a blocked boundary is restored, run that bounded variant into a fresh private root; never reuse or stitch rejected diagnostic outputs.
+4. Inspect the MiniMax, Pi, and subscription reports together to close H-004.
+5. Do not start H-005 until a named profile, finite budget, and explicit invocation authorization are supplied.
+
+## Accepted boundaries
+
+- `.env` and CLI are complementary layers, not alternate modes.
+- `DCI_PROVIDER`/`DCI_MODEL` are common public fields interpreted by the selected runtime.
+- Original DCI supports Pi only; Asterion supports Pi and Claude Code.
+- Agent and Judge roles remain independently configured and credentialed.
+- Local, bounded, and full verification are distinct evidence classes.
+- Full comparison retains per-query evidence and versioned non-inferiority/confidence criteria.
+
+## Ruled-out paths
+
+- Do not create runtime-specific public provider variable families.
+- Do not apply Pi provider compatibility or defaults to Claude Code.
+- Do not substitute internal fixtures for the literal README user paths.
+- Do not claim full or comparable results from bounded `--limit 1` evidence.
+- Do not make Asterion import or launch original DCI to manufacture parity.
+- Do not let `.env`, generic verification, or cache presence authorize full-dataset cost.
 
 ## Ready command
 
 ```bash
-uv run python -m unittest -v tests.test_af340_reproduction_verifier tests.test_original_readme_acceptance tests.test_asterion_documentation
+uv run python tools/verify_af340_reproduction.py local
 ```

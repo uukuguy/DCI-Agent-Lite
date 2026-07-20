@@ -114,7 +114,7 @@ class AsterionDocumentationTests(unittest.TestCase):
             "External-limited",
             "Not rerun",
             "provider-backed operations",
-            "533/533",
+            "538/538",
             "12/12",
             "runtime_context_control",
         )
@@ -158,6 +158,49 @@ class AsterionDocumentationTests(unittest.TestCase):
         self.assertEqual(len(launchers), 12)
         for launcher in launchers:
             self.assertIn(launcher.relative_to(PROJECT).as_posix(), text)
+        self.assertIn("11 个主要 launcher", text)
+        self.assertIn("run_L3.sh", text)
+        self.assertIn("兼容 helper", text)
+
+        readme = read("README.md")
+        validation_guide = read(
+            "asterion/docs/verification/asterion-dci-validation-guide.md"
+        )
+        primary_relatives = (
+            "bcplus_eval/run_bcplus_eval_openai.sh",
+            "qa/run_2wikimultihopqa_dev_sample50.sh",
+            "qa/run_bamboogle_test_sample50.sh",
+            "qa/run_hotpotqa_dev_sample50.sh",
+            "qa/run_musique_dev_sample50.sh",
+            "qa/run_nq_test_sample50.sh",
+            "qa/run_triviaqa_test_sample50.sh",
+            "bright/run_bio.sh",
+            "bright/run_earth_science.sh",
+            "bright/run_economics.sh",
+            "bright/run_robotics.sh",
+        )
+        for relative in primary_relatives:
+            self.assertIn(f"scripts/{relative}", readme)
+            self.assertIn(f"asterion/scripts/{relative}", readme)
+            self.assertIn(f"scripts/{relative}", text)
+            self.assertIn(f"scripts/{relative}", validation_guide)
+            self.assertIn(f"asterion/scripts/{relative}", validation_guide)
+        for representative in (
+            "bash scripts/bcplus_eval/run_bcplus_eval_openai.sh level3 high --limit 1",
+            "bash scripts/qa/run_hotpotqa_dev_sample50.sh --limit 1",
+            "bash scripts/bright/run_bio.sh --limit 1",
+        ):
+            self.assertIn(representative, readme)
+        self.assertIn("tools/verify_af340_reproduction.py full", readme)
+        self.assertIn("is not full execution authorization", readme)
+        self.assertIn("primary Asterion batch profiles are runtime-neutral", readme)
+        self.assertIn("不携带 provider/model", text)
+        self.assertIn("tools/verify_af340_reproduction.py full", validation_guide)
+        self.assertIn("is not full execution authorization", validation_guide)
+        self.assertIn(
+            "primary Asterion batch profiles are runtime-neutral",
+            validation_guide,
+        )
 
         for source in (
             "../../src/asterion/dci/run.py",
@@ -176,6 +219,35 @@ class AsterionDocumentationTests(unittest.TestCase):
             text,
             re.compile(r"AF-290.{0,30}(?:已经|成功|完整)(?:重跑|复现).{0,30}62\.9%"),
         )
+
+    def test_af340_coordinator_ready_commands_and_authority_boundary(self) -> None:
+        documents = (
+            read("README.md"),
+            read("asterion/docs/guides/asterion-dci-complete-reference.md"),
+            read("asterion/docs/verification/asterion-dci-validation-guide.md"),
+        )
+        required = (
+            "tools/verify_af340_reproduction.py local",
+            "bounded --variant pi",
+            "bounded --variant claude-subscription",
+            "bounded --variant claude-minimax",
+            "full --profile current-default/pi",
+            "--dry-run",
+            "--authorize-full",
+            "asterion-dci paper compare",
+            "strict Task 7 manifest",
+            "`comparisons/`",
+            "tools/verify_af340_reproduction.py inspect",
+            "AF340_RESOURCE_ROOT",
+            "credentials live only in `.env` or exported environment variables",
+            "full authorization is always an explicit CLI action",
+        )
+        for document in documents:
+            for literal in required:
+                self.assertIn(literal, document)
+            self.assertGreaterEqual(
+                document.count('--resource-root "$DCI_RESOURCE_ROOT"'), 4
+            )
 
     def test_framework_guide_explains_layers_and_complete_integration(self) -> None:
         relative = "asterion/docs/architecture/asterion-framework-capability-integration.md"

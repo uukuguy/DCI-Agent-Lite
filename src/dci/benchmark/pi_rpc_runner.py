@@ -35,9 +35,17 @@ from dci.benchmark.judge import (
     DEFAULT_JUDGE_OUTPUT_PRICE_PER_1M,
     JudgeConfig,
     judge_answer_sync,
+    judge_public_identity,
     judge_request_fingerprint,
 )
-from dci.config import load_project_env, resolve_pi_paths
+from dci.config import (
+    ConfigLayers,
+    OriginalRuntimeConfig,
+    resolve_original_runtime,
+    resolve_pi_paths,
+)
+from dci.context_management import resolve_context_extension, resolve_context_profile
+from dci.effective_config import OriginalEffectiveConfig
 from dci.framework.adapters.pi import PiProtocolAdapter, map_pi_capabilities
 from dci.framework.protocol import (
     MAX_DEADLINE_MS,
@@ -45,9 +53,6 @@ from dci.framework.protocol import (
     validate_event_stream,
     validate_run_request,
 )
-from dci.effective_config import ConfigLayers, resolve_original_runtime
-
-
 SCRIPT_PATH = Path(__file__).resolve()
 REPO_ROOT = SCRIPT_PATH.parents[3]
 DEFAULT_RUNS_DIR = REPO_ROOT / "outputs" / "runs"
@@ -102,7 +107,21 @@ def utc_now() -> str:
 def write_json(path: Path, payload: Dict[str, Any]) -> None:
     tmp_path = path.with_suffix(path.suffix + ".tmp")
     tmp_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp_path.chmod(0o600)
     tmp_path.replace(path)
+
+
+def write_private_text(path: Path, text: str) -> None:
+    path.write_text(text, encoding="utf-8")
+    path.chmod(0o600)
+
+
+def append_private_text(path: Path, text: str) -> None:
+    if not path.exists():
+        write_private_text(path, "")
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(text)
+    path.chmod(0o600)
 
 
 def read_text_if_exists(path: Optional[Path]) -> Optional[str]:
@@ -488,6 +507,7 @@ class RunRecorder:
             revision_override=os.environ.get("DCI_PI_REVISION") or None,
         )
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.output_dir.chmod(0o700)
         self._pending_tool_call_starts: Dict[str, str] = {}
         self._completed_tool_call_timings: Dict[str, Dict[str, Any]] = {}
 
@@ -521,7 +541,7 @@ class RunRecorder:
                 conversation_features=conversation_features,
                 keep_session=keep_session,
             )
-            self.question_path.write_text(question + "\n", encoding="utf-8")
+            write_private_text(self.question_path, question + "\n")
             self.state["status"] = "running"
             self.state["finished_at"] = None
             self.state["error"] = None
@@ -550,7 +570,7 @@ class RunRecorder:
                     "Resume is reusing the artifact directory only; agent session continuity is not preserved without --keep-session."
                 )
         else:
-            self.question_path.write_text(question + "\n", encoding="utf-8")
+            write_private_text(self.question_path, question + "\n")
             self.state = {
                 "started_at": utc_now(),
                 "finished_at": None,
@@ -652,9 +672,10 @@ class RunRecorder:
         attempt_stem = f"attempt-{attempt:04d}"
         run_id = f"{sanitize_path_component(self.output_dir.name)}-{attempt_stem}"
         self.protocol_dir.mkdir(parents=True, exist_ok=True)
+        self.protocol_dir.chmod(0o700)
         self.protocol_request_path = self.protocol_dir / f"{attempt_stem}.request.json"
         self.protocol_events_path = self.protocol_dir / f"{attempt_stem}.events.jsonl"
-        self.protocol_events_path.write_text("", encoding="utf-8")
+        write_private_text(self.protocol_events_path, "")
         capabilities = map_pi_capabilities(tools)
         request: Dict[str, Any] = {
             "protocol": PROTOCOL_VERSION,
@@ -1050,12 +1071,12 @@ class RunRecorder:
     def append_stderr(self, text: str) -> None:
         if not text:
             return
-        with self.stderr_path.open("a", encoding="utf-8") as f:
-            f.write(text)
+        append_private_text(self.stderr_path, text)
 
     def record_event(self, event: Dict[str, Any]) -> None:
-        with self.events_path.open("a", encoding="utf-8") as f:
-            f.write(json.dumps(event, ensure_ascii=False) + "\n")
+        append_private_text(
+            self.events_path, json.dumps(event, ensure_ascii=False) + "\n"
+        )
 
         self._protocol_adapter.consume(event)
 
@@ -1161,14 +1182,14 @@ class RunRecorder:
             self.state["error"] = error
 
         if self.state["assistant_text"]:
-            self.final_path.write_text(self.state["assistant_text"] + ("\n" if not self.state["assistant_text"].endswith("\n") else ""), encoding="utf-8")
+            write_private_text(self.final_path, self.state["assistant_text"] + ("\n" if not self.state["assistant_text"].endswith("\n") else ""))
         if stderr_text:
             if self.resume and self.stderr_path.exists():
                 existing_stderr = self.stderr_path.read_text(encoding="utf-8")
                 combined = existing_stderr + ("\n" if existing_stderr and not existing_stderr.endswith("\n") else "") + stderr_text
-                self.stderr_path.write_text(combined, encoding="utf-8")
+                write_private_text(self.stderr_path, combined)
             else:
-                self.stderr_path.write_text(stderr_text, encoding="utf-8")
+                write_private_text(self.stderr_path, stderr_text)
 
         self.conversation_full["status"] = status
         self.conversation_full["finished_at"] = self.state["finished_at"]
@@ -1407,6 +1428,7 @@ class PiRpcClient:
         seen_turns = 0
         sent_turn_limit_abort = False
         agent_settled = False
+        terminal_assistant_error = False
         deadline = time.monotonic() + timeout_seconds if timeout_seconds is not None and timeout_seconds > 0 else None
 
         while True:
@@ -1437,6 +1459,7 @@ class PiRpcClient:
 
             if event_type == "agent_start":
                 text_parts = []
+                terminal_assistant_error = False
                 continue
 
             if event_type == "turn_start":
@@ -1460,6 +1483,16 @@ class PiRpcClient:
                     text_parts.append(delta)
                     sys.stdout.write(delta)
                     sys.stdout.flush()
+                continue
+
+            if event_type == "message_end":
+                message_value = event.get("message")
+                if (
+                    isinstance(message_value, dict)
+                    and message_value.get("role") == "assistant"
+                    and message_value.get("stopReason") == "error"
+                ):
+                    terminal_assistant_error = True
                 continue
 
             if event_type == "tool_execution_start" and self.show_tools:
@@ -1487,18 +1520,43 @@ class PiRpcClient:
                 agent_settled = True
                 break
 
+        if terminal_assistant_error:
+            raise RuntimeError("Pi provider returned an assistant error")
+
         if agent_settled:
-            probe_timeout_seconds = 10.0
-            if deadline is not None:
-                probe_timeout_seconds = deadline - time.monotonic()
-                if probe_timeout_seconds <= 0:
+            while True:
+                remaining = None if deadline is None else deadline - time.monotonic()
+                if remaining is not None and remaining <= 0:
+                    abort_id = self._next_id()
+                    try:
+                        self._send({"id": abort_id, "type": "abort"})
+                    except (BrokenPipeError, RuntimeError):
+                        pass
                     raise RuntimeError(
                         f"RPC prompt timed out after {timeout_seconds:g} seconds"
                     )
-            state = self.probe_protocol(timeout_seconds=probe_timeout_seconds)
+                try:
+                    state = self.probe_protocol(
+                        timeout_seconds=(
+                            10.0 if remaining is None else min(10.0, remaining)
+                        )
+                    )
+                except RuntimeError:
+                    if deadline is not None and time.monotonic() >= deadline:
+                        abort_id = self._next_id()
+                        try:
+                            self._send({"id": abort_id, "type": "abort"})
+                        except (BrokenPipeError, RuntimeError):
+                            pass
+                        raise RuntimeError(
+                            f"RPC prompt timed out after {timeout_seconds:g} seconds"
+                        ) from None
+                    raise
+                if not state["isCompacting"]:
+                    break
+                time.sleep(0.05)
             if (
                 state["isStreaming"]
-                or state["isCompacting"]
                 or state["pendingMessageCount"] != 0
             ):
                 raise RuntimeError(
@@ -1521,6 +1579,10 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("question", nargs="*", help="Question text. If omitted, reads from --question-file or stdin.")
     parser.add_argument(
+        "--runtime",
+        help="Agent runtime. Original DCI supports exactly 'pi'. Default: pi.",
+    )
+    parser.add_argument(
         "--terminal",
         action="store_true",
         help=(
@@ -1530,19 +1592,18 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--question-file", type=Path, help="Read the question from a UTF-8 text file.")
     parser.add_argument(
-        "--runtime",
-        default=None,
-        help="Runtime name. Defaults to DCI_RUNTIME / pi.",
+        "--prelude-question",
+        action="append",
+        default=[],
+        help=argparse.SUPPRESS,
     )
     parser.add_argument(
         "--provider",
-        default=None,
-        help="Provider passed to pi. Defaults to DCI_PROVIDER / runtime-default openai-codex.",
+        help="Provider passed to pi. Overrides DCI_PROVIDER and the Pi default.",
     )
     parser.add_argument(
         "--model",
-        default=None,
-        help="Model id or pattern passed to pi. Defaults to DCI_MODEL / runtime-default openai-codex model.",
+        help="Model id or pattern passed to pi. Overrides DCI_MODEL and the Pi default.",
     )
     parser.add_argument(
         "--package-dir",
@@ -1567,8 +1628,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--tools",
-        default="read,bash",
-        help="Comma-separated built-in tools to enable. Default: read,bash",
+        help="Comma-separated built-in tools. Overrides DCI_TOOLS and the Pi default.",
     )
     parser.add_argument(
         "--max-turns",
@@ -1576,10 +1636,21 @@ def parse_args() -> argparse.Namespace:
         help="Client-side cap on agent turns. The runner sends an RPC abort before turn N+1 starts.",
     )
     parser.add_argument(
+        "--pi-thinking-level",
+        choices=["", "off", "minimal", "low", "medium", "high", "xhigh"],
+        help="Pi thinking/reasoning level forwarded as --thinking <level>.",
+    )
+    parser.add_argument(
+        "--runtime-context-level",
+        help="Optional Pi context-management profile, such as level0 through level4.",
+    )
+    parser.add_argument(
         "--rpc-timeout-seconds",
         type=non_negative_float,
-        default=None,
-        help="Wall-clock deadline for one RPC prompt. Defaults to DCI_RPC_TIMEOUT_SECONDS or runtime default.",
+        help=(
+            "Wall-clock deadline for one RPC prompt. Overrides DCI_RPC_TIMEOUT_SECONDS "
+            f"or {DEFAULT_RPC_TIMEOUT_SECONDS:g}; set to 0 to disable."
+        ),
     )
     parser.add_argument(
         "--system-prompt-file",
@@ -1751,6 +1822,90 @@ def load_judge_config_from_args(args: argparse.Namespace) -> JudgeConfig:
     )
 
 
+def resolve_runtime_args(
+    args: argparse.Namespace, layers: ConfigLayers
+) -> OriginalRuntimeConfig:
+    args.max_turns_explicit = args.max_turns is not None
+    resolved = resolve_original_runtime(
+        {
+            "runtime": args.runtime,
+            "provider": args.provider,
+            "model": args.model,
+            "tools": args.tools,
+            "max_turns": args.max_turns,
+            "timeout_seconds": args.rpc_timeout_seconds,
+            "thinking_level": args.pi_thinking_level,
+            "context_profile": args.runtime_context_level,
+        },
+        layers,
+    )
+    args.runtime = resolved.runtime
+    args.provider = resolved.provider
+    args.model = resolved.model
+    args.tools = resolved.tools
+    args.max_turns = resolved.max_turns
+    args.rpc_timeout_seconds = resolved.timeout_seconds
+    args.pi_thinking_level = resolved.thinking_level
+    args.runtime_context_level = resolved.context_profile
+    return resolved
+
+
+def effective_config_for_run(
+    *,
+    runtime: OriginalRuntimeConfig,
+    args: argparse.Namespace,
+    judge_config: Optional[JudgeConfig],
+) -> dict[str, object]:
+    judge: dict[str, object] = {}
+    if judge_config is not None:
+        judge = judge_public_identity(judge_config)
+    implementation_sha256: str | None = None
+    if runtime.context_profile is not None:
+        implementation_sha256 = resolve_context_extension().sha256
+    return OriginalEffectiveConfig(
+        runtime=runtime,
+        context={
+            "profile": runtime.context_profile,
+            "implementation_sha256": implementation_sha256,
+        },
+        judge=judge,
+        experiment={
+            "dataset": None,
+            "selection": "single-query",
+            "corpus": args.cwd.name,
+            "metric": "judge-correctness" if judge_config is not None else None,
+            "execution_class": "single",
+        },
+    ).to_public_dict()
+
+
+def write_effective_config(path: Path, payload: dict[str, object]) -> None:
+    write_json(path, payload)
+    path.chmod(0o600)
+
+
+def resolved_pi_extra_args(args: argparse.Namespace) -> List[str]:
+    extra_args = expand_extra_args(args.extra_arg)
+    if args.pi_thinking_level:
+        extra_args.extend(["--thinking", args.pi_thinking_level])
+    if args.runtime_context_level:
+        profile = resolve_context_profile(args.runtime_context_level)
+        extension = resolve_context_extension()
+        extra_args.extend(
+            [
+                "--extension",
+                str(extension.path),
+                "--dci-context-profile",
+                profile.name,
+                "--dci-context-contract",
+                profile.contract_version,
+                "--dci-context-extension-sha256",
+                extension.sha256,
+            ]
+        )
+    return extra_args
+
+
 def load_question(args: argparse.Namespace, *, resume_dir: Optional[Path]) -> str:
     if args.question_file:
         return args.question_file.read_text(encoding="utf-8").strip()
@@ -1818,7 +1973,7 @@ def validate_terminal_mode_args(args: argparse.Namespace) -> Optional[str]:
         incompatible.append("--output-dir")
     if args.resume is not None:
         incompatible.append("--resume")
-    if args.max_turns is not None:
+    if getattr(args, "max_turns_explicit", args.max_turns is not None):
         incompatible.append("--max-turns")
     if args.show_tools:
         incompatible.append("--show-tools")
@@ -1848,11 +2003,21 @@ def run_terminal_mode(args: argparse.Namespace) -> int:
         print(error, file=sys.stderr)
         return 2
 
-    system_prompt_file = resolve_repo_relative_path(args.system_prompt_file)
-    append_system_prompt_file = resolve_repo_relative_path(args.append_system_prompt_file)
     env = _node_env(os.environ.copy())
     env["PI_CODING_AGENT_DIR"] = str(args.agent_dir.resolve())
-    cmd = build_pi_command(
+    completed = subprocess.run(
+        build_terminal_mode_command(args),
+        cwd=str(args.cwd.resolve()),
+        env=env,
+        check=False,
+    )
+    return completed.returncode
+
+
+def build_terminal_mode_command(args: argparse.Namespace) -> List[str]:
+    system_prompt_file = resolve_repo_relative_path(args.system_prompt_file)
+    append_system_prompt_file = resolve_repo_relative_path(args.append_system_prompt_file)
+    return build_pi_command(
         package_dir=args.package_dir.resolve(),
         mode=None,
         provider=args.provider,
@@ -1861,28 +2026,20 @@ def run_terminal_mode(args: argparse.Namespace) -> int:
         no_session=False,
         system_prompt_file=system_prompt_file,
         append_system_prompt_file=append_system_prompt_file,
-        extra_args=expand_extra_args(args.extra_arg),
+        extra_args=resolved_pi_extra_args(args),
         messages=terminal_initial_messages(args),
     )
-    completed = subprocess.run(
-        cmd,
-        cwd=str(args.cwd.resolve()),
-        env=env,
-        check=False,
-    )
-    return completed.returncode
 
 
 def main() -> int:
-    load_project_env(REPO_ROOT)
+    layers = ConfigLayers.from_repo(REPO_ROOT)
+    layers.materialize(os.environ)
     args = parse_args()
-    effective_runtime = resolve_original_runtime(vars(args), ConfigLayers.from_repo(REPO_ROOT, os.environ))
-    args.runtime = effective_runtime.runtime
-    args.provider = effective_runtime.provider
-    args.model = effective_runtime.model
-    args.tools = effective_runtime.tools
-    args.max_turns = effective_runtime.max_turns
-    args.rpc_timeout_seconds = effective_runtime.timeout_seconds
+    try:
+        runtime_config = resolve_runtime_args(args, layers)
+    except ValueError as exc:
+        print(f"Invalid runtime configuration: {exc}", file=sys.stderr)
+        return 2
     if args.terminal:
         try:
             return run_terminal_mode(args)
@@ -1936,6 +2093,15 @@ def main() -> int:
             return 2
 
     existing_state = read_json_if_exists(output_dir / "state.json") if resume else None
+    output_dir.mkdir(parents=True, exist_ok=True)
+    write_effective_config(
+        output_dir / "effective-config.json",
+        effective_config_for_run(
+            runtime=runtime_config,
+            args=args,
+            judge_config=judge_config,
+        ),
+    )
     if resume and eval_answer is not None and existing_state and existing_state.get("status") == "completed":
         predicted_answer = (
             read_text_if_exists(output_dir / "final.txt")
@@ -2003,7 +2169,7 @@ def main() -> int:
         show_tools=args.show_tools,
         system_prompt_file=system_prompt_file,
         append_system_prompt_file=append_system_prompt_file,
-        extra_args=expand_extra_args(args.extra_arg),
+        extra_args=resolved_pi_extra_args(args),
     )
 
     try:
@@ -2012,6 +2178,14 @@ def main() -> int:
             recorder.set_command(client.command)
         sys.stderr.write(f"[runner] saving run artifacts under {output_dir}\n")
         sys.stderr.flush()
+
+        for prelude in args.prelude_question:
+            client.prompt_and_wait(
+                prelude,
+                recorder=recorder,
+                max_turns=args.max_turns,
+                timeout_seconds=args.rpc_timeout_seconds,
+            )
 
         final_text = client.prompt_and_wait(
             question,

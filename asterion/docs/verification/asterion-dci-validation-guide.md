@@ -189,7 +189,7 @@ uv run --project asterion python tools/verify_asterion_dci_product.py
 ```
 
 Pass: every command exits zero. The verifier reports 8/8 checked-in product
-rows, 533/533 delegated selectors, 12/12 launcher pairs, 6/6 batch extras, and
+rows, 538/538 delegated selectors, 12/12 launcher pairs, 6/6 batch extras, and
 bounded acceptance 7/7 while executing zero Pi or Judge requests.
 
 ## 4. Tier 2 — original DCI examples
@@ -303,7 +303,7 @@ uv run --project asterion asterion-dci terminal \
 Pass: Pi opens interactively and the command returns its exit status. Non-TTY
 use fails before Pi starts.
 
-## 8. Tier 3 — batch profiles, exports, and twelve launchers
+## 8. Tier 3 — batch profiles, exports, and eleven primary launcher pairs
 
 Command class: **provider-free**
 
@@ -313,32 +313,42 @@ uv run --project asterion asterion-dci export bright --help
 uv run --project asterion asterion-dci export bcplus-qa --help
 ```
 
-The twelve Pi-default Asterion launchers, paired one-to-one with the original
-launchers, are:
+The eleven primary launchers are paired one-to-one:
 
-- `asterion/scripts/bcplus_eval/run_L3.sh`
-- `asterion/scripts/bcplus_eval/run_bcplus_eval_openai.sh`
-- `asterion/scripts/bright/run_bio.sh`
-- `asterion/scripts/bright/run_earth_science.sh`
-- `asterion/scripts/bright/run_economics.sh`
-- `asterion/scripts/bright/run_robotics.sh`
-- `asterion/scripts/qa/run_2wikimultihopqa_dev_sample50.sh`
-- `asterion/scripts/qa/run_bamboogle_test_sample50.sh`
-- `asterion/scripts/qa/run_hotpotqa_dev_sample50.sh`
-- `asterion/scripts/qa/run_musique_dev_sample50.sh`
-- `asterion/scripts/qa/run_nq_test_sample50.sh`
-- `asterion/scripts/qa/run_triviaqa_test_sample50.sh`
+| Original DCI | Asterion DCI |
+|---|---|
+| `scripts/bcplus_eval/run_bcplus_eval_openai.sh` | `asterion/scripts/bcplus_eval/run_bcplus_eval_openai.sh` |
+| `scripts/qa/run_2wikimultihopqa_dev_sample50.sh` | `asterion/scripts/qa/run_2wikimultihopqa_dev_sample50.sh` |
+| `scripts/qa/run_bamboogle_test_sample50.sh` | `asterion/scripts/qa/run_bamboogle_test_sample50.sh` |
+| `scripts/qa/run_hotpotqa_dev_sample50.sh` | `asterion/scripts/qa/run_hotpotqa_dev_sample50.sh` |
+| `scripts/qa/run_musique_dev_sample50.sh` | `asterion/scripts/qa/run_musique_dev_sample50.sh` |
+| `scripts/qa/run_nq_test_sample50.sh` | `asterion/scripts/qa/run_nq_test_sample50.sh` |
+| `scripts/qa/run_triviaqa_test_sample50.sh` | `asterion/scripts/qa/run_triviaqa_test_sample50.sh` |
+| `scripts/bright/run_bio.sh` | `asterion/scripts/bright/run_bio.sh` |
+| `scripts/bright/run_earth_science.sh` | `asterion/scripts/bright/run_earth_science.sh` |
+| `scripts/bright/run_economics.sh` | `asterion/scripts/bright/run_economics.sh` |
+| `scripts/bright/run_robotics.sh` | `asterion/scripts/bright/run_robotics.sh` |
+
+`scripts/bcplus_eval/run_L3.sh` and
+`asterion/scripts/bcplus_eval/run_L3.sh` remain compatibility helpers outside
+the eleven-primary count. The 22 primary wrappers forward `"$@"` exactly once,
+do not source `.env`, and do not inject provider/model; their Python entry
+points load repository `.env` without replacing exported process values. The eleven
+primary Asterion batch profiles are runtime-neutral as well: they do not
+carry provider/model values into the invocation layer, while explicit CLI,
+exported environment, `.env`, and runtime-default precedence remains intact.
 
 These launchers resolve the mixed-repository root from their own file location,
 so their internal root/config setup does not depend on the operator's CWD.
 
-Use `--limit 1` or `ASTERION_DCI_BATCH_LIMIT=1` for bounded verification.
+Use literal `--limit 1` for bounded verification.
 
 Command class: **bounded provider-backed**
 
 ```bash
 bash asterion/scripts/qa/run_hotpotqa_dev_sample50.sh --limit 1
 bash asterion/scripts/bcplus_eval/run_bcplus_eval_openai.sh level3 high --limit 1
+bash asterion/scripts/bright/run_bio.sh --limit 1
 ```
 
 Pass: each row has completed native and Judge artifacts, one settled protocol
@@ -353,8 +363,141 @@ Command class: **full-dataset**
 bash asterion/scripts/bright/run_bio.sh
 ```
 
-Omitting `--limit` can issue many Pi/Judge requests and requires explicit
-operator authorization, full data, time, and budget.
+Omitting `--limit` selects the full-dataset surface, but both source and
+Asterion launchers now fail closed before provider construction because a
+launcher invocation is not full execution authorization. `--limit 1` is
+bounded evidence, never a full result. Full execution delegates only through
+`uv run python tools/verify_af340_reproduction.py full ... --authorize-full`,
+with the explicit profile, fresh output root, and budget required by that
+verifier.
+
+### AF-340 reproduction coordinator
+
+Run the complete provider-free matrix first:
+
+```bash
+uv run python tools/verify_af340_reproduction.py local
+```
+
+Each bounded command requires the repository environment file, a fresh output
+root, and the resource tree used by the README examples. `--resource-root`
+defaults to the code checkout, but worktree runs should point it explicitly at
+the main/shared checkout; it is never inferred from the environment-file path.
+Code still executes from the current checkout. Quick Start and launcher sample
+inputs come from the resource root: Pi checks the exact 11 launcher
+dataset/corpus pairs, while each Claude variant requires only the wiki corpus.
+The exact selected-resource content manifest is bound into the retained plan and report.
+Run the three variants separately:
+
+```bash
+DCI_RESOURCE_ROOT=/absolute/path/to/main/DCI-Agent-Lite
+uv run python tools/verify_af340_reproduction.py bounded --variant pi \
+  --env-file .env --resource-root "$DCI_RESOURCE_ROOT" \
+  --output-root outputs/verification/af340-bounded-pi
+uv run python tools/verify_af340_reproduction.py bounded --variant claude-subscription \
+  --env-file .env --resource-root "$DCI_RESOURCE_ROOT" \
+  --output-root outputs/verification/af340-bounded-claude-subscription
+uv run python tools/verify_af340_reproduction.py bounded --variant claude-minimax \
+  --provider minimax --model MiniMax-M3 --env-file .env \
+  --resource-root "$DCI_RESOURCE_ROOT" \
+  --output-root outputs/verification/af340-bounded-claude-minimax
+```
+
+Inspect the three retained 0600 reports without contacting a provider; the
+inspection passes only when original Pi, Asterion Pi, Claude subscription, and
+Claude MiniMax form the exact four-dimensional evidence set. Inspection
+rebuilds the exact selected dataset/corpus content manifest from the external
+resource root and rehashes native request, terminal state/event, and Judge
+artifacts from the private tree. Self-authored report JSON is insufficient, and
+same-path resource mutation invalidates the evidence:
+
+```bash
+uv run python tools/verify_af340_reproduction.py inspect \
+  --resource-root "$DCI_RESOURCE_ROOT" \
+  --report outputs/verification/af340-bounded-pi/af340-bounded-report.json \
+  --report outputs/verification/af340-bounded-claude-subscription/af340-bounded-report.json \
+  --report outputs/verification/af340-bounded-claude-minimax/af340-bounded-report.json
+```
+
+The AF-340 H004 train/evaluation hooks require
+`AF340_RESOURCE_ROOT="$DCI_RESOURCE_ROOT"` alongside the three retained-report
+variables and forward that external anchor to `inspect`.
+
+Print the immutable profile digest, selected-query counts, operation maxima, and
+budget before requesting authority:
+
+```bash
+uv run python tools/verify_af340_reproduction.py full --profile current-default/pi \
+  --output-root outputs/verification/af340-full-pi \
+  --estimated-budget-usd 0 --dry-run
+```
+
+Actual full execution is a separate cost boundary and is never inferred from
+`.env`, cache state, local checks, or bounded evidence. After reviewing the dry
+plan and explicitly authorizing its named profile and budget, use:
+
+```bash
+uv run python tools/verify_af340_reproduction.py full --profile current-default/pi \
+  --output-root outputs/verification/af340-full-pi \
+  --estimated-budget-usd 0 --authorize-full
+```
+
+The coordinator writes one strict Task 7 manifest in each product/scope private
+root and immediately performs the matched Pi or target-only Claude comparison.
+Body-free comparison reports are retained under the full root's `comparisons/`
+directory; no separate manual comparison command is required. Full inspection
+cross-binds consumed Task 6 receipts, exact product/scope trees, Task 7 manifest
+identities, and comparisons.
+
+This retained-evidence check assumes the coordinator-owned 0700 root has not
+been replaced by a hostile process running as the same OS user. That stronger
+threat model requires an external signing or registry trust anchor.
+
+Validate that the retained full report was explicitly authorized, covered every
+profile scope, matched the exact operation maxima, and contains no rejected
+comparison:
+
+```bash
+uv run python tools/verify_af340_reproduction.py inspect-full \
+  --report outputs/verification/af340-full-pi/af340-full-report.json
+```
+
+One report cannot close H005. Produce accepted Pi and
+`paper-reference/claude-code` full reports, run the terminal gates from a clean
+repository, and validate the three independent artifacts together:
+
+```bash
+uv run python tools/verify_af340_reproduction.py terminal \
+  --output-root outputs/verification/af340-terminal
+uv run python tools/verify_af340_reproduction.py inspect-closure \
+  --pi-report outputs/verification/af340-full-pi/af340-full-report.json \
+  --claude-report outputs/verification/af340-full-claude-paper/af340-full-report.json \
+  --terminal-report outputs/verification/af340-terminal/af340-terminal-report.json
+```
+
+The paper Claude report binds the exact versioned target row and digest, retains
+candidate-only query samples, and records one-sample 95% bootstrap intervals
+without manufacturing original-product pairs. Numeric assessment covers the 13
+paper main-result scopes; analysis, appendix, and context-ablation scopes are
+not applicable. H005 separately recomputes the six-dataset QA and IR macro
+targets. Rejected scope or aggregate evidence cannot close H005. Terminal
+evidence also rechecks the complete Git status, including later untracked drift.
+
+To re-run one retained comparison explicitly, use the Task 7 ready command:
+
+```bash
+uv run --project asterion asterion-dci paper compare \
+  --baseline path/to/original/af340-run-manifest.json \
+  --candidate path/to/asterion/af340-run-manifest.json \
+  --profile current-default/pi \
+  --output path/to/private-comparison.json
+```
+
+Operator credentials live only in `.env` or exported environment variables;
+full authorization is always an explicit CLI action. Reports contain hashes,
+counts, safe identities, and status classes—not credentials, prompts, answers,
+private paths, or child process bodies.
+
 
 ## 9. Tier 4 — public and private product acceptance
 
@@ -364,7 +507,7 @@ Command class: **provider-free**
 uv run --project asterion python tools/verify_asterion_dci_product.py
 ```
 
-Pass: 8/8 rows, 533/533 selectors, 12/12 launcher pairs, 6/6 extras, bounded
+Pass: 8/8 rows, 538/538 selectors, 12/12 launcher pairs, 6/6 extras, bounded
 acceptance 7/7, and zero provider-backed execution.
 
 Validate retained native evidence without another provider request. Never put

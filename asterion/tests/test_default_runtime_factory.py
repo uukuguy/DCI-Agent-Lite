@@ -7,9 +7,70 @@ from pathlib import Path
 from unittest.mock import patch
 
 from asterion.runtime.factory import RuntimeFactoryContext
+from asterion.runtime.factory import RuntimeFactoryError
+from asterion.runtime.defaults import _claude_provider_environment
 
 
 class DefaultRuntimeFactoryTests(unittest.TestCase):
+    def test_claude_subscription_injects_no_provider_credentials(self) -> None:
+        child, mode = _claude_provider_environment(
+            {}, provider=None, model="claude-sonnet-4-6"
+        )
+        self.assertEqual(mode, "subscription")
+        self.assertNotIn("ANTHROPIC_API_KEY", child)
+        self.assertNotIn("ANTHROPIC_AUTH_TOKEN", child)
+        self.assertNotIn("ANTHROPIC_BASE_URL", child)
+
+    def test_claude_factory_transports_exact_profile_options(self) -> None:
+        from asterion.runtime.defaults import default_runtime_factory_registry
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            with (
+                patch.dict(
+                    os.environ,
+                    {
+                        "ASTERION_CLAUDE_EXECUTABLE": "claude",
+                        "ASTERION_RUNTIME_CWD": str(root),
+                        "DCI_MAX_TURNS": "100",
+                    },
+                    clear=True,
+                ),
+                patch("asterion.runtime.defaults.shutil.which", return_value="/tool/claude"),
+            ):
+                runtime = default_runtime_factory_registry().select(
+                    "claude-code.reference"
+                ).factory(
+                    self._context(
+                        root,
+                        model="claude-sonnet-4-6",
+                        tools="read,grep",
+                        thinking_level="medium",
+                        context_profile="level3",
+                    )
+                )
+        self.assertEqual(runtime._agent_model, "claude-sonnet-4-6")
+        self.assertEqual(runtime._tools, ("Read", "Grep"))
+        self.assertEqual(runtime._reasoning, "medium")
+        self.assertEqual(runtime._context_profile, "level3")
+
+    def test_claude_rejects_pi_default_pair(self) -> None:
+        with self.assertRaisesRegex(RuntimeFactoryError, "unsupported"):
+            _claude_provider_environment(
+                {}, provider="openai-codex", model="gpt-5.6-luna"
+            )
+
+    def test_claude_rejects_mixed_subscription_and_minimax_signals(self) -> None:
+        with self.assertRaisesRegex(RuntimeFactoryError, "ambiguous"):
+            _claude_provider_environment(
+                {
+                    "CLAUDE_CODE_OAUTH_TOKEN": "subscription-token",
+                    "MINIMAX_API_KEY": "coding-plan-key",
+                },
+                provider="minimax",
+                model="MiniMax-M3",
+            )
+
     def test_claude_factory_is_exact_and_constructs_without_starting_a_process(self) -> None:
         from asterion.runtime.defaults import default_runtime_factory_registry
 
@@ -25,6 +86,7 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
                         "DCI_MODEL": "MiniMax-M2.7",
                         "MINIMAX_API_KEY": "test-minimax-key",
                         "DCI_RPC_TIMEOUT_SECONDS": "3600",
+                        "DCI_MAX_TURNS": "100",
                     },
                     clear=True,
                 ),
@@ -34,14 +96,7 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
                     "claude-code.reference"
                 )
                 runtime = binding.factory(
-                    RuntimeFactoryContext(
-                        provider_id="dci-agent-lite",
-                        application_id="dci.research-capability",
-                        application_version="1.0.0",
-                        runtime_id="claude-code.reference",
-                        assembly_path=root / "assembly.json",
-                        options={},
-                    )
+                    self._context(root)
                 )
 
         self.assertEqual(
@@ -51,6 +106,7 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
         self.assertEqual(runtime.manifest.runtime_id, "claude-code.reference")
         self.assertEqual(runtime.manifest.capabilities, binding.capabilities)
         self.assertEqual(runtime._default_timeout_seconds, 3600.0)
+        self.assertEqual(runtime._max_turns, 100)
 
     def test_claude_factory_derives_minimax_environment_from_shared_config(self) -> None:
         from asterion.runtime.defaults import default_runtime_factory_registry
@@ -83,7 +139,6 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
                     "ANTHROPIC_BASE_URL": "https://stale.invalid",
                         "ANTHROPIC_MODEL": "stale-model",
                         "DEEPSEEK_API_KEY": "judge-secret",
-                        "CLAUDE_CODE_OAUTH_TOKEN": "oauth-secret",
                         "UNRELATED_SECRET": "unrelated-secret",
                         "PATH": "/safe/bin",
                 }
@@ -180,7 +235,7 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
         client.assert_not_called()
         self.assertNotIn("SECRET", str(caught.exception))
 
-    def test_claude_factory_uses_anthropic_api_key_without_stale_auth_token(self) -> None:
+    def test_claude_factory_rejects_unsupported_anthropic_api_mode(self) -> None:
         from asterion.runtime.defaults import default_runtime_factory_registry
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -202,15 +257,8 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
                 binding = default_runtime_factory_registry().select(
                     "claude-code.reference"
                 )
-                runtime = binding.factory(self._context(root))
-
-        native_environment = runtime._environment
-        self.assertEqual(
-            native_environment["ANTHROPIC_BASE_URL"], "https://api.anthropic.com"
-        )
-        self.assertEqual(native_environment["ANTHROPIC_API_KEY"], "anthropic-secret")
-        self.assertNotIn("ANTHROPIC_AUTH_TOKEN", native_environment)
-        self.assertIsNone(runtime._default_timeout_seconds)
+                with self.assertRaisesRegex(RuntimeFactoryError, "unsupported"):
+                    binding.factory(self._context(root))
 
     def test_claude_factory_rejects_invalid_shared_timeout_without_secret_echo(self) -> None:
         from asterion.runtime.defaults import default_runtime_factory_registry
@@ -322,7 +370,13 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
                         application_version="1.0.0",
                         runtime_id="pi.reference",
                         assembly_path=root / "assembly.json",
-                        options={},
+                        options={
+                            "provider": "fixture-provider",
+                            "model": "fixture-model",
+                            "tools": "read,bash",
+                            "timeout_seconds": 3600.0,
+                            "authentication_mode": "saved-auth",
+                        },
                     )
                 )
 
@@ -360,14 +414,27 @@ class DefaultRuntimeFactoryTests(unittest.TestCase):
         self.assertNotIn("SECRET-PACKAGE", str(caught.exception))
 
     @staticmethod
-    def _context(root: Path) -> RuntimeFactoryContext:
+    def _context(root: Path, **options: object) -> RuntimeFactoryContext:
+        provider = os.environ.get("DCI_PROVIDER") or None
+        model = os.environ.get("DCI_MODEL") or None
+        mode = {
+            "minimax": "minimax-coding-plan",
+            "minimax-cn": "minimax-cn-coding-plan",
+        }.get(provider, "subscription" if provider is None else "unsupported")
         return RuntimeFactoryContext(
             provider_id="dci-agent-lite",
             application_id="dci.research-capability",
             application_version="1.0.0",
             runtime_id="claude-code.reference",
             assembly_path=root / "assembly.json",
-            options={},
+            options={
+                "provider": provider,
+                "model": model,
+                "tools": "read,grep,glob",
+                "timeout_seconds": os.environ.get("DCI_RPC_TIMEOUT_SECONDS", "3600"),
+                "authentication_mode": mode,
+                **options,
+            },
         )
 
 

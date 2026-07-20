@@ -1,432 +1,1274 @@
 from __future__ import annotations
 
 import json
-import io
-import os
+import math
 import stat
 import tempfile
 import unittest
+from unittest import mock
+from dataclasses import FrozenInstanceError, fields, replace
+from importlib import resources
 from pathlib import Path
+from types import MappingProxyType
 
 from asterion.dci.cli import main
-from asterion.dci.experiment_profiles import resolve_experiment_profile
-from asterion.dci.paper_benchmarks import (
-    resolve_paper_benchmark,
-    resolve_paper_experiment_scope,
+from asterion.dci import reproduction as reproduction_module
+from asterion.dci.experiment_profiles import (
+    experiment_profile_sha256,
+    resolve_experiment_profile,
 )
 from asterion.dci.reproduction import (
+    COMPARISON_SCHEMA,
+    ESTIMATOR_NAME,
+    ESTIMATOR_RESAMPLES,
+    RUN_MANIFEST_SCHEMA,
+    reproduction_metric_contract_sha256,
     QueryEvidence,
-    RunManifest,
+    OperationCounts,
+    TokenCounts,
+    ConfidenceInterval,
+    EstimatorEvidence,
+    MetricComparison,
+    compare_published_target_aggregates,
     compare_reproduction_runs,
     load_run_manifest,
-    resolve_reproduction_target,
+    write_comparison_report,
 )
 
 
 _SHA_A = "a" * 64
 _SHA_B = "b" * 64
+_SHA_C = "c" * 64
+_SHA_D = "d" * 64
+_SHA_E = "e" * 64
 
 
 def _query(
     query_id: str,
     *,
     status: str = "completed",
-    judge_verdict: bool | None = True,
+    verdict: bool | None = True,
+    ndcg: float | None = None,
     failure_class: str | None = None,
     exclusion_reason: str | None = None,
-) -> QueryEvidence:
-    profile = resolve_experiment_profile("current-default/pi")
-    scope_id = next(
-        scope_id
-        for scope_id in profile.paper_scope_ids
-        if resolve_paper_benchmark(
-            resolve_paper_experiment_scope(scope_id).dataset_id
-        ).mode
-        == "qa"
-    )
-    scope = resolve_paper_experiment_scope(scope_id)
-    return QueryEvidence(
-        query_id=query_id,
-        dataset_id=scope.dataset_id,
-        scope_id=scope_id,
-        status=status,
-        judge_verdict=judge_verdict,
-        ndcg_at_10=None,
-        evidence_sha256=None if status == "missing" else _SHA_A,
-        failure_class=failure_class,
-        exclusion_reason=exclusion_reason,
-        agent_operations=1 if status != "missing" else 0,
-        judge_operations=1 if status == "completed" else 0,
-        input_tokens=10 if status != "missing" else 0,
-        output_tokens=5 if status != "missing" else 0,
-        cost_usd=0.25 if status != "missing" else 0.0,
-    )
+    agent_operations: int = 1,
+    judge_operations: int = 1,
+    input_tokens: int = 10,
+    cached_input_tokens: int = 2,
+    output_tokens: int = 3,
+    cost_usd: float = 0.01,
+    evidence_sha256: str = _SHA_C,
+) -> dict[str, object]:
+    return {
+        "query_id": query_id,
+        "status": status,
+        "judge_verdict": verdict,
+        "ndcg_at_10": ndcg,
+        "failure_class": failure_class,
+        "exclusion_reason": exclusion_reason,
+        "evidence_sha256": evidence_sha256,
+        "operations": {
+            "agent": agent_operations,
+            "judge": judge_operations,
+        },
+        "tokens": {
+            "input": input_tokens,
+            "cached_input": cached_input_tokens,
+            "output": output_tokens,
+        },
+        "cost_usd": cost_usd,
+    }
 
 
-def _ir_query(query_id: str, ndcg_at_10: float) -> QueryEvidence:
-    profile = resolve_experiment_profile("current-default/pi")
-    scope_id = next(
-        scope_id
-        for scope_id in profile.paper_scope_ids
-        if resolve_paper_benchmark(
-            resolve_paper_experiment_scope(scope_id).dataset_id
-        ).mode
-        == "ir"
-    )
-    scope = resolve_paper_experiment_scope(scope_id)
-    return QueryEvidence(
-        query_id=query_id,
-        dataset_id=scope.dataset_id,
-        scope_id=scope_id,
-        status="completed",
-        judge_verdict=None,
-        ndcg_at_10=ndcg_at_10,
-        evidence_sha256=_SHA_A,
-        failure_class=None,
-        exclusion_reason=None,
-        agent_operations=1,
-        judge_operations=0,
-        input_tokens=10,
-        output_tokens=5,
-        cost_usd=0.25,
+def _paper_query_rows(
+    selection_id: str,
+    *,
+    verdict: bool | None = True,
+    ndcg: float | None = None,
+) -> list[dict[str, object]]:
+    from asterion.dci.paper_benchmarks import (
+        published_scope_selected_ids,
+        resolve_paper_experiment_scope,
     )
 
+    scope = resolve_paper_experiment_scope(selection_id)
+    if scope.selection_seed_status == "paper-unreported":
+        query_ids = published_scope_selected_ids(selection_id)
+    elif selection_id == "qa.bamboogle.main.full":
+        query_ids = tuple(f"test_{index}" for index in range(scope.selection_count))
+    elif selection_id == "bright.biology.main.full":
+        query_ids = tuple(str(index) for index in range(scope.selection_count))
+    elif selection_id.startswith("bright.") and selection_id.endswith(".main.full"):
+        prefix = scope.dataset_id.removeprefix("bright.").replace("-", "_")
+        query_ids = tuple(
+            f"{prefix}_{index}" for index in range(scope.selection_count)
+        )
+    else:
+        raise ValueError("paper test fixture does not define this selected-ID set")
+    return [
+        _query(
+            query_id,
+            verdict=verdict,
+            ndcg=ndcg,
+            judge_operations=0 if ndcg is not None else 1,
+        )
+        for query_id in query_ids
+    ]
 
-def _manifest_for(
-    product: str,
-    *queries: QueryEvidence,
+
+def _aggregates(
+    queries: list[dict[str, object]], metric_identities: list[str]
+) -> dict[str, object]:
+    included = [
+        row
+        for row in queries
+        if row["exclusion_reason"] is None or row["status"] != "completed"
+    ]
+    completed = [row for row in included if row["status"] == "completed"]
+    verdicts = [
+        1.0 if row["judge_verdict"] is True else 0.0
+        for row in included
+    ] if "llm-answer-correctness" in metric_identities else []
+    ndcgs = [
+        float(row["ndcg_at_10"] or 0.0)
+        for row in included
+    ] if "ndcg@10-binary-deduplicated" in metric_identities else []
+    input_tokens = sum(int(row["tokens"]["input"]) for row in queries)  # type: ignore[index]
+    cached_tokens = sum(
+        int(row["tokens"]["cached_input"]) for row in queries  # type: ignore[index]
+    )
+    output_tokens = sum(int(row["tokens"]["output"]) for row in queries)  # type: ignore[index]
+    return {
+        "query_count": len(queries),
+        "included_count": len(included),
+        "excluded_count": len(queries) - len(included),
+        "completed_count": len(completed),
+        "failed_count": sum(row["status"] == "failed" for row in included),
+        "cancelled_count": sum(row["status"] == "cancelled" for row in included),
+        "timed_out_count": sum(row["status"] == "timed_out" for row in included),
+        "missing_count": sum(row["status"] == "missing" for row in included),
+        "accuracy": sum(verdicts) / len(verdicts) if verdicts else None,
+        "mean_ndcg_at_10": sum(ndcgs) / len(ndcgs) if ndcgs else None,
+        "agent_operations": sum(
+            int(row["operations"]["agent"]) for row in queries  # type: ignore[index]
+        ),
+        "judge_operations": sum(
+            int(row["operations"]["judge"]) for row in queries  # type: ignore[index]
+        ),
+        "input_tokens": input_tokens,
+        "cached_input_tokens": cached_tokens,
+        "output_tokens": output_tokens,
+        "total_tokens": input_tokens + cached_tokens + output_tokens,
+        "cost_usd": sum(float(row["cost_usd"]) for row in queries),
+    }
+
+
+def _manifest(
+    queries: list[dict[str, object]],
+    *,
     profile_id: str = "current-default/pi",
-) -> RunManifest:
-    profile = resolve_experiment_profile(profile_id)
-    return RunManifest.create(
-        product=product,
-        profile=profile,
-        effective_config_identity_sha256=_SHA_B,
-        scope_ids=tuple(sorted({query.scope_id for query in queries})),
-        queries=queries,
+    runtime: str = "pi",
+    dataset_id: str | None = None,
+    selection_id: str | None = None,
+    selection_sha256: str | None = None,
+    effective_config_sha256: str = _SHA_B,
+    product: str = "asterion-dci",
+    run_id: str | None = None,
+    metric_identities_override: list[str] | None = None,
+) -> dict[str, object]:
+    queries = sorted(queries, key=lambda row: str(row["query_id"]))
+    if any(row["ndcg_at_10"] is not None for row in queries):
+        metric_identities = ["ndcg@10-binary-deduplicated"]
+    else:
+        metric_identities = ["llm-answer-correctness"]
+    if metric_identities_override is not None:
+        metric_identities = list(metric_identities_override)
+    dataset_id = dataset_id or (
+        "beir.arguana"
+        if metric_identities == ["ndcg@10-binary-deduplicated"]
+        else "qa.bamboogle"
+    )
+    selection_id = selection_id or f"{dataset_id}.fixture.all"
+    if selection_sha256 is None:
+        selection_sha256 = _SHA_A
+        if profile_id == "paper-reference/claude-code":
+            from asterion.dci.paper_benchmarks import resolve_paper_experiment_scope
+
+            try:
+                selection_sha256 = resolve_paper_experiment_scope(
+                    selection_id
+                ).selected_ids_sha256
+            except ValueError:
+                pass
+    value: dict[str, object] = {
+        "schema": RUN_MANIFEST_SCHEMA,
+        "run_id": run_id or (
+            "run.original/v1" if product == "original-dci" else "run.asterion/v1"
+        ),
+        "product": product,
+        "implementation_sha256": _SHA_D if product == "original-dci" else _SHA_E,
+        "profile_id": profile_id,
+        "profile_sha256": experiment_profile_sha256(profile_id),
+        "runtime": runtime,
+        "dataset_id": dataset_id,
+        "selection_id": selection_id,
+        "selection_sha256": selection_sha256,
+        "effective_config_sha256": effective_config_sha256,
+        "product_effective_config_sha256": (
+            _SHA_D if product == "original-dci" else _SHA_E
+        ),
+        "metric_contract_sha256": reproduction_metric_contract_sha256(profile_id),
+        "metric_identities": metric_identities,
+        "queries": queries,
+        "aggregates": _aggregates(queries, metric_identities),
+    }
+    from asterion.dci.paper_benchmarks import canonical_sha256
+
+    value["identity_sha256"] = canonical_sha256(value)
+    return value
+
+
+def _source_manifest(
+    queries: list[dict[str, object]], **kwargs: object
+) -> dict[str, object]:
+    return _manifest(queries, product="original-dci", **kwargs)  # type: ignore[arg-type]
+
+
+def _write(path: Path, value: object) -> None:
+    path.write_text(json.dumps(value), encoding="utf-8")
+
+
+def _rehash(value: dict[str, object]) -> None:
+    from asterion.dci.paper_benchmarks import canonical_sha256
+
+    value["identity_sha256"] = canonical_sha256(
+        {key: item for key, item in value.items() if key != "identity_sha256"}
     )
 
 
-def _manifest(*queries: QueryEvidence) -> RunManifest:
-    return _manifest_for("original-dci", *(queries or (_query("q-1"),)))
+def _forge_report_metrics(report, metrics: dict[str, MetricComparison]):
+    """Build a self-hashed report without invoking its constructor validation."""
 
-
-class ReproductionManifestValidationTests(unittest.TestCase):
-    def test_rejects_duplicate_and_missing_query_ids(self) -> None:
-        with self.assertRaises(ValueError):
-            _manifest(_query("q-1"), _query("q-1"))
-
-        value = _manifest().to_mapping()
-        del value["queries"][0]["query_id"]
-        with self.assertRaises(ValueError):
-            RunManifest.from_mapping(value)
-
-    def test_rejects_profile_effective_config_and_aggregate_drift(self) -> None:
-        value = _manifest().to_mapping()
-        mutations = (
-            ("profile_identity_sha256", _SHA_A),
-            ("effective_config_identity_sha256", "not-a-digest"),
-            ("paper_experiment_scopes_sha256", _SHA_A),
+    forged = object.__new__(type(report))
+    for field in fields(report):
+        object.__setattr__(
+            forged,
+            field.name,
+            MappingProxyType(dict(metrics))
+            if field.name == "metrics"
+            else getattr(report, field.name),
         )
-        for field, replacement in mutations:
-            with self.subTest(field=field):
-                changed = json.loads(json.dumps(value))
-                changed[field] = replacement
-                with self.assertRaises(ValueError):
-                    RunManifest.from_mapping(changed)
+    from asterion.dci.paper_benchmarks import canonical_sha256
 
-        changed = json.loads(json.dumps(value))
-        changed["queries"][0]["dataset_id"] = "paper.qa.nq"
+    object.__setattr__(forged, "identity_sha256", canonical_sha256(forged._unsigned_dict()))
+    return forged
+
+
+def _forge_report(report, **changes: object):
+    forged = object.__new__(type(report))
+    for field in fields(report):
+        value = changes.get(field.name, getattr(report, field.name))
+        if field.name == "metrics":
+            value = MappingProxyType(dict(value))  # type: ignore[arg-type]
+        object.__setattr__(forged, field.name, value)
+    from asterion.dci.paper_benchmarks import canonical_sha256
+
+    object.__setattr__(forged, "identity_sha256", canonical_sha256(forged._unsigned_dict()))
+    return forged
+
+
+class ReproductionManifestTests(unittest.TestCase):
+    def _load_value(self, value: dict[str, object]):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "manifest.json"
+            _write(path, value)
+            return load_run_manifest(path)
+
+    def test_manifest_is_frozen_stably_ordered_and_body_free(self) -> None:
+        value = _manifest([_query("q-1"), _query("q-2")])
+        manifest = self._load_value(value)
+
+        self.assertEqual([row.query_id for row in manifest.queries], ["q-1", "q-2"])
+        self.assertIsInstance(manifest.queries[0], QueryEvidence)
+        with self.assertRaises(FrozenInstanceError):
+            manifest.run_id = "changed"  # type: ignore[misc]
         with self.assertRaises(ValueError):
-            RunManifest.from_mapping(changed)
+            replace(manifest, dataset_id="")
+        self.assertNotIn('"answer":', json.dumps(manifest.to_dict()))
 
-        changed = json.loads(json.dumps(value))
-        changed["aggregates"]["accuracy"] = 0.0
+    def test_direct_query_evidence_construction_is_strict(self) -> None:
         with self.assertRaises(ValueError):
-            RunManifest.from_mapping(changed)
+            QueryEvidence(
+                query_id="",
+                status="completed",
+                judge_verdict=True,
+                ndcg_at_10=None,
+                failure_class=None,
+                exclusion_reason=None,
+                evidence_sha256=_SHA_C,
+                operations=OperationCounts(agent=1, judge=1),
+                tokens=TokenCounts(input=1, cached_input=0, output=1),
+                cost_usd=0.0,
+            )
 
-    def test_preserves_noncompleted_rows_and_versioned_exclusions(self) -> None:
-        rows = (
-            _query("q-completed"),
-            _query("q-failed", status="failed", judge_verdict=None, failure_class="runtime-failed"),
-            _query("q-cancelled", status="cancelled", judge_verdict=None, failure_class="cancelled"),
-            _query("q-timed-out", status="timed_out", judge_verdict=None, failure_class="deadline"),
-            _query("q-missing", status="missing", judge_verdict=None, failure_class="missing-evidence"),
-            _query(
-                "q-excluded",
-                status="failed",
-                judge_verdict=None,
-                failure_class="selection-mismatch",
-                exclusion_reason="dci.reproduction-exclusion/not-in-matched-selection/v1",
+    def test_manifest_rejects_duplicate_or_missing_query_ids(self) -> None:
+        for queries in (
+            [_query("q-1"), _query("q-1")],
+            [_query("")],
+        ):
+            with self.subTest(queries=queries), self.assertRaises(ValueError):
+                self._load_value(_manifest(queries))
+
+        value = _manifest([_query("q-1"), _query("q-2")])
+        value["queries"] = list(reversed(value["queries"]))  # type: ignore[arg-type]
+        from asterion.dci.paper_benchmarks import canonical_sha256
+
+        value["identity_sha256"] = canonical_sha256(
+            {key: item for key, item in value.items() if key != "identity_sha256"}
+        )
+        with self.assertRaises(ValueError):
+            self._load_value(value)
+
+    def test_manifest_rejects_all_non_completed_rows_without_failure_class(self) -> None:
+        for status in ("failed", "cancelled", "timed_out", "missing"):
+            row = _query(status, status=status, verdict=None)
+            with self.subTest(status=status), self.assertRaises(ValueError):
+                self._load_value(_manifest([row]))
+
+            row["failure_class"] = f"runtime.{status}/v1"
+            loaded = self._load_value(_manifest([row]))
+            self.assertEqual(loaded.aggregates.accuracy, 0.0)
+
+    def test_manifest_rejects_exclusion_without_versioned_reason(self) -> None:
+        row = _query("q-1", verdict=None, exclusion_reason="not applicable")
+        with self.assertRaises(ValueError):
+            self._load_value(_manifest([row]))
+        row["exclusion_reason"] = "metric.not-applicable/v1"
+        self.assertEqual(self._load_value(_manifest([row])).aggregates.excluded_count, 1)
+
+    def test_manifest_rejects_unknown_body_or_credential_fields_at_any_depth(self) -> None:
+        for field in ("answer", "prompt_body", "api_key", "credential", "tool_body"):
+            value = _manifest([_query("q-1")])
+            value["queries"][0][field] = "SECRET"  # type: ignore[index]
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                self._load_value(value)
+
+        value = _manifest([_query("q-1")])
+        value["unexpected"] = "field"
+        with self.assertRaises(ValueError):
+            self._load_value(value)
+
+    def test_manifest_rejects_non_finite_or_inconsistent_aggregates(self) -> None:
+        for bad in (math.nan, math.inf, -math.inf):
+            value = _manifest([_query("q-1")])
+            value["queries"][0]["cost_usd"] = bad  # type: ignore[index]
+            _rehash(value)
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                self._load_value(value)
+
+        value = _manifest([_query("q-1")])
+        value["aggregates"]["completed_count"] = 0  # type: ignore[index]
+        _rehash(value)
+        with self.assertRaises(ValueError):
+            self._load_value(value)
+
+    def test_manifest_rejects_invalid_exact_digests(self) -> None:
+        for field in (
+            "profile_sha256",
+            "selection_sha256",
+            "effective_config_sha256",
+        ):
+            value = _manifest([_query("q-1")])
+            value[field] = "not-a-sha256"
+            _rehash(value)
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                self._load_value(value)
+
+    def test_manifest_schema_binds_product_and_independent_provenance(self) -> None:
+        schema = json.loads(
+            resources.files("asterion.dci.resources")
+            .joinpath("reproduction-result.schema.json")
+            .read_text(encoding="utf-8")
+        )
+        required = set(schema["$defs"]["run_manifest"]["required"])
+        self.assertTrue(
+            {
+                "product",
+                "implementation_sha256",
+                "product_effective_config_sha256",
+            }.issubset(required)
+        )
+
+    def test_manifest_rejects_runtime_profile_mismatch(self) -> None:
+        value = _manifest(
+            [_query("q-1")],
+            profile_id="paper-reference/claude-code",
+            runtime="pi",
+        )
+        with self.assertRaises(ValueError):
+            self._load_value(value)
+
+    def test_manifest_requires_each_declared_metric_on_completed_rows(self) -> None:
+        value = _manifest([_query("q-1", verdict=None, ndcg=0.5)])
+        value["metric_identities"] = ["llm-answer-correctness"]
+        _rehash(value)
+        with self.assertRaises(ValueError):
+            self._load_value(value)
+
+    def test_comparison_rejects_identity_drift(self) -> None:
+        baseline = self._load_value(_source_manifest([_query("q-1")]))
+        drifts = {
+            "dataset_id": "qa.other.main",
+            "selection_id": "qa.fixture.other",
+            "selection_sha256": _SHA_C,
+            "effective_config_sha256": _SHA_C,
+            "profile_id": "paper-reference/pi",
+        }
+        for key, value in drifts.items():
+            candidate_value = _manifest([_query("q-1")])
+            if key == "profile_id":
+                candidate_value = _manifest(
+                    [_query("q-1")], profile_id=str(value)
+                )
+            else:
+                candidate_value[key] = value
+                from asterion.dci.paper_benchmarks import canonical_sha256
+
+                candidate_value["identity_sha256"] = canonical_sha256(
+                    {k: v for k, v in candidate_value.items() if k != "identity_sha256"}
+                )
+            candidate = self._load_value(candidate_value)
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                compare_reproduction_runs(
+                    baseline, candidate, resolve_experiment_profile("current-default/pi")
+                )
+
+
+class ReproductionStatisticsTests(unittest.TestCase):
+    def _loaded(self, value: dict[str, object]):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "manifest.json"
+            _write(path, value)
+            return load_run_manifest(path)
+
+    def _accuracy_report(self, *, count: int, regressions: int):
+        baseline_rows = [_query(f"q-{index:04d}") for index in range(count)]
+        candidate_rows = [
+            _query(f"q-{index:04d}", verdict=index >= regressions)
+            for index in range(count)
+        ]
+        return compare_reproduction_runs(
+            self._loaded(_source_manifest(baseline_rows)),
+            self._loaded(_manifest(candidate_rows)),
+            resolve_experiment_profile("current-default/pi"),
+        )
+
+    def _ndcg_report(self, delta: float):
+        baseline = _source_manifest(
+            [_query(f"q-{i}", verdict=None, ndcg=0.5) for i in range(20)]
+        )
+        candidate = _manifest(
+            [_query(f"q-{i}", verdict=None, ndcg=0.5 + delta) for i in range(20)]
+        )
+        return compare_reproduction_runs(
+            self._loaded(baseline),
+            self._loaded(candidate),
+            resolve_experiment_profile("current-default/pi"),
+        )
+
+    def _forged_metric_reports(self):
+        report = self._accuracy_report(count=20, regressions=0)
+        metric = report.metrics["accuracy"]
+        drifted_values = MetricComparison(
+            baseline=0.5,
+            candidate=0.5,
+            delta=0.0,
+            confidence_interval=metric.confidence_interval,
+            margin=metric.margin,
+            accepted=metric.accepted,
+            estimator=metric.estimator,
+        )
+        drifted_sample = replace(
+            metric,
+            estimator=replace(metric.estimator, sample_sha256=_SHA_A),
+        )
+        drifted_interval = replace(
+            metric,
+            confidence_interval=ConfidenceInterval(lower=-0.01, upper=0.01),
+        )
+        return {
+            "point-values": _forge_report_metrics(
+                report, {"accuracy": drifted_values}
             ),
-        )
-        manifest = _manifest(*rows)
-        self.assertEqual(
-            tuple(row.status for row in manifest.queries),
-            ("cancelled", "completed", "failed", "failed", "missing", "timed_out"),
-        )
-        self.assertEqual(manifest.aggregates["failure_count"], 4)
-        self.assertEqual(manifest.aggregates["excluded_count"], 1)
+            "sample-digest": _forge_report_metrics(
+                report, {"accuracy": drifted_sample}
+            ),
+            "bootstrap-interval": _forge_report_metrics(
+                report, {"accuracy": drifted_interval}
+            ),
+        }
 
-        changed = manifest.to_mapping()
-        excluded = next(row for row in changed["queries"] if row["query_id"] == "q-excluded")
-        excluded["exclusion_reason"] = "informal-reason"
+    def _assert_report_forgery_rejected_everywhere(self, forged) -> None:
         with self.assertRaises(ValueError):
-            RunManifest.from_mapping(changed)
-
-    def test_rejects_bodies_credentials_and_private_paths(self) -> None:
-        value = _manifest().to_mapping()
-        for field in ("prompt", "answer", "tool_output", "api_key"):
-            with self.subTest(field=field):
-                changed = json.loads(json.dumps(value))
-                changed["queries"][0][field] = "sentinel-secret"
-                with self.assertRaises(ValueError):
-                    RunManifest.from_mapping(changed)
-
-        changed = json.loads(json.dumps(value))
-        changed["queries"][0]["failure_class"] = "/private/sentinel-secret"
+            replace(forged, identity_sha256=forged.identity_sha256)
         with self.assertRaises(ValueError):
-            RunManifest.from_mapping(changed)
-
-    def test_load_run_manifest_rejects_duplicate_json_keys_and_preserves_identity(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
-            path = root / "manifest.json"
-            manifest = _manifest()
-            path.write_text(json.dumps(manifest.to_mapping()))
-            loaded = load_run_manifest(path)
-            self.assertEqual(loaded, manifest)
-
-            path.write_text('{"schema":"first","schema":"second"}')
+            forged.to_dict()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            serialized = {
+                **forged._unsigned_dict(),
+                "identity_sha256": forged.identity_sha256,
+            }
+            source = root / "forged.json"
+            _write(source, serialized)
             with self.assertRaises(ValueError):
-                load_run_manifest(path)
+                reproduction_module.load_comparison_report(source)
+            private = root / "private"
+            private.mkdir(mode=0o700)
+            output = private / "report.json"
+            with self.assertRaises(ValueError):
+                write_comparison_report(output, forged)
+            self.assertFalse(output.exists())
 
+    def test_accuracy_minus_point_zero_four_passes_and_is_deterministic(self) -> None:
+        report = self._accuracy_report(count=2_500, regressions=100)
+        metric = report.metrics["accuracy"]
+        self.assertAlmostEqual(metric.delta, -0.04)
+        self.assertGreaterEqual(metric.confidence_interval.lower, -0.05)
+        self.assertTrue(metric.accepted)
+        self.assertTrue(report.accepted)
+        self.assertEqual(metric.estimator.name, ESTIMATOR_NAME)
+        self.assertEqual(metric.estimator.resamples, ESTIMATOR_RESAMPLES)
+        self.assertEqual(len(metric.estimator.query_set_sha256), 64)
+        self.assertEqual(report.to_json_bytes(), report.to_json_bytes())
 
-class ReproductionComparisonTests(unittest.TestCase):
-    def test_accuracy_margin_uses_deterministic_paired_bootstrap(self) -> None:
-        baseline_rows = tuple(_query(f"qa-{index:04d}") for index in range(2500))
-        passing_rows = tuple(
-            _query(f"qa-{index:04d}", judge_verdict=index >= 100)
-            for index in range(2500)
-        )
-        failing_rows = tuple(
-            _query(f"qa-{index:04d}", judge_verdict=index >= 150)
-            for index in range(2500)
-        )
-        profile = resolve_experiment_profile("current-default/pi")
-        baseline = _manifest_for("original-dci", *baseline_rows)
+    def test_accuracy_minus_point_zero_six_fails(self) -> None:
+        report = self._accuracy_report(count=2_500, regressions=150)
+        metric = report.metrics["accuracy"]
+        self.assertAlmostEqual(metric.delta, -0.06)
+        self.assertLess(metric.confidence_interval.lower, -0.05)
+        self.assertFalse(metric.accepted)
+        self.assertFalse(report.accepted)
 
-        passing = compare_reproduction_runs(
-            baseline,
-            _manifest_for("asterion-dci", *passing_rows),
-            profile,
-        )
-        failing = compare_reproduction_runs(
-            baseline,
-            _manifest_for("asterion-dci", *failing_rows),
-            profile,
-        )
-
-        self.assertAlmostEqual(passing.accuracy["delta"], -0.04)
-        self.assertGreaterEqual(passing.accuracy["lower_bound"], -0.05)
-        self.assertTrue(passing.accuracy["passes"])
-        self.assertTrue(passing.accepted)
-        self.assertAlmostEqual(failing.accuracy["delta"], -0.06)
-        self.assertLess(failing.accuracy["lower_bound"], -0.05)
-        self.assertFalse(failing.accuracy["passes"])
-        self.assertFalse(failing.accepted)
-
-    def test_ndcg_margin_uses_deterministic_paired_bootstrap(self) -> None:
-        baseline_rows = tuple(_ir_query(f"ir-{index:02d}", 0.5) for index in range(20))
-        passing_rows = tuple(_ir_query(f"ir-{index:02d}", 0.481) for index in range(20))
-        failing_rows = tuple(_ir_query(f"ir-{index:02d}", 0.479) for index in range(20))
-        profile = resolve_experiment_profile("current-default/pi")
-        baseline = _manifest_for("original-dci", *baseline_rows)
-
-        passing = compare_reproduction_runs(
-            baseline,
-            _manifest_for("asterion-dci", *passing_rows),
-            profile,
-        )
-        failing = compare_reproduction_runs(
-            baseline,
-            _manifest_for("asterion-dci", *failing_rows),
-            profile,
-        )
-
-        self.assertAlmostEqual(passing.ndcg_at_10["delta"], -0.019)
-        self.assertGreaterEqual(passing.ndcg_at_10["lower_bound"], -0.02)
-        self.assertTrue(passing.ndcg_at_10["passes"])
-        self.assertAlmostEqual(failing.ndcg_at_10["delta"], -0.021)
-        self.assertLess(failing.ndcg_at_10["lower_bound"], -0.02)
-        self.assertFalse(failing.ndcg_at_10["passes"])
-
-    def test_report_binds_estimator_seed_pairs_exclusions_and_costs(self) -> None:
-        included = _query("q-included")
-        missing = _query(
-            "q-missing",
-            status="missing",
-            judge_verdict=None,
-            failure_class="missing-evidence",
-        )
-        excluded = _query(
-            "q-excluded",
-            status="failed",
-            judge_verdict=None,
-            failure_class="selection-mismatch",
-            exclusion_reason="dci.reproduction-exclusion/not-in-matched-selection/v1",
-        )
-        profile = resolve_experiment_profile("current-default/pi")
+    def test_all_failed_rows_contribute_zero_to_declared_metric(self) -> None:
+        rows = [
+            _query(
+                "q-1",
+                status="failed",
+                verdict=None,
+                failure_class="runtime.failed/v1",
+            )
+        ]
+        baseline = self._loaded(_source_manifest(rows))
+        candidate = self._loaded(_manifest(rows))
         report = compare_reproduction_runs(
-            _manifest_for("original-dci", included, missing, excluded),
-            _manifest_for("asterion-dci", included, missing, excluded),
-            profile,
+            baseline,
+            candidate,
+            resolve_experiment_profile("current-default/pi"),
         )
+        self.assertEqual(report.metrics["accuracy"].candidate, 0.0)
 
-        self.assertEqual(report.estimator["name"], "paired-bootstrap-percentile/v1")
-        self.assertEqual(report.estimator["seed"], 340)
-        self.assertEqual(report.estimator["resamples"], 10_000)
-        self.assertRegex(report.estimator["query_set_sha256"], r"^[0-9a-f]{64}$")
-        self.assertRegex(report.estimator["accuracy_sample_sha256"], r"^[0-9a-f]{64}$")
-        self.assertEqual(report.retained_pair_ids, ("q-included", "q-missing"))
-        self.assertEqual(report.excluded_query_ids, ("q-excluded",))
-        self.assertEqual(len(report.pairs), 2)
-        self.assertEqual(report.completion["baseline_rate"], 0.5)
-        self.assertEqual(report.completion["candidate_failure_rate"], 0.5)
-        self.assertEqual(report.totals["candidate"]["agent_operations"], 2)
-        self.assertEqual(report.totals["candidate"]["cost_usd"], 0.5)
-        with self.assertRaises(TypeError):
-            report.pairs[0]["baseline"]["status"] = "failed"
-        repeated = compare_reproduction_runs(
-            _manifest_for("original-dci", included, missing, excluded),
-            _manifest_for("asterion-dci", included, missing, excluded),
-            profile,
+    def test_ndcg_threshold_fixtures_use_lower_confidence_bound(self) -> None:
+        passing = self._ndcg_report(-0.019)
+        failing = self._ndcg_report(-0.021)
+        self.assertAlmostEqual(passing.metrics["ndcg_at_10"].delta, -0.019)
+        self.assertAlmostEqual(
+            passing.metrics["ndcg_at_10"].confidence_interval.lower, -0.019
+        )
+        self.assertTrue(passing.metrics["ndcg_at_10"].accepted)
+        self.assertAlmostEqual(failing.metrics["ndcg_at_10"].delta, -0.021)
+        self.assertFalse(failing.metrics["ndcg_at_10"].accepted)
+
+    def test_report_preserves_pairs_exclusions_rates_and_totals(self) -> None:
+        baseline_rows = [
+            _query("q-1"),
+            _query("q-2", verdict=None, exclusion_reason="metric.not-applicable/v1"),
+            _query(
+                "q-3",
+                status="timed_out",
+                verdict=None,
+                failure_class="runtime.timeout/v1",
+                judge_operations=0,
+            ),
+        ]
+        candidate_rows = [
+            _query("q-1", input_tokens=20, cost_usd=0.02),
+            _query(
+                "q-2", verdict=None, exclusion_reason="metric.not-applicable/v1"
+            ),
+            _query(
+                "q-3",
+                status="failed",
+                verdict=None,
+                failure_class="runtime.failed/v1",
+                judge_operations=0,
+            ),
+        ]
+        report = compare_reproduction_runs(
+            self._loaded(_source_manifest(baseline_rows)),
+            self._loaded(_manifest(candidate_rows)),
+            resolve_experiment_profile("current-default/pi"),
+        )
+        self.assertEqual(report.pair_ids, ("q-1", "q-3"))
+        self.assertEqual(report.exclusion_ids, ("q-2",))
+        self.assertAlmostEqual(report.candidate.completion_rate, 0.5)
+        self.assertAlmostEqual(report.candidate.failure_rate, 0.5)
+        self.assertEqual(report.candidate.agent_operations, 3)
+        self.assertEqual(report.candidate.judge_operations, 2)
+        self.assertEqual(report.candidate.input_tokens, 40)
+        self.assertEqual(report.candidate.total_tokens, 55)
+        self.assertAlmostEqual(report.candidate.cost_usd, 0.04)
+
+    def test_report_retains_complete_body_free_pair_and_exclusion_evidence(self) -> None:
+        baseline_rows = [
+            _query("q-1", verdict=True, ndcg=None),
+            _query("q-2", verdict=None, exclusion_reason="metric.not-applicable/v1"),
+        ]
+        candidate_rows = [
+            _query("q-1", verdict=False, ndcg=None),
+            _query("q-2", verdict=None, exclusion_reason="metric.not-applicable/v1"),
+        ]
+        report = compare_reproduction_runs(
+            self._loaded(_source_manifest(baseline_rows)),
+            self._loaded(_manifest(candidate_rows)),
+            resolve_experiment_profile("current-default/pi"),
+        )
+        payload = report.to_dict()
+        pair = payload["pairs"][0]
+        self.assertEqual(
+            set(pair), {"query_id", "baseline", "candidate"}
         )
         self.assertEqual(
-            json.dumps(report.to_mapping(), sort_keys=True).encode(),
-            json.dumps(repeated.to_mapping(), sort_keys=True).encode(),
+            set(pair["baseline"]),
+            {"status", "judge_verdict", "ndcg_at_10", "evidence_sha256"},
+        )
+        exclusion = payload["exclusions"][0]
+        self.assertEqual(exclusion["query_id"], "q-2")
+        self.assertEqual(
+            exclusion["baseline"]["exclusion_reason"],
+            "metric.not-applicable/v1",
+        )
+        self.assertNotIn('"answer":', json.dumps(payload))
+
+    def test_estimator_sample_digest_binds_values_status_and_evidence(self) -> None:
+        baseline = self._loaded(
+            _source_manifest([_query("q-1"), _query("q-2")])
+        )
+        first = self._loaded(
+            _manifest([_query("q-1", verdict=False), _query("q-2")])
+        )
+        second = self._loaded(_manifest([_query("q-1"), _query("q-2")]))
+        first_report = compare_reproduction_runs(
+            baseline, first, resolve_experiment_profile("current-default/pi")
+        )
+        second_report = compare_reproduction_runs(
+            baseline, second, resolve_experiment_profile("current-default/pi")
+        )
+        self.assertNotEqual(
+            first_report.metrics["accuracy"].estimator.sample_sha256,
+            second_report.metrics["accuracy"].estimator.sample_sha256,
+        )
+        evidence_variant = self._loaded(
+            _manifest(
+                [
+                    _query("q-1", verdict=False, evidence_sha256=_SHA_D),
+                    _query("q-2"),
+                ]
+            )
+        )
+        status_variant = self._loaded(
+            _manifest(
+                [
+                    _query(
+                        "q-1",
+                        status="failed",
+                        verdict=None,
+                        failure_class="runtime.failed/v1",
+                    ),
+                    _query("q-2"),
+                ]
+            )
+        )
+        evidence_report = compare_reproduction_runs(
+            baseline,
+            evidence_variant,
+            resolve_experiment_profile("current-default/pi"),
+        )
+        status_report = compare_reproduction_runs(
+            baseline,
+            status_variant,
+            resolve_experiment_profile("current-default/pi"),
+        )
+        self.assertEqual(
+            first_report.metrics["accuracy"].delta,
+            evidence_report.metrics["accuracy"].delta,
+        )
+        self.assertEqual(
+            first_report.metrics["accuracy"].delta,
+            status_report.metrics["accuracy"].delta,
+        )
+        self.assertNotEqual(
+            first_report.metrics["accuracy"].estimator.sample_sha256,
+            evidence_report.metrics["accuracy"].estimator.sample_sha256,
+        )
+        self.assertNotEqual(
+            first_report.metrics["accuracy"].estimator.sample_sha256,
+            status_report.metrics["accuracy"].estimator.sample_sha256,
         )
 
-    def test_claude_uses_target_comparison_without_manufactured_pairs(self) -> None:
+    def test_constructor_rejects_self_hashed_cross_field_metric_forgery(self) -> None:
+        for drift, forged in self._forged_metric_reports().items():
+            with self.subTest(drift=drift), self.assertRaises(ValueError):
+                replace(
+                    forged,
+                    metrics=dict(forged.metrics),
+                    identity_sha256=forged.identity_sha256,
+                )
+
+    def test_load_rejects_self_hashed_cross_field_metric_forgery(self) -> None:
+        loader = getattr(reproduction_module, "load_comparison_report", None)
+        self.assertIsNotNone(loader)
+        for drift, forged in self._forged_metric_reports().items():
+            with self.subTest(drift=drift), tempfile.TemporaryDirectory() as temporary:
+                path = Path(temporary) / "forged-report.json"
+                _write(
+                    path,
+                    {**forged._unsigned_dict(), "identity_sha256": forged.identity_sha256},
+                )
+                with self.assertRaises(ValueError):
+                    loader(path)
+
+    def test_load_comparison_report_round_trips_valid_report(self) -> None:
+        report = self._accuracy_report(count=20, regressions=0)
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "report.json"
+            path.write_bytes(report.to_json_bytes())
+            loaded = reproduction_module.load_comparison_report(path)
+        self.assertEqual(loaded.to_json_bytes(), report.to_json_bytes())
+
+    def test_report_binds_required_metric_identities_and_rejects_deletion(self) -> None:
+        report = self._accuracy_report(count=20, regressions=0)
+        self.assertEqual(report.metric_identities, ("llm-answer-correctness",))
+        forged = _forge_report(
+            report,
+            metric_identities=(),
+            metrics={},
+            accepted=True,
+        )
+        self._assert_report_forgery_rejected_everywhere(forged)
+
+    def test_report_replays_full_exclusion_contract(self) -> None:
+        rows = [
+            _query("q-1"),
+            _query("q-2", verdict=None, exclusion_reason="metric.not-applicable/v1"),
+        ]
+        report = compare_reproduction_runs(
+            self._loaded(_source_manifest(rows)),
+            self._loaded(_manifest(rows)),
+            resolve_experiment_profile("current-default/pi"),
+        )
+        exclusion = report.exclusions[0]
+        variants = {
+            "asymmetric": replace(
+                exclusion,
+                candidate=replace(
+                    exclusion.candidate, exclusion_reason="metric.other/v1"
+                ),
+            ),
+            "unallowed": replace(
+                exclusion,
+                baseline=replace(
+                    exclusion.baseline, exclusion_reason="metric.other/v1"
+                ),
+                candidate=replace(
+                    exclusion.candidate, exclusion_reason="metric.other/v1"
+                ),
+            ),
+            "noncompleted": replace(
+                exclusion,
+                baseline=replace(exclusion.baseline, status="failed"),
+                candidate=replace(exclusion.candidate, status="failed"),
+            ),
+        }
+        for drift, forged_exclusion in variants.items():
+            with self.subTest(drift=drift):
+                self._assert_report_forgery_rejected_everywhere(
+                    _forge_report(report, exclusions=(forged_exclusion,))
+                )
+
+    def test_report_rejects_noncompleted_pairs_with_metric_evidence(self) -> None:
+        accuracy = self._accuracy_report(count=20, regressions=0)
+        ndcg = self._ndcg_report(0.0)
+        profile = resolve_experiment_profile("current-default/pi")
+        for status in ("failed", "cancelled", "timed_out", "missing"):
+            for evidence_name, report, changes in (
+                ("verdict", accuracy, {"status": status, "judge_verdict": True}),
+                ("ndcg", ndcg, {"status": status, "ndcg_at_10": 0.5}),
+            ):
+                pair = report.pairs[0]
+                forged_pairs = (
+                    replace(pair, candidate=replace(pair.candidate, **changes)),
+                    *report.pairs[1:],
+                )
+                metric_names = tuple(report.metrics)
+                metrics = reproduction_module._recompute_metrics(
+                    forged_pairs, metric_names, profile
+                )
+                forged = _forge_report(
+                    report,
+                    pairs=forged_pairs,
+                    metrics=metrics,
+                    accepted=all(metric.accepted for metric in metrics.values()),
+                )
+                with self.subTest(status=status, evidence=evidence_name):
+                    self._assert_report_forgery_rejected_everywhere(forged)
+
+    def test_valid_noncompleted_pairs_retain_zero_metric_contribution(self) -> None:
+        rows = [
+            _query(
+                status,
+                status=status,
+                verdict=None,
+                ndcg=None,
+                failure_class=f"runtime.{status}/v1",
+            )
+            for status in ("failed", "cancelled", "timed_out", "missing")
+        ]
+        profile = resolve_experiment_profile("current-default/pi")
+        for metric_identity, metric_name in (
+            ("llm-answer-correctness", "accuracy"),
+            ("ndcg@10-binary-deduplicated", "ndcg_at_10"),
+        ):
+            baseline = self._loaded(
+                _source_manifest(
+                    rows, metric_identities_override=[metric_identity]
+                )
+            )
+            candidate = self._loaded(
+                _manifest(rows, metric_identities_override=[metric_identity])
+            )
+            report = compare_reproduction_runs(baseline, candidate, profile)
+            with self.subTest(metric=metric_name):
+                self.assertEqual(report.metrics[metric_name].baseline, 0.0)
+                self.assertEqual(report.metrics[metric_name].candidate, 0.0)
+                self.assertEqual(report.pair_ids, tuple(sorted(row["query_id"] for row in rows)))
+
+    def test_target_report_binds_exact_profile_target_and_runtime(self) -> None:
         profile = resolve_experiment_profile("paper-reference/claude-code")
-        candidate = _manifest_for(
-            "asterion-dci",
-            _query("q-target"),
-            _ir_query("ir-target", 0.5),
-            profile_id=profile.profile_id,
+        report = compare_reproduction_runs(
+            None,
+            self._loaded(
+                _manifest(
+                    _paper_query_rows("qa.nq.main.random50"),
+                    profile_id=profile.profile_id,
+                    runtime="claude-code",
+                    dataset_id="qa.nq",
+                    selection_id="qa.nq.main.random50",
+                )
+            ),
+            profile,
+        )
+        self.assertEqual(report.runtime, "claude-code")
+        self.assertEqual(
+            report.target_identity,
+            "paper.2605.05242v1/dci-agent-cc/main",
+        )
+        self.assertRegex(report.target_sha256 or "", r"^[0-9a-f]{64}$")
+        self.assertEqual(report.metrics["accuracy"].baseline, 0.78)
+        self.assertEqual(report.metrics["accuracy"].candidate, 1.0)
+        self.assertEqual(report.pair_ids, ())
+        self.assertEqual(len(report.target_sample_ids), 50)
+        self.assertEqual(
+            report.metrics["accuracy"].estimator.name,
+            "one-sample-bootstrap-percentile/v1",
+        )
+        self.assertIs(report.accepted, True)
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "target-report.json"
+            path.write_bytes(report.to_json_bytes())
+            self.assertEqual(
+                reproduction_module.load_comparison_report(path).to_json_bytes(),
+                report.to_json_bytes(),
+            )
+        variants = {
+            "wrong-target": _forge_report(report, target_identity="DCI-Agent-Lite"),
+            "wrong-target-digest": _forge_report(report, target_sha256=_SHA_A),
+            "wrong-profile-digest": _forge_report(report, profile_sha256=_SHA_A),
+            "wrong-runtime": _forge_report(report, runtime="pi"),
+        }
+        for drift, forged in variants.items():
+            with self.subTest(drift=drift):
+                self._assert_report_forgery_rejected_everywhere(forged)
+
+    def test_serialization_rejects_self_hashed_cross_field_metric_forgery(self) -> None:
+        for drift, forged in self._forged_metric_reports().items():
+            with self.subTest(drift=drift), self.assertRaises(ValueError):
+                forged.to_dict()
+            with self.subTest(drift=drift), tempfile.TemporaryDirectory() as temporary:
+                parent = Path(temporary) / "private"
+                parent.mkdir(mode=0o700)
+                path = parent / "report.json"
+                with self.assertRaises(ValueError):
+                    write_comparison_report(path, forged)
+                self.assertFalse(path.exists())
+
+    def test_source_parity_rejects_self_comparison(self) -> None:
+        manifest = self._loaded(_manifest([_query("q-1")]))
+        with self.assertRaises(ValueError):
+            compare_reproduction_runs(
+                manifest,
+                manifest,
+                resolve_experiment_profile("current-default/pi"),
+            )
+
+    def test_source_parity_binds_roles_and_shared_normalized_experiment(self) -> None:
+        source = self._loaded(_source_manifest([_query("q-1")]))
+        asterion = self._loaded(_manifest([_query("q-1")]))
+        report = compare_reproduction_runs(
+            source, asterion, resolve_experiment_profile("current-default/pi")
+        )
+        self.assertEqual(report.baseline_product, "original-dci")
+        self.assertEqual(report.candidate_product, "asterion-dci")
+        self.assertEqual(report.effective_config_sha256, _SHA_B)
+        self.assertNotEqual(
+            report.baseline_product_effective_config_sha256,
+            report.candidate_product_effective_config_sha256,
+        )
+        with self.assertRaises(ValueError):
+            compare_reproduction_runs(
+                asterion, source, resolve_experiment_profile("current-default/pi")
+            )
+
+    def test_exclusions_are_symmetric_allowlisted_and_cannot_hide_failures(self) -> None:
+        baseline_rows = [
+            _query("q-1"),
+            _query("q-2", verdict=None, exclusion_reason="metric.not-applicable/v1"),
+        ]
+        asymmetric_candidate = [_query("q-1"), _query("q-2")]
+        with self.assertRaises(ValueError):
+            compare_reproduction_runs(
+                self._loaded(_source_manifest(baseline_rows)),
+                self._loaded(_manifest(asymmetric_candidate)),
+                resolve_experiment_profile("current-default/pi"),
+            )
+
+        disallowed = [
+            _query("q-1"),
+            _query("q-2", verdict=None, exclusion_reason="metric.arbitrary/v1"),
+        ]
+        with self.assertRaises(ValueError):
+            compare_reproduction_runs(
+                self._loaded(_source_manifest(disallowed)),
+                self._loaded(_manifest(disallowed)),
+                resolve_experiment_profile("current-default/pi"),
+            )
+
+        hidden_failure = [
+            _query("q-1"),
+            _query(
+                "q-2",
+                status="failed",
+                verdict=None,
+                failure_class="runtime.failed/v1",
+                exclusion_reason="metric.not-applicable/v1",
+            ),
+        ]
+        hidden_source = self._loaded(_source_manifest(hidden_failure))
+        self.assertEqual(hidden_source.aggregates.failed_count, 1)
+        self.assertEqual(hidden_source.aggregates.excluded_count, 0)
+        with self.assertRaises(ValueError):
+            compare_reproduction_runs(
+                hidden_source,
+                self._loaded(_manifest(hidden_failure)),
+                resolve_experiment_profile("current-default/pi"),
+            )
+
+    def test_all_public_report_values_validate_and_copy_mutable_mappings(self) -> None:
+        report = self._accuracy_report(count=20, regressions=0)
+        with self.assertRaises(ValueError):
+            replace(report, comparison_kind="arbitrary")
+        with self.assertRaises(ValueError):
+            replace(report, accepted=not report.accepted)
+        with self.assertRaises(ValueError):
+            replace(report.candidate, completion_rate=2.0)
+        with self.assertRaises(ValueError):
+            ConfidenceInterval(lower=1.0, upper=0.0)
+        with self.assertRaises(ValueError):
+            EstimatorEvidence(
+                name="arbitrary",
+                seed=1,
+                resamples=1,
+                sample_sha256=_SHA_A,
+            )
+
+        source = dict(report.metrics)
+        copied = replace(report, metrics=source)
+        source.clear()
+        self.assertTrue(copied.metrics)
+        self.assertIsInstance(copied.metrics, type(MappingProxyType({})))
+
+        forged = object.__new__(ConfidenceInterval)
+        object.__setattr__(forged, "lower", math.nan)
+        object.__setattr__(forged, "upper", 0.0)
+        with self.assertRaises(ValueError):
+            forged.to_dict()
+
+    def test_claude_is_target_comparison_and_rejects_source_baseline(self) -> None:
+        profile = resolve_experiment_profile("paper-reference/claude-code")
+        candidate = self._loaded(
+            _manifest(
+                _paper_query_rows("qa.nq.main.random50"),
+                profile_id=profile.profile_id,
+                runtime="claude-code",
+                dataset_id="qa.nq",
+                selection_id="qa.nq.main.random50",
+            )
+        )
+        report = compare_reproduction_runs(None, candidate, profile)
+        self.assertEqual(report.comparison_kind, "target-comparison")
+        self.assertEqual(
+            report.target_identity,
+            "paper.2605.05242v1/dci-agent-cc/main",
+        )
+        self.assertEqual(report.pair_ids, ())
+        self.assertEqual(len(report.target_sample_ids), 50)
+        self.assertIs(report.accepted, True)
+        self.assertNotIn("source-parity", json.dumps(report.to_dict()))
+        with self.assertRaises(ValueError):
+            replace(report, baseline_product="original-dci")
+        with self.assertRaises(ValueError):
+            compare_reproduction_runs(candidate, candidate, profile)
+
+    def test_paper_claude_all_false_verdicts_fail_numeric_target_assessment(self) -> None:
+        profile = resolve_experiment_profile("paper-reference/claude-code")
+        candidate = self._loaded(
+            _manifest(
+                _paper_query_rows("qa.nq.main.random50", verdict=False),
+                profile_id=profile.profile_id,
+                runtime="claude-code",
+                dataset_id="qa.nq",
+                selection_id="qa.nq.main.random50",
+            )
         )
 
         report = compare_reproduction_runs(None, candidate, profile)
-        target = resolve_reproduction_target(profile.profile_id)
 
-        self.assertEqual(report.comparison_kind, "target-comparison")
-        self.assertIsNone(report.accepted)
+        self.assertIs(report.accepted, False)
+        self.assertEqual(report.metrics["accuracy"].baseline, 0.78)
+        self.assertEqual(report.metrics["accuracy"].candidate, 0.0)
+        self.assertLess(report.metrics["accuracy"].confidence_interval.upper, 0.0)
+
+    def test_paper_claude_rejects_unregistered_or_digest_drifted_scope(self) -> None:
+        profile = resolve_experiment_profile("paper-reference/claude-code")
+        nq_index = profile.scope_ids.index("qa.nq.main.random50")
+        nq_digest = profile.selected_ids_sha256[nq_index]
+        for dataset_id, selection_id, selection_sha256, queries in (
+            ("qa.nq", "qa.nq.unregistered.custom", _SHA_A, [_query("q-1")]),
+            ("qa.nq", "qa.nq.main.random50", _SHA_A, [_query("q-1")]),
+            (
+                "qa.triviaqa",
+                "qa.nq.main.random50",
+                nq_digest,
+                _paper_query_rows("qa.nq.main.random50"),
+            ),
+            (
+                "qa.nq",
+                "qa.nq.main.random50",
+                nq_digest,
+                [_query(f"forged-{index}") for index in range(50)],
+            ),
+        ):
+            with self.subTest(selection_id=selection_id):
+                candidate = self._loaded(
+                    _manifest(
+                        queries,
+                        profile_id=profile.profile_id,
+                        runtime="claude-code",
+                        dataset_id=dataset_id,
+                        selection_id=selection_id,
+                        selection_sha256=selection_sha256,
+                    )
+                )
+                with self.assertRaises(ValueError):
+                    compare_reproduction_runs(None, candidate, profile)
+
+    def test_paper_claude_non_main_scope_is_not_compared_to_main_result(self) -> None:
+        profile = resolve_experiment_profile("paper-reference/claude-code")
+        candidate = self._loaded(
+            _manifest(
+                [_query(f"fixture-{index}") for index in range(100)],
+                profile_id=profile.profile_id,
+                runtime="claude-code",
+                dataset_id="browsecomp-plus",
+                selection_id="browsecomp-plus.analysis.n100",
+            )
+        )
+
+        original = reproduction_module.canonical_sha256
+
+        def fixture_digest(value: object) -> str:
+            if value == tuple(sorted(f"fixture-{index}" for index in range(100))):
+                return candidate.selection_sha256
+            return original(value)
+
+        with mock.patch.object(
+            reproduction_module, "canonical_sha256", side_effect=fixture_digest
+        ):
+            report = compare_reproduction_runs(None, candidate, profile)
+
         self.assertEqual(report.pairs, ())
-        self.assertEqual(report.retained_pair_ids, ())
-        self.assertEqual(len(report.target_rows), 2)
-        self.assertEqual(
-            report.estimator["name"], "single-run-bootstrap-percentile/v1"
-        )
-        self.assertEqual(report.estimator["resamples"], 10_000)
-        self.assertEqual(report.accuracy["candidate_mean"], 1.0)
-        self.assertEqual(report.ndcg_at_10["candidate_mean"], 0.5)
-        self.assertEqual(report.target_identity["profile_id"], profile.profile_id)
-        self.assertEqual(
-            report.target_identity["profile_identity_sha256"], profile.identity_sha256
-        )
-        self.assertEqual(report.target_identity["target_id"], target.target_id)
-        self.assertEqual(
-            report.target_identity["target_identity_sha256"], target.identity_sha256
-        )
-        self.assertEqual(target.agentic_search_accuracy, 0.8)
-        self.assertEqual(target.qa_accuracy, 0.83)
-        self.assertEqual(target.ir_ndcg_at_10, 0.685)
-        self.assertEqual(
-            dict(target.dataset_targets),
-            {
-                "beir.arguana": 0.853,
-                "beir.scifact": 0.757,
-                "bright.biology": 0.771,
-                "bright.earth-science": 0.69,
-                "bright.economics": 0.468,
-                "bright.robotics": 0.568,
-                "browsecomp-plus": 0.8,
-                "qa.2wikimultihopqa": 0.82,
-                "qa.bamboogle": 0.8,
-                "qa.hotpotqa": 0.88,
-                "qa.musique": 0.74,
-                "qa.nq": 0.78,
-                "qa.triviaqa": 0.96,
-            },
-        )
-        self.assertNotIn("source-parity", json.dumps(report.to_mapping()))
+        self.assertEqual(report.target_samples, ())
+        self.assertEqual(dict(report.metrics), {})
+        self.assertIsNone(report.accepted)
 
-    def test_cli_writes_private_report_and_returns_nonzero_for_failed_acceptance(self) -> None:
-        profile = resolve_experiment_profile("current-default/pi")
-        baseline = _manifest_for("original-dci", _query("q-cli"))
-        passing = _manifest_for("asterion-dci", _query("q-cli"))
-        failing = _manifest_for(
-            "asterion-dci", _query("q-cli", judge_verdict=False)
-        )
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
-            os.chmod(root, 0o700)
-            baseline_path = root / "baseline.json"
-            passing_path = root / "passing.json"
-            failing_path = root / "failing.json"
-            baseline_path.write_text(json.dumps(baseline.to_mapping()))
-            passing_path.write_text(json.dumps(passing.to_mapping()))
-            failing_path.write_text(json.dumps(failing.to_mapping()))
-
-            passing_report = root / "passing-report.json"
-            stdout = io.StringIO()
-            stderr = io.StringIO()
-            self.assertEqual(
-                main(
-                    [
-                        "paper",
-                        "compare",
-                        "--baseline",
-                        str(baseline_path),
-                        "--candidate",
-                        str(passing_path),
-                        "--profile",
-                        profile.profile_id,
-                        "--output",
-                        str(passing_report),
-                    ],
-                    stdout=stdout,
-                    stderr=stderr,
-                ),
-                0,
+    def test_paper_claude_recomputes_qa_and_ir_macro_targets(self) -> None:
+        profile = resolve_experiment_profile("paper-reference/claude-code")
+        scope_by_dataset = {
+            "qa.2wikimultihopqa": "qa.2wikimultihopqa.main.random50",
+            "qa.bamboogle": "qa.bamboogle.main.full",
+            "qa.hotpotqa": "qa.hotpotqa.main.random50",
+            "qa.musique": "qa.musique.main.random50",
+            "qa.nq": "qa.nq.main.random50",
+            "qa.triviaqa": "qa.triviaqa.main.random50",
+            "beir.arguana": "beir.arguana.main.random50",
+            "beir.scifact": "beir.scifact.main.random50",
+            "bright.biology": "bright.biology.main.full",
+            "bright.earth-science": "bright.earth-science.main.full",
+            "bright.economics": "bright.economics.main.full",
+            "bright.robotics": "bright.robotics.main.full",
+        }
+        reports = []
+        for dataset_id, selection_id in scope_by_dataset.items():
+            ir = dataset_id.startswith(("beir.", "bright."))
+            rows = _paper_query_rows(
+                selection_id,
+                verdict=None if ir else True,
+                ndcg=1.0 if ir else None,
             )
-            self.assertEqual(stderr.getvalue(), "")
-            self.assertIn("acceptance=pass", stdout.getvalue())
-            self.assertEqual(stat.S_IMODE(passing_report.stat().st_mode), 0o600)
-
-            stdout = io.StringIO()
-            stderr = io.StringIO()
-            self.assertEqual(
-                main(
-                    [
-                        "paper",
-                        "compare",
-                        "--baseline",
-                        str(baseline_path),
-                        "--candidate",
-                        str(failing_path),
-                        "--profile",
-                        profile.profile_id,
-                        "--output",
-                        str(root / "failing-report.json"),
-                    ],
-                    stdout=stdout,
-                    stderr=stderr,
-                ),
-                1,
+            reports.append(
+                compare_reproduction_runs(
+                    None,
+                    self._loaded(
+                        _manifest(
+                            rows,
+                            profile_id=profile.profile_id,
+                            runtime="claude-code",
+                            dataset_id=dataset_id,
+                            selection_id=selection_id,
+                        )
+                    ),
+                    profile,
+                )
             )
-            self.assertEqual(stderr.getvalue(), "")
-            self.assertIn("acceptance=fail", stdout.getvalue())
+        aggregates = compare_published_target_aggregates(tuple(reports), profile)
+
+        self.assertEqual(set(aggregates), {"qa_accuracy", "ir_ndcg_at_10"})
+        self.assertEqual(aggregates["qa_accuracy"].baseline, 0.83)
+        self.assertEqual(aggregates["ir_ndcg_at_10"].baseline, 0.685)
+        self.assertTrue(all(metric.accepted for metric in aggregates.values()))
+        with self.assertRaisesRegex(ValueError, "incomplete"):
+            compare_published_target_aggregates(tuple(reports[1:]), profile)
+
+
+class ReproductionCliTests(unittest.TestCase):
+    def test_compare_writes_private_deterministic_report_and_fails_acceptance(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            baseline = root / "baseline.json"
+            candidate = root / "candidate.json"
+            report = root / "private" / "report.json"
+            _write(baseline, _source_manifest([_query("q-1")]))
+            _write(candidate, _manifest([_query("q-1", verdict=False)]))
+
+            first = main(
+                [
+                    "paper",
+                    "compare",
+                    "--baseline",
+                    str(baseline),
+                    "--candidate",
+                    str(candidate),
+                    "--profile",
+                    "current-default/pi",
+                    "--output",
+                    str(report),
+                ]
+            )
+            first_bytes = report.read_bytes()
+            second = main(
+                [
+                    "paper",
+                    "compare",
+                    "--baseline",
+                    str(baseline),
+                    "--candidate",
+                    str(candidate),
+                    "--profile",
+                    "current-default/pi",
+                    "--output",
+                    str(report),
+                ]
+            )
+            self.assertNotEqual(first, 0)
+            self.assertNotEqual(second, 0)
+            self.assertEqual(first_bytes, report.read_bytes())
+            self.assertEqual(stat.S_IMODE(report.parent.stat().st_mode), 0o700)
+            self.assertEqual(stat.S_IMODE(report.stat().st_mode), 0o600)
+            self.assertEqual(json.loads(first_bytes)["schema"], COMPARISON_SCHEMA)
+
+    def test_compare_returns_nonzero_on_schema_drift_without_report(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            baseline = root / "baseline.json"
+            candidate = root / "candidate.json"
+            report = root / "private" / "report.json"
+            value = _manifest([_query("q-1")])
+            value["schema"] = "dci.reproduction-run/v999"
+            _write(baseline, value)
+            _write(candidate, _manifest([_query("q-1")]))
+            result = main(
+                [
+                    "paper",
+                    "compare",
+                    "--baseline",
+                    str(baseline),
+                    "--candidate",
+                    str(candidate),
+                    "--profile",
+                    "current-default/pi",
+                    "--output",
+                    str(report),
+                ]
+            )
+            self.assertNotEqual(result, 0)
+            self.assertFalse(report.exists())
+
+    def test_compare_rejects_existing_non_private_parent_without_changing_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            public_parent = root / "public"
+            public_parent.mkdir(mode=0o755)
+            os_mode = stat.S_IMODE(public_parent.stat().st_mode)
+            baseline = root / "baseline.json"
+            candidate = root / "candidate.json"
+            _write(baseline, _source_manifest([_query("q-1")]))
+            _write(candidate, _manifest([_query("q-1")]))
+            result = main(
+                [
+                    "paper",
+                    "compare",
+                    "--baseline",
+                    str(baseline),
+                    "--candidate",
+                    str(candidate),
+                    "--profile",
+                    "current-default/pi",
+                    "--output",
+                    str(public_parent / "report.json"),
+                ]
+            )
+            self.assertNotEqual(result, 0)
+            self.assertEqual(stat.S_IMODE(public_parent.stat().st_mode), os_mode)
 
 
 if __name__ == "__main__":

@@ -100,7 +100,7 @@ uv run python tools/verify_asterion_dci_product.py
 ```
 
 It executes the eight checked-in local/model-free product rows, resolves and
-executes all 533 delegated batch selectors, verifies the twelve source/Asterion
+executes all 538 delegated batch selectors, verifies the twelve source/Asterion
 launcher pairs, proves the installed wheel/application boundary with a local
 fixture, and validates the digest-bound seven-case bounded-real record. It
 deliberately executes zero Pi or Judge provider calls.
@@ -277,8 +277,8 @@ claim. Successful evidence can be terminally bound with
 bodies, and credentials must never be committed.
 
 The one-to-one Pi-default wrappers under `asterion/scripts/{bcplus_eval,qa,bright}`
-load the shared repository `.env`, preflight their dataset and corpus, and call
-only `asterion-dci benchmark`. For example:
+delegate shared repository `.env` loading to the Python entry point, preflight
+their dataset and corpus, and call only `asterion-dci benchmark`. For example:
 
 ```bash
 bash asterion/scripts/qa/run_hotpotqa_dev_sample50.sh --limit 1
@@ -456,28 +456,21 @@ compatible Responses endpoints do not receive the field.
 <a name="quick-start"></a>
 ## ⚡ Quick Start
 
-**Prerequisites**: Install dependencies and configure the agent and judge credentials you plan to use (see [Setup](#setup)).
+**Prerequisites**: Install dependencies and create the repository configuration file. Add only the agent and independent Judge credentials you intend to use (see [Setup](#setup)); exported environment values and explicit CLI values take precedence over `.env`.
+
+```bash
+cp .env.template .env
+```
 
 The example below illustrates DCI-Agent-Lite in action: the deep research agent searches the corpus, inspects relevant documents, and produces evidence-grounded answers entirely within the given wikipedia corpus.
 
 1. **Open the DCI-Agent-Lite TUI**:
 
 ```bash
-# load keys from .env if not already in environment
-set -a; source .env 2>/dev/null; set +a
-
-PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner --terminal \
+# quick-start-terminal: uses the Pi runtime defaults from the layered configuration
+PYTHONPATH=src uv run python src/dci/benchmark/pi_rpc_runner.py --terminal \
   --cwd "corpus/wiki_corpus" \
-  --extra-arg="--thinking high"
-```
-该命令默认使用仓库根目录 `.env` 中的 `DCI_PROVIDER`/`DCI_MODEL`（建议缺省为 `openai-codex` 与 `gpt-5.6-luna`）。要显式固定 provider/backend 时可加上：
-
-```bash
-PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner --terminal \
-  --provider openai \
-  --model gpt-5.4-nano \
-  --cwd "corpus/wiki_corpus" \
-  --extra-arg="--thinking high"
+  --pi-thinking-level high
 ```
 
 2. **Run your first task**. In the TUI, type:
@@ -489,32 +482,32 @@ Answer the following question using only wiki_dump.jsonl in the current director
 3. (Optional) **Run Programmatically from the CLI**. Remove the `--terminal` flag and pass your task as the final argument:
 
 ```bash
-set -a; source .env 2>/dev/null; set +a
-
-PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
+# quick-start-programmatic: writes the private run artifacts described below
+PYTHONPATH=src uv run python src/dci/benchmark/pi_rpc_runner.py \
   --cwd "corpus/wiki_corpus" \
-  --extra-arg="--thinking high" \
+  --pi-thinking-level high \
   "Answer the following question using only wiki_dump.jsonl in the current directory. Do not use web search. Use rg instead of grep for fast searching. Question: In which street did the Great Fire of London originate?"
 ```
-如需固定 provider/backend，示例如下：
+
+The same command can override the selected Pi provider and model without changing or bypassing `.env`:
 
 ```bash
-PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
-  --provider openai \
-  --model gpt-5.4-nano \
+# quick-start-override: explicit invocation values have highest precedence
+PYTHONPATH=src uv run python src/dci/benchmark/pi_rpc_runner.py \
+  --provider openai-codex \
+  --model gpt-5.6-luna \
   --cwd "corpus/wiki_corpus" \
-  --extra-arg="--thinking high" \
-  "Answer the following question using only wiki_dump.jsonl in the current directory. Do not use web search. Use rg instead of grep for fast searching. Question: In which street did the Great Fire of London originate?"
+  "Answer the following question using only wiki_dump.jsonl in the current directory. Question: In which street did the Great Fire of London originate?"
 ```
 
-Programmatic runs save artifacts under `outputs/runs/<timestamp>/`. The final answer is in `final.txt`, the original question is in `question.txt`, and the full trajectory is in `conversation_full.json`. To choose a specific location, pass `--output-dir path/to/run`. 
+Programmatic runs save private artifacts under `outputs/runs/<timestamp>/`. The original question is in `question.txt`, the final answer in `final.txt`, the full trajectory in `conversation_full.json`, protocol request/event evidence under `protocol/`, and the body-free resolved configuration in `effective-config.json`. The run directory is mode `0700` and these files are mode `0600`. To choose a fresh location, pass `--output-dir path/to/run`.
 
 More runnable examples for OpenAI, Anthropic and vLLM are available in [`scripts/examples/`](scripts/examples/) as `dci_basic_*.sh`. See the [setup guide](assets/docs/setup.md#5-optional-configure-a-local-vllm-provider) for vLLM configuration.
 
 
 ## 🚀 Context Management Strategies
 
-DCI-Agent-Lite includes a lightweight runtime context-management layer for long-horizon deep research runs. Asterion ships the closed `dci.context-profile/v1` contract through an Asterion-owned Pi extension loaded by its native runner.
+DCI-Agent-Lite includes a lightweight runtime context-management layer for long-horizon deep research runs. Original DCI ships its own closed `dci.context-profile/v1` resources and integrity-checked Pi extension; its runner loads that implementation directly and does not import or launch Asterion.
 
 It uses three simple strategies:
 
@@ -566,44 +559,61 @@ Evidence labels are intentionally narrow:
 
 - **Implemented**: extension, transport, artifacts, CLI, benchmark, resume, and installed application are present.
 - **Model-free verified**: deterministic hook, failure, privacy, wheel, and surface tests pass with Provider operations: 0 and Full dataset ran: no.
-- **Bounded provider verified**: reserved for retained L3/L4 runs from `tools/verify_dci_context_acceptance.py --provider-backed`; it is not a full benchmark claim.
+- **Bounded provider verified**: reserved for retained Quick Start, L3, and L4 evidence from `tools/verify_original_readme.py --level bounded`; it is not a full benchmark claim.
 - **Experiment reproduced**: not yet claimed; full paper runs require separate AF-340 budget authorization.
 
-Model-free setup verification is:
+Each closed profile is executable through the normal original DCI entry point. These commands use runtime defaults; each is a provider operation when executed:
 
 ```bash
-uv run --project asterion python tools/verify_dci_context_acceptance.py
+# context-level0
+PYTHONPATH=src uv run python src/dci/benchmark/pi_rpc_runner.py --runtime-context-level level0 --cwd corpus/wiki_corpus "Answer using only wiki_dump.jsonl: Where did the Great Fire of London originate?"
 ```
 
-The bounded provider-backed verifier is cost-bearing and must use a private
-output root; it performs only its declared L3 and L4 cases, never a full dataset.
-
-Set Pi thinking explicitly:
-
 ```bash
-set -a; source .env 2>/dev/null; set +a
-
-PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
-  --cwd "corpus/wiki_corpus" \
-  --extra-arg="--thinking high" \
-  "Answer the following question using only wiki_dump.jsonl in the current directory. Do not use web search. Use rg instead of grep for fast searching. Question: In which street did the Great Fire of London originate?"
+# context-level1
+PYTHONPATH=src uv run python src/dci/benchmark/pi_rpc_runner.py --runtime-context-level level1 --cwd corpus/wiki_corpus "Answer using only wiki_dump.jsonl: Where did the Great Fire of London originate?"
 ```
-要显式指定 provider/backend，可在命令中附加：
 
 ```bash
-PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \
-  --provider openai \
-  --model gpt-5.4-nano \
-  --cwd "corpus/wiki_corpus" \
-  --extra-arg="--thinking high" \
-  "Answer the following question using only wiki_dump.jsonl in the current directory. Do not use web search. Use rg instead of grep for fast searching. Question: In which street did the Great Fire of London originate?"
+# context-level2
+PYTHONPATH=src uv run python src/dci/benchmark/pi_rpc_runner.py --runtime-context-level level2 --cwd corpus/wiki_corpus "Answer using only wiki_dump.jsonl: Where did the Great Fire of London originate?"
+```
+
+```bash
+# context-level3
+PYTHONPATH=src uv run python src/dci/benchmark/pi_rpc_runner.py --runtime-context-level level3 --cwd corpus/wiki_corpus "Answer using only wiki_dump.jsonl: Where did the Great Fire of London originate?"
+```
+
+```bash
+# context-level4
+PYTHONPATH=src uv run python src/dci/benchmark/pi_rpc_runner.py --runtime-context-level level4 --cwd corpus/wiki_corpus "Answer using only wiki_dump.jsonl: Where did the Great Fire of London originate?"
+```
+
+The literal/model-free acceptance checks README commands, installed L0–L4 resources, extension digest, compaction, summary, failure suppression, telemetry, resume, artifact contracts, and terminal preflight without constructing a provider:
+
+```bash
+uv run python tools/verify_original_readme.py --level local
+```
+
+Bounded verification is cost-bearing. It runs the documented programmatic Quick Start plus one forced L3 compaction and one forced L4 summary, while preflighting the interactive terminal path locally. It requires a fresh private output root and does not run a full dataset:
+
+```bash
+uv run python tools/verify_original_readme.py --level bounded \
+  --env-file .env \
+  --output-root outputs/verification/original-readme-bounded
 ```
 
 
 <a name="running-experiments"></a>
 ## 🎯 Benchmark DCI-Agent-Lite 
 
-We benchmark DCI-Agent-Lite on the following benchmark suites using the configured runtime context defaults (commonly `openai-codex` + `gpt-5.6-luna`) with `--thinking high` and a maximum turn budget of 300.
+The launchers below retain their documented dataset, corpus, context, thinking,
+turn, concurrency, and output identities. Agent provider and model now come
+from the shared CLI/environment/`.env` configuration layers; the shell wrappers
+do not source `.env` or inject either value. The eleven primary Asterion batch profiles are runtime-neutral
+too: they preserve explicit or exported
+provider/model values and use runtime defaults only when neither layer supplies
+them.
 
 | Data | Data Size | Retrieval Corpus | Corpus Size | Avg. Corpus Len. (words) | Corpus Path |
 |------|-----------|------------------|-------------|--------------------------|-------------|
@@ -641,6 +651,189 @@ bash scripts/bright/run_earth_science.sh
 bash scripts/bright/run_economics.sh
 bash scripts/bright/run_robotics.sh
 ```
+
+### Original and Asterion launcher parity
+
+The public benchmark surface consists of one BrowseComp-Plus, six QA, and four
+BRIGHT launchers. Each original launcher has one independent Asterion
+counterpart:
+
+| Experiment | Original DCI | Asterion DCI |
+|---|---|---|
+| BrowseComp-Plus | `scripts/bcplus_eval/run_bcplus_eval_openai.sh` | `asterion/scripts/bcplus_eval/run_bcplus_eval_openai.sh` |
+| 2WikiMultiHopQA | `scripts/qa/run_2wikimultihopqa_dev_sample50.sh` | `asterion/scripts/qa/run_2wikimultihopqa_dev_sample50.sh` |
+| Bamboogle | `scripts/qa/run_bamboogle_test_sample50.sh` | `asterion/scripts/qa/run_bamboogle_test_sample50.sh` |
+| HotpotQA | `scripts/qa/run_hotpotqa_dev_sample50.sh` | `asterion/scripts/qa/run_hotpotqa_dev_sample50.sh` |
+| MuSiQue | `scripts/qa/run_musique_dev_sample50.sh` | `asterion/scripts/qa/run_musique_dev_sample50.sh` |
+| Natural Questions | `scripts/qa/run_nq_test_sample50.sh` | `asterion/scripts/qa/run_nq_test_sample50.sh` |
+| TriviaQA | `scripts/qa/run_triviaqa_test_sample50.sh` | `asterion/scripts/qa/run_triviaqa_test_sample50.sh` |
+| BRIGHT Biology | `scripts/bright/run_bio.sh` | `asterion/scripts/bright/run_bio.sh` |
+| BRIGHT Earth Science | `scripts/bright/run_earth_science.sh` | `asterion/scripts/bright/run_earth_science.sh` |
+| BRIGHT Economics | `scripts/bright/run_economics.sh` | `asterion/scripts/bright/run_economics.sh` |
+| BRIGHT Robotics | `scripts/bright/run_robotics.sh` | `asterion/scripts/bright/run_robotics.sh` |
+
+Use a literal limit for bounded launcher checks:
+
+```bash
+bash scripts/bcplus_eval/run_bcplus_eval_openai.sh level3 high --limit 1
+bash scripts/qa/run_hotpotqa_dev_sample50.sh --limit 1
+bash scripts/bright/run_bio.sh --limit 1
+
+bash asterion/scripts/bcplus_eval/run_bcplus_eval_openai.sh level3 high --limit 1
+bash asterion/scripts/qa/run_hotpotqa_dev_sample50.sh --limit 1
+bash asterion/scripts/bright/run_bio.sh --limit 1
+```
+
+The unmodified source and Asterion commands now fail closed before provider
+construction: invoking a launcher is not full execution authorization, and
+`--limit 1` is not a full result. Full execution is delegated only through the
+explicit AF-340 verifier with an invocation-level authorization, profile,
+fresh output root, and budget:
+
+```bash
+uv run python tools/verify_af340_reproduction.py full \
+  --profile current-default/pi \
+  --output-root outputs/verification/af340-full \
+  --estimated-budget-usd 0 \
+  --authorize-full
+```
+
+`scripts/bcplus_eval/run_L3.sh` and its Asterion counterpart remain compatibility
+helpers; they are outside the eleven primary launcher pairs.
+
+### AF-340 reproduction coordinator
+
+Run the complete provider-free matrix first:
+
+```bash
+uv run python tools/verify_af340_reproduction.py local
+```
+
+Each bounded command requires the repository environment file, a fresh output
+root, and the resource tree used by the README examples. `--resource-root`
+defaults to the code checkout, but worktree runs should point it explicitly at
+the main/shared checkout; it is never inferred from the environment-file path.
+The coordinator continues to execute code from the current checkout while using
+this root for the Quick Start wiki corpus and the exact launcher sample inputs.
+Pi checks all 11 launcher dataset/corpus pairs; the Claude variants require only
+the wiki corpus. Retained plans and reports bind the exact selected-resource
+content manifest. Run Pi, Claude Code subscription, and explicit MiniMax as separate retained
+variants:
+
+```bash
+DCI_RESOURCE_ROOT=/absolute/path/to/main/DCI-Agent-Lite
+uv run python tools/verify_af340_reproduction.py bounded --variant pi \
+  --env-file .env --resource-root "$DCI_RESOURCE_ROOT" \
+  --output-root outputs/verification/af340-bounded-pi
+uv run python tools/verify_af340_reproduction.py bounded --variant claude-subscription \
+  --env-file .env --resource-root "$DCI_RESOURCE_ROOT" \
+  --output-root outputs/verification/af340-bounded-claude-subscription
+uv run python tools/verify_af340_reproduction.py bounded --variant claude-minimax \
+  --provider minimax --model MiniMax-M3 --env-file .env \
+  --resource-root "$DCI_RESOURCE_ROOT" \
+  --output-root outputs/verification/af340-bounded-claude-minimax
+```
+
+Inspect the three retained 0600 reports without contacting a provider; the
+inspection passes only when original Pi, Asterion Pi, Claude subscription, and
+Claude MiniMax form the exact four-dimensional evidence set. Inspection
+rebuilds the exact selected dataset/corpus content manifest from the external
+resource root and rehashes the retained native request, terminal state/event,
+and Judge files. Report JSON and self-authored hashes alone cannot satisfy this
+gate, and same-path resource mutation invalidates the evidence:
+
+```bash
+uv run python tools/verify_af340_reproduction.py inspect \
+  --resource-root "$DCI_RESOURCE_ROOT" \
+  --report outputs/verification/af340-bounded-pi/af340-bounded-report.json \
+  --report outputs/verification/af340-bounded-claude-subscription/af340-bounded-report.json \
+  --report outputs/verification/af340-bounded-claude-minimax/af340-bounded-report.json
+```
+
+The AF-340 H004 train/evaluation hooks require
+`AF340_RESOURCE_ROOT="$DCI_RESOURCE_ROOT"` alongside the three retained-report
+variables, so the hooks pass the same external anchor to `inspect`.
+
+Print the immutable profile digest, selected-query counts, operation maxima, and
+budget before requesting authority:
+
+```bash
+uv run python tools/verify_af340_reproduction.py full --profile current-default/pi \
+  --output-root outputs/verification/af340-full-pi \
+  --estimated-budget-usd 0 --dry-run
+```
+
+Actual full execution is a separate cost boundary and is never inferred from
+`.env`, cache state, local checks, or bounded evidence. After reviewing the dry
+plan and explicitly authorizing its named profile and budget, use:
+
+```bash
+uv run python tools/verify_af340_reproduction.py full --profile current-default/pi \
+  --output-root outputs/verification/af340-full-pi \
+  --estimated-budget-usd 0 --authorize-full
+```
+
+The coordinator writes one strict Task 7 manifest in each product/scope private
+root and immediately performs the matched Pi or target-only Claude comparison.
+Body-free comparison reports are retained under the full root's `comparisons/`
+directory; no separate manual comparison command is required. `inspect-full`
+requires consumed Task 6 receipts, every exact product/scope private tree, and
+Task 7 manifest identities bound to the comparison report. Pi credentials or a
+usable saved `auth.json`, and Claude subscription login status, are checked
+before provider-capable execution begins.
+
+The retained gate assumes the private evidence root remains under coordinator
+ownership. It detects report-only fabrication and later artifact mutation; it
+does not claim authenticity against a hostile process running as the same OS
+user without an external signing or registry trust anchor.
+
+Validate that the retained full report was explicitly authorized, covered every
+profile scope, matched the exact operation maxima, and contains no rejected
+comparison:
+
+```bash
+uv run python tools/verify_af340_reproduction.py inspect-full \
+  --report outputs/verification/af340-full-pi/af340-full-report.json
+```
+
+H005 closure is stricter than inspecting one execution report. After producing
+an accepted Pi full report and an accepted `paper-reference/claude-code` report,
+run the terminal gates from a clean repository and inspect all three independent
+artifacts together:
+
+```bash
+uv run python tools/verify_af340_reproduction.py terminal \
+  --output-root outputs/verification/af340-terminal
+uv run python tools/verify_af340_reproduction.py inspect-closure \
+  --pi-report outputs/verification/af340-full-pi/af340-full-report.json \
+  --claude-report outputs/verification/af340-full-claude-paper/af340-full-report.json \
+  --terminal-report outputs/verification/af340-terminal/af340-terminal-report.json
+```
+
+The paper Claude comparison binds the exact versioned target row and its digest.
+It retains candidate-only query samples and uses a one-sample 95% bootstrap; it
+never manufactures original-product pairs. Numeric targets apply only to the 13
+paper main-result scopes, while the three analysis/appendix/ablation scopes are
+explicitly not applicable. H005 also recomputes the paper's macro QA and IR rows
+from their six dataset reports. A rejected scope or aggregate assessment cannot
+close H005. The terminal report is rebound to the complete current Git status,
+so later tracked or untracked drift invalidates it.
+
+To re-run one retained comparison explicitly, use the Task 7 ready command:
+
+```bash
+uv run --project asterion asterion-dci paper compare \
+  --baseline path/to/original/af340-run-manifest.json \
+  --candidate path/to/asterion/af340-run-manifest.json \
+  --profile current-default/pi \
+  --output path/to/private-comparison.json
+```
+
+Operator credentials live only in `.env` or exported environment variables;
+full authorization is always an explicit CLI action. Reports contain hashes,
+counts, safe identities, and status classes—not credentials, prompts, answers,
+private paths, or child process bodies.
+
 
 ## 🤝 Core Contributors
 

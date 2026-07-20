@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -49,6 +50,65 @@ PROFILE_NAMES = {
     "beir.scifact",
 }
 
+PRIMARY_LAUNCHERS = {
+    "bcplus_eval/run_bcplus_eval_openai.sh": (
+        "bcplus.openai",
+        "data/bcplus_qa.jsonl",
+        "corpus/bc_plus_docs",
+    ),
+    "qa/run_2wikimultihopqa_dev_sample50.sh": (
+        "qa.2wikimultihopqa",
+        "data/dci-bench/data/2wikimultihopqa/test.jsonl",
+        "corpus/wiki_corpus",
+    ),
+    "qa/run_bamboogle_test_sample50.sh": (
+        "qa.bamboogle",
+        "data/dci-bench/data/bamboogle/test.jsonl",
+        "corpus/wiki_corpus",
+    ),
+    "qa/run_hotpotqa_dev_sample50.sh": (
+        "qa.hotpotqa",
+        "data/dci-bench/data/hotpotqa/test.jsonl",
+        "corpus/wiki_corpus",
+    ),
+    "qa/run_musique_dev_sample50.sh": (
+        "qa.musique",
+        "data/dci-bench/data/musique/test.jsonl",
+        "corpus/wiki_corpus",
+    ),
+    "qa/run_nq_test_sample50.sh": (
+        "qa.nq",
+        "data/dci-bench/data/nq/test.jsonl",
+        "corpus/wiki_corpus",
+    ),
+    "qa/run_triviaqa_test_sample50.sh": (
+        "qa.triviaqa",
+        "data/dci-bench/data/triviaqa/test.jsonl",
+        "corpus/wiki_corpus",
+    ),
+    "bright/run_bio.sh": (
+        "bright.biology",
+        "data/dci-bench/data/bright_biology/bright_biology.jsonl",
+        "corpus/bright_corpus/biology",
+    ),
+    "bright/run_earth_science.sh": (
+        "bright.earth-science",
+        "data/dci-bench/data/bright_earth_science/bright_earth_science.jsonl",
+        "corpus/bright_corpus/earth_science",
+    ),
+    "bright/run_economics.sh": (
+        "bright.economics",
+        "data/dci-bench/data/bright_economics/economics_full.jsonl",
+        "corpus/bright_corpus/economics",
+    ),
+    "bright/run_robotics.sh": (
+        "bright.robotics",
+        "data/dci-bench/data/bright_robotics/bright_robotics.jsonl",
+        "corpus/bright_corpus/robotics",
+    ),
+}
+PRIMARY_PROFILE_NAMES = {profile for profile, _, _ in PRIMARY_LAUNCHERS.values()}
+
 
 class AsterionDciBatchLauncherTests(unittest.TestCase):
     def test_docs_superpowers_plans_2026_07_14_af_240_batch_evaluation_export_parity_md_target_feature_installed_batch_profiles(
@@ -59,8 +119,12 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
         self.assertEqual(set(document["profiles"]), PROFILE_NAMES)
         for name, profile in document["profiles"].items():
             with self.subTest(profile=name):
-                self.assertEqual(profile["provider"], "openai")
-                self.assertEqual(profile["model"], "gpt-5.4-nano")
+                if name in PRIMARY_PROFILE_NAMES:
+                    self.assertNotIn("provider", profile)
+                    self.assertNotIn("model", profile)
+                else:
+                    self.assertEqual(profile["provider"], "openai")
+                    self.assertEqual(profile["model"], "gpt-5.4-nano")
                 self.assertEqual(profile["tools"], "read,bash")
                 self.assertEqual(profile["node_max_old_space_size_mb"], 8192)
                 self.assertIn(
@@ -106,16 +170,182 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
         for relative in sorted(TARGET_LAUNCHERS):
             text = (ASTERION_LAUNCHER_ROOT / relative).read_text(encoding="utf-8")
             with self.subTest(launcher=relative):
-                self.assertNotIn('source "$REPO_ROOT/.env"', text)
                 self.assertIn("asterion-dci benchmark", text)
                 self.assertIn('"$@"', text)
                 self.assertIn("--profile", text)
-                self.assertIn("--limit", text)
+                if relative not in PRIMARY_LAUNCHERS:
+                    self.assertIn("--limit", text)
                 self.assertIn("[ -f", text)
                 self.assertIn("[ -d", text)
                 self.assertNotIn("src/dci", text)
                 self.assertNotIn("scripts/bcplus_eval/run_bcplus_eval.py", text)
                 self.assertNotIn("uv run python", text)
+                if relative in PRIMARY_LAUNCHERS:
+                    self.assertIn(
+                        'uv run --project "$REPO_ROOT/asterion" asterion-dci benchmark',
+                        text,
+                    )
+                    self.assertNotIn("command=(asterion-dci", text)
+
+    def test_all_primary_launchers_execute_repository_source_without_bare_cli(self) -> None:
+        uv = shutil.which("uv")
+        self.assertIsNotNone(uv)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary).resolve()
+            for _profile, dataset_relative, corpus_relative in PRIMARY_LAUNCHERS.values():
+                dataset = root / dataset_relative
+                dataset.parent.mkdir(parents=True, exist_ok=True)
+                dataset.write_text("{}\n", encoding="utf-8")
+                (root / corpus_relative).mkdir(parents=True, exist_ok=True)
+            clean_bin = root / "bin"
+            clean_bin.mkdir()
+            uv_wrapper = clean_bin / "uv"
+            uv_wrapper.write_text(
+                f'#!/bin/sh\nexec "{uv}" "$@"\n', encoding="utf-8"
+            )
+            uv_wrapper.chmod(0o755)
+            clean_path = os.pathsep.join((str(clean_bin), "/usr/bin", "/bin"))
+            self.assertIsNone(shutil.which("asterion-dci", path=clean_path))
+            environment = os.environ.copy()
+            environment.pop("VIRTUAL_ENV", None)
+            environment.update(
+                {
+                    "PATH": clean_path,
+                    "ASTERION_DCI_RESOURCE_ROOT": str(root),
+                }
+            )
+
+            for relative in sorted(PRIMARY_LAUNCHERS):
+                launcher = ASTERION_LAUNCHER_ROOT / relative
+                with self.subTest(relative=relative):
+                    result = subprocess.run(
+                        ["bash", str(launcher), "--help"],
+                        cwd=ROOT,
+                        env=environment,
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                    )
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertIn("usage: asterion-dci benchmark", result.stdout)
+
+    def test_all_eleven_primary_pairs_are_thin_and_forward_literal_limit_once(self) -> None:
+        self.assertEqual(len(PRIMARY_LAUNCHERS), 11)
+        for relative, (profile, dataset_relative, corpus_relative) in PRIMARY_LAUNCHERS.items():
+            for product in ("source", "asterion"):
+                with self.subTest(relative=relative, product=product), tempfile.TemporaryDirectory() as td:
+                    root = Path(td).resolve()
+                    launcher_root = root / ("scripts" if product == "source" else "asterion/scripts")
+                    launcher = launcher_root / relative
+                    launcher.parent.mkdir(parents=True, exist_ok=True)
+                    actual_root = SOURCE_LAUNCHER_ROOT if product == "source" else ASTERION_LAUNCHER_ROOT
+                    launcher.write_text(
+                        (actual_root / relative).read_text(encoding="utf-8"),
+                        encoding="utf-8",
+                    )
+                    (root / ".env").write_text(
+                        "DCI_PROVIDER=dotenv-provider\nDCI_MODEL=dotenv-model\n",
+                        encoding="utf-8",
+                    )
+                    dataset = root / dataset_relative
+                    dataset.parent.mkdir(parents=True, exist_ok=True)
+                    dataset.write_text("{}\n", encoding="utf-8")
+                    (root / corpus_relative).mkdir(parents=True, exist_ok=True)
+                    bin_dir = root / "bin"
+                    bin_dir.mkdir()
+                    fake = bin_dir / "uv"
+                    fake.write_text(
+                        '#!/usr/bin/env bash\nprintf "%s\\n" "$DCI_PROVIDER" > "$CAPTURE_PROVIDER"\nprintf "%s\\n" "$@" > "$CAPTURE_ARGS"\n',
+                        encoding="utf-8",
+                    )
+                    fake.chmod(0o755)
+                    capture_args = root / f"{product}-args.txt"
+                    capture_provider = root / f"{product}-provider.txt"
+                    forwarded = ["--limit", "1", "--resume-policy", "fresh"]
+                    result = subprocess.run(
+                        ["bash", str(launcher), *forwarded],
+                        env=os.environ
+                        | {
+                            "PATH": f"{bin_dir}:{os.environ['PATH']}",
+                            "DCI_PROVIDER": "exported",
+                            "ASTERION_DCI_BATCH_LIMIT": "9",
+                            "CAPTURE_ARGS": str(capture_args),
+                            "CAPTURE_PROVIDER": str(capture_provider),
+                        },
+                        capture_output=True,
+                        text=True,
+                    )
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    argv = capture_args.read_text(encoding="utf-8").splitlines()
+                    self.assertEqual(capture_provider.read_text(encoding="utf-8").strip(), "exported")
+                    self.assertEqual(argv.count("--limit"), 1)
+                    self.assertEqual(argv.count("1"), 1)
+                    self.assertEqual(argv.count("--resume-policy"), 1)
+                    self.assertEqual(argv.count("fresh"), 1)
+                    self.assertTrue(any(value.endswith(dataset_relative) for value in argv), argv)
+                    corpus_flag = "--corpus-dir" if product == "source" else "--corpus"
+                    self.assertIn(corpus_flag, argv)
+                    self.assertTrue(any(value.endswith(corpus_relative) for value in argv), argv)
+                    if product == "asterion":
+                        self.assertEqual(
+                            argv[:5],
+                            [
+                                "run",
+                                "--project",
+                                str(root / "asterion"),
+                                "asterion-dci",
+                                "benchmark",
+                            ],
+                        )
+                        self.assertIn(profile, argv)
+                    self.assertNotIn("--provider", argv)
+                    self.assertNotIn("--model", argv)
+                    if relative == "bcplus_eval/run_bcplus_eval_openai.sh":
+                        context_index = argv.index("--runtime-context-level")
+                        self.assertEqual(argv[context_index + 1], "level3")
+                        self.assertNotIn("--thinking-level", argv)
+
+                    text = launcher.read_text(encoding="utf-8")
+                    self.assertEqual(text.count('"$@"'), 1)
+                    self.assertNotIn('source "$REPO_ROOT/.env"', text)
+                    self.assertNotIn("--provider openai", text)
+                    self.assertNotIn("--model gpt-5.4-nano", text)
+
+    def test_all_eleven_source_launchers_fail_closed_before_unbounded_work(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            dataset = root / "dataset.jsonl"
+            dataset.write_text(
+                json.dumps({"query_id": "q-1", "query": "q", "answer": "a"})
+                + "\n",
+                encoding="utf-8",
+            )
+            corpus = root / "corpus"
+            corpus.mkdir()
+            for index, relative in enumerate(sorted(PRIMARY_LAUNCHERS)):
+                output = root / f"output-{index}"
+                with self.subTest(relative=relative):
+                    result = subprocess.run(
+                        [
+                            "bash",
+                            str(SOURCE_LAUNCHER_ROOT / relative),
+                            "--dataset",
+                            str(dataset),
+                            "--corpus-dir",
+                            str(corpus),
+                            "--output-root",
+                            str(output),
+                            "--max-concurrency",
+                            "1",
+                        ],
+                        cwd=ROOT,
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                    )
+                    self.assertEqual(result.returncode, 2, result.stderr)
+                    self.assertIn("coordinator-issued AF-340 authorization", result.stderr)
+                    self.assertFalse(output.exists())
 
     def test_paper_beir_launchers_bind_exact_profiles_without_source_parity_claim(self) -> None:
         for relative, profile_name in (
@@ -138,7 +368,8 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
         text = (
             ASTERION_LAUNCHER_ROOT / "bcplus_eval/run_bcplus_eval_openai.sh"
         ).read_text(encoding="utf-8")
-        self.assertIn('level=${1:-"level3"}', text)
+        self.assertIn('level="level3"', text)
+        self.assertIn('if (($# > 0)) && [[ "$1" != --* ]]; then level=$1; shift; fi', text)
         self.assertIn('thinking_level=""', text)
         self.assertIn('[[ "$1" != --* ]]', text)
         self.assertIn('--runtime-context-level "$level"', text)
@@ -160,7 +391,7 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
             (root / "corpus/bc_plus_docs").mkdir(parents=True)
             bin_dir = root / "bin"
             bin_dir.mkdir()
-            fake = bin_dir / "asterion-dci"
+            fake = bin_dir / "uv"
             fake.write_text(
                 '#!/usr/bin/env bash\nprintf "%s\\n" "$@" > "$CAPTURE_ARGS"\n',
                 encoding="utf-8",
@@ -177,6 +408,16 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
             )
             self.assertEqual(result.returncode, 0, result.stderr)
             unset_args = unset_log.read_text(encoding="utf-8").splitlines()
+            self.assertEqual(
+                unset_args[:5],
+                [
+                    "run",
+                    "--project",
+                    str(root / "asterion"),
+                    "asterion-dci",
+                    "benchmark",
+                ],
+            )
             self.assertNotIn("--thinking-level", unset_args)
             self.assertNotIn("--limit", unset_args)
 
@@ -273,6 +514,45 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
         self.assertEqual(request.runtime_options.extra_args, ("--custom value",))
         self.assertEqual(request.runtime_options.provider, "openai")
 
+    def test_primary_profile_preserves_exported_runtime_provider_and_model(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve() / "repo"
+            invocation = Path(temporary_directory).resolve() / "invocation"
+            invocation.mkdir()
+            dataset = root / "data/dci-bench/data/hotpotqa/test.jsonl"
+            dataset.parent.mkdir(parents=True)
+            dataset.write_text("{}\n", encoding="utf-8")
+            (root / "corpus/wiki_corpus").mkdir(parents=True)
+            (root / ".env").write_text(
+                "DCI_PROVIDER=dotenv-provider\nDCI_MODEL=dotenv-model\n",
+                encoding="utf-8",
+            )
+            with patch.dict(
+                os.environ,
+                {
+                    "DCI_PROVIDER": "exported-provider",
+                    "DCI_MODEL": "exported-model",
+                },
+                clear=True,
+            ), patch("asterion.dci.cli.Path.cwd", return_value=invocation), patch(
+                "asterion.dci.cli.run_benchmark"
+            ) as run:
+                run.return_value = type(
+                    "Result",
+                    (),
+                    {"output_root": root / "out", "counts": {"total": 1}},
+                )()
+                status = main(
+                    ["benchmark", "--profile", "qa.hotpotqa", "--limit", "1"],
+                    repo_root=root,
+                    stdout=io.StringIO(),
+                    stderr=io.StringIO(),
+                )
+        self.assertEqual(status, 0)
+        options = run.call_args.args[0].runtime_options
+        self.assertEqual(options.provider, "exported-provider")
+        self.assertEqual(options.model, "exported-model")
+
     def test_unknown_profile_runner_only_paths_and_invalid_bounds_are_body_free(self) -> None:
         cases = (
             ["benchmark", "--profile", "unknown"],
@@ -322,13 +602,8 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
             )
             run.assert_not_called()
 
-    def test_invalid_runtime_values_fail_before_batch_boundary_or_output(self) -> None:
-        for option, value in (
-            ("--thinking-level", "invalid"),
-            ("--provider", ""),
-            ("--model", ""),
-            ("--tools", ""),
-        ):
+    def test_invalid_thinking_fails_before_batch_boundary_or_output(self) -> None:
+        for option, value in (("--thinking-level", "invalid"),):
             with self.subTest(option=option), tempfile.TemporaryDirectory() as td:
                 root = Path(td).resolve()
                 dataset = root / "dataset.jsonl"
@@ -354,6 +629,46 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
                 self.assertEqual(stderr.getvalue(), "DCI benchmark failed\n")
                 self.assertFalse(output.exists())
                 run.assert_not_called()
+
+    def test_empty_runtime_text_overrides_are_omitted_and_use_pi_defaults(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td).resolve()
+            dataset = root / "dataset.jsonl"
+            dataset.write_text(
+                '{"query_id":"q","query":"question","answer":"answer"}\n',
+                encoding="utf-8",
+            )
+            with patch.dict(os.environ, {}, clear=True), patch(
+                "asterion.dci.cli.run_benchmark"
+            ) as run:
+                run.return_value = type(
+                    "Result",
+                    (),
+                    {"output_root": root / "output", "counts": {"total": 1}},
+                )()
+                status = main(
+                    [
+                        "benchmark",
+                        "--dataset",
+                        str(dataset),
+                        "--output-root",
+                        str(root / "output"),
+                        "--provider",
+                        "",
+                        "--model",
+                        "",
+                        "--tools",
+                        "",
+                    ],
+                    repo_root=root,
+                    stdout=io.StringIO(),
+                    stderr=io.StringIO(),
+                )
+            self.assertEqual(status, 0)
+            options = run.call_args.args[0].runtime_options
+            self.assertEqual(options.provider, "openai-codex")
+            self.assertEqual(options.model, "gpt-5.6-luna")
+            self.assertEqual(options.tools, "read,bash")
 
     def test_installed_wheel_loads_profiles_without_repository(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -416,7 +731,8 @@ for _relative, (_profile_slug, _profile_name) in {
         self.assertIn(profile["dataset"], text)
         self.assertIn(profile["corpus"], text)
         self.assertIn("asterion-dci benchmark", text)
-        self.assertNotIn('source "$REPO_ROOT/.env"', text)
+        if relative in PRIMARY_LAUNCHERS:
+            self.assertNotIn('source "$REPO_ROOT/.env"', text)
         self.assertNotIn("run_bcplus_eval.py", text)
         syntax = subprocess.run(
             ["bash", "-n", str(launcher)], capture_output=True, text=True

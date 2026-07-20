@@ -4,6 +4,7 @@ import importlib
 import json
 import unittest
 from importlib import resources
+from pathlib import Path
 
 
 EXPECTED = {
@@ -23,6 +24,11 @@ def context_profiles_module(test: unittest.TestCase):
 
 
 class AsterionDciContextProfileTests(unittest.TestCase):
+    def test_original_readme_verifier_does_not_import_asterion(self) -> None:
+        source = Path("tools/verify_original_readme.py").read_text(encoding="utf-8")
+        self.assertNotIn("import asterion", source)
+        self.assertNotIn("from asterion", source)
+
     def test_exact_closed_profile_names_and_thresholds(self) -> None:
         module = context_profiles_module(self)
 

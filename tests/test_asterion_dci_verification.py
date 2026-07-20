@@ -496,7 +496,7 @@ class DciAcceptanceVerificationTests(unittest.TestCase):
             calls.append(("acceptance", root, acceptance_root))
             return ProductAcceptanceSummary(
                 product_rows=(8, 8),
-                delegated_inventory=(533, 533),
+                delegated_inventory=(538, 538),
                 launcher_pairs=(12, 12),
                 batch_extras=(6, 6),
                 bounded_acceptance=(7, 7),
@@ -532,7 +532,7 @@ class DciAcceptanceVerificationTests(unittest.TestCase):
         self.assertEqual(len(calls), 1)
         counts = {check.check_id: dict(check.counts) for check in result.checks}
         self.assertEqual(counts["product-rows"], {"actual": 8, "expected": 8})
-        self.assertEqual(counts["delegated-inventory"], {"actual": 533, "expected": 533})
+        self.assertEqual(counts["delegated-inventory"], {"actual": 538, "expected": 538})
 
     def test_complete_runs_preflight_basic_acceptance_and_keeps_three_request_bound(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

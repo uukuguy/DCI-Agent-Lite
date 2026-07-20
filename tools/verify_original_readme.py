@@ -1,322 +1,531 @@
 #!/usr/bin/env python3
-"""Verify the original README contract for quick-start and context-management snippets.
-
-Local mode only parses README text and validates executable command templates.
-Bounded mode runs the documented original quick-start command plus one L3 and one
-L4 bounded run against the original DCI entry point.
-"""
+"""Verify the literal original-DCI README Quick Start and context paths."""
 
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import os
 import re
+import shlex
+import stat
 import subprocess
-import tempfile
+import sys
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
-from typing import Optional, Sequence, Set
+from typing import TextIO
+from unittest.mock import patch
 
 
-README_SECTION_PATTERN = re.compile(r"(?m)^##\s+.+$")
-def _find_section_indices(text: str, title_substring: str) -> tuple[int, int]:
-    headings = list(README_SECTION_PATTERN.finditer(text))
-    start = None
-    for i, match in enumerate(headings):
-        if title_substring in match.group(0):
-            start = match.start()
-            if i + 1 < len(headings):
-                return start, headings[i + 1].start()
-            return start, len(text)
-    raise ValueError(f"section not found: {title_substring}")
+_PROFILES = ("level0", "level1", "level2", "level3", "level4")
+_QUESTION = (
+    "Answer the following question using only wiki_dump.jsonl in the current "
+    "directory. Do not use web search. Use rg instead of grep for fast searching. "
+    "Question: In which street did the Great Fire of London originate?"
+)
 
 
-def _extract_section(text: str, title_substring: str) -> str:
-    start, end = _find_section_indices(text, title_substring)
-    return text[start:end]
+def _section(text: str, heading: str) -> str:
+    match = re.search(rf"(?m)^## [^\n]*{re.escape(heading)}[^\n]*$", text)
+    if match is None:
+        raise ValueError("README contract is invalid")
+    following = re.search(r"(?m)^## ", text[match.end() :])
+    end = len(text) if following is None else match.end() + following.start()
+    return text[match.end() : end]
 
 
-def _extract_bash_blocks(section: str) -> list[str]:
-    blocks: list[str] = []
-    opened = False
-    current: list[str] = []
-    for line in section.splitlines():
-        if line.lstrip().startswith("```"):
-            if opened:
-                blocks.append("\n".join(current))
-                current = []
-            opened = not opened
-            continue
-        if opened:
-            current.append(line)
-    return blocks
+def _fences(section: str) -> tuple[str, ...]:
+    return tuple(match.group(1).strip() for match in re.finditer(r"```bash\n(.*?)```", section, re.S))
 
 
-def _has_flag(text: str, flag: str) -> bool:
-    pattern = re.compile(rf"(?:^|\s){re.escape(flag)}(?:\s|$)")
-    return pattern.search(text) is not None
+def _marked(fences: Sequence[str], marker: str) -> str:
+    matches = [fence for fence in fences if marker in fence]
+    if len(matches) != 1:
+        raise ValueError("README contract is invalid")
+    return matches[0]
 
 
-def _validate_no_hardcoded_provider_model(block: str) -> None:
-    if _has_flag(block, "--provider") or _has_flag(block, "--model"):
-        raise ValueError("default README command must not hardcode provider/model")
+def validate_readme_contract(path: Path) -> dict[str, object]:
+    text = path.read_text(encoding="utf-8")
+    quick = _section(text, "Quick Start")
+    context = _section(text, "Context Management Strategies")
+    quick_fences = _fences(quick)
+    terminal = _marked(quick_fences, "quick-start-terminal")
+    programmatic = _marked(quick_fences, "quick-start-programmatic")
+    override = _marked(quick_fences, "quick-start-override")
+    if "cp .env.template .env" not in quick:
+        raise ValueError("README contract is invalid")
+    for command in (terminal, programmatic):
+        if (
+            "src/dci/benchmark/pi_rpc_runner.py" not in command
+            or "--provider" in command
+            or "--model" in command
+        ):
+            raise ValueError("README contract is invalid")
+    if "--provider openai-codex" not in override or "--model gpt-5.6-luna" not in override:
+        raise ValueError("README contract is invalid")
+    context_commands: dict[str, str] = {}
+    for fence in _fences(context):
+        for profile in re.findall(r"--runtime-context-level[= ]+(level[0-9]+)", fence):
+            if profile in context_commands:
+                raise ValueError("README contract is invalid")
+            context_commands[profile] = fence
+    if tuple(sorted(context_commands)) != _PROFILES:
+        raise ValueError("README contract is invalid")
+    if "tools/verify_original_readme.py --level local" not in context:
+        raise ValueError("README contract is invalid")
+    return {
+        "terminal": terminal,
+        "programmatic": programmatic,
+        "override": override,
+        "context_commands": context_commands,
+    }
 
 
-def _validate_tokens_present(text: str, token: str) -> None:
-    if token not in text:
-        raise ValueError(f"missing README token: {token}")
+def _original_context_api(repo_root: Path):
+    source_root = str(repo_root / "src")
+    if source_root not in sys.path:
+        sys.path.insert(0, source_root)
+    from dci.context_management import (  # noqa: PLC0415
+        ModelFreeContextPolicy,
+        context_profile_names,
+        resolve_context_extension,
+        resolve_context_profile,
+    )
+
+    return (
+        ModelFreeContextPolicy,
+        context_profile_names,
+        resolve_context_extension,
+        resolve_context_profile,
+    )
 
 
-def _validate_quick_start(readme: str) -> None:
-    section = _extract_section(readme, "⚡ Quick Start")
-    blocks = _extract_bash_blocks(section)
-    command_blocks = [block for block in blocks if "dci.benchmark.pi_rpc_runner" in block]
-    if len(command_blocks) < 2:
-        raise ValueError("Quick Start should contain both terminal and programmatic examples")
-
-    terminal_defaults = [
-        block
-        for block in command_blocks
-        if "--terminal" in block
-        and not (_has_flag(block, "--provider") or _has_flag(block, "--model"))
-    ]
-    if not terminal_defaults:
-        raise ValueError("Quick Start should show a terminal command")
-    for block in terminal_defaults:
-        _validate_no_hardcoded_provider_model(block)
-
-    default_programmatic = [
-        block
-        for block in command_blocks
-        if "--terminal" not in block
-        and not (_has_flag(block, "--provider") or _has_flag(block, "--model"))
-    ]
-    if not default_programmatic:
-        raise ValueError("Quick Start should show a programmatic command")
-    for block in default_programmatic:
-        _validate_no_hardcoded_provider_model(block)
-
-    override_blocks = [
-        block
-        for block in command_blocks
-        if _has_flag(block, "--provider") and _has_flag(block, "--model")
-    ]
-    if not override_blocks:
-        raise ValueError("Quick Start must include a provider/model override example")
-
-    if not any(req in block for block in override_blocks for req in ("--provider", "--model")):
-        raise ValueError("Quick Start override example must include provider/model flags")
-    _validate_tokens_present(section, "PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner")
-    _validate_tokens_present(section, "--extra-arg=\"--thinking high\"")
+def _model_free_context_contract(repo_root: Path) -> str:
+    policy_type, names, resolve_extension, resolve_profile = _original_context_api(
+        repo_root
+    )
+    if names() != _PROFILES:
+        raise ValueError("context contract is invalid")
+    extension = resolve_extension()
+    level1 = policy_type(resolve_profile("level1"))
+    if len(level1.tool_result("x" * 60_000)) != 50_000:
+        raise ValueError("context contract is invalid")
+    level3 = policy_type(resolve_profile("level3"))
+    level3.tool_result("x" * 240_001)
+    level3.compact(summary_succeeded=None)
+    if level3.compactions != 1 or level3.visible_turn_count(13) != 12:
+        raise ValueError("context contract is invalid")
+    level4 = policy_type(resolve_profile("level4"))
+    for _ in range(3):
+        level4.tool_result("x" * 240_001)
+        level4.compact(summary_succeeded=False)
+    if level4.summary_attempts != 3 or not level4.summary_suppressed:
+        raise ValueError("context contract is invalid")
+    resumed = policy_type.resume(resolve_profile("level4"), level4.snapshot())
+    if not any(item.get("event") == "resume" for item in resumed.telemetry):
+        raise ValueError("context contract is invalid")
+    return extension.sha256
 
 
-def _validate_context_strategy(readme: str) -> None:
-    section = _extract_section(readme, "Context Management Strategies")
-    _validate_tokens_present(section, "one short bounded command")
-    required_levels = {"level0", "level1", "level2", "level3", "level4"}
-    loop_levels: set[str] = set()
-    for line in section.splitlines():
-        if "for profile in " in line and "do" in line:
-            loop_levels.update(re.findall(r"level[0-4]", line))
-    if loop_levels and not required_levels.issubset(loop_levels):
-        missing = ", ".join(sorted(required_levels - loop_levels))
-        raise ValueError(f"Context-management section missing {missing}")
+def _terminal_preflight(
+    repo_root: Path, environment: Mapping[str, str], literal_command: object
+) -> dict[str, object]:
+    if not isinstance(literal_command, str):
+        raise ValueError("terminal preflight is invalid")
+    source_root = str(repo_root / "src")
+    if source_root not in sys.path:
+        sys.path.insert(0, source_root)
+    from dci.benchmark import pi_rpc_runner as runner  # noqa: PLC0415
+    from dci.config import ConfigLayers  # noqa: PLC0415
 
-    blocks = _extract_bash_blocks(section)
-    context_blocks = [
-        block for block in blocks if "--runtime-context-level" in block
-    ]
-    if not context_blocks:
-        raise ValueError("context section should include runtime-context-level examples")
-
-    seen: Set[str] = set()
-    for block in context_blocks:
-        if re.search(r'--runtime-context-level\s+["\']?\$profile["\']?', block):
-            seen = required_levels.copy()
-            break
-        for level in ("level0", "level1", "level2", "level3", "level4"):
-            pattern = re.compile(rf"--runtime-context-level\s+\"?{re.escape(level)}\"?")
-            if pattern.search(block):
-                seen.add(level)
-    if seen != {"level0", "level1", "level2", "level3", "level4"}:
-        raise ValueError("Context examples should cover level0..level4")
-
-
-def verify_readme_contract(readme_path: Path) -> list[str]:
-    text = readme_path.read_text(encoding="utf-8")
-    _validate_quick_start(text)
-    _validate_context_strategy(text)
-    return [
-        "quick-start contract: ok",
-        "context-management contract: ok",
-    ]
-
-
-def _parse_env_file(path: Optional[Path]) -> dict[str, str]:
-    if path is None or not path.is_file():
-        return {}
-    env: dict[str, str] = {}
-    for raw in path.read_text(encoding="utf-8").splitlines():
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
-        if line.startswith("export "):
-            line = line.removeprefix("export ").strip()
-        if "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        value = value.strip().strip('"').strip("'")
-        env[key.strip()] = value
-    return env
+    tokens = shlex.split(literal_command.replace("\\\n", " "))
+    try:
+        script_index = next(
+            index
+            for index, token in enumerate(tokens)
+            if token.endswith("src/dci/benchmark/pi_rpc_runner.py")
+        )
+    except StopIteration as exc:
+        raise ValueError("terminal preflight is invalid") from exc
+    argv = [tokens[script_index], *tokens[script_index + 1 :]]
+    with (
+        patch.object(sys, "argv", argv),
+        patch.dict(os.environ, dict(environment), clear=True),
+        patch("sys.stdin.isatty", return_value=True),
+        patch("sys.stdout.isatty", return_value=True),
+        patch.object(
+            runner,
+            "ensure_built_pi_cli",
+            return_value=repo_root / "pi/packages/coding-agent/dist/cli.js",
+        ),
+        patch.object(runner, "_node_bin", return_value="node"),
+    ):
+        args = runner.parse_args()
+        runner.resolve_runtime_args(args, ConfigLayers(environment, {}))
+        if runner.validate_terminal_mode_args(args) is not None:
+            raise ValueError("terminal preflight is invalid")
+        command = runner.build_terminal_mode_command(args)
+    if "--mode" in command or "--terminal" in command:
+        raise ValueError("terminal preflight is invalid")
+    return {"argv": command, "cwd": args.cwd.resolve()}
 
 
-def _run_command(
-    args: Sequence[str],
-    *,
-    cwd: Path,
-    env: dict[str, str],
-    timeout_seconds: int,
-) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        list(args),
-        cwd=str(cwd),
-        env=env,
+def _resolve_pi_loader(repo_root: Path, environment: Mapping[str, str]) -> Path:
+    _, _, _, _ = _original_context_api(repo_root)
+    from dci.config import resolve_pi_paths  # noqa: PLC0415
+
+    formal = resolve_pi_paths(repo_root, environment)
+    candidates = [formal.package_dir]
+    common = subprocess.run(
+        ["git", "rev-parse", "--git-common-dir"],
+        cwd=repo_root,
         text=True,
         capture_output=True,
         check=False,
-        timeout=timeout_seconds,
     )
+    if common.returncode == 0:
+        common_dir = Path(common.stdout.strip())
+        if not common_dir.is_absolute():
+            common_dir = repo_root / common_dir
+        if not environment.get("DCI_PI_DIR") and not environment.get(
+            "DCI_PI_PACKAGE_DIR"
+        ):
+            candidates.append(
+                resolve_pi_paths(common_dir.resolve().parent, environment).package_dir
+            )
+    for package_dir in candidates:
+        loader = package_dir / "dist/core/extensions/loader.js"
+        if loader.is_file():
+            return loader
+    raise ValueError("installed Pi extension loader is unavailable")
 
 
-def _write_question(path: Path) -> None:
-    path.write_text(
-        "Answer the following question using only wiki_dump.jsonl in the current directory. "
-        "Question: In which street did the Great Fire of London originate?",
-        encoding="utf-8",
+def _run_extension_fixture(
+    repo_root: Path, environment: Mapping[str, str], extension_path: Path
+) -> None:
+    completed = subprocess.run(
+        [
+            "node",
+            str(repo_root / "tools/fixtures/original-context-extension-harness.mjs"),
+            str(_resolve_pi_loader(repo_root, environment)),
+            str(extension_path),
+            str(repo_root),
+        ],
+        cwd=repo_root,
+        env=dict(environment),
+        text=True,
+        capture_output=True,
+        check=False,
     )
-
-
-def _ensure_output_artifacts(output_dir: Path) -> None:
-    required = ("question.txt", "final.txt", "state.json", "events.jsonl", "conversation_full.json", "effective-config.json")
-    missing = [name for name in required if not (output_dir / name).is_file()]
-    if missing:
-        raise RuntimeError(
-            f"bounded quick-start output missing files: {', '.join(missing)} in {output_dir}"
+    try:
+        result = json.loads(completed.stdout)
+    except json.JSONDecodeError as exc:
+        raise ValueError("context extension fixture is invalid") from exc
+    expected_characters = {
+        "level0": 240_001,
+        "level1": 50_000,
+        "level2": 20_000,
+        "level3": 20_000,
+        "level4": 20_000,
+    }
+    expected_turns = {
+        "level0": 13,
+        "level1": 13,
+        "level2": 13,
+        "level3": 12,
+        "level4": 12,
+    }
+    if (
+        completed.returncode != 0
+        or {name: value.get("toolCharacters") for name, value in result.get("profiles", {}).items()} != expected_characters
+        or {name: value.get("retainedUsers") for name, value in result.get("profiles", {}).items()} != expected_turns
+        or result.get("profiles", {}).get("level3", {}).get("compactions") != 1
+        or result.get("profiles", {}).get("level4", {}).get("summarySuccesses") != 1
+        or result.get("failureSuppression") != {"attempts": 3, "suppressed": True}
+        or result.get("resumeEvent") != "resume"
+        or result.get("resumeGuards")
+        != {"profile": True, "contract": True, "digest": True}
+        or result.get("retainedTargetGuard") is not True
+        or result.get("profiles", {}).get("level4", {}).get(
+            "summaryRecentTokenTarget"
         )
+        != 20_000
+        or any(
+            value.get("customTypes")
+            != ["dci-context-state", "dci-context-telemetry"]
+            for value in result.get("profiles", {}).values()
+        )
+    ):
+        raise ValueError("context extension fixture is invalid")
 
 
-def verify_bounded_contract(
-    readme_path: Path,
-    env_file: Optional[Path],
-    output_root: Path,
+def _load_env_file(path: Path | None, inherited: Mapping[str, str]) -> dict[str, str]:
+    environment = dict(inherited)
+    if path is None:
+        return environment
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        name, value = line.split("=", 1)
+        environment.setdefault(name.strip(), value.strip().strip("\"'"))
+    return environment
+
+
+def _prepare_private_root(path: Path) -> Path:
+    path = Path(os.path.abspath(os.path.normpath(path.expanduser())))
+    current = Path(path.anchor)
+    for part in path.parts[1:]:
+        current = current / part
+        if current.is_symlink():
+            raise ValueError("bounded output root must not contain symlinks")
+    if path.exists() and (not path.is_dir() or any(path.iterdir())):
+        raise ValueError("bounded output root must be a new empty directory")
+    path.mkdir(parents=True, mode=0o700, exist_ok=True)
+    path.chmod(0o700)
+    return path
+
+
+def _runner_command(
     repo_root: Path,
+    output_dir: Path,
+    profile: str | None,
+    *,
+    corpus_dir: Path | None = None,
 ) -> list[str]:
-    verify_readme_contract(readme_path)
-    output_root = output_root.expanduser().resolve()
-    output_root.mkdir(parents=True, exist_ok=True, mode=0o700)
-    env = os.environ.copy()
-    if env_file is not None:
-        env.update(_parse_env_file(env_file))
-    env["PYTHONPATH"] = "src"
-    command_base = [
-        "uv",
-        "run",
-        "python",
-        "-m",
-        "dci.benchmark.pi_rpc_runner",
+    command = [
+        sys.executable,
+        str(repo_root / "src/dci/benchmark/pi_rpc_runner.py"),
         "--runtime",
         "pi",
         "--cwd",
-        "corpus/wiki_corpus",
-        "--extra-arg=--thinking high",
+        str(corpus_dir or repo_root / "corpus/wiki_corpus"),
+        "--output-dir",
+        str(output_dir),
+        "--max-turns",
+        "8",
+        "--rpc-timeout-seconds",
+        "300",
+        "--pi-thinking-level",
+        "high",
     ]
-
-    with tempfile.TemporaryDirectory(prefix="verify-original-readme-", dir=output_root) as temporary:
-        question_file = Path(temporary) / "question.txt"
-        _write_question(question_file)
-
-        # quick-start programmatic command
-        quick_output = output_root / "quick-start"
-        quick = _run_command(
-            [
-                *command_base,
-                "--max-turns",
-                "2",
-                "--output-dir",
-                str(quick_output),
-                "--question-file",
-                str(question_file),
-            ],
-            cwd=repo_root,
-            env=env,
-            timeout_seconds=1200,
-        )
-        if quick.returncode != 0:
-            raise RuntimeError(
-                "bounded quick-start failed\n"
-                f"stdout:\n{quick.stdout}\nstderr:\n{quick.stderr}"
-            )
-        _ensure_output_artifacts(quick_output)
-
-        for level in ("level3", "level4"):
-            level_output = output_root / f"context-{level}"
-            level_case = _run_command(
-                [
-                *command_base,
+    if profile is not None:
+        command.extend(
+            (
                 "--runtime-context-level",
-                level,
-                "--max-turns",
-                "3",
-                "--output-dir",
-                str(level_output),
-                "--question-file",
-                str(question_file),
-            ],
-            cwd=repo_root,
-            env=env,
-            timeout_seconds=1200,
-        )
-            if level_case.returncode != 0:
-                raise RuntimeError(
-                    f"bounded context {level} failed\n"
-                    f"stdout:\n{level_case.stdout}\nstderr:\n{level_case.stderr}"
-                )
-            _ensure_output_artifacts(level_output)
-
-    return [
-        f"bounded quick-start: {quick_output}",
-        f"bounded level3: {output_root / 'context-level3'}",
-        f"bounded level4: {output_root / 'context-level4'}",
-    ]
-
-
-def verify_original_readme_main(argv: Optional[Sequence[str]] = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--level", choices=("local", "bounded"), default="local")
-    parser.add_argument("--readme", default="README.md")
-    parser.add_argument("--env-file", type=Path)
-    parser.add_argument("--output-root", default="outputs/verify-original-readme")
-    args = parser.parse_args(list(argv) if argv is not None else None)
-
-    readme_path = Path(args.readme).resolve()
-    repo_root = readme_path.parent
-    try:
-        if args.level == "local":
-            report = verify_readme_contract(readme_path)
-        else:
-            report = verify_bounded_contract(
-                readme_path=readme_path,
-                env_file=args.env_file,
-                output_root=(repo_root / args.output_root).resolve(),
-                repo_root=repo_root,
+                profile,
+                "--keep-session",
+                "--extra-arg=--session",
+                f"--extra-arg={output_dir / 'pi-session.jsonl'}",
             )
-    except Exception as exc:
-        print(f"verify_original_readme failed: {exc}", flush=True)
-        return 2
+        )
+        for _ in range(12):
+            command.extend(("--prelude-question", "Reply only with ok."))
+        command.append(
+            "Run exactly these five commands as separate tool calls in order, then reply only with done: "
+            + "; ".join(f"sed -n '{index}p' pressure.txt" for index in range(1, 6))
+        )
+    else:
+        command.append(_QUESTION)
+    return command
 
-    for line in report:
-        print(line, flush=True)
-    print("PASS: Agent operations: 0", flush=True)
-    return 0
+
+def _write_pressure_fixture(output_root: Path) -> Path:
+    corpus = output_root / "pressure-corpus"
+    corpus.mkdir(mode=0o700)
+    payload = "".join(f"{index}:" + "x" * 74_997 + "\n" for index in range(1, 6))
+    path = corpus / "pressure.txt"
+    path.write_text(payload, encoding="utf-8")
+    path.chmod(0o600)
+    return corpus
+
+
+def _bounded_context_evidence(profile: str, summary: Mapping[str, object]) -> dict[str, object]:
+    required = {
+        "profile",
+        "compactions",
+        "summary_attempts",
+        "summary_successes",
+        "summary_suppressed",
+        "extension_sha256",
+    }
+    if set(summary) != required or summary.get("profile") != profile:
+        raise ValueError("bounded context evidence is invalid")
+    compactions = summary.get("compactions")
+    attempts = summary.get("summary_attempts")
+    successes = summary.get("summary_successes")
+    digest = summary.get("extension_sha256")
+    if (
+        isinstance(compactions, bool)
+        or not isinstance(compactions, int)
+        or compactions < 1
+        or not isinstance(attempts, int)
+        or not isinstance(successes, int)
+        or not isinstance(digest, str)
+        or re.fullmatch(r"[0-9a-f]{64}", digest) is None
+    ):
+        raise ValueError("bounded context evidence is invalid")
+    if profile == "level3" and (attempts != 0 or successes != 0):
+        raise ValueError("bounded context evidence is invalid")
+    if profile == "level4" and (attempts < 1 or successes < 1 or summary.get("summary_suppressed") is not False):
+        raise ValueError("bounded context evidence is invalid")
+    return dict(summary)
+
+
+def _read_context_evidence(session_file: Path, profile: str) -> dict[str, object]:
+    telemetry = []
+    states = []
+    for line in session_file.read_text(encoding="utf-8").splitlines():
+        entry = json.loads(line)
+        if entry.get("type") == "custom" and entry.get("customType") == "dci-context-telemetry":
+            telemetry.append(entry.get("data"))
+        if entry.get("type") == "custom" and entry.get("customType") == "dci-context-state":
+            states.append(entry.get("data"))
+    if (
+        not telemetry
+        or not states
+        or not isinstance(telemetry[-1], dict)
+        or not isinstance(states[-1], dict)
+    ):
+        raise ValueError("bounded context evidence is invalid")
+    latest = telemetry[-1]
+    state = states[-1]
+    if (
+        latest.get("profile") != state.get("profile")
+        or latest.get("contractVersion") != "dci.context-profile/v1"
+        or state.get("contractVersion") != "dci.context-profile/v1"
+        or latest.get("extensionSha256") != state.get("extensionSha256")
+    ):
+        raise ValueError("bounded context evidence is invalid")
+    return _bounded_context_evidence(
+        profile,
+        {
+            "profile": latest.get("profile"),
+            "compactions": latest.get("compactionCount"),
+            "summary_attempts": latest.get("summaryAttempts"),
+            "summary_successes": latest.get("summarySuccesses"),
+            "summary_suppressed": latest.get("summarySuppressed"),
+            "extension_sha256": latest.get("extensionSha256"),
+        },
+    )
+
+
+def _artifact_hashes(output_dir: Path) -> dict[str, str]:
+    required = {
+        "question.txt",
+        "final.txt",
+        "conversation_full.json",
+        "effective-config.json",
+    }
+    files = sorted(path for path in output_dir.rglob("*") if path.is_file())
+    if not required.issubset({path.name for path in files}) or not any(
+        path.parent.name == "protocol" for path in files
+    ):
+        raise ValueError("bounded artifact contract is invalid")
+    hashes: dict[str, str] = {}
+    for directory in (path for path in output_dir.rglob("*") if path.is_dir()):
+        if stat.S_IMODE(directory.stat().st_mode) != 0o700:
+            raise ValueError("bounded artifact contract is invalid")
+    for path in files:
+        if stat.S_IMODE(path.stat().st_mode) != 0o600:
+            raise ValueError("bounded artifact contract is invalid")
+        name = path.relative_to(output_dir).as_posix()
+        hashes[name] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return hashes
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="verify_original_readme.py")
+    parser.add_argument("--level", choices=("local", "bounded"), required=True)
+    parser.add_argument("--env-file", type=Path)
+    parser.add_argument("--output-root", type=Path)
+    return parser
+
+
+def verify_original_readme_main(
+    argv: Sequence[str] | None = None,
+    *,
+    repo_root: Path | None = None,
+    stdout: TextIO | None = None,
+    stderr: TextIO | None = None,
+    executor: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+    raise_errors: bool = False,
+) -> int:
+    stdout = sys.stdout if stdout is None else stdout
+    stderr = sys.stderr if stderr is None else stderr
+    root = Path(__file__).resolve().parents[1] if repo_root is None else Path(repo_root).resolve()
+    try:
+        args = _parser().parse_args(argv)
+        readme_contract = validate_readme_contract(root / "README.md")
+        environment = _load_env_file(args.env_file.resolve() if args.env_file else None, os.environ)
+        environment["PYTHONPATH"] = str(root / "src")
+        extension_digest = _model_free_context_contract(root)
+        _run_extension_fixture(
+            root,
+            environment,
+            _original_context_api(root)[2]().path,
+        )
+        _terminal_preflight(root, environment, readme_contract["terminal"])
+        if args.level == "local":
+            stdout.write("PASS\nAgent operations: 0\nJudge operations: 0\nFull dataset ran: no\n")
+            return 0
+        if args.env_file is None or args.output_root is None:
+            raise ValueError("bounded verification requires --env-file and --output-root")
+        output_root = _prepare_private_root(args.output_root)
+        pressure_corpus = _write_pressure_fixture(output_root)
+        cases = (("quick-start-programmatic", None), ("context-level3", "level3"), ("context-level4", "level4"))
+        records = []
+        for command_id, profile in cases:
+            output_dir = output_root / command_id
+            completed = executor(
+                _runner_command(
+                    root,
+                    output_dir,
+                    profile,
+                    corpus_dir=pressure_corpus if profile is not None else None,
+                ),
+                cwd=root,
+                env=environment,
+                check=False,
+                text=True,
+                capture_output=True,
+                umask=0o077,
+            )
+            if completed.returncode != 0:
+                raise ValueError(f"bounded command failed: {command_id}")
+            if profile is not None:
+                evidence = _read_context_evidence(
+                    output_dir / "pi-session.jsonl", profile
+                )
+                if evidence["extension_sha256"] != extension_digest:
+                    raise ValueError("bounded context evidence is invalid")
+                evidence_path = output_dir / "context-evidence.json"
+                evidence_path.write_text(
+                    json.dumps(evidence, sort_keys=True, indent=2) + "\n",
+                    encoding="utf-8",
+                )
+                evidence_path.chmod(0o600)
+            hashes = _artifact_hashes(output_dir)
+            config = json.loads((output_dir / "effective-config.json").read_text(encoding="utf-8"))
+            records.append({"command_id": command_id, "effective_config_sha256": config["identity_sha256"], "private_artifact_sha256": hashes})
+        report = {
+            "command_ids": [item["command_id"] for item in records],
+            "agent_operations": 3,
+            "judge_operations": 0,
+            "commands": records,
+        }
+        report_path = output_root / "original-readme-acceptance.json"
+        report_path.write_text(json.dumps(report, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+        report_path.chmod(0o600)
+        stdout.write("PASS\nAgent operations: 3\nJudge operations: 0\nFull dataset ran: no\n")
+        return 0
+    except (OSError, TypeError, ValueError, json.JSONDecodeError):
+        if raise_errors:
+            raise
+        stderr.write("Original README verification failed\n")
+        return 2
 
 
 if __name__ == "__main__":

@@ -6,9 +6,84 @@ import math
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Mapping
+from types import MappingProxyType
+from typing import Literal, Mapping, MutableMapping
 
-from dotenv import load_dotenv
+from dotenv import dotenv_values, load_dotenv
+
+
+ValueSource = Literal["invocation", "environment", "runtime-default"]
+
+PI_DEFAULT_PROVIDER = "openai-codex"
+PI_DEFAULT_MODEL = "gpt-5.6-luna"
+PI_DEFAULT_TOOLS = "read,bash"
+PI_DEFAULT_MAX_TURNS = 100
+PI_DEFAULT_TIMEOUT_SECONDS = 3600.0
+
+
+@dataclass(frozen=True)
+class ConfigLayers:
+    """Immutable process and repository ``.env`` snapshots."""
+
+    process: Mapping[str, str]
+    dotenv: Mapping[str, str]
+
+    @classmethod
+    def from_repo(
+        cls, repo_root: Path, process_environment: Mapping[str, str] | None = None
+    ) -> "ConfigLayers":
+        process = dict(os.environ if process_environment is None else process_environment)
+        loaded = dotenv_values(Path(repo_root) / ".env")
+        dotenv = {key: value for key, value in loaded.items() if value is not None}
+        return cls(
+            process=MappingProxyType(process),
+            dotenv=MappingProxyType(dotenv),
+        )
+
+    def resolve(
+        self,
+        name: str,
+        invocation: object,
+        default: object,
+        *,
+        allow_empty_environment: bool = False,
+    ) -> tuple[object, ValueSource]:
+        def is_empty(value: object) -> bool:
+            return isinstance(value, str) and not value.strip()
+
+        if invocation is not None and (
+            allow_empty_environment or not is_empty(invocation)
+        ):
+            return invocation, "invocation"
+        if name in self.process and (
+            allow_empty_environment or not is_empty(self.process[name])
+        ):
+            return self.process[name], "environment"
+        if name in self.dotenv and (
+            allow_empty_environment or not is_empty(self.dotenv[name])
+        ):
+            return self.dotenv[name], "environment"
+        return default, "runtime-default"
+
+    def materialize(self, target: MutableMapping[str, str]) -> None:
+        for name, value in self.dotenv.items():
+            target.setdefault(name, value)
+
+
+@dataclass(frozen=True)
+class AsterionRuntimeConfig:
+    """Runtime-relative configuration before an installed client is built."""
+
+    runtime: str
+    provider: str | None
+    model: str | None
+    tools: str
+    max_turns: int
+    timeout_seconds: float | None
+    thinking_level: str | None
+    context_profile: str | None
+    authentication_mode: str
+    sources: Mapping[str, ValueSource]
 
 
 @dataclass(frozen=True)
@@ -43,6 +118,7 @@ class DciRuntimeOptions:
     node_max_old_space_size_mb: int | None = None
     keep_session: bool = False
     extra_args: tuple[str, ...] = ()
+    authentication_mode: str = "saved-auth"
 
 
 def load_asterion_dci_env(
@@ -61,24 +137,30 @@ def load_asterion_dci_env(
     return env_path
 
 
-def resolve_dci_paths(repo_root: Path) -> DciPaths:
+def resolve_dci_paths(
+    repo_root: Path, *, environment: Mapping[str, str] | None = None
+) -> DciPaths:
     """Resolve shared DCI Pi paths and Asterion-compatible aliases."""
 
     root = Path(repo_root).resolve()
+    configured_environment = os.environ if environment is None else environment
     pi_dir = _configured_path_shared(
-        "DCI_PI_DIR", "ASTERION_DCI_PI_DIR", root / "pi", root=root
+        "DCI_PI_DIR", "ASTERION_DCI_PI_DIR", root / "pi", root=root,
+        environment=configured_environment,
     )
     package_dir = _configured_path_shared(
         "DCI_PI_PACKAGE_DIR",
         "ASTERION_DCI_PI_PACKAGE_DIR",
         pi_dir / "packages" / "coding-agent",
         root=root,
+        environment=configured_environment,
     )
     agent_dir = _configured_path_shared(
         "DCI_PI_AGENT_DIR",
         "ASTERION_DCI_PI_AGENT_DIR",
         pi_dir / ".pi" / "agent",
         root=root,
+        environment=configured_environment,
     )
     output_root = _configured_output_path(
         "ASTERION_DCI_OUTPUT_ROOT", root / "outputs" / "asterion-dci-runs", root=root
@@ -102,41 +184,20 @@ def resolve_dci_runtime_options(
     values = {} if overrides is None else dict(overrides)
     from asterion.dci.context_profiles import resolve_context_profile
 
-    runtime = _resolve_runtime(
-        _override_or_env(values, "runtime", "DCI_RUNTIME", "pi")
-    )
-    if not runtime:
-        runtime = "pi"
-    if runtime not in {"pi", "claude-code"}:
-        raise ValueError("DCI runtime is unsupported")
-    provider_default: str | None = (
-        "openai-codex" if runtime == "pi" else None
-    )
-    model_default: str | None = (
-        "gpt-5.6-luna" if runtime == "pi" else None
-    )
-    provider = _override_or_env(values, "provider", "DCI_PROVIDER", provider_default)
-    model = _override_or_env(values, "model", "DCI_MODEL", model_default)
-    if runtime == "claude-code":
-        provider, model = _resolve_claude_pair(provider=provider, model=model)
-
+    if "runtime_context_level" in values and "context_profile" not in values:
+        values["context_profile"] = values["runtime_context_level"]
+    resolved = resolve_asterion_runtime(values, ConfigLayers(os.environ, {}))
     context_profile = resolve_context_profile(
-        _override_or_env(values, "runtime_context_level", "DCI_RUNTIME_CONTEXT_LEVEL")
+        resolved.context_profile
     )
     return DciRuntimeOptions(
-        runtime=runtime,
-        provider=None if provider is None else str(provider),
-        model=None if model is None else str(model),
-        tools=str(_override_or_env(values, "tools", "DCI_TOOLS", "read,bash")),
-        timeout_seconds=_timeout_value(
-            _override_or_env(
-                values, "timeout_seconds", "DCI_RPC_TIMEOUT_SECONDS", "3600"
-            )
-        ),
+        runtime=resolved.runtime,
+        provider=resolved.provider,
+        model=resolved.model,
+        tools=resolved.tools,
+        timeout_seconds=resolved.timeout_seconds,
         runtime_context_level=(context_profile.name if context_profile else None),
-        thinking_level=_override_or_env(
-            values, "thinking_level", "DCI_PI_THINKING_LEVEL"
-        ),
+        thinking_level=resolved.thinking_level,
         node_max_old_space_size_mb=_optional_positive_int(
             _override_or_env(
                 values, "node_max_old_space_size_mb", "DCI_NODE_MAX_OLD_SPACE_SIZE_MB"
@@ -144,23 +205,134 @@ def resolve_dci_runtime_options(
         ),
         keep_session=bool(values.get("keep_session", False)),
         extra_args=tuple(values.get("extra_args", ())),
+        authentication_mode=resolved.authentication_mode,
     )
 
 
-def _resolve_claude_pair(
-    provider: object, model: object
-) -> tuple[None | str, None | str]:
-    if (provider is None and model is None) or (provider == "" and model == ""):
-        return None, None
-    if provider is None or provider == "":
-        raise ValueError("Claude Code runtime requires provider and model together")
-    if model is None or model == "":
-        raise ValueError("Claude Code runtime requires provider and model together")
-    provider_value = str(provider).strip()
-    model_value = str(model).strip()
-    if provider_value not in {"anthropic", "minimax", "minimax-cn"}:
-        raise ValueError("Claude Code runtime provider is unsupported")
-    return provider_value, model_value
+def resolve_asterion_runtime(
+    overrides: Mapping[str, object], layers: ConfigLayers
+) -> AsterionRuntimeConfig:
+    """Resolve Asterion's public Pi/Claude runtime contract independently."""
+
+    runtime_value, runtime_source = layers.resolve(
+        "DCI_RUNTIME", overrides.get("runtime"), "pi"
+    )
+    runtime = _public_runtime_name(_required_text(runtime_value, default="pi"))
+    if runtime not in {"pi", "claude-code"}:
+        raise ValueError("Asterion runtime is unsupported")
+
+    provider_default = PI_DEFAULT_PROVIDER if runtime == "pi" else None
+    model_default = PI_DEFAULT_MODEL if runtime == "pi" else None
+    tools_default = PI_DEFAULT_TOOLS if runtime == "pi" else "read,grep,glob"
+    specs = (
+        ("provider", "DCI_PROVIDER", provider_default, "agent.provider", False),
+        ("model", "DCI_MODEL", model_default, "agent.model", False),
+        ("tools", "DCI_TOOLS", tools_default, "agent.tools", False),
+        ("max_turns", "DCI_MAX_TURNS", PI_DEFAULT_MAX_TURNS, "agent.max_turns", False),
+        (
+            "timeout_seconds",
+            "DCI_RPC_TIMEOUT_SECONDS",
+            PI_DEFAULT_TIMEOUT_SECONDS,
+            "agent.timeout_seconds",
+            True,
+        ),
+        (
+            "thinking_level",
+            "DCI_PI_THINKING_LEVEL",
+            None,
+            "agent.thinking_level",
+            True,
+        ),
+        (
+            "context_profile",
+            "DCI_RUNTIME_CONTEXT_LEVEL",
+            None,
+            "context.profile",
+            True,
+        ),
+    )
+    values: dict[str, object] = {}
+    sources: dict[str, ValueSource] = {"runtime": runtime_source}
+    for field_name, env_name, default, source_name, allow_empty in specs:
+        value, source = layers.resolve(
+            env_name,
+            overrides.get(field_name),
+            default,
+            allow_empty_environment=allow_empty,
+        )
+        values[field_name] = value
+        sources[source_name] = source
+
+    provider = _optional_text(values["provider"])
+    model = _optional_text(values["model"])
+    if runtime == "pi":
+        provider = provider or PI_DEFAULT_PROVIDER
+        model = model or PI_DEFAULT_MODEL
+        authentication_mode = "saved-auth"
+    else:
+        if provider is None:
+            authentication_mode = "subscription"
+        elif provider in {"minimax", "minimax-cn"} and model is not None:
+            authentication_mode = (
+                "minimax-coding-plan"
+                if provider == "minimax"
+                else "minimax-cn-coding-plan"
+            )
+        else:
+            raise ValueError("Claude Code runtime/provider pair is unsupported")
+
+    from asterion.dci.context_profiles import resolve_context_profile
+
+    raw_context_profile = values["context_profile"]
+    context_profile = (
+        None
+        if raw_context_profile is None
+        or (isinstance(raw_context_profile, str) and not raw_context_profile.strip())
+        else resolve_context_profile(str(raw_context_profile)).name
+    )
+    return AsterionRuntimeConfig(
+        runtime=runtime,
+        provider=provider,
+        model=model,
+        tools=_required_text(values["tools"], default=tools_default),
+        max_turns=_positive_int(values["max_turns"], default=PI_DEFAULT_MAX_TURNS),
+        timeout_seconds=_timeout_value(values["timeout_seconds"]),
+        thinking_level=_optional_text(values["thinking_level"]),
+        context_profile=context_profile,
+        authentication_mode=authentication_mode,
+        sources=MappingProxyType(sources),
+    )
+
+
+def _public_runtime_name(value: str) -> str:
+    return {
+        "pi.reference": "pi",
+        "claude-code.reference": "claude-code",
+    }.get(value, value)
+
+
+def _required_text(value: object, *, default: str) -> str:
+    normalized = str(value).strip()
+    return normalized or default
+
+
+def _optional_text(value: object) -> str | None:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    return normalized or None
+
+
+def _positive_int(value: object, *, default: int) -> int:
+    if isinstance(value, str) and not value.strip():
+        return default
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as error:
+        raise ValueError("DCI_MAX_TURNS must be an integer") from error
+    if parsed <= 0:
+        raise ValueError("DCI_MAX_TURNS must be greater than zero")
+    return parsed
 
 
 def _override_or_env(
@@ -184,7 +356,7 @@ def _resolve_runtime(value: object) -> str:
 
 
 def _timeout_value(value: object) -> float | None:
-    if value is None:
+    if value is None or (isinstance(value, str) and not value.strip()):
         return None
     try:
         timeout_seconds = float(value)
@@ -228,11 +400,16 @@ def _configured_output_path(name: str, default: Path, *, root: Path) -> Path:
 
 
 def _configured_path_shared(
-    shared_name: str, alias_name: str, default: Path, *, root: Path
+    shared_name: str,
+    alias_name: str,
+    default: Path,
+    *,
+    root: Path,
+    environment: Mapping[str, str] = os.environ,
 ) -> Path:
     value = (
-        os.environ.get(shared_name, "").strip()
-        or os.environ.get(alias_name, "").strip()
+        environment.get(shared_name, "").strip()
+        or environment.get(alias_name, "").strip()
     )
     path = Path(value).expanduser() if value else default
     if not path.is_absolute():

@@ -32,8 +32,10 @@ AF240_OWNERS = {
     "asterion.dci.artifacts",
     "asterion.dci.benchmark",
     "asterion.dci.cli",
+    "asterion.dci.config",
     "asterion.dci.datasets",
     "asterion.dci.evaluation",
+    "asterion.dci.effective_config",
     "asterion.dci.export",
     "asterion.dci.judge",
     "asterion.dci.metrics",
@@ -111,6 +113,26 @@ AF250_MATRIX_TESTS = {
         "test_af250_h005_private_acceptance_recomputes_artifacts_and_semantics",
     ),
 }
+
+
+def _shell_if_branch_bodies(script: str, hypothesis_id: str) -> list[str]:
+    return re.findall(
+        rf'(?:if|elif) \[ "\$1" = "{re.escape(hypothesis_id)}" \]; then\n'
+        r"(.*?)(?=\nelif \[ \"\$1\"|\nfi)",
+        script,
+        re.S,
+    )
+
+
+def _shell_case_branch(script: str, hypothesis_id: str) -> str:
+    match = re.search(
+        rf"^    {re.escape(hypothesis_id)}\)\n(.*?)^        ;;$",
+        script,
+        re.M | re.S,
+    )
+    if match is None:
+        raise AssertionError(f"missing case branch for {hypothesis_id}")
+    return match.group(1)
 
 
 def _af240_source_functions(path: str) -> set[str]:
@@ -3261,32 +3283,8 @@ class ClimbToolTests(unittest.TestCase):
                 self.assertEqual(evaluation["total"], 4)
                 self.assertEqual(set(evaluation["per_task"]), dimensions)
 
-    def test_af340_climb_session_maps_the_reproduction_plan_to_governed_hypotheses(self) -> None:
-        state_dir = REPO_ROOT / "docs/status/climb"
-        config = yaml.safe_load((state_dir / "config.yaml").read_text())
-        session = json.loads((state_dir / "session-state.json").read_text())
-        hypotheses = yaml.safe_load((state_dir / "hypotheses.yaml").read_text())[
-            "hypotheses"
-        ]
-        indexed = {item["id"]: item for item in hypotheses}
+    def test_af340_train_has_exact_closed_membership_and_paradigms(self) -> None:
         train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
-        eval_script = (REPO_ROOT / "tools/climb/eval-local.sh").read_text()
-
-        self.assertEqual(config["score_name"], "af340_reproduction_acceptance")
-        self.assertEqual(
-            config["subscores"],
-            [
-                "normalized_evidence",
-                "statistical_comparison",
-                "local_coordination",
-                "bounded_evidence",
-                "full_reproduction",
-            ],
-        )
-        self.assertEqual(session["work_package_id"], "AF-340")
-        self.assertEqual(session["next_hypothesis"], "AF-340-H-001")
-        self.assertEqual(session["phase"], "implementation")
-
         expected = {
             "AF-340-H-001": "dci-reproduction-evidence",
             "AF-340-H-002": "dci-reproduction-statistics",
@@ -3294,19 +3292,260 @@ class ClimbToolTests(unittest.TestCase):
             "AF-340-H-004": "dci-reproduction-bounded-evidence",
             "AF-340-H-005": "dci-reproduction-full-closure",
         }
+        allowlist = re.search(
+            r'^case "\$1" in\n    ([^\n]+)\) ;;$', train_script, re.M
+        )
+
+        self.assertIsNotNone(allowlist)
+        af340_members = [
+            item
+            for item in allowlist.group(1).split("|")
+            if item.startswith("AF-340-")
+        ]
+        self.assertEqual(af340_members, list(expected))
+
         for hypothesis_id, paradigm in expected.items():
             with self.subTest(hypothesis_id=hypothesis_id):
-                hypothesis = indexed[hypothesis_id]
-                self.assertEqual(hypothesis["work_package_id"], "AF-340")
-                self.assertEqual(hypothesis["parent_paradigm"], paradigm)
-                self.assertEqual(hypothesis["status"], "pending")
-                self.assertIn(hypothesis_id, train_script)
-                self.assertIn(f"    {hypothesis_id})", eval_script)
+                branches = _shell_if_branch_bodies(train_script, hypothesis_id)
+                self.assertEqual(len(branches), 2)
+                self.assertEqual(
+                    branches[0].strip(), f'paradigm="{paradigm}"'
+                )
 
-        target = (state_dir / "session-target.md").read_text()
-        self.assertIn("AF-340", target)
-        self.assertIn("explicit", target.lower())
-        self.assertIn("authorization", target.lower())
+    def test_af340_eval_branches_have_exact_dimensions_and_selectors(self) -> None:
+        eval_script = (REPO_ROOT / "tools/climb/eval-local.sh").read_text()
+        expected = {
+            "AF-340-H-001": (
+                (
+                    "immutable_rows",
+                    "strict_manifest",
+                    "status_preservation",
+                    "body_free_schema",
+                ),
+                (
+                    "tests.test_asterion_dci_reproduction.ReproductionManifestTests.test_manifest_is_frozen_stably_ordered_and_body_free",
+                    "tests.test_asterion_dci_reproduction.ReproductionManifestTests.test_manifest_rejects_duplicate_or_missing_query_ids",
+                    "tests.test_asterion_dci_reproduction.ReproductionManifestTests.test_manifest_rejects_exclusion_without_versioned_reason",
+                    "tests.test_asterion_dci_reproduction.ReproductionManifestTests.test_manifest_rejects_unknown_body_or_credential_fields_at_any_depth",
+                ),
+            ),
+            "AF-340-H-002": (
+                (
+                    "paired_accuracy",
+                    "paired_ndcg",
+                    "deterministic_estimator",
+                    "target_comparison_cli",
+                ),
+                (
+                    "tests.test_asterion_dci_reproduction.ReproductionStatisticsTests.test_accuracy_minus_point_zero_four_passes_and_is_deterministic",
+                    "tests.test_asterion_dci_reproduction.ReproductionStatisticsTests.test_ndcg_threshold_fixtures_use_lower_confidence_bound",
+                    "tests.test_asterion_dci_reproduction.ReproductionStatisticsTests.test_estimator_sample_digest_binds_values_status_and_evidence",
+                    "tests.test_asterion_dci_reproduction.ReproductionStatisticsTests.test_target_report_binds_exact_profile_target_and_runtime",
+                ),
+            ),
+            "AF-340-H-003": (
+                (
+                    "literal_local_matrix",
+                    "zero_operations",
+                    "private_output_boundary",
+                    "documented_commands",
+                ),
+                (
+                    "tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_local_exact_matrix_has_zero_provider_operations",
+                    "tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_local_exact_matrix_has_zero_provider_operations",
+                    "tests.test_af340_reproduction_verifier.Af340ReproductionVerifierTests.test_failure_report_preserves_counts_without_command_or_output_bodies",
+                    "tests.test_asterion_documentation",
+                ),
+            ),
+            "AF-340-H-004": (
+                (
+                    "bounded_original_pi",
+                    "bounded_asterion_pi",
+                    "bounded_claude_modes",
+                    "retained_body_free_evidence",
+                ),
+                (
+                    "bounded_original_pi",
+                    "bounded_asterion_pi",
+                    "bounded_claude_modes",
+                    "retained_body_free_evidence",
+                ),
+            ),
+            "AF-340-H-005": (
+                (
+                    "explicit_authorization",
+                    "matched_pi_noninferiority",
+                    "claude_target_comparison",
+                    "terminal_repository_gates",
+                ),
+                (
+                    "explicit_authorization",
+                    "matched_pi_noninferiority",
+                    "claude_target_comparison",
+                    "terminal_repository_gates",
+                ),
+            ),
+        }
+
+        for hypothesis_id, (dimensions, selectors) in expected.items():
+            with self.subTest(hypothesis_id=hypothesis_id):
+                branch = _shell_case_branch(eval_script, hypothesis_id)
+                assignments = dict(re.findall(r'^        (\w+)="([^"]+)"$', branch, re.M))
+                self.assertEqual(
+                    tuple(assignments[f"{name}_dimension"] for name in (
+                        "first", "second", "third", "fourth"
+                    )),
+                    dimensions,
+                )
+                self.assertEqual(
+                    tuple(assignments[name] for name in (
+                        "immutable_test", "repeat_test", "dirty_test", "override_test"
+                    )),
+                    selectors,
+                )
+                expected_keys = {
+                    "first_dimension",
+                    "second_dimension",
+                    "third_dimension",
+                    "fourth_dimension",
+                    "immutable_test",
+                    "repeat_test",
+                    "dirty_test",
+                    "override_test",
+                }
+                if hypothesis_id in {"AF-340-H-004", "AF-340-H-005"}:
+                    expected_keys.add("dimension_runner")
+                    self.assertEqual(
+                        assignments["dimension_runner"],
+                        (
+                            "run_af340_evidence_dimension"
+                            if hypothesis_id == "AF-340-H-004"
+                            else "run_af340_full_dimension"
+                        ),
+                    )
+                self.assertEqual(set(assignments), expected_keys)
+
+    def test_af340_train_branches_use_exact_tracked_commands(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+        expected_modules = {
+            "AF-340-H-001": {
+                "tests.test_asterion_dci_reproduction",
+            },
+            "AF-340-H-002": {
+                "tests.test_asterion_dci_reproduction",
+                "tests.test_asterion_dci_paper_resolution_analysis",
+                "tests.test_asterion_dci_paper_product",
+            },
+            "AF-340-H-003": {
+                "tests.test_af340_reproduction_verifier",
+                "tests.test_original_readme_acceptance",
+                "tests.test_asterion_documentation",
+            },
+            "AF-340-H-004": set(),
+            "AF-340-H-005": set(),
+        }
+
+        for hypothesis_id, modules in expected_modules.items():
+            with self.subTest(hypothesis_id=hypothesis_id):
+                branch = _shell_if_branch_bodies(train_script, hypothesis_id)[1]
+                self.assertEqual(
+                    set(re.findall(r"tests\.test_[a-zA-Z0-9_]+", branch)),
+                    modules,
+                )
+                verifier_calls = re.findall(
+                    r"uv run python tools/verify_af340_reproduction\.py [^\n\\]+",
+                    branch,
+                )
+                if hypothesis_id == "AF-340-H-004":
+                    self.assertEqual(
+                        verifier_calls,
+                        ["uv run python tools/verify_af340_reproduction.py inspect "],
+                    )
+                elif hypothesis_id == "AF-340-H-005":
+                    self.assertEqual(
+                        verifier_calls,
+                        ["uv run python tools/verify_af340_reproduction.py inspect-closure "],
+                    )
+                else:
+                    self.assertEqual(verifier_calls, [])
+
+    def test_af340_h004_eval_only_inspects_retained_evidence(self) -> None:
+        train_script = (REPO_ROOT / "tools/climb/train.sh").read_text()
+        eval_script = (REPO_ROOT / "tools/climb/eval-local.sh").read_text()
+        h004_eval = _shell_case_branch(eval_script, "AF-340-H-004")
+        runner = re.search(
+            r"run_af340_evidence_dimension\(\) \{\n(.*?)\n\}",
+            eval_script,
+            re.S,
+        )
+
+        self.assertIsNotNone(runner)
+        self.assertIn("inspect", runner.group(1))
+        self.assertNotIn("inspect-full", runner.group(1))
+        self.assertEqual(runner.group(1).count('--report "$AF340_'), 3)
+        self.assertNotIn("AF340_FULL_REPORT", runner.group(1))
+        self.assertNotIn('--dimension "$dimension"', runner.group(1))
+        self.assertNotIn("verify_af340_reproduction.py bounded", runner.group(1))
+        self.assertNotIn('="bounded"', h004_eval)
+        self.assertEqual(
+            train_script.count("verify_af340_reproduction.py bounded")
+            + eval_script.count("verify_af340_reproduction.py bounded"),
+            0,
+        )
+
+    def test_af340_h001_eval_is_provider_free_and_scores_four(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            run_dir = Path(temp_dir)
+            env = os.environ.copy()
+            env["DCI_CLIMB_HYPOTHESIS_ID"] = "AF-340-H-001"
+            env.pop("OPENAI_API_KEY", None)
+            env.pop("ANTHROPIC_API_KEY", None)
+            env.pop("DEEPSEEK_API_KEY", None)
+            env.pop("MINIMAX_API_KEY", None)
+
+            result = subprocess.run(
+                ["bash", "tools/climb/eval-local.sh", str(run_dir)],
+                cwd=REPO_ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+            )
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            evaluation = json.loads((run_dir / "local-eval.json").read_text())
+            self.assertEqual(evaluation["hypothesis_id"], "AF-340-H-001")
+            self.assertEqual(evaluation["total"], 4)
+            self.assertEqual(
+                evaluation["per_task"],
+                {
+                    "immutable_rows": 1,
+                    "strict_manifest": 1,
+                    "status_preservation": 1,
+                    "body_free_schema": 1,
+                },
+            )
+
+    def test_af340_h001_shell_syntax_and_scope_preflight_pass(self) -> None:
+        syntax = subprocess.run(
+            ["bash", "-n", "tools/climb/train.sh", "tools/climb/eval-local.sh"],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+        )
+        scope = subprocess.run(
+            [
+                "python3",
+                "tools/project_scope_check.py",
+                "--climb-hypothesis",
+                "AF-340-H-001",
+            ],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+        )
+
+        self.assertEqual(syntax.returncode, 0, syntax.stderr)
+        self.assertEqual(scope.returncode, 0, scope.stderr)
 
     def test_af310_h005_provider_binding_is_digest_bound_and_body_free(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

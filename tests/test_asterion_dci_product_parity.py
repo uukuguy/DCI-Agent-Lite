@@ -26,6 +26,7 @@ from dci.benchmark.judge import (
     JudgeConfig as SourceJudgeConfig,
     build_judge_request as build_source_judge_request,
     judge_request_fingerprint as source_judge_fingerprint,
+    judge_public_identity as source_judge_public_identity,
 )
 from asterion.dci.benchmark import BenchmarkRequest, run_benchmark
 from asterion.dci.config import (
@@ -38,6 +39,7 @@ from asterion.dci.judge import (
     JudgeConfig as AsterionJudgeConfig,
     build_judge_request as build_asterion_judge_request,
     judge_request_fingerprint as asterion_judge_fingerprint,
+    judge_public_identity as asterion_judge_public_identity,
 )
 from asterion.dci.pi_rpc import build_pi_command as build_asterion_pi_command
 from asterion.dci.export import export_bcplus, export_subset as asterion_bright_export
@@ -306,6 +308,7 @@ class AsterionDciProductParityTests(unittest.TestCase):
             provider="fixture-provider",
             model="fixture-model",
             tools="read,bash",
+            max_turns=100,
             resume=resume,
         )
         with (
@@ -522,7 +525,7 @@ class AsterionDciProductParityTests(unittest.TestCase):
         inventory = self.document["batch_inventory"]
         path = ROOT / inventory["path"]
         self.assertEqual(inventory["path"], "assets/dci/batch-parity.json")
-        self.assertEqual(inventory["row_count"], 533)
+        self.assertEqual(inventory["row_count"], 538)
         self.assertEqual(
             inventory["sha256"], hashlib.sha256(path.read_bytes()).hexdigest()
         )
@@ -550,12 +553,12 @@ class AsterionDciProductParityTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, error):
                     validate_product_matrix(ROOT, document)
 
-    def test_inventory_requires_all_533_resolvable_executable_selectors(self) -> None:
+    def test_inventory_requires_all_538_resolvable_executable_selectors(self) -> None:
         selectors = product_verifier.validate_batch_inventory(
             ROOT, self.document["batch_inventory"]
         )
-        self.assertEqual(len(selectors), 533)
-        self.assertEqual(len(set(selectors)), 533)
+        self.assertEqual(len(selectors), 538)
+        self.assertEqual(len(set(selectors)), 538)
         rejected = selectors[17]
         with mock.patch.object(
             product_verifier,
@@ -572,6 +575,13 @@ class AsterionDciProductParityTests(unittest.TestCase):
     def test_exact_twelve_source_asterion_launcher_pairs_are_required(self) -> None:
         pairs = product_verifier.validate_launcher_pairs(ROOT)
         self.assertEqual(len(pairs), 12)
+        primary_pairs = tuple(
+            pair for pair in pairs if not pair[0].endswith("/run_L3.sh")
+        )
+        self.assertEqual(len(primary_pairs), 11)
+        self.assertTrue(
+            all("/run_L3.sh" not in path for pair in primary_pairs for path in pair)
+        )
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             for source, target in pairs:
@@ -626,7 +636,7 @@ class AsterionDciProductParityTests(unittest.TestCase):
         with mock.patch("subprocess.run", side_effect=execute):
             result = run_local_evidence(ROOT, rows)
         self.assertEqual(result["bounded_acceptance"], "7/7")
-        self.assertEqual(result["delegated_inventory"], "0/533")
+        self.assertEqual(result["delegated_inventory"], "0/538")
         self.assertEqual(result["launcher_pairs"], "0/12")
         self.assertEqual(result["batch_extra_selectors"], "0/6")
 
@@ -830,7 +840,7 @@ class AsterionDciProductParityTests(unittest.TestCase):
         self.assertEqual(result["provider_backed_executed"], 0)
         self.assertNotIn("private body", json.dumps(result))
         self.assertNotIn("secret", json.dumps(result))
-        self.assertEqual(result["delegated_inventory"], "533/533")
+        self.assertEqual(result["delegated_inventory"], "538/538")
         self.assertEqual(result["launcher_pairs"], "12/12")
         self.assertEqual(result["batch_extra_selectors"], "6/6")
         for call in run.call_args_list:
@@ -857,7 +867,7 @@ class AsterionDciProductParityTests(unittest.TestCase):
     def test_default_cli_prints_the_exact_product_row_aggregate(self) -> None:
         summary = product_verifier.ProductAcceptanceSummary(
             product_rows=(8, 8),
-            delegated_inventory=(533, 533),
+            delegated_inventory=(538, 538),
             launcher_pairs=(12, 12),
             batch_extras=(6, 6),
             bounded_acceptance=(7, 7),
@@ -950,7 +960,7 @@ class AsterionDciProductParityTests(unittest.TestCase):
             "provider": "fixture-provider",
             "model": "fixture-model",
             "tools": "read,bash",
-            "max_turns": None,
+            "max_turns": 100,
             "pi_provenance": {"commit": "fixture", "dirty": False},
             "resume_count": 0,
             "protocol_attempt_count": 1,
@@ -1091,10 +1101,14 @@ class AsterionDciProductParityTests(unittest.TestCase):
 
     def test_af250_h002_judge_request_and_cache_invalidation_semantics_match(self) -> None:
         source_config = SourceJudgeConfig(
-            base_url="https://judge.example.test/v1", model="fixture-judge"
+            base_url="https://judge.example.test/v1",
+            api="responses",
+            model="fixture-judge",
         )
         asterion_config = AsterionJudgeConfig(
-            base_url="https://judge.example.test/v1", model="fixture-judge"
+            base_url="https://judge.example.test/v1",
+            api="responses",
+            model="fixture-judge",
         )
         token_key = (
             "max_output_tokens"
@@ -1109,6 +1123,10 @@ class AsterionDciProductParityTests(unittest.TestCase):
         source_request = build_source_judge_request(source_config, **fields)
         asterion_request = build_asterion_judge_request(asterion_config, **fields)
         self.assertEqual(source_config.public_dict(), asterion_config.public_dict())
+        self.assertEqual(
+            source_judge_public_identity(source_config),
+            asterion_judge_public_identity(asterion_config),
+        )
         self.assertEqual(source_request["model"], asterion_request["model"])
         self.assertEqual(
             source_request[token_key],

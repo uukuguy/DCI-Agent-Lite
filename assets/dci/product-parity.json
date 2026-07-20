@@ -2,8 +2,8 @@
   "schema": "asterion.dci.product-parity/v1",
   "batch_inventory": {
     "path": "assets/dci/batch-parity.json",
-    "sha256": "2189ae454ee3aaad1a939c334855a6777d5a64fd96fde1d605e78604eea0c1b2",
-    "row_count": 533
+    "sha256": "935137f174c9fe9e5d8ca97d7623dcdcda92ee9917d176d864345b0ada978cf8",
+    "row_count": 538
   },
   "product_acceptance": {
     "path": "assets/dci/product-acceptance.json",
@@ -196,7 +196,7 @@
         "asterion/src/asterion/dci/export.py"
       ],
       "stable_semantics": [
-        "The digest-bound 533-row inventory delegates complete fine-grained batch coverage",
+        "The digest-bound 538-row inventory delegates complete fine-grained batch coverage",
         "Batch reuse metrics analysis figures and exports retain deterministic product semantics"
       ],
       "unsupported": false,
@@ -252,6 +252,8 @@
             "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_pi_extra_arg",
             "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_pi_thinking_level",
             "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_provider",
+            "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_rpc_timeout_seconds",
+            "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_runtime",
             "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_runtime_context_level",
             "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_system_prompt_file",
             "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_tools",
@@ -291,6 +293,7 @@
             "tests.test_asterion_dci_metrics.AsterionDciMetricTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_compute_ndcg_at_k",
             "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_compute_percentile",
             "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_compute_run_batch_timing",
+            "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_effective_config_for_batch",
             "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_enrich_results",
             "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_existing_result_succeeded",
             "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_existing_run_has_error",
@@ -323,7 +326,9 @@
             "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_read_json_if_exists",
             "tests.test_asterion_dci_datasets.AsterionDciDatasetTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_read_jsonl",
             "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_read_text_if_exists",
+            "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_batch_full_selection_requires_explicit_invocation_authority",
             "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_resolve_repo_relative_path",
+            "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_resolve_runtime_args",
             "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_run_single_query",
             "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_safe_float",
             "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_scatter_by_outcome",
@@ -793,6 +798,8 @@
             "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_pi_extra_arg",
             "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_pi_thinking_level",
             "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_provider",
+            "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_rpc_timeout_seconds",
+            "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_runtime",
             "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_runtime_context_level",
             "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_system_prompt_file",
             "tests.test_asterion_dci_batch_launchers.AsterionDciBatchLauncherTests.test_scripts_bcplus_eval_run_bcplus_eval_py_cli_flag_tools",
@@ -832,6 +839,7 @@
             "tests.test_asterion_dci_metrics.AsterionDciMetricTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_compute_ndcg_at_k",
             "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_compute_percentile",
             "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_compute_run_batch_timing",
+            "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_effective_config_for_batch",
             "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_enrich_results",
             "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_existing_result_succeeded",
             "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_existing_run_has_error",
@@ -864,7 +872,9 @@
             "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_read_json_if_exists",
             "tests.test_asterion_dci_datasets.AsterionDciDatasetTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_read_jsonl",
             "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_read_text_if_exists",
+            "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_source_batch_full_selection_requires_explicit_invocation_authority",
             "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_resolve_repo_relative_path",
+            "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_resolve_runtime_args",
             "tests.test_asterion_dci_batch.AsterionDciBatchTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_run_single_query",
             "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_safe_float",
             "tests.test_asterion_dci_analysis.AsterionDciAnalysisTests.test_scripts_bcplus_eval_run_bcplus_eval_py_function_scatter_by_outcome",

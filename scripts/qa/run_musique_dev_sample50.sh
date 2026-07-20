@@ -14,4 +14,5 @@ uv run python "$REPO_ROOT/scripts/bcplus_eval/run_bcplus_eval.py" \
   --max-concurrency 5 \
   --runtime-context-level level3 \
   --pi-thinking-level high \
-  --node-max-old-space-size-mb 8192
+  --node-max-old-space-size-mb 8192 \
+  "$@"

@@ -1,216 +1,282 @@
 from __future__ import annotations
 
-import os
-import shutil
+import io
+import json
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 
-from tools import verify_original_readme
-
-
-def _sample_readme_text(
-    *,
-    include_override: bool = True,
-    missing_level: str | None = None,
-) -> str:
-    quick_terminal_default = """PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner --terminal \\
-  --cwd \"corpus/wiki_corpus\" \\
-  --extra-arg=\"--thinking high\""""
-    quick_terminal_override = """PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner --terminal \\
-  --provider openai \\
-  --model gpt-5.4-nano \\
-  --cwd \"corpus/wiki_corpus\" \\
-  --extra-arg=\"--thinking high\""""
-    quick_programmatic_default = """PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \\
-  --cwd \"corpus/wiki_corpus\" \\
-  --extra-arg=\"--thinking high\" \\
-  \"Answer the following question using only wiki_dump.jsonl in the current directory. Question: In which street did the Great Fire of London originate?\""""
-    quick_programmatic_override = """PYTHONPATH=src uv run python -m dci.benchmark.pi_rpc_runner \\
-  --provider openai \\
-  --model gpt-5.4-nano \\
-  --cwd \"corpus/wiki_corpus\" \\
-  --extra-arg=\"--thinking high\" \\
-  \"Answer the following question using only wiki_dump.jsonl in the current directory. Question: In which street did the Great Fire of London originate?\""""
-
-    override_blocks = ""
-    if include_override:
-        override_blocks = (
-            "\n```bash\n"
-            f"{quick_terminal_override}\n"
-            "```\n\n```bash\n"
-            f"{quick_programmatic_override}\n"
-            "```\n"
-        )
-
-    context_levels = ["level0", "level1", "level2", "level3", "level4"]
-    if missing_level in context_levels:
-        context_levels = [level for level in context_levels if level != missing_level]
-    if not context_levels:
-        raise ValueError("at least one context level must remain in the sample")
-
-    context_blocks = [
-        f'--runtime-context-level "{level}" \\\n'
-        '  --cwd \"corpus/wiki_corpus\" \\\n'
-        "  --max-turns 6 \\\n"
-        '"Answer the following question using only wiki_dump.jsonl in the current directory. '
-        'Question: In which street did the Great Fire of London originate?"'
-        for level in context_levels
-    ]
-    context_for = " ".join(context_levels)
-    context_block = "\n".join(
-        [f"for profile in {context_for}; do", "  " + "\n  ".join(context_blocks), "done"]
-    )
-
-    return f"""# Sample
-
-## ⚡ Quick Start
-
-```bash
-{quick_terminal_default}
-```
-
-{override_blocks}
-
-```bash
-{quick_programmatic_default}
-```
-
-## 🚀 Context Management Strategies
-
-For reproducibility, one short bounded command for each level:
-
-```bash
-{context_block}
-```
-"""
+from tests import SOURCE_ROOT as _SOURCE_ROOT  # noqa: F401
+from dci.context_management import resolve_context_extension
+from tools.verify_original_readme import (
+    _bounded_context_evidence,
+    _prepare_private_root,
+    _read_context_evidence,
+    _resolve_pi_loader,
+    _runner_command,
+    _terminal_preflight,
+    validate_readme_contract,
+    verify_original_readme_main,
+)
 
 
-def _write_readme(text: str) -> Path:
-    temporary_directory = tempfile.mkdtemp()
-    path = Path(temporary_directory) / "README.md"
-    path.write_text(text, encoding="utf-8")
-    return path
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 class OriginalReadmeAcceptanceTests(unittest.TestCase):
-    def test_readme_contract_passes_for_valid_literal_contract(self) -> None:
-        readme = _write_readme(_sample_readme_text())
-        try:
-            self.assertEqual(
-                verify_original_readme.verify_readme_contract(readme),
-                ["quick-start contract: ok", "context-management contract: ok"],
-            )
-        finally:
-            shutil.rmtree(readme.parent, ignore_errors=True)
-
-    def test_readme_contract_fails_without_override(self) -> None:
-        readme = _write_readme(_sample_readme_text(include_override=False))
-        try:
-            with self.assertRaises(ValueError):
-                verify_original_readme.verify_readme_contract(readme)
-        finally:
-            shutil.rmtree(readme.parent, ignore_errors=True)
-
-    def test_readme_contract_fails_missing_context_level(self) -> None:
-        readme = _write_readme(_sample_readme_text(missing_level="level4"))
-        try:
-            with self.assertRaises(ValueError):
-                verify_original_readme.verify_readme_contract(readme)
-        finally:
-            shutil.rmtree(readme.parent, ignore_errors=True)
-
-    def test_parse_env_file(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            path = Path(temporary_directory) / "env"
-            path.write_text(
-                "\n".join(
-                    [
-                        "# this is comment",
-                        "DCI_PROVIDER=openai-codex",
-                        "DCI_MODEL=\"gpt-5.6-luna\"",
-                        "export DCI_TOOLS=read,bash",
-                    ]
-                ),
-                encoding="utf-8",
-            )
-            parsed = verify_original_readme._parse_env_file(path)
-            self.assertEqual(
-                parsed,
+    def test_retained_context_evidence_binds_telemetry_and_state_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            session = Path(temp) / "session.jsonl"
+            entries = [
                 {
-                    "DCI_PROVIDER": "openai-codex",
-                    "DCI_MODEL": "gpt-5.6-luna",
-                    "DCI_TOOLS": "read,bash",
+                    "type": "custom",
+                    "customType": "dci-context-telemetry",
+                    "data": {
+                        "profile": "level3",
+                        "contractVersion": "dci.context-profile/v1",
+                        "extensionSha256": "a" * 64,
+                        "compactionCount": 1,
+                        "summaryAttempts": 0,
+                        "summarySuccesses": 0,
+                        "summarySuppressed": False,
+                    },
+                },
+                {
+                    "type": "custom",
+                    "customType": "dci-context-state",
+                    "data": {
+                        "profile": "level3",
+                        "contractVersion": "dci.context-profile/v1",
+                        "extensionSha256": "b" * 64,
+                    },
+                },
+            ]
+            session.write_text("\n".join(map(json.dumps, entries)) + "\n")
+
+            with self.assertRaisesRegex(ValueError, "bounded context evidence"):
+                _read_context_evidence(session, "level3")
+
+    def test_loader_resolution_uses_formal_package_override(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            ordinary = root / "pi/packages/coding-agent/dist/core/extensions"
+            override = root / "custom-package/dist/core/extensions"
+            ordinary.mkdir(parents=True)
+            override.mkdir(parents=True)
+            (ordinary / "loader.js").write_text("ordinary")
+            (override / "loader.js").write_text("override")
+
+            loader = _resolve_pi_loader(
+                root,
+                {
+                    "DCI_PI_DIR": "pi",
+                    "DCI_PI_PACKAGE_DIR": "custom-package",
                 },
             )
-            self.assertEqual(
-                verify_original_readme._parse_env_file(Path(path.parent / "missing")),
-                {},
-            )
 
-    def test_bounded_contract_uses_expected_original_entrypoint_and_levels(self) -> None:
-        readme = _write_readme(_sample_readme_text())
-        calls: list[list[str]] = []
+        self.assertEqual(loader, override / "loader.js")
 
-        def fake_run_command(
-            args: list[str],
-            *,
-            cwd: Path,
-            env: dict[str, str],
-            timeout_seconds: int,
-        ) -> subprocess.CompletedProcess[str]:
-            del cwd, env, timeout_seconds
-            calls.append(list(args))
-            output_index = args.index("--output-dir")
-            output_dir = Path(args[output_index + 1])
-            output_dir.mkdir(parents=True, exist_ok=True)
-            for name in (
-                "question.txt",
-                "final.txt",
-                "state.json",
-                "events.jsonl",
-                "conversation_full.json",
-                "effective-config.json",
-            ):
-                output_dir.joinpath(name).write_text("{}", encoding="utf-8")
-            return subprocess.CompletedProcess(args, 0, "", "")
+    def test_terminal_preflight_builds_literal_command_under_simulated_tty(self) -> None:
+        contract = validate_readme_contract(REPO_ROOT / "README.md")
 
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            output_root = Path(temporary_directory) / "outputs"
-            with patch("tools.verify_original_readme._run_command", side_effect=fake_run_command):
-                with patch.dict(
-                    os.environ,
-                    {
-                        "DCI_PROVIDER": "openai-codex",
-                        "DCI_MODEL": "gpt-5.6-luna",
-                        "OPENAI_API_KEY": "fixture",
-                    },
-                ):
-                    report = verify_original_readme.verify_bounded_contract(
-                        readme_path=readme,
-                        env_file=None,
-                        output_root=output_root,
-                        repo_root=readme.parent,
-                    )
-                    shutil.rmtree(readme.parent, ignore_errors=True)
+        preflight = _terminal_preflight(REPO_ROOT, {}, contract["terminal"])
+        command = preflight["argv"]
 
-            self.assertEqual(
-                report,
-                [
-                    f"bounded quick-start: {(output_root / 'quick-start').resolve()}",
-                    f"bounded level3: {(output_root / 'context-level3').resolve()}",
-                    f"bounded level4: {(output_root / 'context-level4').resolve()}",
-                ],
-            )
+        self.assertIn("--thinking", command)
+        self.assertIn("high", command)
+        self.assertNotIn("--terminal", command)
+        self.assertEqual(preflight["cwd"], REPO_ROOT / "corpus/wiki_corpus")
 
-        self.assertEqual(len(calls), 3)
-        self.assertTrue(
-            all("dci.benchmark.pi_rpc_runner" in " ".join(call) for call in calls)
+    def test_bounded_context_command_uses_pressure_preludes_and_bounds(self) -> None:
+        command = _runner_command(
+            REPO_ROOT,
+            Path("/private/run"),
+            "level4",
+            corpus_dir=Path("/private/corpus"),
         )
-        self.assertTrue(any("--runtime pi" in " ".join(call) for call in calls))
-        self.assertEqual(sum("--runtime-context-level" in token for call in calls for token in call), 2)
+
+        self.assertEqual(command.count("--prelude-question"), 12)
+        self.assertIn("--runtime", command)
+        self.assertIn("pi", command)
+        self.assertIn("--max-turns", command)
+        self.assertIn("--rpc-timeout-seconds", command)
+        self.assertIn("pressure.txt", command[-1])
+
+    def test_bounded_captures_child_bodies_and_reports_only_hashes(self) -> None:
+        calls = []
+
+        def fake_executor(command, **kwargs):
+            calls.append((command, kwargs))
+            output = Path(command[command.index("--output-dir") + 1])
+            output.mkdir(mode=0o700)
+            protocol = output / "protocol"
+            protocol.mkdir(mode=0o700)
+            files = {
+                "question.txt": "question-canary",
+                "final.txt": "answer-canary",
+                "conversation_full.json": "{}",
+                "effective-config.json": json.dumps({"identity_sha256": "b" * 64}),
+                "protocol/attempt-0001.events.jsonl": "{}\n",
+            }
+            for name, body in files.items():
+                path = output / name
+                path.write_text(body, encoding="utf-8")
+                path.chmod(0o600)
+            profile = next(
+                (value for value in ("level3", "level4") if value in command), None
+            )
+            if profile:
+                telemetry = {
+                    "type": "custom",
+                    "customType": "dci-context-telemetry",
+                    "data": {
+                        "profile": profile,
+                        "contractVersion": "dci.context-profile/v1",
+                        "extensionSha256": resolve_context_extension().sha256,
+                        "compactionCount": 1,
+                        "summaryAttempts": 1 if profile == "level4" else 0,
+                        "summarySuccesses": 1 if profile == "level4" else 0,
+                        "summarySuppressed": False,
+                    },
+                }
+                state = {
+                    "type": "custom",
+                    "customType": "dci-context-state",
+                    "data": {
+                        "profile": profile,
+                        "contractVersion": "dci.context-profile/v1",
+                        "extensionSha256": resolve_context_extension().sha256,
+                    },
+                }
+                session = output / "pi-session.jsonl"
+                session.write_text(
+                    json.dumps(telemetry) + "\n" + json.dumps(state) + "\n",
+                    encoding="utf-8",
+                )
+                session.chmod(0o600)
+            return subprocess.CompletedProcess(command, 0, "answer-canary", "stderr-canary")
+
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            env_file = root / "env"
+            env_file.write_text("DCI_RUNTIME=pi\n", encoding="utf-8")
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            result = verify_original_readme_main(
+                [
+                    "--level",
+                    "bounded",
+                    "--env-file",
+                    str(env_file),
+                    "--output-root",
+                    str(root / "output"),
+                ],
+                repo_root=REPO_ROOT,
+                stdout=stdout,
+                stderr=stderr,
+                executor=fake_executor,
+                raise_errors=True,
+            )
+            self.assertEqual(result, 0, stderr.getvalue())
+            report = json.loads(
+                (root / "output/original-readme-acceptance.json").read_text()
+            )
+
+        self.assertTrue(all(kwargs["capture_output"] for _cmd, kwargs in calls))
+        self.assertTrue(all(kwargs["umask"] == 0o077 for _cmd, kwargs in calls))
+        self.assertNotIn("answer-canary", stdout.getvalue())
+        self.assertNotIn("stderr-canary", stdout.getvalue())
+        self.assertEqual(report["command_ids"], ["quick-start-programmatic", "context-level3", "context-level4"])
+        self.assertEqual(report["agent_operations"], 3)
+        self.assertEqual(report["judge_operations"], 0)
+        self.assertEqual(
+            set(report),
+            {"command_ids", "agent_operations", "judge_operations", "commands"},
+        )
+        self.assertTrue(
+            all(
+                set(command) == {"command_id", "effective_config_sha256", "private_artifact_sha256"}
+                for command in report["commands"]
+            )
+        )
+
+    def test_bounded_context_evidence_requires_observed_counters(self) -> None:
+        base = {
+            "profile": "level3",
+            "compactions": 0,
+            "summary_attempts": 0,
+            "summary_successes": 0,
+            "summary_suppressed": False,
+            "extension_sha256": "a" * 64,
+        }
+        with self.assertRaisesRegex(ValueError, "bounded context evidence"):
+            _bounded_context_evidence("level3", base)
+        with self.assertRaisesRegex(ValueError, "bounded context evidence"):
+            _bounded_context_evidence(
+                "level4", {**base, "profile": "level4", "compactions": 1}
+            )
+
+        self.assertEqual(
+            _bounded_context_evidence(
+                "level4",
+                {
+                    **base,
+                    "profile": "level4",
+                    "compactions": 1,
+                    "summary_attempts": 1,
+                    "summary_successes": 1,
+                },
+            )["summary_successes"],
+            1,
+        )
+
+    def test_bounded_output_root_rejects_symlinks(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            target = root / "target"
+            target.mkdir()
+            link = root / "linked-output"
+            link.symlink_to(target, target_is_directory=True)
+
+            with self.assertRaisesRegex(ValueError, "output root"):
+                _prepare_private_root(link)
+
+    def test_literal_quick_start_and_context_commands(self) -> None:
+        contract = validate_readme_contract(REPO_ROOT / "README.md")
+        readme = (REPO_ROOT / "README.md").read_text(encoding="utf-8")
+        context_section = readme.split("## 🚀 Context Management Strategies", 1)[1].split("## 🎯", 1)[0]
+
+        self.assertNotIn("--provider", contract["terminal"])
+        self.assertNotIn("--model", contract["terminal"])
+        self.assertNotIn("--provider", contract["programmatic"])
+        self.assertNotIn("--model", contract["programmatic"])
+        self.assertIn("src/dci/benchmark/pi_rpc_runner.py", contract["terminal"])
+        self.assertIn("src/dci/benchmark/pi_rpc_runner.py", contract["programmatic"])
+        self.assertIn("--provider openai-codex", contract["override"])
+        self.assertIn("--model gpt-5.6-luna", contract["override"])
+        self.assertEqual(
+            set(contract["context_commands"]),
+            {"level0", "level1", "level2", "level3", "level4"},
+        )
+        self.assertIn("Original DCI ships its own", context_section)
+        self.assertNotIn("Asterion ships", context_section)
+
+    def test_local_verifier_is_provider_free(self) -> None:
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        result = verify_original_readme_main(
+            ["--level", "local"],
+            repo_root=REPO_ROOT,
+            stdout=stdout,
+            stderr=stderr,
+        )
+
+        self.assertEqual(result, 0, stderr.getvalue())
+        self.assertIn("PASS", stdout.getvalue())
+        self.assertIn("Agent operations: 0", stdout.getvalue())
+        self.assertIn("Judge operations: 0", stdout.getvalue())
+        self.assertIn("Full dataset ran: no", stdout.getvalue())
 
 
 if __name__ == "__main__":

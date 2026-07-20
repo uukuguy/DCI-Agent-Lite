@@ -926,43 +926,119 @@
 - 17:31 project-state check 通过：AF-340 唯一活动，状态/工作表一致，无存活评测进程，工作树仅含预期日志追加。
 - 17:47 AF-340 八任务 TDD 实施计划完成自检；scope preflight、14 项治理测试、占位/接口扫描与 diff check 均通过，未启动 provider 或 full dataset。
 - 17:51 AF-340 实施计划固化配置、验证与 full 授权边界。 [83f424a]
+- 18:16 AF-340 Climb 自主会话启动；四个假设绑定唯一活动包，full 仍需显式 profile/budget 授权。
+- 18:22 AF-340 Climb 四假设与恢复状态落盘，开始隔离分支自主实施。 [93186ab]
+- 18:23 AF-340 Climb/SDD 隔离执行恢复边界已固化。 [e585777]
+- 18:37 Task 1 原 DCI 分层配置与安全投影完成；31 项测试及静态门禁通过。 [c13d947]
+- 18:47 Task 1 修复来源优先级、Judge URL 隐私与 schema 强制校验；37 项测试通过。 [3858d07]
+- 18:54 Task 1 必填配置空值不再遮蔽下层，来源证据保持真实；40 项测试通过。 [6838615]
+- 19:10 Task 2 Asterion 独立 runtime resolver 与 Claude 认证模式完成；119 项测试及静态门禁通过。 [4e5b5c7]
+- 19:19 Task 2 修复显式 optional 空值与 CLI `.env` 安全 materialize；122 项测试通过。 [8505524]
+- 19:39 Task 3 双产品 Judge 缺省切换 DeepSeek V4 并补全 cache/effective identity；299 项受影响测试通过。 [79583ea]
+- 19:39 Task 3 扩展 AF-320 selector 因隔离 worktree 缺 `data/bcplus_qa.jsonl` 在 provider 前失败；非代码回归。
+- 19:53 Task 3 两套 batch cache 绑定完整 Judge identity；旧不完整缓存降级为 Judge-only 重评。 [bc46e0b]
+- 20:03 AF-340 Climb adapter 注册 H001-H004，H001 provider-free 四维评估 4/4。 [5f5b77d]
+- 20:14 Climb H004 收敛为一次 bounded 加四维 provider-free retained-evidence 检查，阻断成本倍增。 [c1c71e9]
+- 20:03 AF-340-H-001 confirmed 4/4; package acceptance recorded.
+- 20:20 AF-340-H-001 正式 cycle 104 确认 4/4，下一假设 H002。 [1169251]
+- 20:22 固化 H001 恢复边界，支持 Task 4 接续。 [14811a6]
+- 20:38 Task 4 固化字面 README 与零 provider 本地验收。 [2711b84]
+- 20:47 Task 4 初审拒绝：原始 context 未真实加载，bounded 未验证触发。
+- 21:12 修复原始 context 独立加载、行为验收与私有产物边界。 [891762f]
+- 21:20 Task 4 复审仍拒绝：真实 TS resume/digest 与 L4 token 目标不完整。
+- 21:36 绑定真实 context resume 身份并落实 L4 20k 目标。 [25b3d07]
+- 21:42 Task 4 三轮复审清零，字面 README 与 context 验收通过。
+- 21:43 固化 Task 4 恢复边界，支持 launcher parity 接续。 [e9d3401]
+- 22:00 Task 5 统一 11 对 thin launchers 与文档路径。 [6a8b8c7]
+- 22:12 Task 5 初审拒绝：profile 仍覆盖环境，BC+ 不接受裸 limit。
+- 22:29 修复 runtime-neutral profiles 与 BC+ 裸 limit 透传。 [8a35dd2]
+- 22:34 Task 5 复审清零，11/11 launcher parity 通过。
+- 21:31 AF-340-H-002 confirmed 4/4; package acceptance recorded.
+- 22:35 AF-340-H-002 正式确认 4/4，下一假设 H003。
+- 22:36 固化 H002 文档表面证据，支持 profile 契约接续。 [e7a9d42]
+- 22:54 Task 6 新增不可变 profiles、显式 full 授权与零操作 dry-run。 [1154be8]
+- 23:07 Task 6 初审拒绝：授权可伪造重放且存在 root TOCTOU。
+- 23:28 加固不可伪造 scope 能力、root 身份与生产消费链。 [54afafa]
+- 23:37 Task 6 复审仍拒绝：registry 未保存独立签发快照。
+- 23:55 密封 registry 快照并在写前复验执行 root 身份。 [2f2bedf]
+- 00:02 Task 6 最终复审仍拒绝：整数 issuer 身份存在生命周期复用。
+- 00:09 registry 强引用原 issuer，移除整数身份信任。 [375aafa]
+- 00:12 Task 6 四轮安全复审清零，full 授权契约通过。
+- 00:13 固化 Task 6 恢复边界，支持比较证据接续。 [ecc565a]
+- 00:41 Task 7 新增严格 per-query evidence 与确定性比较。 [418fbeb]
+- 00:52 Task 7 初审拒绝：report 未绑定 paired sample 且构造器可绕过校验。
+- 01:16 加固 paired evidence、产品角色与 exclusion metric 契约。 [6490240]
+- 01:25 Task 7 复审仍拒绝：report 未从 retained pairs 重算统计。
+- 01:39 从 retained pairs 重算并验证完整统计报告。 [d467f3d]
+- 01:47 Task 7 最终复审仍拒绝：report 未绑定 expected metrics/exclusions/target。
+- 02:01 绑定 report metric、exclusion 与 Claude target 契约。 [061445a]
+- 02:10 Task 7 复审仍拒绝：非 completed pair 可携带成功 metric。
+- 02:17 拒绝失败 pair 携带 Judge/NDCG 成功证据。 [5e16861]
+- 02:22 Task 7 五轮复审清零，统计比较契约通过。
+- 02:23 固化 Task 7 恢复边界，支持根协调器接续。 [559ed8d]
+- 04:18 新增 AF-340 coordinator，强制精确 bounded/full 证据。 [930d3f8]
+- 02:38 Task 8 独立复审拒绝：inspect 可伪造 retained/full 闭环，且 preflight、完成计数与原生证据权限不完整。
+- 03:07 加固 AF-340 原生证据、授权绑定、隐私与认证预检，阻止自认证 retained report。 [e18e4a5]
+- 03:12 Task 8 复审仍拒绝：CompletedProcess 注入可认证，openai-codex key 映射错误，full 中间目录非私有。
+- 03:25 AF-340 retained evidence 要求精确 production runner，并修正认证别名与 full-tree 隐私。 [1df9c5f]
+- 03:29 Task 8 三轮独立复审清零，provider-free reproduction coordinator 契约通过。
 
 ## 2026-07-19
+- 03:31 AF-340-H-003 confirmed 4/4; package acceptance recorded.
+- 03:34 固化 H003 provider-free 证据与 H004 bounded/full 恢复边界。 [e69d9f3]
+- 03:41 H004 bounded 预检暴露隔离 worktree 资源根缺口：误要求未执行的 paper-full 资产且无法使用共享语料。
+- 03:59 AF-340 bounded 分离代码与资源根，并绑定精确输入预检与证据身份。 [181e80e]
+- 04:07 resource-root 复审拒绝：report 自信任路径哈希，未绑定外部根、内容变异或祖先 symlink。
+- 04:25 外部锚定 AF-340 资源 manifest，拒绝协同 report 重写与同路径内容漂移。 [470ae76]
+- 04:30 修正文档为选中资源内容 manifest，匹配 retained evidence 协议。 [88ad682]
+- 04:34 启动 H004 Pi bounded r1，PID 34686，分支代码使用主仓资源与外部 Pi；full 未授权。
+- 04:36 Pi bounded r1 在 original Quick Start 前置导入失败，Agent 0/Judge 0/full no；缺分支 `src` PYTHONPATH。
+- 04:48 按 operation 隔离 original `src` 导入，修复 Pi 启动且不污染 Asterion 执行。 [8fd9365]
+- 04:51 启动 H004 Pi bounded r2，PID 51440，fresh 输出根；full 未授权。
+- 04:54 Pi bounded r2 完成 Quick Start/L3 后在 L4 异步 compaction settling 失败；Agent 2/Judge 0/full no。
+- 05:02 等待异步 Pi compaction 后再校验 idle，使 original L4 稳定收敛。 [66011ed]
+- 05:05 启动 H004 Pi bounded r3，PID 64893，fresh 全矩阵；full 未授权。
+- 05:08 Pi bounded r3 完成 Quick Start/L3/L4，首个 original launcher 因不支持 `--resume-policy` 拒绝；Agent 3/Judge 0/full no。
+- 05:14 仅向 Asterion launcher 传 `resume-policy`，使 original batch parser 接受 bounded 命令。 [19d9c15]
+- 05:17 启动 H004 Pi bounded r4，PID 74085，fresh 全矩阵；full 未授权。
+- 05:20 Pi bounded r4 完成三条 context 路径，首 batch 将 runtime profile 错传为 Pi 选项；Agent 3/Judge 0/full no。
+- 05:25 经 `pi_rpc_runner` 路由 batch context profile，使 AF-310 extension flags 安全到达外部 Pi。 [4996e71]
+- 05:29 对齐 batch help 与封闭 level0-level4 context profile 契约。 [a00b69b]
+- 05:31 启动 H004 Pi bounded r5，PID 82555，fresh 全矩阵；full 未授权。
+- 05:37 Pi bounded r5 完成 Agent 4，Judge 被导出环境中的冲突 key 以 HTTP 401 拒绝；Judge 0/full no。
+- 05:38 仓库 `.env` Judge 凭据认证探针 HTTP 200；r6 将移除冲突的导出 key 以恢复既定优先级输入。
+- 05:39 启动 H004 Pi bounded r6，PID 1518，使用认证通过的 `.env` Judge key；full 未授权。
+- 05:50 Pi bounded r6 完成 original Agent 14/Judge 7；首 Asterion launcher 因缺全局 `asterion-dci` rc127，full no。
+- 06:00 将 primary Asterion launcher 绑定仓库 source CLI，使 clean-PATH bounded 可可靠启动。 [da41465]
+- 06:03 启动 H004 Pi bounded r7，PID 16131，fresh 全矩阵；full 未授权。
+- 06:21 Pi bounded r7 完成 original Agent 14/Judge 7；首 Asterion `--limit 1` 被旧 AF-320 full gate 拒绝，full no。
+- 06:37 开放精确 limit-one paper-profile 样本，同时保留 full 授权与 non-comparable 证据边界。 [a002388]
+- 06:43 bounded gate 根审拒绝：删除 selection 并重算指纹仍可通过独立 config 验证。
+- 06:55 要求外部锚定 batch execution class，使删除或跨类重写 selection 证据失败关闭。 [a417a85]
+- 07:01 启动 H004 Pi bounded r8，PID 46835，fresh 全矩阵；full 未授权。
+- 07:04 Pi bounded r8 被 openai-codex 用量上限阻断；暴露 provider error 被误记 completed，证据拒收。
+- 07:12 Pi provider 终端错误现在双路径 fail closed，防止空答案进入 Judge。 [9397ed5]
+- 07:18 启动 H004 Claude MiniMax bounded r1，PID 52707，fresh retained 路径；full 未授权。
+- 07:23 Claude MiniMax r1 因国际端点与本机中国 Coding Plan 凭据错配返回 401；Agent/Judge 0，证据拒收。
+- 07:24 checkpoint 记录 Pi 配额阻断与 provider fail-closed 恢复边界。 [6031c7d]
+- 07:26 启动 H004 Claude MiniMax-CN bounded r2，PID 55775，按 process-env 层映射本机 Coding Plan。
+- 07:31 Claude MiniMax-CN r2 仍经 10 次 401 失败；确认当前 Coding Plan token 不可认证，Agent/Judge 0。
+- 07:33 Claude subscription bounded 预检按本机未登录状态 fail closed；Agent/Judge 0。
+- 07:35 五个 full profile dry-run 固化 1978 queries；Pi 上限 3956/2910，Claude 1978/1455，full no。
+- 07:37 provider-free AF-340 local coordinator PASS；Agent/Judge 0，full no。
+- 07:40 checkpoint 固化 H004 外部认证阻断与 full dry-run 边界。 [b06c970]
 
-- 11:57 AF-340: unified runtime-aware DCI configuration stack implemented end-to-end for Asterion `run` and runtime factories. `DCI_RUNTIME` now normalizes `pi`/`claude-code` aliases; Pi default runtime/profile is now `openai-codex`/`gpt-5.6-luna`; Claude Code requires runtime-aware provider/model pairs (anthropic/minimax/minimax-cn) and supports compatible MiniMax translation; Judge defaults changed to DeepSeek `deepseek-v4-flash`.
-- 11:58 AF-340 regression fix: `asterion run --runtime` remains optional; runtime default now resolves through `resolve_dci_runtime_options` and runtime selection is validated consistently via public/runtime-id normalization.
-- 11:59 AF-340 verification: `uv run python -m unittest discover -v tests -p 'test_asterion_dci_batch.py'` passed 94 tests (33.8s); `uv run python -m unittest discover -v tests -p 'test_asterion_dci_config.py'` passed 11 tests; `uv run python -m unittest discover -v asterion/tests -p 'test_asterion_cli.py'`/`test_default_runtime_factory.py`/`test_asterion_dci_product_parity.py` passed in full.
-- 10:02 AF-340 复现实验在统一环境层次下通过：`variant=claude-minimax`，`--provider minimax --model MiniMax-M3 --env-file .../.env`，`DCI_MAX_TURNS=20`，未使用 `.env` 外的覆盖路径，结果 PASS，`Agent operations: 2`，`Judge operations: 2`，`Full dataset ran: no`。报告位于
-  `/Users/sujiangwen/sandbox/agentic-2026/DCI-Agent-Lite/.worktrees/af-340-implementation/outputs/verification/af340-bounded-claude-minimax-r6/af340-bounded-report.json`，`report_sha256=efabac9ad548f1530de76017195c174ffdcf05d4a3841dc815a6ff92e15c9039`。
-- 08:26 AF-340 Task 1 推进：落地原始层 `ConfigLayers` 与 `resolve_original_runtime`，添加 `src/dci/effective_config.py` 与 `src/dci/effective-config.schema.json`，并切换 `load_project_env`、`pi_rpc_runner`、`bcplus_eval` 到统一三层配置解析路径；`effective-config` 公共投影写入 `outputs/effective-config.json`。
-- 08:26 验证：`uv run python -m py_compile src/dci/config.py src/dci/effective_config.py src/dci/benchmark/pi_rpc_runner.py scripts/bcplus_eval/run_bcplus_eval.py`、`uv run ruff check`（同文件）通过；`uv run python -m unittest -v tests.test_config tests.test_effective_config tests.test_pi_rpc_runner` 27/27 通过。
-- 20:12 AF-340 finish-line hardening: fixed judge parity request-shape coverage by removing API-key-name influence from both judge fingerprints and adding parity-safe request token assertions (`max_output_tokens` vs `max_tokens` based on API shape).
-- 20:12 AF-340 parse-layer correction: `tests.test_judge.test_parse_args_preserves_runtime_defaults_for_layered_resolution` now keeps CLI/environment assertions in the same patch scope so env-driven runtime resolution is asserted from the exact effective layers.
-- 20:12 AF-340 verification check: `uv run python -m unittest -v tests.test_judge tests.test_asterion_dci_judge tests.test_check_judge tests.test_asterion_dci_product_parity` 全部通过；`python3 -m py_compile` + `ruff check` on touched files通过；`python3 tools/project_scope_check.py` OK。
-- 20:14 Journal one-liner: AF-340 judge defaults and parity-shape handling aligned; commit b7cf40d.
-- 11:11 AF-340 added `tools/verify_original_readme.py` to lock Quick Start + context-management literal contract and bounded provider-backed command-shape checks.
-- 11:11 AF-340 test-suite parity update: `tests/test_original_readme_acceptance.py` added and `tests/test_asterion_dci_batch_launchers.py` aligned with launcher contract (`source "$REPO_ROOT/.env"` no longer expected).
-- 11:12 AF-340 verification passes: `uv run python -m unittest -v tests.test_original_readme_acceptance tests.test_asterion_dci_batch_launchers tests.test_asterion_documentation tests.test_asterion_dci_product_parity` (121 tests).
-- 11:13 AF-340 verification check: `python3 tools/project_scope_check.py`、`ruff check`（`tools/verify_original_readme.py`、`tests/test_original_readme_acceptance.py`、`tests/test_asterion_dci_batch_launchers.py`）和 `git diff --check` 都通过。
-- 11:14 AF-340 commit prepared: `acbd5e2` after passing `py_compile` for touched files and shell `bash -n` across changed launcher scripts.
-- 11:15 AF-340 `tools/verify_original_readme.py --level bounded` was executed and failed only on provider-side quota (`Codex error: The usage limit has been reached`), so no bounded proof was recorded in this environment.
-- 11:17 AF-340 复现验证补强：补齐原始 README 契约验证器并新增 acceptance 测试，覆盖 launcher 合约与 bounded 命令形状。
-- 11:22 AF-340 更新 RESUME checkpoint，记录 verifier 交付状态并维持 AF-340 的下一步有界验证路径。
-- 12:24 AF-340 Task5 launcher 与文档对齐交付（`6385d58`）：11个核心 source/Asterion launcher 均去除硬编码 provider/model/sourcing，并复用显式传参，验证命令/文档一致性重整。
-- 12:24 AF-340 本地验证：`python3 tools/verify_original_readme.py --level local` 与 `uv run python -m unittest -v tests.test_asterion_dci_batch_launchers tests.test_asterion_dci_product_parity tests.test_asterion_documentation tests.test_original_readme_acceptance` 均通过。
+## 2026-07-20 — interrupted-session recovery correction
 
-## 2026-07-20
-
-- 12:42 中断恢复：AF-340 Task6 有 10 个未提交文件；scope 通过，聚焦 30 tests 通过，尚未完成计划验收。
-- 12:58 AF-340 Task6 immutable profiles 与显式 full authorization 落地；full evidence 仍须 invocation gate。 [ec4d1e9]
-- 12:58 Task6 验证：130 focused、10 product tests 及 final wheel/compile/Ruff/scope/diff 全通过；零 provider 操作。
-- 13:01 AF-340 Task6 recovery state 对齐 CURRENT/WORKLIST/RESUME，并清除 Open Problems 中已完成条目。 [3f0cd03]
-- 13:34 AF-340 Climb 五假设链激活，恢复树重新绑定当前工作包。 [0fd6168]
-- 13:41 AF-340-H-001 confirmed 4/4; package acceptance recorded.
-- 13:42 H001 严格逐题证据与 manifest 合同落地，阻止漂移和敏感正文。 [aa7421e]
-- 13:51 D-052 将论文结果目标独立版本化，避免静默改写实验 profile。 [a97c882]
-- 13:54 AF-340-H-002 confirmed 4/4; package acceptance recorded.
-- 13:57 Task7 增加确定性非劣效比较与论文目标绑定，形成可审计复现报告。 [cc47393]
-- 13:58 Task7 checkpoint 将恢复入口推进 H-003，避免再次从过期 Task6 续作。 [3e21782]
-- 14:03 AF-340-H-003 confirmed 4/4; package acceptance recorded.
-- 14:04 H003 统一模型外协调器落地，固定本地矩阵并证明零 provider 操作。 [2e7d6c8]
+- 10:02 A valid retained AF-340 `claude-minimax` r6 bounded report completed through installed and wheel entry points with 2 agent and 2 Judge operations; no full dataset ran. Canonical report SHA-256 is `efabac9ad548f1530de76017195c174ffdcf05d4a3841dc815a6ff92e15c9039`.
+- 12:42–14:04 The restarted mainline independently rebuilt Tasks 6-8, versioned the arXiv v1 target registry, and confirmed AF-340-H-001 through H-003 in Climb cycles 104-106. Commits `ec4d1e9`, `aa7421e`, `a97c882`, `cc47393`, and `2e7d6c8` remain historical inputs to the recovery merge.
+- Recovery audit found the preserved `codex/af-340-implementation` branch at `7482914` contains the complete, independently hardened Tasks 1-8 implementation and bounded fixes omitted from the live state baton. The branch is now being merged instead of continuing the weaker duplicate coordinator.
+- Merge compatibility fixes restore optional runtime defaults, Pi/original configuration imports, Judge cache identity without credential-variable names, full-authorization CLI markers, semantic resource digests, and exact selected-resource handling.
+- Recovered validation passes 127 AF-340 core tests, 1434 root Python tests, 134 Asterion tests, 153 Climb adapter tests, Ruff, shell syntax, Rust/TypeScript closure gates embedded in Climb, and `python3 tools/project_scope_check.py`; no provider request or full dataset ran during recovery.
+- Governance correction separates bounded H-004 from explicitly authorized full H-005. The preserved MiniMax report revalidates against current code and resources; Pi quota and Claude subscription login remain the two bounded external blockers.
+- Pre-provider H-004 readiness recheck confirms `openai-codex` saved Pi authentication and the configured Judge credential are present; Claude CLI is installed but subscription authentication is still logged out. No provider request was made by this check.
+- Pre-merge independent review rejected the first recovery candidate: all eleven source launchers could select a full dataset without the AF-340 invocation gate, H-005 repeated one arbitrary report across four dimensions, and paper Claude target comparisons carried no numeric target evidence. These paths were not accepted as closure evidence.
+- Review fixes make every unbounded source batch selection require explicit CLI authorization, an exact Pi experiment profile, a finite budget, and a fresh root before Judge/provider construction; all eleven public launchers have a zero-provider negative test. H-005 now requires distinct accepted Pi full, accepted `paper-reference/claude-code` numeric-target, and terminal-gate reports. Paper Claude comparisons bind the versioned target row/digest and deterministic 95% bootstrap assessment; all-false Judge evidence is rejected.
+- Second review supersedes the preceding direct-CLI gate: public source launchers can no longer accept full-authorization flags. Full source execution is an in-process coordinator path whose injected Task 6 capability validates exact profile/runtime/provider/model/Judge/dataset/selection/root fields before it is consumed. Paper Claude now retains candidate-only one-sample evidence for main-result scopes, marks three non-main scopes not applicable, and recomputes the published six-dataset QA/IR macro rows without manufacturing source pairs. Terminal evidence binds full Git porcelain status so post-report untracked drift is rejected.
+- Final review repair makes full inspection recompute every comparison from the normalized native baseline/candidate manifests and require exact identity plus JSON bytes; a forged all-true target report now fails with `comparison-replay`. Exact selection scope/dataset/count/query-ID binding remains fail closed.
+- Recovery closure passes 1443 root Python tests, 134 Asterion tests, 153 Climb tests, 92 focused reproduction/verifier tests, the provider-free AF-340 local coordinator, Ruff, compile, shell syntax, JSON parsing, scope preflight, and diff checks. Independent re-review approves with 0 Critical and 0 Important findings; no provider request or full dataset ran.

@@ -1,20 +1,15 @@
 #!/usr/bin/env bash
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && git rev-parse --show-toplevel 2>/dev/null)"
-if [ -z "$REPO_ROOT" ]; then
-    REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    while [ "$REPO_ROOT" != "/" ] && [ ! -d "$REPO_ROOT/.git" ]; do
-        REPO_ROOT="$(dirname "$REPO_ROOT")"
-    done
-fi
 set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/../.." && pwd)
-level=${1:-"level3"}
+level="level3"
+if (($# > 0)) && [[ "$1" != --* ]]; then level=$1; shift; fi
 concurrency="10"
 node_heap_mb="8192"
-thinking_level=${2:-""}
+thinking_level=""
+if (($# > 0)) && [[ "$1" != --* ]]; then thinking_level=$1; shift; fi
 output_root="$REPO_ROOT/outputs/bcplus_eval/openai_${level}_concurrency${concurrency}"
 if [[ -n "$thinking_level" ]]; then
   output_root="${output_root}_thinking${thinking_level}"

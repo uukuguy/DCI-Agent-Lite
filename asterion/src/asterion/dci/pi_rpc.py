@@ -694,6 +694,7 @@ class PiRpcClient:
         turns = 0
         sent_abort = False
         settled = False
+        terminal_assistant_error = False
         deadline = (
             time.monotonic() + timeout_seconds
             if timeout_seconds and timeout_seconds > 0
@@ -740,6 +741,7 @@ class PiRpcClient:
                 continue
             if event_type == "agent_start":
                 text_parts = []
+                terminal_assistant_error = False
                 continue
             if event_type == "turn_start":
                 turns += 1
@@ -762,6 +764,15 @@ class PiRpcClient:
                         text_parts.append(delta)
                         if self.stream_text:
                             print(delta, end="", file=sys.stdout, flush=True)
+                continue
+            if event_type == "message_end":
+                message_value = event.get("message")
+                if (
+                    isinstance(message_value, Mapping)
+                    and message_value.get("role") == "assistant"
+                    and message_value.get("stopReason") == "error"
+                ):
+                    terminal_assistant_error = True
                 continue
             if event_type == "tool_execution_start" and self.show_tools:
                 print(
@@ -790,6 +801,8 @@ class PiRpcClient:
                     )
                 settled = True
                 break
+        if terminal_assistant_error:
+            raise RuntimeError("Pi provider returned an assistant error")
         if settled:
             while True:
                 if cancel_event is not None and cancel_event.is_set():
