@@ -957,3 +957,4 @@
 - 12:58 AF-340 Task6 immutable profiles 与显式 full authorization 落地；full evidence 仍须 invocation gate。 [ec4d1e9]
 - 12:58 Task6 验证：130 focused、10 product tests 及 final wheel/compile/Ruff/scope/diff 全通过；零 provider 操作。
 - 13:01 AF-340 Task6 recovery state 对齐 CURRENT/WORKLIST/RESUME，并清除 Open Problems 中已完成条目。 [3f0cd03]
+- 13:34 AF-340 Climb 五假设链激活，恢复树重新绑定当前工作包。 [0fd6168]
