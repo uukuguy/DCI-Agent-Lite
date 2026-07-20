@@ -990,7 +990,8 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
                     "asterion.dci.benchmark._read_input_snapshot"
                 ) as read_input, patch("asterion.dci.benchmark._run_pi_async") as run:
                     with self.assertRaisesRegex(
-                        DciBenchmarkError, "not executable in AF-320"
+                        DciBenchmarkError,
+                        "not executable without explicit AF-340 authorization",
                     ):
                         asyncio.run(
                             run_benchmark_async(
@@ -1010,7 +1011,7 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
             with patch(
                 "asterion.dci.benchmark._run_pi_async"
             ) as run, self.assertRaisesRegex(
-                DciBenchmarkError, "not executable in AF-320"
+                DciBenchmarkError, "not executable without explicit AF-340 authorization"
             ):
                 asyncio.run(run_benchmark_async(request, paths=Mock()))
             run.assert_not_called()
@@ -1035,9 +1036,50 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
                 + "\n"
             )
             with self.assertRaisesRegex(
-                DciBenchmarkError, "not executable in AF-320"
+                DciBenchmarkError, "not executable without explicit AF-340 authorization"
             ):
                 _prepare(replace(request, dataset=beir_dataset))
+
+            from asterion.dci.experiment_profiles import authorize_full_execution
+
+            authorization = authorize_full_execution(
+                "current-default/pi",
+                Path(temporary_directory).resolve() / "authorization",
+                25.0,
+                True,
+            )
+            _rows, _output, config, items, _snapshots = _prepare(
+                replace(
+                    request,
+                    dataset=beir_dataset,
+                    output_root=Path(temporary_directory).resolve() / "authorized-run",
+                    mode="ir",
+                    profile="beir.arguana",
+                    paper_full_authorization=authorization,
+                )
+            )
+            identity = config["paper_full_authorization"]
+            self.assertEqual(identity["profile_id"], "current-default/pi")
+            self.assertEqual(identity["estimated_budget_usd"], 25.0)
+            self.assertRegex(identity["profile_identity_sha256"], r"^[0-9a-f]{64}$")
+            self.assertRegex(identity["experiment_profiles_sha256"], r"^[0-9a-f]{64}$")
+            self.assertNotIn("output_root", identity)
+            self.assertEqual(items[0]["identity"]["paper_full_authorization"], identity)
+
+            with self.assertRaisesRegex(
+                DciBenchmarkError, "not executable without explicit AF-340 authorization"
+            ):
+                _prepare(
+                    replace(
+                        request,
+                        dataset=beir_dataset,
+                        mode="ir",
+                        profile="beir.arguana",
+                        paper_full_authorization=replace(
+                            authorization, profile_id="paper-reference/pi"
+                        ),
+                    )
+                )
 
             browsecomp_superset = request.cwd / "browsecomp-superset.jsonl"
             browsecomp_superset.write_bytes(
@@ -1045,7 +1087,7 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
                 + b'{"query_id":"not-paper","query":"extra","answer":"extra"}\n'
             )
             with self.assertRaisesRegex(
-                DciBenchmarkError, "not executable in AF-320"
+                DciBenchmarkError, "not executable without explicit AF-340 authorization"
             ):
                 _prepare(
                     replace(request, dataset=browsecomp_superset, limit=830)
@@ -1064,7 +1106,7 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
                     + "\n"
                 )
             with self.assertRaisesRegex(
-                DciBenchmarkError, "not executable in AF-320"
+                DciBenchmarkError, "not executable without explicit AF-340 authorization"
             ):
                 _prepare(replace(request, dataset=beir_dataset, limit=50))
 

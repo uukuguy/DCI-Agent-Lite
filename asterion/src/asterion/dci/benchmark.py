@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import math
 import os
 import re
 import secrets
@@ -115,6 +116,7 @@ class BenchmarkRequest:
     resolution_registry: Path | None = None
     resolution_segment_characters: int | None = None
     ablation_row: str | None = None
+    paper_full_authorization: object | None = None
 
 
 @dataclass(frozen=True)
@@ -510,10 +512,21 @@ def _prepare(
             "row_sha256": ablation.identity_sha256,
             "matrix_sha256": paper_ablation_matrix_sha256(),
         }
+    paper_authorization_identity: dict[str, object] | None = None
     paper_scope = paper_scope_for_profile(request.profile)
     if paper_scope is not None:
         try:
-            require_af320_executable_scope(paper_scope)
+            require_af320_executable_scope(
+                paper_scope, authorization=request.paper_full_authorization
+            )
+            from asterion.dci.experiment_profiles import (
+                full_execution_authorization_identity,
+            )
+
+            paper_authorization_identity = full_execution_authorization_identity(
+                request.paper_full_authorization,
+                scope_id=paper_scope,
+            )
         except ValueError as error:
             raise DciBenchmarkError(str(error)) from error
     try:
@@ -538,10 +551,21 @@ def _prepare(
                 raise DatasetError("DCI BEIR selected-ID manifest does not match")
     except DatasetError as error:
         raise DciBenchmarkError("DCI benchmark dataset is invalid") from error
-    _reject_af320_paper_rows(rows)
+    selected_paper_scope = _reject_af320_paper_rows(
+        rows, authorization=request.paper_full_authorization
+    )
+    if selected_paper_scope is not None and paper_authorization_identity is None:
+        from asterion.dci.experiment_profiles import (
+            full_execution_authorization_identity,
+        )
+
+        paper_authorization_identity = full_execution_authorization_identity(
+            request.paper_full_authorization,
+            scope_id=selected_paper_scope,
+        )
     if request.limit is not None:
         rows = rows[: request.limit]
-        _reject_af320_paper_rows(rows)
+    _reject_af320_paper_rows(rows, authorization=request.paper_full_authorization)
     if any((row.is_ir if request.mode == "qa" else not row.is_ir) for row in rows):
         raise DciBenchmarkError("DCI benchmark dataset does not match its mode")
     _resolution_paths, resolution_config, resolution_snapshots = (
@@ -597,6 +621,8 @@ def _prepare(
         config["resolution"] = resolution_config
     if ablation_identity is not None:
         config["ablation"] = ablation_identity
+    if paper_authorization_identity is not None:
+        config["paper_full_authorization"] = paper_authorization_identity
     config["run_fingerprint"] = _fingerprint(
         {key: value for key, value in config.items() if key not in {"judge", "judge_configuration_fingerprint"}}
     )
@@ -624,6 +650,8 @@ def _prepare(
             )
         if ablation_identity is not None:
             identity["ablation"] = ablation_identity
+        if paper_authorization_identity is not None:
+            identity["paper_full_authorization"] = paper_authorization_identity
         documents.append(
             {
                 "schema": "asterion.dci.batch-item/v1",
@@ -638,16 +666,19 @@ def _prepare(
     return rows, output_root, config, tuple(documents), snapshots
 
 
-def _reject_af320_paper_rows(rows: tuple[BenchmarkRow, ...]) -> None:
+def _reject_af320_paper_rows(
+    rows: tuple[BenchmarkRow, ...], authorization: object | None
+) -> str | None:
     selected_scope = paper_scope_for_selected_ids(
         tuple(row.query_id for row in rows)
     )
     if selected_scope is None:
-        return
+        return None
     try:
-        require_af320_executable_scope(selected_scope)
+        require_af320_executable_scope(selected_scope, authorization=authorization)
     except ValueError as error:
         raise DciBenchmarkError(str(error)) from error
+    return selected_scope
 
 
 async def _run_row(
@@ -966,15 +997,42 @@ def _validate_config_document(value: dict[str, Any]) -> None:
         "analysis", "figures", "judge", "judge_configuration_fingerprint",
         "prompt_resources", "run_fingerprint", "batch_fingerprint",
     }
+    optional = {"resolution", "ablation", "paper_full_authorization"}
     if (
-        frozenset(value)
-        not in {
-            frozenset(expected),
-            frozenset(expected | {"resolution"}),
-            frozenset(expected | {"ablation"}),
-            frozenset(expected | {"resolution", "ablation"}),
-        }
+        not expected.issubset(value)
+        or not set(value).issubset(expected | optional)
         or value.get("schema") != "asterion.dci.batch/v1"
+    ):
+        raise DciBenchmarkError("DCI benchmark configuration evidence is invalid")
+    paper_authorization = value.get("paper_full_authorization")
+    if paper_authorization is not None and (
+        type(paper_authorization) is not dict
+        or set(paper_authorization)
+        != {
+            "schema",
+            "profile_id",
+            "profile_identity_sha256",
+            "experiment_profiles_sha256",
+            "paper_benchmark_inventory_sha256",
+            "paper_experiment_scopes_sha256",
+            "estimated_budget_usd",
+        }
+        or paper_authorization.get("schema")
+        != "asterion.dci.paper-full-authorization/v1"
+        or any(
+            re.fullmatch(r"[0-9a-f]{64}", str(paper_authorization.get(field)))
+            is None
+            for field in (
+                "profile_identity_sha256",
+                "experiment_profiles_sha256",
+                "paper_benchmark_inventory_sha256",
+                "paper_experiment_scopes_sha256",
+            )
+        )
+        or type(paper_authorization.get("profile_id")) is not str
+        or type(paper_authorization.get("estimated_budget_usd")) not in {int, float}
+        or not math.isfinite(float(paper_authorization["estimated_budget_usd"]))
+        or float(paper_authorization["estimated_budget_usd"]) < 0
     ):
         raise DciBenchmarkError("DCI benchmark configuration evidence is invalid")
     batch_payload = dict(value)

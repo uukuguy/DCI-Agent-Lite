@@ -653,11 +653,25 @@ def published_scope_selected_ids(scope_id: object) -> tuple[str, ...]:
     return selected
 
 
-def require_af320_executable_scope(scope_id: object) -> None:
-    """Reject every paper-full scope before AF-340 authorization exists."""
+def require_af320_executable_scope(
+    scope_id: object, authorization: object | None = None
+) -> None:
+    """Reject paper-full scope unless caller supplies a valid AF-340 authorization."""
 
-    resolve_paper_experiment_scope(scope_id)
-    raise ValueError("DCI paper scope is not executable in AF-320")
+    scope = resolve_paper_experiment_scope(scope_id)
+    try:
+        from asterion.dci.experiment_profiles import (
+            validate_full_execution_authorization,
+        )
+
+        validate_full_execution_authorization(
+            authorization,
+            scope_id=scope.scope_id,
+        )
+    except (OSError, RuntimeError, TypeError, ValueError):
+        raise ValueError(
+            "DCI paper scope is not executable without explicit AF-340 authorization"
+        ) from None
 
 
 def paper_benchmark_inventory_sha256() -> str:

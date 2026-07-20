@@ -129,6 +129,35 @@ class PaperBenchmarkCliTests(unittest.TestCase):
         self.assertIn("Planned external operations: 3", stdout.getvalue())
         self.assertIn("Full dataset ran: no", stdout.getvalue())
 
+    def test_paper_reproduce_public_cli_plans_without_authorizing(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output = Path(temporary_directory).resolve() / "not-created"
+            stdout = io.StringIO()
+            stderr = io.StringIO()
+            self.assertEqual(
+                main(
+                    [
+                        "paper",
+                        "reproduce",
+                        "--profile",
+                        "current-default/pi",
+                        "--output-root",
+                        str(output),
+                        "--estimated-budget-usd",
+                        "0",
+                        "--dry-run",
+                    ],
+                    stdout=stdout,
+                    stderr=stderr,
+                ),
+                0,
+                stderr.getvalue(),
+            )
+            self.assertFalse(output.exists())
+            self.assertNotIn(str(output), stdout.getvalue())
+            self.assertIn("reproduction_authorized=no", stdout.getvalue())
+            self.assertIn("operation_count=0", stdout.getvalue())
+
     def test_resolution_export_cli_reanalyzes_authoritative_inputs(self) -> None:
         projection = {
             "schema": "dci.trajectory-resolution-summary/v1",
@@ -251,6 +280,12 @@ class PaperBenchmarkProductParityTests(unittest.TestCase):
         self.assertIn("no environment default", values["env"])
 
     def test_verification_description_exposes_the_same_paper_contract(self) -> None:
+        from asterion.dci.experiment_profiles import (
+            EXPERIMENT_AUTHORIZATION_SCHEMA,
+            experiment_profile_ids,
+            experiment_profile_schema_sha256,
+            experiment_profiles_sha256,
+        )
         from asterion.dci.verification import (
             DCI_PRODUCT_DESCRIPTION,
             paper_product_contract,
@@ -274,6 +309,26 @@ class PaperBenchmarkProductParityTests(unittest.TestCase):
         self.assertEqual(contract["ablation_matrix_sha256"], contract["resources"]["paper-ablation-matrix.json"])
         self.assertEqual(contract["benchmark_inventory_sha256"], contract["resources"]["paper-benchmarks.json"])
         self.assertEqual(contract["experiment_scopes_sha256"], contract["resources"]["paper-experiment-scopes.json"])
+        self.assertEqual(contract["experiment_profile_ids"], list(experiment_profile_ids()))
+        self.assertEqual(
+            contract["experiment_profiles_sha256"], experiment_profiles_sha256()
+        )
+        self.assertEqual(
+            contract["resources"]["experiment-profiles.json"],
+            experiment_profiles_sha256(),
+        )
+        self.assertEqual(
+            contract["resources"]["experiment-profile.schema.json"],
+            experiment_profile_schema_sha256(),
+        )
+        self.assertEqual(
+            contract["paper_full_authorization"],
+            {
+                "required": True,
+                "schema": EXPERIMENT_AUTHORIZATION_SCHEMA,
+                "environment_authorization": False,
+            },
+        )
 
 
 if __name__ == "__main__":

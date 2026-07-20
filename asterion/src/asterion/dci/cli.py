@@ -173,6 +173,12 @@ def _parser() -> argparse.ArgumentParser:
     paper_verify.add_argument("--provider-backed", action="store_true")
     paper_verify.add_argument("--env-file", type=Path)
     paper_verify.add_argument("--output-root", type=Path)
+    paper_reproduce = paper_commands.add_parser("reproduce")
+    paper_reproduce.add_argument("--profile", required=True)
+    paper_reproduce.add_argument("--output-root", required=True, type=Path)
+    paper_reproduce.add_argument("--estimated-budget-usd", type=float, required=True)
+    paper_reproduce.add_argument("--authorize-full", action="store_true")
+    paper_reproduce.add_argument("--dry-run", action="store_true")
     return parser
 
 
@@ -323,6 +329,7 @@ def main(
             from asterion.dci.verification import (
                 paper_benchmark_acceptance_main,
                 paper_product_contract,
+                paper_reproduce_main,
             )
 
             if args.paper_command == "describe":
@@ -333,19 +340,41 @@ def main(
                     + "\n"
                 )
                 return 0
-            verify_argv = []
-            if args.provider_backed:
-                verify_argv.append("--provider-backed")
-            if args.env_file is not None:
-                verify_argv.extend(("--env-file", str(args.env_file)))
-            if args.output_root is not None:
-                verify_argv.extend(("--output-root", str(args.output_root)))
-            root = Path.cwd().resolve() if repo_root is None else Path(repo_root).resolve()
-            return paper_benchmark_acceptance_main(
-                verify_argv,
+            if args.paper_command == "verify":
+                verify_argv = []
+                if args.provider_backed:
+                    verify_argv.append("--provider-backed")
+                if args.env_file is not None:
+                    verify_argv.extend(("--env-file", str(args.env_file)))
+                if args.output_root is not None:
+                    verify_argv.extend(("--output-root", str(args.output_root)))
+                root = (
+                    Path.cwd().resolve()
+                    if repo_root is None
+                    else Path(repo_root).resolve()
+                )
+                return paper_benchmark_acceptance_main(
+                    verify_argv,
+                    stdout=stdout,
+                    stderr=stderr,
+                    repo_root=root,
+                )
+            reproduce_argv = [
+                "--profile",
+                args.profile,
+                "--output-root",
+                str(args.output_root),
+                "--estimated-budget-usd",
+                str(args.estimated_budget_usd),
+            ]
+            if args.authorize_full:
+                reproduce_argv.append("--authorize-full")
+            if args.dry_run:
+                reproduce_argv.append("--dry-run")
+            return paper_reproduce_main(
+                reproduce_argv,
                 stdout=stdout,
                 stderr=stderr,
-                repo_root=root,
             )
         except (RuntimeError, ValueError):
             stderr.write("DCI paper command failed\n")

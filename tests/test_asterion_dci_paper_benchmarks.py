@@ -140,7 +140,9 @@ class PaperBenchmarkInventoryTests(unittest.TestCase):
             with self.subTest(profile=profile):
                 scope_id = module.paper_scope_for_profile(profile)
                 self.assertIn(scope_id, EXPECTED_SCOPES)
-                with self.assertRaisesRegex(ValueError, "not executable in AF-320"):
+                with self.assertRaisesRegex(
+                    ValueError, "not executable without explicit AF-340 authorization"
+                ):
                     module.require_af320_executable_scope(scope_id)
         self.assertIsNone(module.paper_scope_for_profile("qa.bamboogle"))
         self.assertIsNone(module.paper_scope_for_profile(None))
@@ -416,7 +418,7 @@ class PaperExperimentScopeTests(unittest.TestCase):
             module.select_and_verify_scope_ids(
                 "browsecomp-plus.appendix-a1.random50", tuple(str(i) for i in range(49))
             )
-        with self.assertRaisesRegex(ValueError, "not executable in AF-320"):
+        with self.assertRaisesRegex(ValueError, "not executable without explicit AF-340 authorization"):
             module.require_af320_executable_scope(
                 "browsecomp-plus.appendix-a1.random50"
             )

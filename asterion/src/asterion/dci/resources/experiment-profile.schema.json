@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dci.experiment-profile/v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "profiles"
+  ],
+  "properties": {
+    "schema": {
+      "const": "dci.experiment-profile/v1"
+    },
+    "profiles": {
+      "type": "array",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "$ref": "#/$defs/profile"
+      }
+    }
+  },
+  "$defs": {
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile_id",
+        "profile_family",
+        "runtime_id",
+        "runtime_provider",
+        "runtime_model",
+        "runtime_model_from_invocation",
+        "runtime_authentication_mode",
+        "reasoning",
+        "tools",
+        "max_turns",
+        "runtime_context_level",
+        "judge_contract",
+        "judge_api",
+        "dataset_scope_ids",
+        "comparison_targets",
+        "paper_seed_policy",
+        "paper_scope_dataset_ids",
+        "executable_if_authorized"
+      ],
+      "properties": {
+        "profile_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "profile_family": {
+          "enum": [
+            "current-default",
+            "paper-reference"
+          ]
+        },
+        "runtime_id": {
+          "enum": [
+            "pi",
+            "claude-code"
+          ]
+        },
+        "runtime_provider": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "runtime_model": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "runtime_model_from_invocation": {
+          "type": "boolean"
+        },
+        "runtime_authentication_mode": {
+          "enum": [
+            "provider",
+            "subscription",
+            "minimax-coding-plan",
+            "native"
+          ]
+        },
+        "reasoning": {
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "default"
+          ]
+        },
+        "tools": {
+          "type": "string",
+          "minLength": 1
+        },
+        "max_turns": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "runtime_context_level": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "level0",
+            "level1",
+            "level2",
+            "level3",
+            "level4",
+            null
+          ]
+        },
+        "judge_contract": {
+          "type": "string",
+          "minLength": 1
+        },
+        "judge_api": {
+          "enum": [
+            "chat-completions",
+            "responses"
+          ]
+        },
+        "dataset_scope_ids": {
+          "type": "array",
+          "minItems": 16,
+          "maxItems": 16,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "comparison_targets": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "qa_accuracy_drop_margin",
+            "ir_ndcg_drop_margin"
+          ],
+          "properties": {
+            "qa_accuracy_drop_margin": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 0.25
+            },
+            "ir_ndcg_drop_margin": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "maximum": 0.25
+            }
+          }
+        },
+        "paper_seed_policy": {
+          "enum": [
+            "explicit",
+            "paper-unreported-preserved"
+          ]
+        },
+        "paper_scope_dataset_ids": {
+          "type": "array",
+          "minItems": 13,
+          "maxItems": 13,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "executable_if_authorized": {
+          "const": true
+        }
+      }
+    }
+  }
+}
