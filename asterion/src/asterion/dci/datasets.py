@@ -24,6 +24,18 @@ BENCHMARK_PROMPT_CONTRACT = "dci.benchmark-prompt/v1"
 
 
 _ALLOWED_FIELDS = frozenset({"query_id", "query", "answer", "gold_docs", "gold_ids"})
+_BRIGHT_SOURCE_FIELDS = frozenset(
+    {
+        "answer",
+        "excluded_ids",
+        "gold_ids",
+        "gold_ids_long",
+        "id",
+        "query",
+        "query_id",
+        "reasoning",
+    }
+)
 _WINDOWS_RESERVED = frozenset(
     {"CON", "PRN", "AUX", "NUL"}
     | {f"COM{index}" for index in range(1, 10)}
@@ -346,6 +358,64 @@ def load_beir_benchmark_rows_bytes(
     return tuple(rows)
 
 
+def load_bright_benchmark_rows_bytes(
+    raw: bytes, *, expected_count: int | None = None
+) -> tuple[BenchmarkRow, ...]:
+    """Normalize the published DCI-Bench BRIGHT source shape into IR rows."""
+
+    if expected_count is not None and (
+        type(expected_count) is not int or expected_count <= 0
+    ):
+        raise DatasetError("DCI BRIGHT source count must be a positive integer")
+    try:
+        text = raw.decode("utf-8", errors="strict")
+        rows: list[BenchmarkRow] = []
+        identities: set[str] = set()
+        for line in text.split("\n"):
+            if line.endswith("\r"):
+                line = line[:-1]
+            if not line.strip():
+                continue
+            value = json.loads(line, object_pairs_hook=_object_without_duplicate_keys)
+            if type(value) is not dict or set(value) != _BRIGHT_SOURCE_FIELDS:
+                raise DatasetError("DCI BRIGHT row has invalid fields")
+            raw_query_id = value["query_id"]
+            if type(raw_query_id) is str:
+                query_id = _require_nonempty_string(raw_query_id, field="query ID")
+            elif type(raw_query_id) is int:
+                query_id = str(raw_query_id)
+            else:
+                raise DatasetError("DCI BRIGHT query ID is invalid")
+            query = _require_nonempty_string(value["query"], field="query")
+            for field in ("answer", "id", "reasoning"):
+                _require_nonempty_string(value[field], field=field)
+            for field in ("excluded_ids", "gold_ids_long"):
+                _document_list(value[field], field=field)
+            gold_ids = _document_list(value["gold_ids"], field="gold_ids")
+            identity = portable_query_id_key(query_id)
+            if identity in identities:
+                raise DatasetError("DCI BRIGHT dataset has colliding query ID")
+            identities.add(identity)
+            rows.append(
+                BenchmarkRow(
+                    query_id=query_id,
+                    query=query,
+                    gold_ids=gold_ids,
+                )
+            )
+    except DatasetError as error:
+        if "BRIGHT" in str(error):
+            raise
+        raise DatasetError("DCI BRIGHT dataset is invalid") from error
+    except (json.JSONDecodeError, UnicodeError, TypeError) as error:
+        raise DatasetError("DCI BRIGHT dataset is invalid") from error
+    if not rows:
+        raise DatasetError("DCI BRIGHT dataset is empty")
+    if expected_count is not None and len(rows) != expected_count:
+        raise DatasetError("DCI BRIGHT source count does not match")
+    return tuple(rows)
+
+
 def validate_beir_corpus(corpus: Path, rows: tuple[BenchmarkRow, ...]) -> Path:
     """Verify a no-follow corpus directory and every referenced regular document."""
 
@@ -563,6 +633,7 @@ __all__ = [
     "load_benchmark_rows_bytes",
     "load_beir_benchmark_rows",
     "load_beir_benchmark_rows_bytes",
+    "load_bright_benchmark_rows_bytes",
     "normalize_retrieved_path",
     "parse_retrieved_docs",
     "parse_retrieved_documents",

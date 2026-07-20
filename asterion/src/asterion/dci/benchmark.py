@@ -44,6 +44,7 @@ from asterion.dci.datasets import (
     canonical_input_identity,
     load_benchmark_rows_bytes,
     load_beir_benchmark_rows_bytes,
+    load_bright_benchmark_rows_bytes,
 )
 from asterion.dci.evaluation import (
     _load_reusable_result,
@@ -65,6 +66,7 @@ from asterion.dci.paper_benchmarks import (
     paper_scope_for_selected_ids,
     published_scope_selected_ids,
     require_af320_executable_scope,
+    resolve_paper_benchmark,
     resolve_paper_experiment_scope,
 )
 from asterion.dci.analysis import (
@@ -572,7 +574,18 @@ def _prepare(
             "beir.arguana": "beir.arguana.main.random50",
             "beir.scifact": "beir.scifact.main.random50",
         }.get(request.profile)
-        if beir_scope is None:
+        bright_benchmark = None
+        if paper_scope is not None:
+            candidate = resolve_paper_benchmark(
+                resolve_paper_experiment_scope(paper_scope).dataset_id
+            )
+            if candidate.dataset_id.startswith("bright."):
+                bright_benchmark = candidate
+        if bright_benchmark is not None:
+            rows = load_bright_benchmark_rows_bytes(
+                dataset_raw, expected_count=bright_benchmark.source_count
+            )
+        elif beir_scope is None:
             try:
                 rows = load_benchmark_rows_bytes(dataset_raw)
             except DatasetError as generic_error:

@@ -14,7 +14,9 @@ from asterion.dci.datasets import (
     build_ir_prompt,
     build_qa_prompt,
     load_benchmark_rows,
+    load_benchmark_rows_bytes,
     load_beir_benchmark_rows_bytes,
+    load_bright_benchmark_rows_bytes,
     portable_query_id_key,
     read_jsonl,
     validate_beir_corpus,
@@ -105,6 +107,82 @@ class PaperBeirDatasetTests(unittest.TestCase):
             corpus.symlink_to(target, target_is_directory=True)
             with self.assertRaisesRegex(DatasetError, "BEIR corpus"):
                 validate_beir_corpus(corpus, rows)
+
+
+class PaperBrightDatasetTests(unittest.TestCase):
+    @staticmethod
+    def _row(query_id: object = 0) -> dict[str, object]:
+        return {
+            "query": "find documents",
+            "reasoning": "source rationale",
+            "id": "0",
+            "excluded_ids": ["N/A"],
+            "gold_ids_long": ["topic/document.txt"],
+            "gold_ids": ["topic/document_0.txt", "topic/document_1.txt"],
+            "query_id": query_id,
+            "answer": "source answer",
+        }
+
+    def test_normalizes_exact_source_rows_and_integer_query_ids(self) -> None:
+        payload = (
+            json.dumps(self._row())
+            + "\n"
+            + json.dumps(self._row("earth_science_1") | {"id": "1"})
+            + "\n"
+        ).encode()
+
+        first, second = load_bright_benchmark_rows_bytes(payload, expected_count=2)
+
+        self.assertEqual(first.query_id, "0")
+        self.assertEqual(second.query_id, "earth_science_1")
+        self.assertEqual(
+            first.gold_ids,
+            ("topic/document_0.txt", "topic/document_1.txt"),
+        )
+        self.assertIsNone(first.answer)
+        self.assertEqual(
+            first.as_dict(),
+            {
+                "query_id": "0",
+                "query": "find documents",
+                "gold_ids": ["topic/document_0.txt", "topic/document_1.txt"],
+            },
+        )
+        with self.assertRaises(DatasetError):
+            load_benchmark_rows_bytes(payload)
+
+    def test_rejects_source_shape_field_type_count_and_id_collisions(self) -> None:
+        invalid_rows = []
+        for field, replacement in (
+            ("query", ""),
+            ("reasoning", None),
+            ("id", 0),
+            ("excluded_ids", []),
+            ("gold_ids_long", [""]),
+            ("gold_ids", [1]),
+            ("query_id", True),
+            ("query_id", 1.0),
+            ("answer", ""),
+        ):
+            invalid_rows.append(self._row() | {field: replacement})
+        missing = self._row()
+        missing.pop("reasoning")
+        invalid_rows.extend((missing, self._row() | {"unknown": "field"}))
+
+        for row in invalid_rows:
+            with self.subTest(row=row), self.assertRaises(DatasetError):
+                load_bright_benchmark_rows_bytes((json.dumps(row) + "\n").encode())
+
+        collision = (
+            json.dumps(self._row(1)) + "\n" + json.dumps(self._row("1")) + "\n"
+        ).encode()
+        with self.assertRaisesRegex(DatasetError, "query ID"):
+            load_bright_benchmark_rows_bytes(collision)
+
+        valid = (json.dumps(self._row()) + "\n").encode()
+        for count in (0, -1, True, 1.0, "1", 2):
+            with self.subTest(count=count), self.assertRaises(DatasetError):
+                load_bright_benchmark_rows_bytes(valid, expected_count=count)  # type: ignore[arg-type]
 
 
 class AsterionDciDatasetTests(unittest.TestCase):

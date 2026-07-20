@@ -311,6 +311,61 @@ class AsterionDciBatchTests(unittest.IsolatedAsyncioTestCase):
 
                     self.assertEqual(len(rows), 1)
 
+    def test_prepare_normalizes_all_public_bright_rows_before_slicing(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        datasets = {
+            "bright.biology": (
+                "bright_biology/bright_biology.jsonl",
+                "biology",
+            ),
+            "bright.earth-science": (
+                "bright_earth_science/bright_earth_science.jsonl",
+                "earth_science",
+            ),
+            "bright.economics": (
+                "bright_economics/economics_full.jsonl",
+                "economics",
+            ),
+            "bright.robotics": (
+                "bright_robotics/bright_robotics.jsonl",
+                "robotics",
+            ),
+        }
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            output_root = Path(temporary_directory).resolve()
+            for profile, (dataset_name, corpus_name) in datasets.items():
+                with self.subTest(profile=profile):
+                    corpus = repository / f"corpus/bright_corpus/{corpus_name}"
+                    request = BenchmarkRequest(
+                        dataset=repository / f"data/dci-bench/data/{dataset_name}",
+                        output_root=output_root / corpus_name,
+                        cwd=corpus,
+                        judge_config=JudgeConfig(
+                            base_url="https://judge.example.invalid/v1"
+                        ),
+                        runtime_options=DciRuntimeOptions(
+                            runtime="pi",
+                            tools="read,bash",
+                            runtime_context_level="level3",
+                            thinking_level="high",
+                            node_max_old_space_size_mb=8192,
+                        ),
+                        limit=1,
+                        mode="ir",
+                        profile=profile,
+                        corpus=corpus,
+                        max_turns=300,
+                        resume_policy="fresh",
+                    )
+
+                    rows, _output, config, _items, _snapshots = _prepare(request)
+
+                    self.assertEqual(len(rows), 1)
+                    self.assertTrue(rows[0].is_ir)
+                    self.assertEqual(
+                        config["selection"]["execution_class"], "paper-bounded"
+                    )
+
     async def test_qa_answer_aliases_use_source_judge_string_and_exact_reuse(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
