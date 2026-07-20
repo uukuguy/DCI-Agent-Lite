@@ -59,7 +59,7 @@ class BenchmarkRow:
 
     query_id: str
     query: str
-    answer: str | None = None
+    answer: str | tuple[str, ...] | None = None
     gold_docs: tuple[str, ...] | None = None
     gold_ids: tuple[str, ...] | None = None
 
@@ -177,9 +177,14 @@ def _row_from_value(value: Any) -> BenchmarkRow:
 
     query_id = _require_nonempty_string(value.get("query_id"), field="query ID")
     query = _require_nonempty_string(value.get("query"), field="query")
-    answer = (
-        _optional_string(value["answer"], field="answer") if "answer" in value else None
-    )
+    answer: str | tuple[str, ...] | None = None
+    if "answer" in value:
+        raw_answer = value["answer"]
+        answer = (
+            _document_list(raw_answer, field="answer")
+            if type(raw_answer) is list
+            else _optional_string(raw_answer, field="answer")
+        )
     has_gold_docs = "gold_docs" in value
     has_gold_ids = "gold_ids" in value
     gold_docs = (

@@ -1060,3 +1060,9 @@
 - 22:01 复审修正通过 1453 root、134 Asterion、153 Climb、378 focused、product、local、static 与 scope；provider 0。
 - 22:05 空-final 恢复二轮复审清零：Critical 0、Important 0、Minor 0，批准提交。
 - 22:06 空-final 单轮恢复与双侧 cache 身份提交，为 fresh Pi H004 证据解除运行时阻塞。 [0f8094e]
+- 22:07 active-session checkpoint 固化 r12 恢复命令与已验证提交边界。 [2738620]
+- 22:08 启动 H004 Pi bounded r12，PID 74951，fresh 私有根、提交 0f8094e；full 未授权。
+- 22:29 H004 Pi bounded r12 在 15 Agent/8 Judge、full no 后失败：首个 Asterion launcher 的空-final 单轮恢复已在真实 Pi 会话中产出文本并完成，第二个 Asterion QA launcher 则在 provider 前因公开数据中的合法 answer 别名数组被本地 schema 拒绝；r12 不作为接受证据。
+- 22:34 只读检查 launcher 文本误触发 long-task regex；没有 evaluator/PID，scope preflight 仍通过。
+- 22:46 QA answer-alias 修复通过 1456 root business、134 Asterion、六份公开 QA 数据预检、产品 8/8、delegated 538/538、launchers 12/12、extras 6/6、bounded 7/7、AF-340 local coordinator、static 与 scope 门禁；provider 0。1609 全量 discovery 的单次 AF-210 闭环波动随后以同一 4/4 用例完整重跑通过。
+- 22:46 answer-alias 增量复审清零：Critical 0、Important 0、Minor 0，批准提交。

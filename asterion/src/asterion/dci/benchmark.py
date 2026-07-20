@@ -906,7 +906,7 @@ async def _run_row(
                 assert row.answer is not None
                 verdict = await evaluate_run_directory_async(
                     native_dir,
-                    gold_answer=row.answer,
+                    gold_answer=_qa_gold_answer(row),
                     judge_config=request.judge_config,
                     _directory_fd=native_authority.fd,
                 )
@@ -1334,6 +1334,13 @@ def _prompt(request: BenchmarkRequest, row: BenchmarkRow) -> str:
     return build_qa_prompt(row.query, request.corpus)
 
 
+def _qa_gold_answer(row: BenchmarkRow) -> str:
+    """Match the source runner's exact ``str(row["answer"])`` Judge input."""
+
+    assert row.answer is not None
+    return row.answer if isinstance(row.answer, str) else str(list(row.answer))
+
+
 def _read_input_snapshot(path: Path) -> bytes:
     descriptor: int | None = None
     try:
@@ -1542,7 +1549,7 @@ def _validate_exact_reuse(
         fingerprint = judge_request_fingerprint(
             config=request.judge_config,
             question=question,
-            gold_answer=row.answer,
+            gold_answer=_qa_gold_answer(row),
             predicted_answer=prediction,
         )
         cached = _load_reusable_result(lock, state, fingerprint, request.judge_config)

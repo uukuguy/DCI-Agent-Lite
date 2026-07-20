@@ -140,6 +140,16 @@ class AsterionDciDatasetTests(unittest.TestCase):
         self.assertEqual(second.gold_ids, ("c.txt",))
         self.assertIsNone(second.answer)
 
+    def test_loads_qa_answer_aliases_and_preserves_source_shape(self) -> None:
+        path = self._dataset(
+            b'{"query_id":"qa-alias","query":"question","answer":["primary","alias"]}\n'
+        )
+
+        row = load_benchmark_rows(path)[0]
+
+        self.assertEqual(row.answer, ("primary", "alias"))
+        self.assertEqual(row.as_dict()["answer"], ["primary", "alias"])
+
     def test_preserves_representative_six_qa_and_four_bright_row_order(self) -> None:
         values = [
             {
@@ -232,6 +242,10 @@ class AsterionDciDatasetTests(unittest.TestCase):
             {"query_id": "q", "query": "", "answer": "a"},
             {"query_id": "q", "query": "q", "answer": False},
             {"query_id": "q", "query": "q", "answer": None},
+            {"query_id": "q", "query": "q", "answer": []},
+            {"query_id": "q", "query": "q", "answer": [""]},
+            {"query_id": "q", "query": "q", "answer": ["ok", 1]},
+            {"query_id": "q", "query": "q", "answer": {"alias": "a"}},
             {"query_id": "q", "query": "q"},
             {"query_id": "q", "query": "q", "gold_docs": []},
             {"query_id": "q", "query": "q", "gold_ids": [1]},
