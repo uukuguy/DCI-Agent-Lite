@@ -6,7 +6,7 @@ Active work package: AF-340
 
 Package: README reproduction and runtime-result parity
 
-Currently running: no evaluator process. H004 Pi bounded r12 ended failed after 15 Agent/8 Judge operations; its dataset-parity blocker is repaired and reviewed, pending a cohesive commit and fresh r13. No full dataset is authorized.
+Currently running: no evaluator process. H004 Pi bounded r12 ended failed after 15 Agent/8 Judge operations; its dataset-parity blocker is repaired and reviewed at `50ad0b0`, pending fresh r13. No full dataset is authorized.
 
 ## TL;DR
 
@@ -35,7 +35,7 @@ Currently running: no evaluator process. H004 Pi bounded r12 ended failed after 
 
 ## Next action
 
-1. Commit the verified answer-alias repair, then run Pi bounded r13 into a fresh private root; never reuse or stitch r10-r12.
+1. Run Pi bounded r13 from `50ad0b0` into a fresh private root; never reuse or stitch r10-r12.
 2. Inspect the retained r13 report and native evidence before accepting it.
 3. Recheck Claude subscription login without a provider request and collect its fresh bounded report only if authentication is restored.
 4. Inspect the MiniMax, Pi, and subscription reports together to close H-004. Do not start H-005 without explicit profile/budget authorization.

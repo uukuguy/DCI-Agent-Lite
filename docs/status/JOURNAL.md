@@ -1066,3 +1066,4 @@
 - 22:34 只读检查 launcher 文本误触发 long-task regex；没有 evaluator/PID，scope preflight 仍通过。
 - 22:46 QA answer-alias 修复通过 1456 root business、134 Asterion、六份公开 QA 数据预检、产品 8/8、delegated 538/538、launchers 12/12、extras 6/6、bounded 7/7、AF-340 local coordinator、static 与 scope 门禁；provider 0。1609 全量 discovery 的单次 AF-210 闭环波动随后以同一 4/4 用例完整重跑通过。
 - 22:46 answer-alias 增量复审清零：Critical 0、Important 0、Minor 0，批准提交。
+- 22:48 Asterion 支持严格 QA answer aliases 与 source Judge 语义，解除 H004 r12 阻塞。 [50ad0b0]
