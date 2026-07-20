@@ -605,6 +605,34 @@ class AsterionDciRunTests(unittest.TestCase):
                 thread.join(timeout=5)
             self.assertEqual(len(errors), 1)
 
+    def test_empty_final_answer_fails_before_completed_evidence(self) -> None:
+        class EmptyFinalClient(FixturePiClient):
+            final_text = ""
+
+            def prompt_and_wait(self, _: str, *, on_event, **__: object) -> str:
+                for event in (
+                    {"type": "response", "id": "py-1", "success": True},
+                    {"type": "agent_end"},
+                ):
+                    on_event(event)
+                return self.final_text
+
+        for index, final_text in enumerate(("", " \n\t")):
+            with self.subTest(final_text=repr(final_text)), tempfile.TemporaryDirectory() as temporary_directory:
+                root = Path(temporary_directory)
+                paths = resolve_dci_paths(root)
+                output = root / f"run-{index}"
+                request = DciRunRequest(
+                    run_id=f"run-{index}", question="question", cwd=root
+                )
+                EmptyFinalClient.final_text = final_text
+                with patch("asterion.dci.run.PiRpcClient", EmptyFinalClient):
+                    with self.assertRaisesRegex(DciRunError, "Pi execution failed"):
+                        run_pi_research(paths, request, output_dir=output)
+                state = json.loads((output / "state.json").read_text())
+                self.assertEqual(state["status"], "failed")
+                self.assertFalse((output / "final.txt").exists())
+
     def test_cancellation_finalizes_one_failed_attempt_and_drains_stop_before_unlock(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)

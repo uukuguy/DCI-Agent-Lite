@@ -327,7 +327,7 @@ class AsterionDciProductParityTests(unittest.TestCase):
                 return "failed"
 
     def _write_source_batch_evidence(
-        self, root: Path, *, mode: str, rows: int
+        self, root: Path, *, mode: str, rows: int, verify_reuse: bool = True
     ) -> tuple[Path, int, int]:
         output_root = root / f"source-{mode}"
         corpus = root / "corpus"
@@ -425,7 +425,7 @@ class AsterionDciProductParityTests(unittest.TestCase):
             source_batch, "judge_answer_async", side_effect=fake_judge
         ):
             results = asyncio.run(execute())
-            if rows == 1:
+            if rows == 1 and verify_reuse:
                 initial_calls = (source_calls, judge_calls)
                 asyncio.run(execute())
                 self.assertEqual((source_calls, judge_calls), initial_calls)
@@ -514,6 +514,112 @@ class AsterionDciProductParityTests(unittest.TestCase):
                     (_AsterionMixedBatchPiClient.calls, judge_calls), initial_calls
                 )
         return output_root, _AsterionMixedBatchPiClient.calls, judge_calls
+
+    def test_source_completed_cache_rejects_prompt_contract_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            output_root, _, _ = self._write_source_batch_evidence(
+                root, mode="qa", rows=1, verify_reuse=False
+            )
+            query_dir = output_root / "q-0"
+            (query_dir / "input_question.txt").write_text(
+                "legacy prompt\n", encoding="utf-8"
+            )
+            argv = [
+                "run-batch",
+                "--dataset",
+                str(root / "source-qa.jsonl"),
+                "--output-root",
+                str(output_root),
+                "--corpus-dir",
+                str(root / "corpus"),
+                "--max-concurrency",
+                "1",
+            ]
+            with mock.patch.object(sys, "argv", argv):
+                args = source_batch.parse_args()
+            config = SourceJudgeConfig(
+                base_url="https://judge.example.test/v1", model="fixture-judge"
+            )
+            row = {"query_id": "q-0", "query": "question 0", "answer": "gold"}
+            with mock.patch("asyncio.create_subprocess_exec") as launch:
+                with self.assertRaisesRegex(RuntimeError, "prompt.*incompatible"):
+                    asyncio.run(
+                        source_batch.run_single_query(
+                            args=args,
+                            row=row,
+                            query_dir=query_dir,
+                            judge_config=config,
+                        )
+                    )
+            launch.assert_not_called()
+
+    def test_source_main_persists_and_rejects_prompt_contract_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            dataset = root / "dataset.jsonl"
+            dataset.write_text(
+                "".join(
+                    json.dumps(
+                        {
+                            "query_id": f"q-{index}",
+                            "query": f"question {index}",
+                            "gold_docs": ["doc.txt"],
+                        }
+                    )
+                    + "\n"
+                    for index in range(2)
+                ),
+                encoding="utf-8",
+            )
+            corpus = root / "corpus"
+            corpus.mkdir()
+            (corpus / "doc.txt").write_text("fixture", encoding="utf-8")
+            output_root = root / "output"
+            argv = [
+                "--dataset",
+                str(dataset),
+                "--output-root",
+                str(output_root),
+                "--corpus-dir",
+                str(corpus),
+                "--enable-ir",
+                "--limit",
+                "1",
+            ]
+            result_row = {
+                "query_id": "q-0",
+                "run_status": "completed",
+                "is_correct": None,
+                "ndcg_at_10": 1.0,
+            }
+            run_query = mock.AsyncMock(return_value=result_row)
+            with (
+                mock.patch.object(source_batch, "run_single_query", run_query),
+                mock.patch.object(source_batch, "write_analysis_artifacts"),
+                contextlib.redirect_stdout(io.StringIO()),
+            ):
+                self.assertEqual(asyncio.run(source_batch.main_async(argv)), 0)
+            config_path = output_root / "config.json"
+            config = json.loads(config_path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                config["benchmark_prompt_contract"],
+                source_batch.BENCHMARK_PROMPT_CONTRACT,
+            )
+            self.assertEqual(
+                config["benchmark_prompt_contract_sha256"],
+                source_batch.BENCHMARK_PROMPT_CONTRACT_SHA256,
+            )
+
+            config["benchmark_prompt_contract_sha256"] = "0" * 64
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+            rejected_query = mock.AsyncMock(return_value=result_row)
+            with (
+                mock.patch.object(source_batch, "run_single_query", rejected_query),
+                contextlib.redirect_stderr(io.StringIO()),
+            ):
+                self.assertEqual(asyncio.run(source_batch.main_async(argv)), 2)
+            rejected_query.assert_not_awaited()
 
     def test_product_matrix_has_no_unsupported_or_unexecutable_row(self) -> None:
         rows = self._validated_rows()

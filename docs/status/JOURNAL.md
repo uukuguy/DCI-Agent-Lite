@@ -1043,3 +1043,11 @@
 - Final review repair makes full inspection recompute every comparison from the normalized native baseline/candidate manifests and require exact identity plus JSON bytes; a forged all-true target report now fails with `comparison-replay`. Exact selection scope/dataset/count/query-ID binding remains fail closed.
 - Recovery closure passes 1443 root Python tests, 134 Asterion tests, 153 Climb tests, 92 focused reproduction/verifier tests, the provider-free AF-340 local coordinator, Ruff, compile, shell syntax, JSON parsing, scope preflight, and diff checks. Independent re-review approves with 0 Critical and 0 Important findings; no provider request or full dataset ran.
 - AF-340 recovery merge hardens full authorization, evidence replay, and paper targets for trustworthy closure. [6706b42]
+- Recovery checkpoint records the merge identity and next H004 boundary for reliable resume. [c694b35]
+- H004 Pi bounded r9 completed three context paths, then failed closed on the first launcher after 4 Agent/0 Judge operations; full no.
+- Safe provenance comparison confirmed a stale exported `DEEPSEEK_API_KEY` differed from `.env` and caused the Judge's three HTTP 401 responses; no credential value or digest was exposed.
+- H004 Pi bounded r10 passed all original launchers, then the first Asterion launcher produced no textual answer and failed closed after 15 Agent/7 Judge operations; full no.
+- Runtime repair rejects empty/whitespace Pi finals before completed evidence, while the shared QA prompt now explicitly requires a textual final answer for source/Asterion parity.
+- A compile-only command mentioning the batch script path triggered the long-task regex; it finished in 0.5 seconds with no evaluator PID, and scope check passed.
+- H004 runtime repair now rejects empty finals, binds exact prompt/cache identity, and hashes every executed Python/shell implementation path.
+- Repair closure passes 1447 root, 134 Asterion, 153 Climb, product 8/8, local coordinator, static gates, and independent 0/0/0 review.

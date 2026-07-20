@@ -566,6 +566,8 @@ def run_pi_research(
                 on_event=recorder.record_event,
                 cancel_event=_cancel_event,
             )
+        if not final_text.strip():
+            raise RuntimeError("Pi provider returned no final answer")
         if context_profile is not None and request.keep_session:
             materialized_file, materialized_id = _validate_pi_context_session(
                 {"sessionFile": str(session_file), "sessionId": session_id},

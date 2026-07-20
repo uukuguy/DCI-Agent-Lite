@@ -1478,6 +1478,33 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             self.assertTrue(all(request.product == "asterion-dci" for request in requests))
             self.assertTrue(all(baseline is None for baseline, _candidate in comparisons))
 
+    def test_original_implementation_identity_includes_executed_launcher_code(self) -> None:
+        module = load_verifier()
+        source = str(ROOT / "asterion/src")
+        if source not in __import__("sys").path:
+            __import__("sys").path.insert(0, source)
+        from asterion.dci.experiment_profiles import resolve_experiment_profile
+
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = Path(temporary)
+            (repo / "src/dci").mkdir(parents=True)
+            (repo / "scripts").mkdir()
+            (repo / "src/dci/runtime.py").write_text("VALUE = 1\n")
+            launcher = repo / "scripts/run_fixture.sh"
+            launcher.write_text("#!/bin/sh\nexit 0\n")
+            request = module.FullScopeRequest(
+                "original-dci",
+                "qa.nq.main.random50",
+                None,
+                repo / "output",
+                resolve_experiment_profile("current-default/pi"),
+                repo,
+            )
+            before = module._implementation_sha256(request)
+            launcher.write_text("#!/bin/sh\nexit 1\n")
+            after = module._implementation_sha256(request)
+            self.assertNotEqual(before, after)
+
     def test_original_and_asterion_native_artifacts_normalize_to_strict_body_free_manifests(self) -> None:
         module = load_verifier()
         source = str(ROOT / "asterion/src")

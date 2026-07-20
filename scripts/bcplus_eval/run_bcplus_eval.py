@@ -2,6 +2,7 @@
 
 import argparse
 import asyncio
+import hashlib
 import json
 import math
 import os
@@ -44,6 +45,7 @@ from dci.effective_config import OriginalEffectiveConfig  # noqa: E402
 DEFAULT_DATASET_PATH = REPO_ROOT / "data" / "bcplus_qa.jsonl"
 DEFAULT_OUTPUT_ROOT = REPO_ROOT / "outputs" / "bcplus_eval"
 DEFAULT_CORPUS_DIR = REPO_ROOT / "corpus" / "bc_plus_docs"
+BENCHMARK_PROMPT_CONTRACT = "dci.benchmark-prompt/v1"
 # OpenAI API pricing verified on April 5, 2026 from official OpenAI pricing/model pages.
 
 COLOR_CORRECT = "#2E8B57"
@@ -498,7 +500,8 @@ def build_benchmark_prompt(query: str, corpus_dir: Path) -> str:
     return (
         "Answer the following question. "
         f"The answer is contained in the corpus directory at @{corpus_dir}. "
-        "**Do Not use web search!** Use ripgrep (rg) instead of grep for fast searching.\n\n"
+        "**Do Not use web search!** Use ripgrep (rg) instead of grep for fast searching. "
+        "After using tools, always finish with a non-empty textual final answer.\n\n"
         "QUESTION:\n"
         f"{query}\n"
     )
@@ -538,6 +541,26 @@ def build_ir_prompt(query: str, corpus_dir: Path, corpus_hint: str | None = None
         f"Exact Answer: {{concise final answer only}}\n"
         f"Confidence: {{0–100%; use below 50% if evidence is weak, ambiguous, or missing}}\n"
     )
+
+
+BENCHMARK_PROMPT_CONTRACT_SHA256 = hashlib.sha256(
+    json.dumps(
+        {
+            "schema": BENCHMARK_PROMPT_CONTRACT,
+            "qa": build_benchmark_prompt(
+                "__DCI_QUERY__", Path("/__dci_prompt_contract_corpus__")
+            ),
+            "ir": build_ir_prompt(
+                "__DCI_QUERY__",
+                Path("/__dci_prompt_contract_corpus__"),
+                "__DCI_CORPUS_HINT__",
+            ),
+        },
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode()
+).hexdigest()
 
 
 def build_subprocess_env(args: argparse.Namespace) -> Dict[str, str]:
@@ -1638,6 +1661,9 @@ async def run_single_query(
 
     existing_result = load_existing_query_result(query_dir)
     existing_state = read_json_if_exists(query_dir / "state.json") or {}
+    existing_prompt = read_text_if_exists(query_dir / "input_question.txt")
+    if (existing_result is not None or existing_state) and existing_prompt != question_text:
+        raise RuntimeError("Existing benchmark prompt is incompatible")
     has_error = existing_run_has_error(query_dir, existing_result=existing_result, existing_state=existing_state)
 
     if existing_result_succeeded(existing_result, judge_config) and not has_error:
@@ -1812,6 +1838,17 @@ async def main_async(
             print(f"Invalid judge configuration: {exc}", file=sys.stderr)
             return 2
 
+    prompt_contract_sha256 = BENCHMARK_PROMPT_CONTRACT_SHA256
+    existing_config = read_json_if_exists(args.output_root / "config.json")
+    if existing_config is not None and (
+        existing_config.get("benchmark_prompt_contract")
+        != BENCHMARK_PROMPT_CONTRACT
+        or existing_config.get("benchmark_prompt_contract_sha256")
+        != prompt_contract_sha256
+    ):
+        print("Existing benchmark prompt contract is incompatible", file=sys.stderr)
+        return 2
+
     query_dirs_requiring_work = [
         args.output_root / str(row["query_id"])
         for row in rows
@@ -1858,6 +1895,8 @@ async def main_async(
         "limit": args.limit,
         "node_max_old_space_size_mb": args.node_max_old_space_size_mb,
         "question_count": len(rows),
+        "benchmark_prompt_contract": BENCHMARK_PROMPT_CONTRACT,
+        "benchmark_prompt_contract_sha256": prompt_contract_sha256,
     }
     if judge_config is not None:
         run_config.update(judge_public_identity(judge_config))

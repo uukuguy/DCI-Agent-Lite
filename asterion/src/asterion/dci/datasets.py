@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -15,6 +16,9 @@ from typing import Any
 
 class DatasetError(ValueError):
     """Safe public error for malformed or ambiguous benchmark input."""
+
+
+BENCHMARK_PROMPT_CONTRACT = "dci.benchmark-prompt/v1"
 
 
 _ALLOWED_FIELDS = frozenset({"query_id", "query", "answer", "gold_docs", "gold_ids"})
@@ -465,7 +469,8 @@ def build_benchmark_prompt(query: str, corpus_dir: Path) -> str:
     return (
         "Answer the following question. "
         f"The answer is contained in the corpus directory at @{corpus}. "
-        "**Do Not use web search!** Use ripgrep (rg) instead of grep for fast searching.\n\n"
+        "**Do Not use web search!** Use ripgrep (rg) instead of grep for fast searching. "
+        "After using tools, always finish with a non-empty textual final answer.\n\n"
         "QUESTION:\n"
         f"{query}\n"
     )
@@ -517,8 +522,30 @@ def build_ir_prompt(
     )
 
 
+BENCHMARK_PROMPT_CONTRACT_SHA256 = hashlib.sha256(
+    json.dumps(
+        {
+            "schema": BENCHMARK_PROMPT_CONTRACT,
+            "qa": build_benchmark_prompt(
+                "__DCI_QUERY__", Path("/__dci_prompt_contract_corpus__")
+            ),
+            "ir": build_ir_prompt(
+                "__DCI_QUERY__",
+                Path("/__dci_prompt_contract_corpus__"),
+                "__DCI_CORPUS_HINT__",
+            ),
+        },
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode()
+).hexdigest()
+
+
 __all__ = [
     "BenchmarkRow",
+    "BENCHMARK_PROMPT_CONTRACT",
+    "BENCHMARK_PROMPT_CONTRACT_SHA256",
     "DatasetError",
     "build_benchmark_prompt",
     "build_ir_prompt",

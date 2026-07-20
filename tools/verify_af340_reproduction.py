@@ -1740,6 +1740,31 @@ def _native_config_document(request: FullScopeRequest) -> tuple[dict[str, object
     return config, raw
 
 
+def _implementation_sha256(request: FullScopeRequest) -> str:
+    relative_roots = (
+        (Path("src/dci"), Path("scripts"))
+        if request.product == "original-dci"
+        else (Path("asterion/src/asterion/dci"), Path("asterion/scripts"))
+    )
+    paths = sorted(
+        path
+        for relative_root in relative_roots
+        for path in (request.repo_root / relative_root).rglob("*")
+        if path.suffix in {".py", ".sh"}
+    )
+    if not paths:
+        raise ValueError("AF-340 implementation identity has no source paths")
+    records: list[str] = []
+    for path in paths:
+        if path.is_symlink() or not path.is_file():
+            raise ValueError("AF-340 implementation identity path is invalid")
+        records.append(
+            f"{path.relative_to(request.repo_root).as_posix()}\0"
+            f"{hashlib.sha256(path.read_bytes()).hexdigest()}\n"
+        )
+    return hashlib.sha256("".join(records).encode()).hexdigest()
+
+
 def normalize_full_scope_manifest(
     request: FullScopeRequest, *, write: bool = True
 ) -> object:
@@ -1799,15 +1824,7 @@ def normalize_full_scope_manifest(
     )
     metric_identities = (benchmark.metric,)
     aggregates = _computed_aggregates(queries, metric_identities, request.profile.profile_id)
-    implementation_root = request.repo_root / (
-        "src/dci" if request.product == "original-dci" else "asterion/src/asterion/dci"
-    )
-    implementation_digest = hashlib.sha256(
-        "".join(
-            f"{path.relative_to(implementation_root).as_posix()}\0{hashlib.sha256(path.read_bytes()).hexdigest()}\n"
-            for path in sorted(implementation_root.rglob("*.py"))
-        ).encode()
-    ).hexdigest()
+    implementation_digest = _implementation_sha256(request)
     values: dict[str, object] = {
         "schema": "dci.reproduction-run/v1",
         "run_id": f"af340.{request.product}.{_safe_slug(request.scope_id)}",

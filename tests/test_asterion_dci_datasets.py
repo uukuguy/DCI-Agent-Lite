@@ -7,6 +7,8 @@ import unicodedata
 from pathlib import Path
 
 from asterion.dci.datasets import (
+    BENCHMARK_PROMPT_CONTRACT,
+    BENCHMARK_PROMPT_CONTRACT_SHA256,
     DatasetError,
     build_benchmark_prompt,
     build_ir_prompt,
@@ -365,7 +367,8 @@ class AsterionDciDatasetTests(unittest.TestCase):
         corpus = Path("/tmp/corpus")
         expected = (
             "Answer the following question. The answer is contained in the corpus directory at @/tmp/corpus. "
-            "**Do Not use web search!** Use ripgrep (rg) instead of grep for fast searching.\n\n"
+            "**Do Not use web search!** Use ripgrep (rg) instead of grep for fast searching. "
+            "After using tools, always finish with a non-empty textual final answer.\n\n"
             "QUESTION:\nWhat?\n"
         )
         self.assertEqual(build_benchmark_prompt("What?", corpus), expected)
@@ -409,6 +412,8 @@ class AsterionDciDatasetTests(unittest.TestCase):
 
     def test_prompt_corpus_identity_and_hint_branch_are_source_compatible(self) -> None:
         from scripts.bcplus_eval.run_bcplus_eval import (
+            BENCHMARK_PROMPT_CONTRACT as source_prompt_contract,
+            BENCHMARK_PROMPT_CONTRACT_SHA256 as source_prompt_contract_sha256,
             build_benchmark_prompt as source_qa_prompt,
             build_ir_prompt as source_ir_prompt,
         )
@@ -422,6 +427,10 @@ class AsterionDciDatasetTests(unittest.TestCase):
         )
         self.assertEqual(
             build_ir_prompt("Q", corpus, "   "), source_ir_prompt("Q", corpus, "   ")
+        )
+        self.assertEqual(BENCHMARK_PROMPT_CONTRACT, source_prompt_contract)
+        self.assertEqual(
+            BENCHMARK_PROMPT_CONTRACT_SHA256, source_prompt_contract_sha256
         )
         for unsafe in (
             "bad\npath",
