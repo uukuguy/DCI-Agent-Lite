@@ -6,14 +6,14 @@ Active work package: AF-340
 
 Package: README reproduction and runtime-result parity
 
-Currently running: no live provider or evaluator process. The interrupted implementation branch is being merged into `main`; focused and full local regressions pass. No full dataset is authorized.
+Currently running: no live provider or evaluator process. The interrupted implementation branch is merged into `main` at `6706b42`; focused and full local regressions pass. No full dataset is authorized.
 
 ## TL;DR
 
 - The user approved AF-340's complete design: one layered CLI/application → `.env`/environment → runtime/Judge-default configuration contract.
 - Pi defaults to `openai-codex`/`gpt-5.6-luna`; Claude Code defaults to local subscription login and supports explicit compatible MiniMax Coding Plan translation; Judge defaults independently to DeepSeek V4 Flash.
 - Original DCI README Quick Start, Context Management Strategies, and all eleven Benchmark DCI-Agent-Lite launchers are the baseline acceptance paths. Asterion must run the same Pi experiment contract and the paper Claude Code path through source, application, and installed-wheel surfaces.
-- The eight-task implementation is recovered from `codex/af-340-implementation` onto `main`; Task 8's three hardening rounds and subsequent bounded fixes are preserved.
+- The eight-task implementation is recovered from `codex/af-340-implementation` onto `main` by merge commit `6706b42`; Task 8's three hardening rounds and subsequent bounded fixes are preserved.
 - AF-340-H-001 through H-003 are confirmed 4/4. H-004 requires exactly three retained bounded reports; one valid MiniMax report exists. H-005 is the separate full-result hypothesis and remains explicitly authorization/budget gated.
 
 ## Where things stand
@@ -30,11 +30,10 @@ Currently running: no live provider or evaluator process. The interrupted implem
 
 ## Next action
 
-1. Commit the fully verified recovered merge, then record its exact commit identity in this checkpoint.
-2. Recheck Pi saved-auth quota and Claude subscription login without making provider requests.
-3. When a blocked boundary is restored, run that bounded variant into a fresh private root; never reuse or stitch rejected diagnostic outputs.
-4. Inspect the MiniMax, Pi, and subscription reports together to close H-004.
-5. Do not start H-005 until a named profile, finite budget, and explicit invocation authorization are supplied.
+1. Recheck Pi saved-auth quota and Claude subscription login without making provider requests.
+2. When a blocked boundary is restored, run that bounded variant into a fresh private root; never reuse or stitch rejected diagnostic outputs.
+3. Inspect the MiniMax, Pi, and subscription reports together to close H-004.
+4. Do not start H-005 until a named profile, finite budget, and explicit invocation authorization are supplied.
 
 ## Accepted boundaries
 
