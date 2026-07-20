@@ -956,3 +956,4 @@
 - 12:42 中断恢复：AF-340 Task6 有 10 个未提交文件；scope 通过，聚焦 30 tests 通过，尚未完成计划验收。
 - 12:58 AF-340 Task6 immutable profiles 与显式 full authorization 落地；full evidence 仍须 invocation gate。 [ec4d1e9]
 - 12:58 Task6 验证：130 focused、10 product tests 及 final wheel/compile/Ruff/scope/diff 全通过；零 provider 操作。
+- 13:01 AF-340 Task6 recovery state 对齐 CURRENT/WORKLIST/RESUME，并清除 Open Problems 中已完成条目。 [3f0cd03]
