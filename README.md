@@ -105,6 +105,18 @@ launcher pairs, proves the installed wheel/application boundary with a local
 fixture, and validates the digest-bound seven-case bounded-real record. It
 deliberately executes zero Pi or Judge provider calls.
 
+AF-340 adds one provider-free reproduction coordinator over the literal source
+and Asterion contract checks. Give it a fresh, uncommitted private directory:
+
+```bash
+uv run python tools/verify_af340_reproduction.py local \
+  --output-root outputs/af340-local
+```
+
+A successful local run reports `Agent operations: 0` and
+`Full dataset ran: no`; it does not authorize bounded or full reproduction.
+The private directory is mode 0700 and its body-free evidence file is mode 0600.
+
 Bounded real acceptance is a separate, body-free seven-case record. Every case
 exited successfully and its structural artifacts validated; the public record
 contains only command templates, inherited environment-variable names, exit

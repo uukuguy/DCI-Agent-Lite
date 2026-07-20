@@ -416,6 +416,17 @@ make asterion-describe
 
 ## 完整验证矩阵
 
+AF-340 的统一入口先执行固定的模型外 source/Asterion 本地矩阵；输出目录必须是
+新的私有目录，且不得提交：
+
+```bash
+uv run python tools/verify_af340_reproduction.py local \
+  --output-root outputs/af340-local
+```
+
+通过时明确输出 `Agent operations: 0`、`Judge operations: 0` 与
+`Full dataset ran: no`。这只建立本地合同证据，不会隐式进入有界或完整数据集执行。
+
 | 验证层 | 命令 | Provider 操作 | 证明内容 | 状态 |
 |---|---|---:|---|---|
 | 环境准备 | `make asterion-verify-preflight` | 0 | `.env`、Pi、Node、corpus、Judge | **Verified** |

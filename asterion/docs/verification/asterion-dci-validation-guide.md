@@ -36,6 +36,19 @@ worktree corpus cannot silently select the wrong path. Use
 `$ASTERION_DCI_OUTPUT_ROOT` for Asterion artifacts. Supply retained private
 evidence only through `$AF250_ACCEPTANCE_ROOT`.
 
+Before any cost-bearing step, run the AF-340 provider-free coordinator with a
+fresh uncommitted output root:
+
+```bash
+uv run python tools/verify_af340_reproduction.py local \
+  --output-root outputs/af340-local
+```
+
+Pass output includes `Agent operations: 0`, `Judge operations: 0`, and
+`Full dataset ran: no`. The coordinator creates a 0700 root and one 0600
+body-free evidence file; the public report contains neither that private path
+nor command output. Local success never authorizes bounded or full execution.
+
 ### Paper context-profile evidence
 
 The Asterion-owned Pi extension implements the exact closed

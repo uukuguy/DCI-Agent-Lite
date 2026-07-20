@@ -15,6 +15,22 @@ def read(relative: str) -> str:
 
 
 class AsterionDocumentationTests(unittest.TestCase):
+    def test_af340_reproduction_commands_are_documented(self) -> None:
+        documents = (
+            ROOT / "README.md",
+            PROJECT / "docs/guides/asterion-dci-complete-reference.md",
+            PROJECT / "docs/verification/asterion-dci-validation-guide.md",
+        )
+        for document in documents:
+            text = document.read_text(encoding="utf-8")
+            with self.subTest(document=document.name):
+                self.assertIn(
+                    "uv run python tools/verify_af340_reproduction.py local",
+                    text,
+                )
+                self.assertIn("Agent operations: 0", text)
+                self.assertIn("Full dataset ran: no", text)
+
     def test_architecture_verification_blocks_use_one_mixed_repository_root(
         self,
     ) -> None:

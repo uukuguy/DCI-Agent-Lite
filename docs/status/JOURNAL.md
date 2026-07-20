@@ -963,3 +963,5 @@
 - 13:51 D-052 将论文结果目标独立版本化，避免静默改写实验 profile。 [a97c882]
 - 13:54 AF-340-H-002 confirmed 4/4; package acceptance recorded.
 - 13:57 Task7 增加确定性非劣效比较与论文目标绑定，形成可审计复现报告。 [cc47393]
+- 13:58 Task7 checkpoint 将恢复入口推进 H-003，避免再次从过期 Task6 续作。 [3e21782]
+- 14:03 AF-340-H-003 confirmed 4/4; package acceptance recorded.
