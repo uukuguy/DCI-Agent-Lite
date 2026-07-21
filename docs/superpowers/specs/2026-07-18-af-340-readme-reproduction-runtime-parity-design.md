@@ -233,6 +233,14 @@ finite budget. The governance check runs before credential checks, output-root
 creation, or capability authorization. Reuse is permitted only for exact
 compatible evidence.
 
+The canonical scope checker owns the single worklist parser used for this
+decision. Package fields are flat: any H2 ends the current package, fenced
+content is excluded, duplicate package IDs or field names are invalid, and the
+active package projection carries the parsed fields consumed by the full
+gate. Exactly one authority field with value `AF-340` is required; one valid
+line cannot mask a conflicting duplicate or a marker placed under notes/sample
+content.
+
 ## Versioned experiment profiles
 
 AF-340 defines two immutable profiles.

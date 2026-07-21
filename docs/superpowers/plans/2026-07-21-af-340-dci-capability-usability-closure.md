@@ -630,7 +630,8 @@ Expected: completed-lifecycle scope is healthy, the checkpoint commit succeeds, 
 
 ### Task 7: Enforce successor governance on dormant full execution
 
-**Files:** `tools/verify_af340_reproduction.py`,
+**Files:** `tools/project_scope_check.py`, `tests/test_project_scope_check.py`,
+`tools/verify_af340_reproduction.py`,
 `tests/test_af340_reproduction_verifier.py`
 
 - Add RED tests proving completed lifecycle, AF-340 itself, mismatched package
@@ -641,6 +642,10 @@ Expected: completed-lifecycle scope is healthy, the checkpoint commit succeeds, 
 - Add `--work-package-id` for actual full execution. Validate the canonical
   scope audit, one different active package, matching invocation ID, and the
   exact structured worklist authority field before existing full preflight.
+- Use one strict canonical worklist parser: any H2 ends a package, fenced
+  content is excluded, duplicate IDs/fields fail scope, and the verifier reads
+  the parsed active-package fields from the audit. Add conflicting-authority,
+  unrelated-H2, fenced-marker, duplicate-ID, and duplicate-status tests.
 - Run focused verifier tests, compile, Ruff, scope, and diff checks; commit the
   independently reviewed repair.
 
