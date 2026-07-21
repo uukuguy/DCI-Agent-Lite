@@ -1092,3 +1092,4 @@
 ## 2026-07-22
 
 - 02:21 retained inspector 改为 Pi+MiniMax 三维必需、subscription 可选；55 项 verifier 通过。 [50b2010]
+- 02:24 Task 1 独立复审清零；TDD 时序由 RED 报告及协调器中途状态共同确认。
