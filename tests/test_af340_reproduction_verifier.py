@@ -877,7 +877,6 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             reports = []
             for variant, provider, model in (
                 ("pi", None, None),
-                ("claude-subscription", None, None),
                 ("claude-minimax", "minimax", "MiniMax-M3"),
             ):
                 variant_root = root / variant
@@ -2350,39 +2349,62 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             self.assertEqual(executor.calls, [])
             self.assertFalse((Path(temporary) / "full").exists())
 
-    def test_inspect_requires_four_body_free_retained_dimensions(self) -> None:
+    def test_inspect_requires_pi_and_minimax_three_dimensions(self) -> None:
         module = load_verifier()
         with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
             root = Path(temporary)
             resource_root = root / "resources"
-            reports = []
-            for variant, provider, model in (
-                ("pi", None, None),
-                ("claude-subscription", None, None),
-                ("claude-minimax", "minimax", "MiniMax-M3"),
-            ):
-                variant_root = root / variant
-                variant_root.mkdir()
-                report, _executor = self._retained_report_fixture(
-                    module, variant_root, variant, provider=provider, model=model,
-                    resource_root=resource_root,
-                )
-                reports.append(report)
-            args = ["inspect", "--resource-root", str(resource_root)]
-            for report in reports:
-                args.extend(("--report", str(report)))
+            (root / "pi").mkdir()
+            (root / "claude-minimax").mkdir()
+            pi_report, _ = self._retained_report_fixture(
+                module, root / "pi", "pi", resource_root=resource_root
+            )
+            minimax_report, _ = self._retained_report_fixture(
+                module,
+                root / "claude-minimax",
+                "claude-minimax",
+                provider="minimax",
+                model="MiniMax-M3",
+                resource_root=resource_root,
+            )
+            reports = [pi_report, minimax_report]
+            args = [
+                "inspect",
+                "--resource-root",
+                str(resource_root),
+                "--report",
+                str(pi_report),
+                "--report",
+                str(minimax_report),
+            ]
             stdout = io.StringIO()
             self.assertEqual(
                 module.verify_af340_reproduction_main(args, repo_root=ROOT, stdout=stdout),
                 0,
             )
-            self.assertIn("Retained evidence dimensions: 4/4", stdout.getvalue())
+            self.assertIn("Required retained evidence dimensions: 3/3", stdout.getvalue())
             self.assertIn("Agent operations: 0", stdout.getvalue())
             self.assertIn("Judge operations: 0", stdout.getvalue())
             self.assertIn("Full dataset ran: no", stdout.getvalue())
 
             bound_report = json.loads(reports[0].read_text(encoding="utf-8"))
             original_report = json.loads(json.dumps(bound_report))
+            reports[0].chmod(0o644)
+            self.assertEqual(
+                module.verify_af340_reproduction_main(args, repo_root=ROOT), 2
+            )
+            reports[0].chmod(0o600)
+
+            bound_report["report_sha256"] = "0" * 64
+            reports[0].write_text(json.dumps(bound_report) + "\n", encoding="utf-8")
+            reports[0].chmod(0o600)
+            self.assertEqual(
+                module.verify_af340_reproduction_main(args, repo_root=ROOT), 2
+            )
+            reports[0].write_text(json.dumps(original_report) + "\n", encoding="utf-8")
+            reports[0].chmod(0o600)
+
+            bound_report = json.loads(json.dumps(original_report))
             bound_report["resource_manifest"]["corpora"][0]["sha256"] = "f" * 64
             bound_report["plan_sha256"] = module._plan_sha256(
                 module.bounded_operation_plan(ROOT, "pi", None, None),
@@ -2411,6 +2433,87 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             artifact.write_bytes(b"tampered\n")
             self.assertEqual(
                 module.verify_af340_reproduction_main(args, repo_root=ROOT),
+                2,
+            )
+
+    def test_inspect_accepts_subscription_as_optional_third_report(self) -> None:
+        module = load_verifier()
+        with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
+            root = Path(temporary)
+            resource_root = root / "resources"
+            reports = []
+            for variant, provider, model in (
+                ("pi", None, None),
+                ("claude-minimax", "minimax", "MiniMax-M3"),
+                ("claude-subscription", None, None),
+            ):
+                variant_root = root / variant
+                variant_root.mkdir()
+                report, _ = self._retained_report_fixture(
+                    module,
+                    variant_root,
+                    variant,
+                    provider=provider,
+                    model=model,
+                    resource_root=resource_root,
+                )
+                reports.append(report)
+            args = ["inspect", "--resource-root", str(resource_root)]
+            for report in reports:
+                args.extend(("--report", str(report)))
+            stdout = io.StringIO()
+            self.assertEqual(
+                module.verify_af340_reproduction_main(args, repo_root=ROOT, stdout=stdout),
+                0,
+            )
+            self.assertIn("Optional retained evidence dimensions: 1/1", stdout.getvalue())
+            self.assertIn(
+                "Retained dimension: asterion-claude-subscription",
+                stdout.getvalue(),
+            )
+
+    def test_inspect_rejects_missing_minimax_or_duplicate_variant(self) -> None:
+        module = load_verifier()
+        with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
+            root = Path(temporary)
+            resource_root = root / "resources"
+            reports = {}
+            for variant, provider, model in (
+                ("pi", None, None),
+                ("claude-minimax", "minimax", "MiniMax-M3"),
+                ("claude-subscription", None, None),
+            ):
+                variant_root = root / variant
+                variant_root.mkdir()
+                reports[variant], _ = self._retained_report_fixture(
+                    module,
+                    variant_root,
+                    variant,
+                    provider=provider,
+                    model=model,
+                    resource_root=resource_root,
+                )
+            base = ["inspect", "--resource-root", str(resource_root)]
+            missing_minimax = base + [
+                "--report",
+                str(reports["pi"]),
+                "--report",
+                str(reports["claude-subscription"]),
+            ]
+            duplicate_minimax = base + [
+                "--report",
+                str(reports["pi"]),
+                "--report",
+                str(reports["claude-minimax"]),
+                "--report",
+                str(reports["claude-minimax"]),
+            ]
+            self.assertEqual(
+                module.verify_af340_reproduction_main(missing_minimax, repo_root=ROOT),
+                2,
+            )
+            self.assertEqual(
+                module.verify_af340_reproduction_main(duplicate_minimax, repo_root=ROOT),
                 2,
             )
 

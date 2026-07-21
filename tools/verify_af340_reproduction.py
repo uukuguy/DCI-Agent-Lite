@@ -27,13 +27,12 @@ from typing import NamedTuple, TextIO
 REPORT_SCHEMA = "dci.af340-reproduction/v2"
 FULL_REPORT_SCHEMA = "dci.af340-full-reproduction/v2"
 TERMINAL_REPORT_SCHEMA = "dci.af340-terminal-gates/v1"
-RETAINED_DIMENSIONS = frozenset(
-    {
-        "original-pi",
-        "asterion-pi",
-        "asterion-claude-subscription",
-        "asterion-claude-minimax",
-    }
+REQUIRED_RETAINED_DIMENSIONS = frozenset(
+    {"original-pi", "asterion-pi", "asterion-claude-minimax"}
+)
+OPTIONAL_RETAINED_DIMENSIONS = frozenset({"asterion-claude-subscription"})
+ACCEPTED_RETAINED_DIMENSIONS = (
+    REQUIRED_RETAINED_DIMENSIONS | OPTIONAL_RETAINED_DIMENSIONS
 )
 LOCAL_CHECK_IDS = (
     "scope-governance",
@@ -2856,8 +2855,10 @@ def _validate_report(
 
 
 def _run_inspect(args: argparse.Namespace, root: Path, stdout: TextIO) -> int:
-    if len(args.report) != 3:
-        raise ValueError("AF-340 retained evidence requires exactly three reports")
+    if len(args.report) not in {2, 3}:
+        raise ValueError(
+            "AF-340 retained evidence requires two reports plus optional subscription"
+        )
     dimensions: set[str] = set()
     variants: set[str] = set()
     resource_root = _bounded_resource_root(args.resource_root, root)
@@ -2873,10 +2874,14 @@ def _run_inspect(args: argparse.Namespace, root: Path, stdout: TextIO) -> int:
         if overlap:
             raise ValueError("AF-340 retained evidence dimension is duplicated")
         dimensions.update(retained)
-    if dimensions != RETAINED_DIMENSIONS:
+    if not REQUIRED_RETAINED_DIMENSIONS.issubset(dimensions):
         raise ValueError("AF-340 retained evidence is incomplete")
+    if not dimensions.issubset(ACCEPTED_RETAINED_DIMENSIONS):
+        raise ValueError("AF-340 retained evidence is invalid")
+    optional_count = len(dimensions & OPTIONAL_RETAINED_DIMENSIONS)
     stdout.write(
-        "PASS\nRetained evidence dimensions: 4/4\n"
+        "PASS\nRequired retained evidence dimensions: 3/3\n"
+        + f"Optional retained evidence dimensions: {optional_count}/1\n"
         + "".join(f"Retained dimension: {item}\n" for item in sorted(dimensions))
         + "Agent operations: 0\nJudge operations: 0\nFull dataset ran: no\n"
     )
