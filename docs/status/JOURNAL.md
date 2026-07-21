@@ -1112,3 +1112,4 @@
 - 04:35 final branch review requested changes: dormant full lacked runtime governance, root README retained the old three-report/H005 workflow, and session target remained stale; AF-340 reopened only for governed repair.
 - 04:35 D-055 requires actual full execution to match a separately active work package with explicit `Full execution authority: AF-340` before credentials, filesystem effects, or provider work.
 - 04:38 D-055 reopened AF-340 for governed full-boundary and public-contract repair. [57994bf]
+- 04:53 D-055 full 门禁在凭据/输出/授权前绑定 active successor ID 与 worklist authority；59 项 verifier 通过。 [c5ad921]
