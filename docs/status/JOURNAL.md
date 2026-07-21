@@ -1097,3 +1097,4 @@
 - 02:38 Task 2 独立复审清零；153 项 Climb 与交叉契约测试证实路由闭合。
 - 02:52 发布 Pi r14+MiniMax r6 功能闭包文档，H-005 由 D-053 supersede。 [f3619ae]
 - 02:58 修正 AF-340 session target，仅 H-004 active，并新增回归断言。 [280a9b2]
+- 03:00 Task 3 修复复审清零；文档、H-005 supersession 与 active tree 一致。
