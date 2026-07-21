@@ -15,6 +15,25 @@ def read(relative: str) -> str:
 
 
 class AsterionDocumentationTests(unittest.TestCase):
+    def test_af340_functional_closure_uses_pi_and_minimax(self) -> None:
+        complete_reference = (
+            PROJECT / "docs/guides/asterion-dci-complete-reference.md"
+        ).read_text(encoding="utf-8")
+        validation_guide = (
+            PROJECT / "docs/verification/asterion-dci-validation-guide.md"
+        ).read_text(encoding="utf-8")
+        for document in (complete_reference, validation_guide):
+            self.assertIn("Pi r14", document)
+            self.assertIn("Claude MiniMax r6", document)
+            self.assertIn("subscription", document)
+            self.assertIn("optional", document)
+            self.assertIn("strict paper reproduction", document)
+            self.assertIn("new active work package", document)
+            inspect_block = document.split(
+                "verify_af340_reproduction.py inspect ", 1
+            )[1].split("```", 1)[0]
+            self.assertEqual(inspect_block.count("--report"), 2)
+
     def test_af340_reproduction_commands_are_documented(self) -> None:
         documents = (
             ROOT / "README.md",

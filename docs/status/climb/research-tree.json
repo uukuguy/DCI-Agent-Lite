@@ -7,7 +7,7 @@
     "last_cycle": 106,
     "next_hypothesis": "AF-340-H-004",
     "in_flight": null,
-    "next_action": "Recheck body-free Claude subscription login; if restored, collect the sole missing fresh claude-subscription bounded report, then inspect it with retained MiniMax r6 and Pi r14. Do not start H-005 without explicit authorization.",
+    "next_action": "Inspect the retained Pi r14 plus Claude MiniMax r6 reports for complete DCI core-capability coverage under AF-340-H-004.",
     "falsified_routes": [
       "duplicate the authoritative Pi commit across setup.sh and .env.template",
       "convert the independent Pi checkout to vendored or submodule ownership",
@@ -32,7 +32,7 @@
     {
       "id": "AF-340-H-004",
       "work_package_id": "AF-340",
-      "description": "Prove retained bounded original, Asterion Pi, Claude subscription, and Claude MiniMax evidence covers every user-facing path without full execution.",
+      "description": "Prove retained Pi r14 plus Claude MiniMax r6 reports cover the complete DCI core-capability matrix without full execution.",
       "parent_paradigm": "dci-reproduction-bounded-evidence",
       "expected_lift": "+1 complete bounded reproduction matrix",
       "cost_h": 3.0,
@@ -40,19 +40,6 @@
       "status": "pending",
       "created_at": "2026-07-20T13:30:37+08:00",
       "verification_command": "uv run python -m unittest -v tests.test_af340_reproduction_verifier",
-      "results": []
-    },
-    {
-      "id": "AF-340-H-005",
-      "work_package_id": "AF-340",
-      "description": "After explicit invocation authorization, prove matched original/Asterion Pi non-inferiority, exact Claude target comparison, privacy, and terminal closure gates.",
-      "parent_paradigm": "dci-reproduction-full-closure",
-      "expected_lift": "+1 authorized full reproduction closure",
-      "cost_h": 8.0,
-      "ranking": 0.6,
-      "status": "pending",
-      "created_at": "2026-07-20T13:30:37+08:00",
-      "verification_command": "explicit authorization plus tools/verify_af340_reproduction.py full and terminal repository gates",
       "results": []
     }
   ],

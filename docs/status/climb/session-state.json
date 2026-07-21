@@ -5,7 +5,7 @@
   "last_cycle": 106,
   "next_hypothesis": "AF-340-H-004",
   "in_flight": null,
-  "next_action": "Recheck body-free Claude subscription login; if restored, collect the sole missing fresh claude-subscription bounded report, then inspect it with retained MiniMax r6 and Pi r14. Do not start H-005 without explicit authorization.",
+  "next_action": "Inspect the retained Pi r14 plus Claude MiniMax r6 reports for complete DCI core-capability coverage under AF-340-H-004.",
   "falsified_routes": [
     "duplicate the authoritative Pi commit across setup.sh and .env.template",
     "convert the independent Pi checkout to vendored or submodule ownership",

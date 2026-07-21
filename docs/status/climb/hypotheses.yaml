@@ -2421,8 +2421,8 @@ hypotheses:
     decision_reason: deterministic local package acceptance
 - id: AF-340-H-004
   work_package_id: AF-340
-  description: Prove retained bounded original, Asterion Pi, Claude subscription,
-    and Claude MiniMax evidence covers every user-facing path without full execution.
+  description: Prove retained Pi r14 plus Claude MiniMax r6 reports cover the complete
+    DCI core-capability matrix without full execution.
   parent_paradigm: dci-reproduction-bounded-evidence
   expected_lift: +1 complete bounded reproduction matrix
   cost_h: 3.0
@@ -2440,7 +2440,9 @@ hypotheses:
   expected_lift: +1 authorized full reproduction closure
   cost_h: 8.0
   ranking: 0.6
-  status: pending
+  status: superseded
+  superseded_by: D-053
+  superseded_reason: Strict paper reproduction is optional future evidence outside AF-340 closure.
   created_at: '2026-07-20T13:30:37+08:00'
   verification_command: explicit authorization plus tools/verify_af340_reproduction.py
     full and terminal repository gates

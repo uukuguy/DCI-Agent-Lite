@@ -387,25 +387,24 @@ Code still executes from the current checkout. Quick Start and launcher sample
 inputs come from the resource root: Pi checks the exact 11 launcher
 dataset/corpus pairs, while each Claude variant requires only the wiki corpus.
 The exact selected-resource content manifest is bound into the retained plan and report.
-Run the three variants separately:
+AF-340 functional closure requires the retained Pi r14 and Claude MiniMax r6
+reports. Generate those two required bounded reports separately:
 
 ```bash
 DCI_RESOURCE_ROOT=/absolute/path/to/main/DCI-Agent-Lite
 uv run python tools/verify_af340_reproduction.py bounded --variant pi \
   --env-file .env --resource-root "$DCI_RESOURCE_ROOT" \
   --output-root outputs/verification/af340-bounded-pi
-uv run python tools/verify_af340_reproduction.py bounded --variant claude-subscription \
-  --env-file .env --resource-root "$DCI_RESOURCE_ROOT" \
-  --output-root outputs/verification/af340-bounded-claude-subscription
 uv run python tools/verify_af340_reproduction.py bounded --variant claude-minimax \
   --provider minimax --model MiniMax-M3 --env-file .env \
   --resource-root "$DCI_RESOURCE_ROOT" \
   --output-root outputs/verification/af340-bounded-claude-minimax
 ```
 
-Inspect the three retained 0600 reports without contacting a provider; the
-inspection passes only when original Pi, Asterion Pi, Claude subscription, and
-Claude MiniMax form the exact four-dimensional evidence set. Inspection
+Inspect the two retained 0600 reports without contacting a provider. Pi r14
+covers original Pi and Asterion Pi, while Claude MiniMax r6 covers the
+Asterion Claude path. Together they form the required three-dimensional
+core-capability evidence set. Inspection
 rebuilds the exact selected dataset/corpus content manifest from the external
 resource root and rehashes native request, terminal state/event, and Judge
 artifacts from the private tree. Self-authored report JSON is insufficient, and
@@ -415,13 +414,30 @@ same-path resource mutation invalidates the evidence:
 uv run python tools/verify_af340_reproduction.py inspect \
   --resource-root "$DCI_RESOURCE_ROOT" \
   --report outputs/verification/af340-bounded-pi/af340-bounded-report.json \
-  --report outputs/verification/af340-bounded-claude-subscription/af340-bounded-report.json \
   --report outputs/verification/af340-bounded-claude-minimax/af340-bounded-report.json
 ```
 
 The AF-340 H004 train/evaluation hooks require
-`AF340_RESOURCE_ROOT="$DCI_RESOURCE_ROOT"` alongside the three retained-report
+`AF340_RESOURCE_ROOT="$DCI_RESOURCE_ROOT"` alongside the two retained-report
 variables and forward that external anchor to `inspect`.
+
+#### Optional subscription evidence
+
+A validated Claude subscription report is optional supplementary evidence. It
+may be generated separately and appended to the primary inspection command as
+a third `--report`; subscription availability does not block AF-340 closure:
+
+```bash
+uv run python tools/verify_af340_reproduction.py bounded --variant claude-subscription \
+  --env-file .env --resource-root "$DCI_RESOURCE_ROOT" \
+  --output-root outputs/verification/af340-bounded-claude-subscription
+```
+
+#### Dormant optional strict paper reproduction tooling
+
+The following full/paper commands are dormant optional tooling. They cannot
+close AF-340 and may execute only after a new active work package and explicit
+budget authorization.
 
 Print the immutable profile digest, selected-query counts, operation maxima, and
 budget before requesting authority:
@@ -462,9 +478,9 @@ uv run python tools/verify_af340_reproduction.py inspect-full \
   --report outputs/verification/af340-full-pi/af340-full-report.json
 ```
 
-One report cannot close H005. Produce accepted Pi and
-`paper-reference/claude-code` full reports, run the terminal gates from a clean
-repository, and validate the three independent artifacts together:
+The historical superseded H005 route cannot close AF-340. It required accepted
+Pi and `paper-reference/claude-code` full reports, terminal gates from a clean
+repository, and validation of the three independent artifacts together:
 
 ```bash
 uv run python tools/verify_af340_reproduction.py terminal \

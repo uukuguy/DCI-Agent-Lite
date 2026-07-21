@@ -9,12 +9,11 @@
 - Last cycle: 106
 - Next hypothesis: AF-340-H-004
 - In flight: none
-- Next action: Recheck body-free Claude subscription login; if restored, collect the sole missing fresh claude-subscription bounded report, then inspect it with retained MiniMax r6 and Pi r14. Do not start H-005 without explicit authorization.
+- Next action: Inspect the retained Pi r14 plus Claude MiniMax r6 reports for complete DCI core-capability coverage under AF-340-H-004.
 
 ## Active hypotheses
 
-- **AF-340-H-004** (pending, rank 0.70): Prove retained bounded original, Asterion Pi, Claude subscription, and Claude MiniMax evidence covers every user-facing path without full execution.
-- **AF-340-H-005** (pending, rank 0.60): After explicit invocation authorization, prove matched original/Asterion Pi non-inferiority, exact Claude target comparison, privacy, and terminal closure gates.
+- **AF-340-H-004** (pending, rank 0.70): Prove retained Pi r14 plus Claude MiniMax r6 reports cover the complete DCI core-capability matrix without full execution.
 
 ## Run ladder
 
