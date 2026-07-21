@@ -370,7 +370,7 @@
 - Dependencies: AF-330
 - Acceptance: original DCI and Asterion independently emit the same safe effective-configuration schema; Pi defaults to `openai-codex`/`gpt-5.6-luna`, Claude Code retains both optional local subscription support and explicit compatible MiniMax Coding Plan translation, and Judge defaults to DeepSeek V4 Flash while every value remains overrideable through the unified precedence layers. Model-free gates cover the complete DCI core-capability matrix; all eleven documented benchmark launchers, Quick Start, and L0-L4 paths pass local and bounded gates. Pi r14 plus Claude MiniMax r6 must independently revalidate and cover exactly `original-pi`, `asterion-pi`, and `asterion-claude-minimax`; subscription evidence may be additional but is not required. H-004 closure plus terminal local/static/product/privacy/governance gates closes AF-340. Any paper-model, published-score, statistical non-inferiority, or full-dataset execution requires a new active work package, explicit invocation authorization, and finite budget.
 - Design: `docs/superpowers/specs/2026-07-18-af-340-readme-reproduction-runtime-parity-design.md`
-- Plan: `docs/superpowers/plans/2026-07-18-af-340-readme-reproduction-runtime-parity.md`
+- Plan: `docs/superpowers/plans/2026-07-21-af-340-dci-capability-usability-closure.md`
 
 ## AF-095 — Asterion framework identity and extraction
 
