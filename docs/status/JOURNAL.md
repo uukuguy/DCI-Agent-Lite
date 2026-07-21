@@ -1096,3 +1096,4 @@
 - 02:37 AF-340 Climb 改为 Pi+MiniMax 双报告 H-004，移除 subscription/H-005 执行门槛。 [275fcef]
 - 02:38 Task 2 独立复审清零；153 项 Climb 与交叉契约测试证实路由闭合。
 - 02:52 发布 Pi r14+MiniMax r6 功能闭包文档，H-005 由 D-053 supersede。 [f3619ae]
+- 02:58 修正 AF-340 session target，仅 H-004 active，并新增回归断言。 [280a9b2]
