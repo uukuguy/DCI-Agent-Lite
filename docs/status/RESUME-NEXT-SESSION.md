@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-22 04:11 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-22 04:13 +0800. **Session remains active — not a final handoff.**
 
 Active work package: none
 
@@ -19,7 +19,7 @@ Currently running: no process.
 ## Repository state
 
 - Closure work is on `codex/af-340-capability-closure` in `.worktrees/af-340-capability-closure`; there is no configured upstream and nothing has been pushed.
-- The structural closure commit includes `WORKLIST`, `CURRENT-STATE`, this live checkpoint, and the completed Climb session/tree. Its exact hash is recorded by the immediately following checkpoint commit.
+- Structural closure commit `4d2defd` includes `WORKLIST`, `CURRENT-STATE`, this live checkpoint, and the completed Climb session/tree.
 - External `pi/`, retained evidence, credentials, and ignored local execution logs remain outside the committed change set.
 
 ## Next concrete action
