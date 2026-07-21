@@ -163,7 +163,7 @@ Asterion 通过 Asterion-owned Pi extension 实现闭合的 `dci.context-profile
 
 私有 `state.json` 的 `runtime_context_control` 保存这份不可变策略 identity；公开应用结果只投影 body-free 版本、计数器、extension digest 和 opaque artifact reference。
 
-证据层严格分为 **Implemented**、**Model-free verified**、**Bounded provider verified** 和 **Experiment reproduced**。当前实现与模型外测试属于前两层；有界 L3/L4 证据由 `tools/verify_dci_context_acceptance.py --provider-backed` 单独生成；完整论文复现仍属于 AF-340，Full dataset ran: no。
+证据层严格分为 **Implemented**、**Model-free verified**、**Bounded provider verified** 和 **Experiment reproduced**。当前实现与模型外测试属于前两层；有界 L3/L4 证据由 `tools/verify_dci_context_acceptance.py --provider-backed` 单独生成。完整论文复现只有 new non-AF-340 active work package 取得 D-055 authority 后才能执行；当前仍是 Full dataset ran: no。
 
 ### 2. 已保存 conversation artifact 的处理
 
@@ -297,8 +297,9 @@ profile、mode、limit、tools、context 或 resolution override 都会在读取
 私有 artifact digests。agent 多轮内部 API request 数仍标为 externally ambiguous，
 不会伪称三个 operation 等于三个底层 HTTP request。binder 会重新哈希全部引用产物
 并再次检查 clean runtime；任何 symlink、权限、digest、runtime 或既有 binding 冲突
-都在不修改 Climb 状态的情况下失败。GPT-4.1 是论文实验 provenance；只有 AF-340
-声称论文分数可比时才要求该实验配置。完整数据集和论文分数复现仍属于 AF-340。
+都在不修改 Climb 状态的情况下失败。GPT-4.1 是论文实验 provenance；只有 new
+non-AF-340 active work package 取得 D-055 authority 并声称论文分数可比时，才要求
+该实验配置并允许完整数据集或论文分数复现。
 
 完整实现的模型外验收包括 538/538 个细粒度 selector、6/6 个额外 batch 语义和 12/12 个原始/Asterion launcher 对。迁移期间还运行过一条有界 Pi+Judge batch 及精确 reuse 证明；AF-320 的三操作 terminal evidence 只有在上述 verifier 成功且 binder 重哈希后才可标记为 bounded provider verified。
 
@@ -309,8 +310,8 @@ profile、mode、limit、tools、context 或 resolution override 都会在读取
 Bundled profile 定义在 `asterion/dci/resources/batch-profiles.json`：
 
 绑定 AF-320 `paper-full` inventory 的 profile，其未修改命令仍会在读取数据或
-启动 provider 前失败关闭，并且只能由 AF-340 的显式 full authorization 执行。
-AF-340 另行开放精确整数 `--limit 1` 的有界 successor gate：系统先验证未截断
+启动 provider 前失败关闭；只有 new non-AF-340 active work package 取得 D-055
+authority 后才能执行。精确整数 `--limit 1` 只进入有界 gate：系统先验证未截断
 数据与 profile 绑定的完整 paper scope 完全一致，再只执行一行；配置证据固定记录
 versioned `paper-bounded` execution class、`limit-1`、`full_dataset: false` 和
 `comparable: false`。授权完整运行记录独立的 `paper-full-authorized` class；其他
@@ -460,6 +461,8 @@ canonical flat worklist entry must contain exactly one
 the placeholder below; no such package or current execution route exists:
 
 ```bash
+# Required canonical worklist field (this comment grants no authority):
+# Full execution authority: AF-340
 uv run python tools/verify_af340_reproduction.py full --profile current-default/pi \
   --output-root outputs/verification/af340-full-pi \
   --estimated-budget-usd 0 --work-package-id AF-XYZ --authorize-full
@@ -525,7 +528,8 @@ private paths, or child process bodies.
 
 AF-320 另提供两个 paper-inventory launcher；它们没有原始/Asterion
 一对一迁移计数声明。它们对应 `paper-full` scope，在 AF-320 会于 provider
-启动前失败关闭；只有 AF-340 的独立授权才能执行：
+启动前失败关闭；只有 new non-AF-340 active work package 取得 D-055 authority
+后才能执行：
 
 ```text
 scripts/beir/benchmark_arguana.sh

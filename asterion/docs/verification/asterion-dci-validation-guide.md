@@ -84,7 +84,7 @@ uv run --project asterion python tools/verify_dci_context_acceptance.py \
 
 Only a successful retained run earns **Bounded provider verified**. It does not
 earn **Experiment reproduced**: complete paper datasets, score tables, and
-ablations remain AF-340 work and require separate time/cost authorization. Never
+ablations require a new non-AF-340 active work package with D-055 authority. Never
 commit the output root, credentials, prompts, answers, or tool bodies. Profile
 runs intended for resume must preserve the original Pi session with
 `--keep-session`.
@@ -114,7 +114,8 @@ credentials, and the complete public identity of the configured supported Judge.
 It then runs only `qa-agent`, `qa-judge`, and `ir-agent`, in that order. The 0600
 report binds the effective endpoint, API, model, request shaping, and prompt
 contract, but contains no prompt, answer, tool body, credential, or private path.
-GPT-4.1 is paper experiment provenance and is required only for AF-340 paper-score
+GPT-4.1 is paper experiment provenance and is required only when a new
+non-AF-340 active work package with D-055 authority claims paper-score
 comparability. Agent API request multiplicity remains externally ambiguous. Bind a
 successful report only after the verifier exits successfully:
 
@@ -145,7 +146,8 @@ uv run --project asterion asterion-dci ablation render \
 ```
 
 The paper render is deliberately a `NON-EXECUTABLE` comment. Every
-`paper-full` row remains blocked until separately reviewed AF-340 authority.
+`paper-full` row remains blocked until a new non-AF-340 active work package has
+D-055 authority.
 FineWeb corpus rows preserve the paper's unreported revision, seed, selection
 algorithm, IDs, and manifest digest as null; they do not invent reproduction
 identity. The restricted tool row is the literal Pi `read,grep` set and never
@@ -457,6 +459,8 @@ canonical flat worklist entry must contain exactly one
 the placeholder below; no such package or current execution route exists:
 
 ```bash
+# Required canonical worklist field (this comment grants no authority):
+# Full execution authority: AF-340
 uv run python tools/verify_af340_reproduction.py full --profile current-default/pi \
   --output-root outputs/verification/af340-full-pi \
   --estimated-budget-usd 0 --work-package-id AF-XYZ --authorize-full

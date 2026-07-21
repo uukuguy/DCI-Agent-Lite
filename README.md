@@ -261,7 +261,8 @@ uv run --project asterion asterion-dci ablation list --execution-class bounded-f
 The matrix contains ten non-executable paper declarations and ten tiny bounded
 analogues. A bounded run requires one explicit `--ablation-row` plus the normal
 provider/model and output authorization. `paper-full` rows are unconditionally
-rejected before provider configuration until AF-340; the unpublished FineWeb
+rejected before provider configuration. Future execution requires a new non-AF-340
+active work package with D-055 authority; the unpublished FineWeb
 selection fields remain null rather than fabricated.
 
 `paper verify` is model-free by default and reports zero agent/Judge operations.
@@ -271,10 +272,10 @@ identity of the configured supported Judge, and an empty private output root
 before running the fixed `QA agent → Judge → IR agent` plan. It never expands the matrix or runs a
 full dataset. The report binds the effective Judge endpoint, API, model, safe
 request-shaping settings, and prompt-contract digest. GPT-4.1 remains the paper
-experiment provenance and is required only for an AF-340 paper-score comparison
-claim. Successful evidence can be terminally bound with
-`tools/climb/bind-paper-benchmark-evidence.py`; private prompts, answers, tool
-bodies, and credentials must never be committed.
+experiment provenance and is required only if a new non-AF-340 active work
+package with D-055 authority makes a paper-score comparison claim. Successful
+evidence can be terminally bound with `tools/climb/bind-paper-benchmark-evidence.py`;
+private prompts, answers, tool bodies, and credentials must never be committed.
 
 The one-to-one Pi-default wrappers under `asterion/scripts/{bcplus_eval,qa,bright}`
 delegate shared repository `.env` loading to the Python entry point, preflight
@@ -283,8 +284,6 @@ their dataset and corpus, and call only `asterion-dci benchmark`. For example:
 ```bash
 bash asterion/scripts/qa/run_hotpotqa_dev_sample50.sh --limit 1
 bash asterion/scripts/bcplus_eval/run_bcplus_eval_openai.sh level3 high --limit 1
-# deliberate full profile run (no limit)
-bash asterion/scripts/bright/run_bio.sh
 ```
 
 `--resume-policy compatible` resumes compatible incomplete native rows and
@@ -560,7 +559,7 @@ Evidence labels are intentionally narrow:
 - **Implemented**: extension, transport, artifacts, CLI, benchmark, resume, and installed application are present.
 - **Model-free verified**: deterministic hook, failure, privacy, wheel, and surface tests pass with Provider operations: 0 and Full dataset ran: no.
 - **Bounded provider verified**: reserved for retained Quick Start, L3, and L4 evidence from `tools/verify_original_readme.py --level bounded`; it is not a full benchmark claim.
-- **Experiment reproduced**: not yet claimed; full paper runs require separate AF-340 budget authorization.
+- **Experiment reproduced**: not yet claimed; a full paper run requires a new non-AF-340 active work package with D-055 authority.
 
 Each closed profile is executable through the normal original DCI entry point. These commands use runtime defaults; each is a provider operation when executed:
 
@@ -694,6 +693,8 @@ package's canonical flat worklist entry must contain exactly one
 placeholder only after it exists:
 
 ```bash
+# Required canonical worklist field (this comment grants no authority):
+# Full execution authority: AF-340
 uv run python tools/verify_af340_reproduction.py full \
   --profile current-default/pi \
   --output-root outputs/verification/af340-full \
@@ -790,6 +791,8 @@ command and contain exactly one `Full execution authority: AF-340` field in its
 canonical flat worklist entry before this example can be used:
 
 ```bash
+# Required canonical worklist field (this comment grants no authority):
+# Full execution authority: AF-340
 uv run python tools/verify_af340_reproduction.py full --profile current-default/pi \
   --output-root outputs/verification/af340-full-pi \
   --estimated-budget-usd 0 --work-package-id AF-XYZ --authorize-full

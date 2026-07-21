@@ -79,14 +79,106 @@ class AsterionDocumentationTests(unittest.TestCase):
             self.assertTrue(dry_runs)
             for match in actual_full:
                 self.assertIn("--work-package-id AF-XYZ", match.group("body"))
-                nearby_contract = document[
-                    max(0, match.start() - 900) : match.start()
-                ]
                 self.assertIn(
-                    "Full execution authority: AF-340", nearby_contract
+                    "Full execution authority: AF-340", match.group("body")
                 )
             for match in dry_runs:
                 self.assertNotIn("--work-package-id", match.group("body"))
+                self.assertNotIn(
+                    "Full execution authority: AF-340", match.group("body")
+                )
+
+    def test_earlier_dci_sections_do_not_grant_af340_full_authority(self) -> None:
+        readme = read("README.md")
+        complete_reference = read(
+            "asterion/docs/guides/asterion-dci-complete-reference.md"
+        )
+        validation_guide = read(
+            "asterion/docs/verification/asterion-dci-validation-guide.md"
+        )
+
+        cases = (
+            (
+                "README paper and launcher overview",
+                readme.split("The matrix contains", 1)[1].split(
+                    "The installed registry also exposes", 1
+                )[0],
+                (
+                    "rejected before provider configuration until AF-340",
+                    "required only for an AF-340 paper-score comparison claim",
+                ),
+            ),
+            (
+                "README evidence labels",
+                readme.split("Evidence labels are intentionally narrow", 1)[1].split(
+                    "Each closed profile is executable", 1
+                )[0],
+                ("full paper runs require separate AF-340 budget authorization",),
+            ),
+            (
+                "complete reference context evidence",
+                complete_reference.split(
+                    "### 1. Pi 模型输入前的运行时策略", 1
+                )[1].split("### 2. 已保存 conversation artifact 的处理", 1)[0],
+                ("完整论文复现仍属于 AF-340",),
+            ),
+            (
+                "complete reference paper verifier",
+                complete_reference.split("## Benchmark DCI-Agent-Lite", 1)[1].split(
+                    "## 数据集、Profile 与 Launcher", 1
+                )[0],
+                (
+                    "只有 AF-340\n声称论文分数可比时才要求该实验配置",
+                    "完整数据集和论文分数复现仍属于 AF-340",
+                ),
+            ),
+            (
+                "complete reference launcher authority",
+                complete_reference.split("## 数据集、Profile 与 Launcher", 1)[
+                    1
+                ].split("## 指标、分析、图表与导出", 1)[0],
+                (
+                    "只能由 AF-340 的显式 full authorization 执行",
+                    "AF-340 另行开放精确整数 `--limit 1` 的有界 successor gate",
+                    "只有 AF-340 的独立授权才能执行",
+                ),
+            ),
+            (
+                "validation context evidence",
+                validation_guide.split("### Paper context-profile evidence", 1)[
+                    1
+                ].split("### Paper and bounded ablation matrix", 1)[0],
+                ("ablations remain AF-340 work",),
+            ),
+            (
+                "validation paper matrix",
+                validation_guide.split("### Paper and bounded ablation matrix", 1)[
+                    1
+                ].split("## 3. Tier 1", 1)[0],
+                (
+                    "required only for AF-340 paper-score\ncomparability",
+                    "blocked until separately reviewed AF-340 authority",
+                ),
+            ),
+        )
+
+        for label, section, forbidden in cases:
+            with self.subTest(section=label):
+                normalized_section = " ".join(section.split())
+                for stale_claim in forbidden:
+                    self.assertNotIn(
+                        " ".join(stale_claim.split()), normalized_section
+                    )
+                self.assertRegex(
+                    section, r"new\s+non-AF-340\s+active work package"
+                )
+                self.assertIn("D-055 authority", section)
+
+        readme_overview = cases[0][1]
+        self.assertNotRegex(
+            readme_overview,
+            r"(?m)^\s*bash asterion/scripts/bright/run_bio\.sh\s*$",
+        )
 
     def test_af340_reproduction_commands_are_documented(self) -> None:
         documents = (
