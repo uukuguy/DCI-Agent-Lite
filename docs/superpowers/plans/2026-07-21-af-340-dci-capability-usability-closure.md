@@ -558,6 +558,7 @@ Expected: only planned verifier, tests, shell, documentation, and tracked state 
 **Files:**
 - Modify: `docs/status/WORKLIST.md`
 - Modify: `docs/status/CURRENT-STATE.md`
+- Modify: `docs/status/climb/session-state.json`
 - Modify: `docs/status/JOURNAL.md`
 - Rewrite as active checkpoint: `docs/status/RESUME-NEXT-SESSION.md`
 
@@ -588,12 +589,17 @@ Set AF-340 `Status: completed` and add closure evidence naming:
 
 Update CURRENT-STATE structurally: AF-340 accepted, no active package unless a separately approved successor exists, and the framework objective remains DCI capability-package usability. Do not add session narration or next steps to CURRENT-STATE.
 
+Set the AF-340 Climb session phase to `completed`. Before the completed-lifecycle
+scope check, also draft RESUME as a live checkpoint that no longer presents
+AF-340 as active; finalize its exact closure-commit hash in Step 4. This ordering
+is required because the scope checker evaluates the working-tree lifecycle state.
+
 - [ ] **Step 3: Verify and commit structural closure**
 
 ```bash
 python3 tools/project_scope_check.py
 git diff --check
-git add docs/status/WORKLIST.md docs/status/CURRENT-STATE.md
+git add docs/status/WORKLIST.md docs/status/CURRENT-STATE.md docs/status/climb/session-state.json
 git commit -m "docs: close AF-340 capability usability"
 ```
 
@@ -601,7 +607,7 @@ Expected: closure preflight passes and the structural closure commit succeeds.
 
 - [ ] **Step 4: Journal the exact closure commit and checkpoint recovery state**
 
-Read the hash from `git rev-parse --short HEAD`, append one terminal JOURNAL line containing that hash plus the fresh Task 5 verification counts, and rewrite RESUME as `# Live Session Checkpoint` while the session remains active. Record that no paper/full successor is selected.
+Read the hash from `git rev-parse --short HEAD`, append one terminal JOURNAL line containing that hash plus the fresh Task 5 verification counts, and finalize RESUME as `# Live Session Checkpoint` while the session remains active. Record that no paper/full successor is selected.
 
 - [ ] **Step 5: Verify and commit the state checkpoint**
 
