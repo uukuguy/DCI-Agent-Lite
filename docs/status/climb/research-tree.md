@@ -9,7 +9,7 @@
 - Last cycle: 106
 - Next hypothesis: AF-340-H-004
 - In flight: none
-- Next action: Complete AF-340-H-004 with fresh Pi and Claude-subscription bounded reports; the retained MiniMax report is valid.
+- Next action: Recheck body-free Claude subscription login; if restored, collect the sole missing fresh claude-subscription bounded report, then inspect it with retained MiniMax r6 and Pi r14. Do not start H-005 without explicit authorization.
 
 ## Active hypotheses
 
