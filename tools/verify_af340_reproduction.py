@@ -120,6 +120,87 @@ class FullScopeResult(NamedTuple):
 FullRunner = Callable[..., FullRunResult]
 
 
+def _canonical_scope_audit(root: Path) -> Mapping[str, object]:
+    checker = root / "tools/project_scope_check.py"
+    if checker.is_symlink() or not checker.is_file():
+        raise ValueError("AF-340 full authority governance scope checker is invalid")
+    completed = subprocess.run(
+        (sys.executable, str(checker), "--root", str(root)),
+        cwd=root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    try:
+        payload = json.loads(completed.stdout)
+    except (TypeError, ValueError) as error:
+        raise ValueError(
+            "AF-340 full authority governance scope audit is malformed"
+        ) from error
+    if completed.returncode != 0 or not isinstance(payload, dict):
+        raise ValueError("AF-340 full authority governance scope audit failed")
+    return payload
+
+
+def _full_execution_governance(
+    args: argparse.Namespace,
+    root: Path,
+    *,
+    scope_audit: Callable[[Path], Mapping[str, object]] = _canonical_scope_audit,
+) -> None:
+    work_package_id = getattr(args, "work_package_id", None)
+    if (
+        not isinstance(work_package_id, str)
+        or re.fullmatch(r"[A-Z][A-Z0-9]*-\d+", work_package_id) is None
+    ):
+        raise ValueError("AF-340 full authority governance requires a work package")
+    if work_package_id == "AF-340":
+        raise ValueError("AF-340 full authority governance requires a successor package")
+
+    audit = scope_audit(root)
+    if (
+        not isinstance(audit, Mapping)
+        or audit.get("ok") is not True
+        or audit.get("lifecycle") != "active"
+        or audit.get("active_package") != work_package_id
+        or audit.get("errors") != []
+    ):
+        raise ValueError(
+            "AF-340 full authority governance scope must match one active package"
+        )
+
+    try:
+        lines = (root / "docs/status/WORKLIST.md").read_text(
+            encoding="utf-8"
+        ).splitlines()
+    except OSError as error:
+        raise ValueError("AF-340 full authority governance worklist is invalid") from error
+    package_header = re.compile(r"^## (?P<id>[A-Z][A-Z0-9]*-\d+) — .+$")
+    packages: list[tuple[str, list[str]]] = []
+    current: tuple[str, list[str]] | None = None
+    for line in lines:
+        header = package_header.fullmatch(line)
+        if header is not None:
+            current = (header.group("id"), [])
+            packages.append(current)
+        elif current is not None:
+            current[1].append(line)
+    active_ids = [
+        package_id
+        for package_id, package_lines in packages
+        if package_lines.count("- Status: in_progress") == 1
+    ]
+    matching = [item for item in packages if item[0] == work_package_id]
+    if active_ids != [work_package_id] or len(matching) != 1:
+        raise ValueError(
+            "AF-340 full authority governance worklist must match one active package"
+        )
+    if matching[0][1].count("- Full execution authority: AF-340") != 1:
+        raise ValueError(
+            "AF-340 full authority governance marker is missing or ambiguous"
+        )
+
+
 def local_operation_plan(repo_root: Path) -> tuple[Operation, ...]:
     python = sys.executable
     return (
@@ -454,6 +535,7 @@ def _parser() -> argparse.ArgumentParser:
     full.add_argument("--output-root", type=Path, required=True)
     full.add_argument("--estimated-budget-usd", type=float, required=True)
     full.add_argument("--authorize-full", action="store_true")
+    full.add_argument("--work-package-id")
     full.add_argument("--dry-run", action="store_true")
     full.add_argument("--provider")
     full.add_argument("--model")
@@ -2580,17 +2662,18 @@ def _run_full(
     executor: Callable[..., object],
     full_runner: FullRunner,
     full_comparator: Callable[[object | None, object, object], object],
+    full_governance: Callable[[argparse.Namespace, Path], None],
     full_preflight: Callable[[argparse.Namespace, Path, object], None],
     stdout: TextIO,
 ) -> int:
+    if args.dry_run or not args.authorize_full:
+        profile, plan = _full_preflight(args, root)
+        _print_full_plan(args, profile, plan, stdout)
+        stdout.write("Full authorization issued: no\nFull dataset ran: no\n")
+        return 0 if args.dry_run else 2
+    full_governance(args, root)
     profile, plan = _full_preflight(args, root)
     _print_full_plan(args, profile, plan, stdout)
-    if args.dry_run:
-        stdout.write("Full authorization issued: no\nFull dataset ran: no\n")
-        return 0
-    if not args.authorize_full:
-        stdout.write("Full authorization issued: no\nFull dataset ran: no\n")
-        return 2
     full_preflight(args, root, profile)
     parent_root = _private_root(args.output_root)
     authorize, *_ = _asterion_profile_api(root)
@@ -3499,6 +3582,9 @@ def verify_af340_reproduction_main(
     bounded_preflight: Callable[..., BoundedPreflight] = _default_bounded_preflight,
     full_runner: FullRunner = _default_full_runner,
     full_comparator: Callable[[object | None, object, object], object] = _default_full_comparator,
+    full_governance: Callable[
+        [argparse.Namespace, Path], None
+    ] = _full_execution_governance,
     full_preflight: Callable[[argparse.Namespace, Path, object], None] = _full_execution_preflight,
     stdout: TextIO | None = None,
     stderr: TextIO | None = None,
@@ -3515,7 +3601,14 @@ def verify_af340_reproduction_main(
             return _run_bounded(args, root, executor, bounded_preflight, stdout)
         if args.mode == "full":
             return _run_full(
-                args, root, executor, full_runner, full_comparator, full_preflight, stdout
+                args,
+                root,
+                executor,
+                full_runner,
+                full_comparator,
+                full_governance,
+                full_preflight,
+                stdout,
             )
         if args.mode == "terminal":
             return _run_terminal(args, root, executor, stdout)

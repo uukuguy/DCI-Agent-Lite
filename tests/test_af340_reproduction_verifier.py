@@ -184,6 +184,11 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             cleanup_root=None,
         )
 
+    @staticmethod
+    def _approved_full_governance(args, _root) -> None:
+        if args.work_package_id != "AF-900":
+            raise ValueError("test full authority was not approved")
+
     def _run(self, module, argv, **kwargs):
         return module.verify_af340_reproduction_main(
             argv, bounded_preflight=self._preflight, **kwargs
@@ -1295,6 +1300,179 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             self.assertIn("Maximum agent operations: 3956", stdout.getvalue())
             self.assertIn("Maximum Judge operations: 2910", stdout.getvalue())
 
+    def test_full_parser_exposes_explicit_successor_work_package(self) -> None:
+        module = load_verifier()
+        parser = module._parser()
+        subparsers = next(
+            action
+            for action in parser._actions
+            if isinstance(action, __import__("argparse")._SubParsersAction)
+        )
+        full_parser = subparsers.choices["full"]
+        option_strings = {
+            option
+            for action in full_parser._actions
+            for option in action.option_strings
+        }
+        self.assertIn("--work-package-id", option_strings)
+
+    def test_full_governance_requires_one_authorized_active_successor(self) -> None:
+        module = load_verifier()
+        governance = getattr(module, "_full_execution_governance", None)
+        self.assertTrue(callable(governance), "full governance validator is missing")
+
+        approved_audit = {
+            "ok": True,
+            "lifecycle": "active",
+            "active_package": "AF-900",
+            "errors": [],
+        }
+        args = SimpleNamespace(work_package_id="AF-900")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            status = root / "docs/status"
+            status.mkdir(parents=True)
+            worklist = status / "WORKLIST.md"
+
+            worklist.write_text(
+                "# Worklist\n\n"
+                "## AF-900 — Authorized successor\n\n"
+                "- Status: in_progress\n"
+                "- Full execution authority: AF-340\n",
+                encoding="utf-8",
+            )
+            governance(args, root, scope_audit=lambda _root: approved_audit)
+
+            rejected = (
+                (
+                    SimpleNamespace(work_package_id="AF-900"),
+                    {**approved_audit, "lifecycle": "complete", "active_package": None},
+                    "active",
+                ),
+                (
+                    SimpleNamespace(work_package_id="AF-340"),
+                    {**approved_audit, "active_package": "AF-340"},
+                    "successor",
+                ),
+                (
+                    SimpleNamespace(work_package_id="AF-901"),
+                    approved_audit,
+                    "match",
+                ),
+                (
+                    SimpleNamespace(work_package_id="AF-900"),
+                    {**approved_audit, "ok": False, "errors": ["fixture failure"]},
+                    "scope",
+                ),
+                (
+                    SimpleNamespace(work_package_id="AF-900"),
+                    {"ok": True, "lifecycle": "active", "active_package": "AF-900"},
+                    "scope",
+                ),
+            )
+            for invocation, audit, reason in rejected:
+                with self.subTest(reason=reason), self.assertRaisesRegex(
+                    ValueError, "governance|authority"
+                ):
+                    governance(invocation, root, scope_audit=lambda _root, value=audit: value)
+
+            worklist.write_text(
+                "# Worklist\n\n"
+                "## AF-900 — Unauthorized successor\n\n"
+                "- Status: in_progress\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "authority"):
+                governance(args, root, scope_audit=lambda _root: approved_audit)
+
+            worklist.write_text(
+                "# Worklist\n\n"
+                "## AF-900 — Ambiguous successor\n\n"
+                "- Status: in_progress\n"
+                "- Full execution authority: AF-340\n"
+                "- Full execution authority: AF-340\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "authority"):
+                governance(args, root, scope_audit=lambda _root: approved_audit)
+
+    def test_completed_canonical_scope_rejects_before_any_full_preflight(self) -> None:
+        module = load_verifier()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "tools").mkdir()
+            shutil.copy2(
+                ROOT / "tools/project_scope_check.py",
+                root / "tools/project_scope_check.py",
+            )
+            (root / "asterion/docs/architecture").mkdir(parents=True)
+            (root / "asterion/docs/architecture/agent-framework.md").write_text(
+                "# Fixture\n", encoding="utf-8"
+            )
+            status = root / "docs/status"
+            (status / "climb").mkdir(parents=True)
+            (status / "WORKLIST.md").write_text(
+                "# Worklist\n\n"
+                "> Project lifecycle: complete\n\n"
+                "## AF-340 — Completed package\n\n"
+                "- Status: completed\n",
+                encoding="utf-8",
+            )
+            (status / "CURRENT-STATE.md").write_text(
+                "Framework north star: `asterion/docs/architecture/agent-framework.md`\n",
+                encoding="utf-8",
+            )
+            (status / "RESUME-NEXT-SESSION.md").write_text(
+                "Active work package: none\n", encoding="utf-8"
+            )
+            (status / "climb/session-state.json").write_text(
+                '{"phase":"completed"}\n', encoding="utf-8"
+            )
+            output_root = root / "full-output"
+            plan_preflight = mock.Mock(
+                return_value=(
+                    SimpleNamespace(
+                        profile_id="fixture/pi",
+                        dataset_inventory_sha256="a" * 64,
+                        experiment_scopes_sha256="b" * 64,
+                    ),
+                    {
+                        "profile_sha256": "c" * 64,
+                        "dataset_count": 0,
+                        "scope_count": 0,
+                        "selected_count": 0,
+                        "agent_maximum": 0,
+                        "judge_maximum": 0,
+                    },
+                )
+            )
+            credential_preflight = mock.Mock(
+                side_effect=ValueError("credential preflight must not run")
+            )
+            executor = RecordingExecutor()
+            stderr = io.StringIO()
+            with mock.patch.object(module, "_full_preflight", plan_preflight):
+                result = module.verify_af340_reproduction_main(
+                    [
+                        "full",
+                        "--profile", "fixture/pi",
+                        "--output-root", str(output_root),
+                        "--estimated-budget-usd", "0",
+                        "--authorize-full",
+                        "--work-package-id", "AF-900",
+                    ],
+                    repo_root=root,
+                    executor=executor,
+                    full_preflight=credential_preflight,
+                    stderr=stderr,
+                )
+            self.assertEqual(result, 2)
+            self.assertIn("reason_class=authorization", stderr.getvalue())
+            plan_preflight.assert_not_called()
+            credential_preflight.assert_not_called()
+            self.assertEqual(executor.calls, [])
+            self.assertFalse(output_root.exists())
+
     def test_authorized_full_uses_task6_capability_before_injected_runner(self) -> None:
         module = load_verifier()
         with tempfile.TemporaryDirectory() as temporary:
@@ -1320,9 +1498,12 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
                         "--estimated-budget-usd",
                         "0",
                         "--authorize-full",
+                        "--work-package-id",
+                        "AF-900",
                     ],
                     repo_root=ROOT,
                     full_runner=full_runner,
+                    full_governance=self._approved_full_governance,
                     full_preflight=lambda *_args: None,
                     stdout=stdout,
                 )
@@ -1390,9 +1571,11 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
                         "full", "--profile", "current-default/pi",
                         "--output-root", str(output_root),
                         "--estimated-budget-usd", "0", "--authorize-full",
+                        "--work-package-id", "AF-900",
                     ],
                     repo_root=ROOT,
                     executor=scope_executor,
+                    full_governance=self._approved_full_governance,
                     full_preflight=lambda *_args: None,
                     full_comparator=comparator,
                     stdout=stdout,
@@ -1469,8 +1652,10 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
                         "full", "--profile", "current-default/claude-subscription",
                         "--output-root", str(Path(temporary) / "full"),
                         "--estimated-budget-usd", "0", "--authorize-full",
+                        "--work-package-id", "AF-900",
                     ],
                     repo_root=ROOT, executor=scope_executor,
+                    full_governance=self._approved_full_governance,
                     full_preflight=lambda *_args: None,
                     full_comparator=comparator,
                 ),
