@@ -2,7 +2,7 @@
 
 > Canonical work-package ledger. An `active` lifecycle requires exactly one `in_progress` package; a `complete` lifecycle permits none and forbids autonomous dispatch.
 
-> Project lifecycle: active
+> Project lifecycle: complete
 
 ## AF-000 — Framework control plane
 
@@ -363,14 +363,14 @@
 
 ## AF-340 — README reproduction and runtime-result parity
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Prove Asterion DCI is a complete usable capability package and thereby validate the Asterion capability-package framework
 - Scope: implement one layered `.env`/environment/CLI/application configuration contract with runtime-aware agent defaults and an independent DeepSeek Judge default; make the original README Quick Start, Context Management Strategies, and Benchmark DCI-Agent-Lite paths executable; then prove the independent Asterion package's core research, context, artifact/resume, evaluation, benchmark, analysis/export, installed-wheel, Pi, and Claude Code abilities with bounded retained evidence. Strict paper-model, published-score, and full-dataset reproduction are optional future evidence outside AF-340 closure.
-- Progress: Tasks 1-8 are recovered on `main`; the hardened coordinator, authorization, evidence, comparison, README/launcher, and runtime work passes 1459 root business tests, 134 Asterion tests, product 8/8+538/538+12/12+6/6+7/7, TypeScript/Rust/static gates, and provider-free local coordination. Climb H-001 through H-003 are confirmed 4/4. The approved H-004 amendment and its public/Climb/documentation migration are implemented: `claude-minimax` r6 contributes `asterion-claude-minimax` with 2 Agent/2 Judge operations, and Pi r14 contributes `original-pi` plus `asterion-pi` with all thirty bounded agent paths and 16 Judge operations; neither ran a full dataset. H-004 confirmation is pending the governed same-file Python-alias repair identified when r14's `.venv/bin/python3` plan met the current `uv run python` inspector; the report passes unchanged under its original alias and no provider/full work was retried.
 - Dependencies: AF-330
 - Acceptance: original DCI and Asterion independently emit the same safe effective-configuration schema; Pi defaults to `openai-codex`/`gpt-5.6-luna`, Claude Code retains both optional local subscription support and explicit compatible MiniMax Coding Plan translation, and Judge defaults to DeepSeek V4 Flash while every value remains overrideable through the unified precedence layers. Model-free gates cover the complete DCI core-capability matrix; all eleven documented benchmark launchers, Quick Start, and L0-L4 paths pass local and bounded gates. Pi r14 plus Claude MiniMax r6 must independently revalidate and cover exactly `original-pi`, `asterion-pi`, and `asterion-claude-minimax`; subscription evidence may be additional but is not required. Retained plan validation may normalize only conventional Python aliases in one environment `bin/` directory that resolve by `samefile()` to the identical interpreter inode; every different executable or plan component remains invalid. H-004 closure plus terminal local/static/product/privacy/governance gates closes AF-340. Any paper-model, published-score, statistical non-inferiority, or full-dataset execution requires a new active work package, explicit invocation authorization, and finite budget.
 - Design: `docs/superpowers/specs/2026-07-18-af-340-readme-reproduction-runtime-parity-design.md`
 - Plan: `docs/superpowers/plans/2026-07-21-af-340-dci-capability-usability-closure.md`
+- Closure evidence: AF-340-H-001 through H-004 are confirmed 4/4. Pi r14 plus Claude MiniMax r6 independently revalidate exactly `original-pi`, `asterion-pi`, and `asterion-claude-minimax`: r14 completed all thirty bounded agent paths with 16 Judge operations, while r6 completed 2 Agent and 2 Judge operations; neither ran a full dataset. Claude subscription remains supported as optional evidence and was not executed for closure; AF-340-H-005 is superseded by D-053. Fresh terminal closure passes 289 focused tests, 1617 root Python tests, 134 Asterion tests, 11 TypeScript tests, and 19 Rust tests, plus local verification with zero Agent/Judge operations and no full dataset, compileall, Ruff, Bash syntax, Rust fmt/Clippy, scope, and diff gates. The contract migration made no provider request and ran no full dataset. Strict paper-model, published-score, statistical, or full-dataset reproduction requires a new active work package, explicit invocation authorization, and finite budget; no successor is selected.
 
 ## AF-095 — Asterion framework identity and extraction
 

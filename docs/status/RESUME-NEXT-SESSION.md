@@ -1,57 +1,48 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-22 03:18 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-22 04:11 +0800. **Session remains active — not a final handoff.**
 
-Active work package: AF-340
+Active work package: none
 
-Package: DCI capability-package usability closure
+Package: none — project lifecycle complete
+
+Currently running: no process.
 
 ## TL;DR
 
-- Task 1 changed public retained inspection to require Pi r14 plus Claude MiniMax r6 across `original-pi`, `asterion-pi`, and `asterion-claude-minimax`; subscription evidence is optional.
-- Task 2 changed runnable AF-340-H-004 Climb execution to two reports and removed AF-340-H-005 from Climb routing while preserving standalone full/paper verifier tooling.
-- Task 3 published the Pi+MiniMax operator contract, superseded H-005 under D-053, and left only H-004 active in generated Climb state.
-- Tasks 1-3 followed observed RED/GREEN and passed independent task review; Task 3's single wording finding was fixed and re-reviewed clean.
-- Task 4 first inspection stopped fail-closed on a literal Python-alias plan mismatch; D-054 now governs a strict same-venv/same-inode alias repair before retry.
+- AF-340 accepts Asterion DCI as the complete usable capability-package reference product and validates the Asterion capability-package framework at this boundary.
+- AF-340-H-001 through H-004 are confirmed 4/4. Pi r14 and Claude MiniMax r6 independently cover exactly `original-pi`, `asterion-pi`, and `asterion-claude-minimax`.
+- Fresh terminal closure passes 289 focused, 1617 root Python, 134 Asterion, 11 TypeScript, and 19 Rust tests plus compileall, Ruff, Bash syntax, Rust fmt/Clippy, scope, and diff gates.
+- Local verification reports `PASS`, zero Agent/Judge operations, and no full dataset. The contract migration made no provider request and ran no full dataset.
+- Claude subscription evidence is optional and was not executed. AF-340-H-005 is superseded by D-053; no paper/full successor is selected.
 
-## Where things stand
+## Repository state
 
-- Work executes in `.worktrees/af-340-capability-closure` on `codex/af-340-capability-closure`; root main and retained-evidence worktree remain untouched.
-- Task 1: `50b2010` (`fix(dci): close bounded evidence with Pi and MiniMax`), 55 verifier tests plus compile/Ruff passed.
-- Task 2: `275fcef` (`fix(climb): align AF-340 with capability closure`), 153 Climb tests, focused cross-contract verifier test, Bash syntax, diff, and scope checks passed.
-- Task 3: `f3619ae` plus fix `280a9b2`; 166 documentation/Climb tests passed, H-005 is traceable but absent from active trees, and only H-004 remains active.
-- Scope preflight reports AF-340 active and healthy. No provider request or full dataset ran.
-- Pi r14 resources, operation count, and native evidence are unchanged. The new inspector passes 3/3 when invoked with r14's original `.venv/bin/python3`; current `uv run python` differs only by a same-file alias.
-- Governance commit `33681d5` updates the design, WORKLIST acceptance, D-054, and Task 4 plan before security-boundary implementation.
-- Isolated setup uses ignored read-only links to root `pi/` and `data/`; nested TypeScript dependencies are installed locally.
-- SDD Tasks 1-3 are complete; Task 4 retained-evidence confirmation is next, with Tasks 5-6 pending.
+- Closure work is on `codex/af-340-capability-closure` in `.worktrees/af-340-capability-closure`; there is no configured upstream and nothing has been pushed.
+- The structural closure commit includes `WORKLIST`, `CURRENT-STATE`, this live checkpoint, and the completed Climb session/tree. Its exact hash is recorded by the immediately following checkpoint commit.
+- External `pi/`, retained evidence, credentials, and ignored local execution logs remain outside the committed change set.
 
-## Retained bounded evidence
+## Next concrete action
 
-- Pi r14: `/Users/sujiangwen/sandbox/agentic-2026/DCI-Agent-Lite/outputs/verification/af340-bounded-pi-r14/af340-bounded-report.json`.
-- Claude MiniMax r6: `/Users/sujiangwen/sandbox/agentic-2026/DCI-Agent-Lite/.worktrees/af-340-implementation/outputs/verification/af340-bounded-claude-minimax-r6/af340-bounded-report.json`.
-- Task 4 must bind `--resource-root` to `/Users/sujiangwen/sandbox/agentic-2026/DCI-Agent-Lite`, not the isolated worktree, while committing generated Climb state on the closure branch.
+1. Finish the independent whole-branch review and integrate the verified closure branch through the normal branch-completion workflow.
+2. Do not begin implementation until governance explicitly activates a new work package.
 
-## Next actions
+## Open questions
 
-1. TDD D-054: accept only conventional sibling Python aliases that resolve by `samefile()` to the current interpreter, while rejecting a distinct executable.
-2. Re-run public two-report inspection and governed AF-340-H-004 against the absolute root resource tree; commit confirmed state if 4/4.
-3. Run the complete DCI core-capability matrix, then close AF-340 only after managed closure preflight and final branch review.
+- No implementation question is active. Strict paper-model, published-score, statistical, or full-dataset reproduction remains unselected future work.
 
 ## Ruled-out paths
 
-- Do not require Claude subscription login for AF-340 closure.
-- Do not remove subscription support; it remains optional evidence.
+- Do not require Claude subscription login to reopen or reinterpret AF-340 acceptance.
 - Do not treat MiniMax evidence as paper-model, published-score, statistical-parity, or full-result evidence.
-- Do not run H-005/full datasets without a new governed package and explicit finite-budget authorization.
-- Do not edit or commit external `pi/`, the retained-evidence worktree, or credentials.
-- Do not accept arbitrary interpreter paths or cross-environment equivalence; D-054 permits only conventional aliases in one `bin/` directory resolving to the identical inode.
+- Do not run H-005, a provider, or a full dataset without a new active package, exact invocation authority, and finite budget.
+- Do not edit or commit external `pi/`, retained-evidence worktrees, private artifacts, or credentials.
 
 ## Ready commands
 
 ```bash
 cd /Users/sujiangwen/sandbox/agentic-2026/DCI-Agent-Lite/.worktrees/af-340-capability-closure
-python3 tools/project_scope_check.py
-cat .superpowers/sdd/progress.md
+git status --short --branch
 git log --oneline -8
+python3 tools/project_scope_check.py
 ```
