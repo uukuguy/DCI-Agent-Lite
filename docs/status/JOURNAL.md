@@ -1111,3 +1111,4 @@
 - 04:20 Corrected AF-340 branch wording and portable resume commands for truthful recovery. [d44423d]
 - 04:35 final branch review requested changes: dormant full lacked runtime governance, root README retained the old three-report/H005 workflow, and session target remained stale; AF-340 reopened only for governed repair.
 - 04:35 D-055 requires actual full execution to match a separately active work package with explicit `Full execution authority: AF-340` before credentials, filesystem effects, or provider work.
+- 04:38 D-055 reopened AF-340 for governed full-boundary and public-contract repair. [57994bf]
