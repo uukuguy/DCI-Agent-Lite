@@ -2,7 +2,7 @@
 
 ## Product objective
 
-Build Asterion as a multi-runtime, multi-language agent-application framework. DCI is its first complete capability-package reference product: an independently owned DCI implementation composes through Asterion contracts into an AI application, while the existing source-only DCI product remains a separate comparison baseline.
+Build Asterion as a multi-runtime, multi-language agent-application framework. DCI is its first complete capability-package reference product: an independently owned, fully usable DCI implementation composes through Asterion contracts into an AI application, while the existing source-only DCI product remains a separate comparison baseline. Framework success is established by complete capability-package behavior, installability, runtime portability, safety, and verifiable bounded execution; strict reproduction of the DCI paper is optional follow-on evidence rather than a framework-completion prerequisite.
 
 ## Layers
 
@@ -17,6 +17,9 @@ Build Asterion as a multi-runtime, multi-language agent-application framework. D
 - Define and test the runtime protocol before building additional adapters.
 - Keep the existing Pi JSONL RPC boundary as the first reference adapter.
 - Use the full Asterion DCI package as the first proof that a complete domain implementation can compose through capability contracts into an AI application, while retaining a separate legacy DCI baseline for parity checks.
+- Verify DCI's core research, context, artifact/resume, evaluation, benchmark, analysis/export, and installed-application abilities across the capability-package boundary; do not substitute command reachability for domain completeness.
+- Prefer available, explicitly compatible runtime backends for functional acceptance. A Claude Code MiniMax Coding Plan run may establish the Claude adapter and capability-package path without requiring a local Claude subscription account; subscription authentication remains supported but optional.
+- Keep paper-model, published-score, and full-dataset reproduction in a separately authorized evidence layer. Absence of that optional evidence must not block an otherwise complete and bounded-verified capability package or framework.
 - Expose installed runtime factories by exact identity; constructing a factory is not provider authorization or a provider invocation.
 - Add enterprise policy, audit, artifact, and observability boundaries through the shared protocol rather than adapter-private behavior.
 - Keep Asterion's generic core domain-neutral; package-local CLIs and implementation details must not enter generic framework selection or execution paths.

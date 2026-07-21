@@ -1,21 +1,62 @@
-# AF-340 README Reproduction and Runtime-Parity Design
+# AF-340 README Reproduction and Capability-Usability Design
 
-> Status: approved by the user on 2026-07-18.
+> Status: approved by the user on 2026-07-18; functional-closure amendment approved on 2026-07-21.
 
 ## Goal
 
-Make the repository's documented DCI product executable from its public
-configuration contract through measured results. The original DCI README Quick
-Start, Context Management Strategies, and Benchmark DCI-Agent-Lite paths must
-run first as the comparison baseline. Asterion DCI must then run the same Pi
-experiment contract and the paper's Claude Code runtime path through its own
-independent implementation. Full-dataset results, result comparability, and
-paper-reference comparison belong to this package rather than to bounded
-functional acceptance.
+Make Asterion DCI a complete, installed, independently owned capability package
+that proves the Asterion capability-package framework is usable. The
+repository's documented original DCI Quick Start, Context Management
+Strategies, and Benchmark DCI-Agent-Lite paths remain an executable comparison
+baseline. Asterion DCI must reproduce those functional surfaces through Pi and
+prove an independent Claude Code adapter path through an explicitly compatible
+backend. Strict paper-model execution, published-score reproduction, and
+full-dataset comparison are optional follow-on evidence rather than AF-340
+closure gates.
 
 AF-340 does not add Claude Agent SDK. It keeps the runtime contract open for a
-future adapter while accepting only the currently implemented paper runtimes:
+future adapter while accepting the currently implemented DCI runtime families:
 Pi and Claude Code.
+
+## 2026-07-21 functional-closure amendment
+
+AF-340 closes on complete DCI capability-package usability, not on access to
+every supported authentication mode or strict reproduction of the DCI paper.
+The required core-capability matrix is:
+
+1. research execution over local corpora with multi-turn tool use, final
+   answers, and inspectable system prompts;
+2. `level0` through `level4` live context policies plus complete and processed
+   conversation evidence;
+3. private native artifacts, exact compatible resume, cancellation, deadlines,
+   and truthful failed/partial states;
+4. independent Judge execution, request/cache identity, QA accuracy, and IR
+   NDCG@10;
+5. QA/IR datasets and profiles, concurrent benchmark orchestration, all eleven
+   launcher pairs, and exact reuse;
+6. summaries, detailed analysis, figures, and BC+/BRIGHT/resolution exports;
+7. one implementation across the source CLI, installed application, isolated
+   wheel, Pi, and Claude Code MiniMax paths; and
+8. layered configuration, credential separation, private-path safety, and
+   body-free public evidence.
+
+Model-free product gates verify the complete matrix. Retained Pi r14 covers
+`original-pi` and `asterion-pi` across Quick Start, L3/L4, all eleven original
+launchers, and all eleven Asterion launchers. Retained Claude MiniMax r6 covers
+`asterion-claude-minimax` through installed and wheel-backed Claude Code paths.
+These two reports cover the three required functional dimensions.
+
+A compatible `claude-subscription` report may be inspected as additional
+evidence when an account is available, but subscription login is not required
+for bounded closure. Subscription support remains implemented and tested
+locally; this amendment changes acceptance availability, not the public runtime
+contract.
+
+AF-340-H-005 no longer gates AF-340. Full datasets, paper-declared models,
+published-score comparison, and statistical result reproduction require a new
+active work package plus explicit invocation and finite-budget authorization.
+Bounded MiniMax evidence proves functionality only and must never be relabeled
+as paper-model or published-score evidence.
 
 ## One layered configuration contract
 
@@ -150,7 +191,9 @@ With Pi selected, original DCI and Asterion must resolve identical experiment
 inputs and safe effective configuration while retaining separate code and
 artifact roots. With Claude Code selected, Asterion uses the same dataset,
 prompt, context, Judge, metric, and result contracts and changes only the
-runtime adapter and runtime-valid provider configuration.
+runtime adapter and runtime-valid provider configuration. The retained MiniMax
+path is sufficient for functional closure; subscription mode is an optional
+compatible path.
 
 The installed Asterion CLI, selected application, and isolated wheel must bind
 the same implementation and experiment identity as the source-tree Asterion
@@ -165,9 +208,10 @@ commands:
 - `local`: zero provider operations; validates configuration precedence,
   fixtures, launchers, context profiles, schemas, privacy, and product parity;
 - `bounded`: runs at least one real sample for every user-facing path and binds
-  private evidence into a body-free record;
-- `full`: runs the complete approved benchmark scopes and cross-product result
-  comparison.
+  private evidence into a body-free record; AF-340 closure requires Pi r14 and
+  Claude MiniMax r6 to cover the three functional dimensions named above;
+- `full`: optionally runs complete approved benchmark scopes and cross-product
+  result comparison under a future separately authorized work package.
 
 `.env` may provide every normal runtime and Judge value. It cannot by itself
 authorize a full dataset. Full execution requires an explicit invocation-level
@@ -200,6 +244,11 @@ provenance where they are unavailable.
 Both profiles record all material identities. A `current-default` result is not
 silently relabeled as `paper-reference`, and neither profile may fabricate a
 missing paper seed, FineWeb selection, or Bamboogle source.
+
+Profile availability does not imply that every profile is required for package
+acceptance. `current-default/claude-subscription` remains a supported optional
+profile; `current-default/claude-minimax` is the required retained Claude Code
+functional path for AF-340.
 
 ## Result comparison
 
@@ -267,7 +316,7 @@ Implementation proceeds test-first in these slices:
 4. original benchmark launchers and result identities;
 5. Asterion source, application, installed-wheel, and launcher parity;
 6. local and bounded verification orchestration;
-7. explicitly authorized full profiles and statistical comparison.
+7. optional, separately scoped full profiles and statistical comparison.
 
 Focused tests cover both independent configuration implementations, exact
 precedence, environment loading, CLI overrides, credential shadowing, cache
@@ -286,6 +335,10 @@ preflight, diff checks, and independent review.
 - Treating a configured DeepSeek Judge as the agent backend or vice versa.
 - Replacing README commands with internal fixture-only commands.
 - Claiming full or comparable results from `--limit 1` evidence.
+- Requiring an unavailable subscription account when an explicit compatible
+  MiniMax backend already proves the Claude Code functional path.
+- Blocking capability-package or framework usability on optional paper-model,
+  full-dataset, or published-score reproduction.
 - Importing or launching original DCI from Asterion to manufacture parity.
 - Allowing `.env`, a generic verify command, or cache presence to authorize a
   full-dataset run.

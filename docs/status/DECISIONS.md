@@ -509,3 +509,15 @@
 - Current-default boundary: Claude subscription and MiniMax profiles have no published numeric targets. Their reports remain `target-comparison` against exact profile identity and explicitly record `published_target_status: not-applicable`; they never inherit Sonnet 4.6 paper values or claim source parity.
 - Statistical boundary: Claude reports retain single-run point estimates and 95% intervals without manufacturing original-product pairs. Pi remains the only paired original/Asterion non-inferiority comparison.
 - Revalidation trigger: change target values, source revision, dataset mapping, or target aggregation only after reconciling a newer primary paper artifact and versioning the target registry.
+
+## D-053 — Close on DCI capability-package usability, not strict paper reproduction
+
+- Status: ✅ accepted design decision
+- Decided: 2026-07-21
+- Decision: the project's primary objective is a complete usable Asterion DCI capability package that proves the Asterion capability-package framework. Strict DCI paper reproduction is optional evidence and is not a prerequisite for AF-340 or framework closure.
+- Core-capability boundary: acceptance covers research execution, L0–L4 live context and conversation processing, private artifacts and exact resume, Judge/cache/QA/IR evaluation, benchmark datasets/profiles/launchers/reuse, analysis/figures/exports, source/application/wheel delivery, Pi and Claude Code runtime integration, and configuration/privacy/body-free evidence safety.
+- Functional evidence boundary: AF-340-H-004 requires retained Pi r14 and Claude MiniMax r6 evidence covering `original-pi`, `asterion-pi`, and `asterion-claude-minimax`. Claude subscription remains a supported optional authentication path; the absence of a valid local subscription account cannot block functional acceptance when the compatible MiniMax backend has already proven the Claude Code path.
+- Claim boundary: bounded MiniMax evidence proves capability-package and adapter functionality only. It cannot be relabeled as the paper's Claude model, published-score reproduction, or full-result parity.
+- Full-execution boundary: AF-340-H-005 is removed from AF-340 closure. Paper models, full datasets, published targets, statistical non-inferiority, and complete result reproduction may run only under a new active work package with explicit invocation authorization, exact profiles, fresh private roots, and a finite budget.
+- Rationale: framework usefulness depends on complete contracts, domain behavior, installation, runtime integration, safety, and verifiable execution. Tying closure to an unavailable account or expensive paper experiment would confuse backend availability and optional research evidence with product completeness.
+- Revalidation trigger: make strict paper reproduction a product gate only if the user explicitly changes the project objective and approves a new work package, acceptance contract, and budget authority.
