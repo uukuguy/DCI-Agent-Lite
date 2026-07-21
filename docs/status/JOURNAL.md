@@ -1088,3 +1088,7 @@
 - 22:09 AF-340 handoff 对齐 Climb 与 subscription 单一续点。 [60f7abb]
 - 22:53 AF-340 改以 DCI 核心能力包可用性闭包，订阅与论文复现转可选。 [ecc5400]
 - 23:01 AF-340 两报告闭包实施计划落地，锁定 TDD、Climb 与核心能力终验。 [8e99b57]
+
+## 2026-07-22
+
+- 02:21 retained inspector 改为 Pi+MiniMax 三维必需、subscription 可选；55 项 verifier 通过。 [50b2010]
