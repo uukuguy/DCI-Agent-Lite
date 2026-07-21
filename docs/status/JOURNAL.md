@@ -1103,3 +1103,4 @@
 - 03:29 D-054 修复仅为 Pi 枚举同一 `bin/`、同一 inode 的常规 Python 别名，并以签名计划哈希唯一选定完整计划；56 项 verifier 通过，独立复审清零。 [eaf1bb1]
 - 03:46 AF-340-H-004 confirmed 4/4; package acceptance recorded.
 - 03:48 H004 retained evidence confirmed 4/4 without provider/full execution, closing the bounded capability gate. [e2a5aa0]
+- 03:50 隔离 worktree 的跨 `.venv/bin` 检查按 D-054 正确拒绝；显式复用根 `.venv` 后公共 inspect 3/3 与 H004 4/4 通过，状态独立复审清零，未扩大别名边界。
