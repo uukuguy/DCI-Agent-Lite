@@ -77,7 +77,108 @@ class ProjectScopeCheckTests(unittest.TestCase):
         self.assertTrue(payload["ok"])
         self.assertEqual(payload["lifecycle"], "active")
         self.assertEqual(payload["active_package"], "AF-000")
+        self.assertEqual(
+            payload["active_package_fields"],
+            {
+                "ID": "AF-000",
+                "Title": "Framework control plane",
+                "Status": "in_progress",
+                "Parent objective": "Agent Application Framework",
+                "Scope": "scope audit",
+                "Dependencies": "none",
+                "Acceptance": "valid state passes",
+                "Design": "`docs/design.md`",
+                "Plan": "`docs/plan.md`",
+            },
+        )
         self.assertEqual(payload["errors"], [])
+
+    def test_unrelated_h2_ends_active_package_field_projection(self) -> None:
+        worklist = (self.root / "docs/status/WORKLIST.md").read_text()
+        self.write(
+            "docs/status/WORKLIST.md",
+            worklist
+            + "\n  ## Operational notes\n\n"
+            + "- Full execution authority: AF-340\n",
+        )
+
+        result = self.run_check()
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        fields = json.loads(result.stdout)["active_package_fields"]
+        self.assertNotIn("Full execution authority", fields)
+
+    def test_fenced_package_and_fields_are_not_parsed(self) -> None:
+        worklist = (self.root / "docs/status/WORKLIST.md").read_text()
+        self.write(
+            "docs/status/WORKLIST.md",
+            worklist
+            + "\n```markdown\n"
+            + "## AF-999 — Example only\n\n"
+            + "- Status: in_progress\n"
+            + "- Full execution authority: AF-340\n"
+            + "```\n",
+        )
+
+        result = self.run_check()
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["active_package"], "AF-000")
+        self.assertNotIn("Full execution authority", payload["active_package_fields"])
+
+    def test_duplicate_package_id_fails_scope_audit(self) -> None:
+        worklist = (self.root / "docs/status/WORKLIST.md").read_text()
+        self.write(
+            "docs/status/WORKLIST.md",
+            worklist + "\n## AF-000 — Duplicate\n\n- Status: completed\n",
+        )
+
+        result = self.run_check()
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(
+            "worklist contains duplicate package ID AF-000",
+            json.loads(result.stdout)["errors"],
+        )
+
+    def test_duplicate_status_field_fails_scope_audit(self) -> None:
+        worklist = (self.root / "docs/status/WORKLIST.md").read_text()
+        self.write(
+            "docs/status/WORKLIST.md",
+            worklist.replace(
+                "- Status: in_progress",
+                "- Status: in_progress\n- Status: completed",
+            ),
+        )
+
+        result = self.run_check()
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(
+            "AF-000 contains duplicate field Status",
+            json.loads(result.stdout)["errors"],
+        )
+
+    def test_conflicting_full_authority_fields_fail_scope_audit(self) -> None:
+        worklist = (self.root / "docs/status/WORKLIST.md").read_text()
+        self.write(
+            "docs/status/WORKLIST.md",
+            worklist.replace(
+                "- Status: in_progress",
+                "- Status: in_progress\n"
+                "- Full execution authority: AF-340\n"
+                "- Full execution authority: AF-999",
+            ),
+        )
+
+        result = self.run_check()
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn(
+            "AF-000 contains duplicate field Full execution authority",
+            json.loads(result.stdout)["errors"],
+        )
 
     def test_complete_lifecycle_accepts_zero_active_completed_packages(self) -> None:
         self.write(

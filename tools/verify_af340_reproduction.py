@@ -158,46 +158,21 @@ def _full_execution_governance(
         raise ValueError("AF-340 full authority governance requires a successor package")
 
     audit = scope_audit(root)
+    active_fields = audit.get("active_package_fields") if isinstance(audit, Mapping) else None
     if (
         not isinstance(audit, Mapping)
         or audit.get("ok") is not True
         or audit.get("lifecycle") != "active"
         or audit.get("active_package") != work_package_id
         or audit.get("errors") != []
+        or not isinstance(active_fields, Mapping)
+        or active_fields.get("ID") != work_package_id
+        or active_fields.get("Status") != "in_progress"
+        or active_fields.get("Full execution authority") != "AF-340"
     ):
         raise ValueError(
-            "AF-340 full authority governance scope must match one active package"
-        )
-
-    try:
-        lines = (root / "docs/status/WORKLIST.md").read_text(
-            encoding="utf-8"
-        ).splitlines()
-    except OSError as error:
-        raise ValueError("AF-340 full authority governance worklist is invalid") from error
-    package_header = re.compile(r"^## (?P<id>[A-Z][A-Z0-9]*-\d+) — .+$")
-    packages: list[tuple[str, list[str]]] = []
-    current: tuple[str, list[str]] | None = None
-    for line in lines:
-        header = package_header.fullmatch(line)
-        if header is not None:
-            current = (header.group("id"), [])
-            packages.append(current)
-        elif current is not None:
-            current[1].append(line)
-    active_ids = [
-        package_id
-        for package_id, package_lines in packages
-        if package_lines.count("- Status: in_progress") == 1
-    ]
-    matching = [item for item in packages if item[0] == work_package_id]
-    if active_ids != [work_package_id] or len(matching) != 1:
-        raise ValueError(
-            "AF-340 full authority governance worklist must match one active package"
-        )
-    if matching[0][1].count("- Full execution authority: AF-340") != 1:
-        raise ValueError(
-            "AF-340 full authority governance marker is missing or ambiguous"
+            "AF-340 full authority governance scope projection must match one "
+            "authorized active package"
         )
 
 

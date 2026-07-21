@@ -1325,22 +1325,16 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             "ok": True,
             "lifecycle": "active",
             "active_package": "AF-900",
+            "active_package_fields": {
+                "ID": "AF-900",
+                "Status": "in_progress",
+                "Full execution authority": "AF-340",
+            },
             "errors": [],
         }
         args = SimpleNamespace(work_package_id="AF-900")
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            status = root / "docs/status"
-            status.mkdir(parents=True)
-            worklist = status / "WORKLIST.md"
-
-            worklist.write_text(
-                "# Worklist\n\n"
-                "## AF-900 — Authorized successor\n\n"
-                "- Status: in_progress\n"
-                "- Full execution authority: AF-340\n",
-                encoding="utf-8",
-            )
             governance(args, root, scope_audit=lambda _root: approved_audit)
 
             rejected = (
@@ -1366,8 +1360,46 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
                 ),
                 (
                     SimpleNamespace(work_package_id="AF-900"),
-                    {"ok": True, "lifecycle": "active", "active_package": "AF-900"},
+                    {**approved_audit, "errors": ["duplicate authority"]},
                     "scope",
+                ),
+                (
+                    SimpleNamespace(work_package_id="AF-900"),
+                    {**approved_audit, "active_package_fields": None},
+                    "projection",
+                ),
+                (
+                    SimpleNamespace(work_package_id="AF-900"),
+                    {
+                        **approved_audit,
+                        "active_package_fields": {
+                            **approved_audit["active_package_fields"],
+                            "ID": "AF-901",
+                        },
+                    },
+                    "field ID",
+                ),
+                (
+                    SimpleNamespace(work_package_id="AF-900"),
+                    {
+                        **approved_audit,
+                        "active_package_fields": {
+                            **approved_audit["active_package_fields"],
+                            "Status": "completed",
+                        },
+                    },
+                    "field status",
+                ),
+                (
+                    SimpleNamespace(work_package_id="AF-900"),
+                    {
+                        **approved_audit,
+                        "active_package_fields": {
+                            **approved_audit["active_package_fields"],
+                            "Full execution authority": "AF-999",
+                        },
+                    },
+                    "field authority",
                 ),
             )
             for invocation, audit, reason in rejected:
@@ -1375,26 +1407,6 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
                     ValueError, "governance|authority"
                 ):
                     governance(invocation, root, scope_audit=lambda _root, value=audit: value)
-
-            worklist.write_text(
-                "# Worklist\n\n"
-                "## AF-900 — Unauthorized successor\n\n"
-                "- Status: in_progress\n",
-                encoding="utf-8",
-            )
-            with self.assertRaisesRegex(ValueError, "authority"):
-                governance(args, root, scope_audit=lambda _root: approved_audit)
-
-            worklist.write_text(
-                "# Worklist\n\n"
-                "## AF-900 — Ambiguous successor\n\n"
-                "- Status: in_progress\n"
-                "- Full execution authority: AF-340\n"
-                "- Full execution authority: AF-340\n",
-                encoding="utf-8",
-            )
-            with self.assertRaisesRegex(ValueError, "authority"):
-                governance(args, root, scope_audit=lambda _root: approved_audit)
 
     def test_completed_canonical_scope_rejects_before_any_full_preflight(self) -> None:
         module = load_verifier()

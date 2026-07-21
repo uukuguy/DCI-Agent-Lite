@@ -13,6 +13,8 @@ import yaml
 
 
 PACKAGE_HEADER = re.compile(r"^## (?P<id>[A-Z][A-Z0-9]*-\d+) — (?P<title>.+)$")
+H2_HEADER = re.compile(r"^[ ]{0,3}##(?:[ \t]+|$)")
+FENCE_LINE = re.compile(r"^[ ]{0,3}(?P<fence>`{3,}|~{3,})(?P<rest>.*)$")
 FIELD_LINE = re.compile(r"^- (?P<field>[A-Za-z ]+): (?P<value>.*)$")
 LIFECYCLE_MARKER = re.compile(
     r"^> Project lifecycle: (?P<value>[a-z]+)$", re.MULTILINE
@@ -49,35 +51,69 @@ def read_text(path: Path, errors: list[str], label: str) -> str:
         return ""
 
 
-def parse_worklist(path: Path, errors: list[str]) -> list[dict[str, str]]:
+def parse_worklist(
+    path: Path, errors: list[str]
+) -> tuple[list[dict[str, str]], str | None]:
     text = read_text(path, errors, "worklist")
     packages: list[dict[str, str]] = []
+    package_ids: set[str] = set()
+    lifecycle_markers: list[str] = []
     current: dict[str, str] | None = None
+    fence_character: str | None = None
+    fence_length = 0
     for line in text.splitlines():
-        header = PACKAGE_HEADER.match(line)
-        if header:
+        fence = FENCE_LINE.match(line)
+        if fence_character is not None:
+            if (
+                fence is not None
+                and fence.group("fence")[0] == fence_character
+                and len(fence.group("fence")) >= fence_length
+                and not fence.group("rest").strip()
+            ):
+                fence_character = None
+                fence_length = 0
+            continue
+        if fence is not None:
+            fence_character = fence.group("fence")[0]
+            fence_length = len(fence.group("fence"))
+            continue
+
+        lifecycle = LIFECYCLE_MARKER.fullmatch(line)
+        if lifecycle is not None:
+            lifecycle_markers.append(lifecycle.group("value"))
+
+        if H2_HEADER.match(line):
+            current = None
+            header = PACKAGE_HEADER.fullmatch(line)
+            if header is None:
+                continue
+            package_id = header.group("id")
+            if package_id in package_ids:
+                errors.append(f"worklist contains duplicate package ID {package_id}")
+            package_ids.add(package_id)
             current = {"ID": header.group("id"), "Title": header.group("title")}
             packages.append(current)
             continue
         field = FIELD_LINE.match(line)
         if field and current is not None:
-            current[field.group("field")] = field.group("value")
+            field_name = field.group("field")
+            if field_name in current:
+                errors.append(
+                    f"{current['ID']} contains duplicate field {field_name}"
+                )
+            else:
+                current[field_name] = field.group("value")
     if not packages:
         errors.append("worklist contains no packages")
-    return packages
-
-
-def parse_lifecycle(path: Path, errors: list[str]) -> str | None:
-    text = read_text(path, errors, "worklist")
-    markers = LIFECYCLE_MARKER.findall(text)
-    if len(markers) != 1:
+    if len(lifecycle_markers) != 1:
         errors.append("worklist must contain exactly one project lifecycle marker")
-        return None
-    lifecycle = markers[0]
+        lifecycle = None
+    else:
+        lifecycle = lifecycle_markers[0]
     if lifecycle not in VALID_LIFECYCLES:
-        errors.append(f"unknown project lifecycle {lifecycle}")
-        return lifecycle
-    return lifecycle
+        if lifecycle is not None:
+            errors.append(f"unknown project lifecycle {lifecycle}")
+    return packages, lifecycle
 
 
 def validate_required_fields(active: list[dict[str, str]], errors: list[str]) -> None:
@@ -201,8 +237,7 @@ def main() -> int:
     root = args.root.resolve()
     errors: list[str] = []
     worklist_path = root / "docs/status/WORKLIST.md"
-    packages = parse_worklist(worklist_path, errors)
-    lifecycle = parse_lifecycle(worklist_path, errors)
+    packages, lifecycle = parse_worklist(worklist_path, errors)
     active = [item for item in packages if item.get("Status") == "in_progress"]
     if lifecycle == "active" and len(active) != 1:
         errors.append(
@@ -234,6 +269,7 @@ def main() -> int:
         "ok": not errors,
         "lifecycle": lifecycle,
         "active_package": active_id,
+        "active_package_fields": dict(active[0]) if len(active) == 1 else None,
         "errors": errors,
     }
     print(json.dumps(payload, sort_keys=True))
