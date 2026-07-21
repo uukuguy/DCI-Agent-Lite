@@ -1117,3 +1117,4 @@
 - 05:02 D-055 centralized strict worklist parsing to prevent ambiguous full authority. [22424c4]
 - 05:12 Canonical parser now rejects fenced, misplaced, duplicate, or conflicting authority fields. [ec02dc8]
 - 05:16 Task 7 D-055 security re-review cleared all findings; actual full remains gated before every side effect.
+- 05:18 Task 8 扩展到全部三份公开 DCI 文档，确保任何 actual-full 示例均声明 D-055 work-package authority。

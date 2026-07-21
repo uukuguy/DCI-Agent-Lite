@@ -651,7 +651,10 @@ Expected: completed-lifecycle scope is healthy, the checkpoint commit succeeds, 
 
 ### Task 8: Align the root README and completed session target
 
-**Files:** `README.md`, `tests/test_asterion_documentation.py`,
+**Files:** `README.md`,
+`asterion/docs/guides/asterion-dci-complete-reference.md`,
+`asterion/docs/verification/asterion-dci-validation-guide.md`,
+`tests/test_asterion_documentation.py`,
 `docs/status/climb/session-target.md`, `tests/test_climb_tools.py`
 
 - RED: require the root README's primary inspect block to contain exactly Pi
@@ -659,7 +662,9 @@ Expected: completed-lifecycle scope is healthy, the checkpoint commit succeeds, 
   and actual full commands to name future work-package governance.
 - Rewrite the public workflow without deleting dormant dry-run/full inspection
   reference material. Mark actual full execution unavailable until a new
-  authorized package exists.
+  authorized package exists, and make every actual-full example in the root
+  README and both Asterion guides include the D-055 work-package ID/ledger
+  marker contract.
 - State H-001 through H-004 confirmed and no AF-340 hypothesis active; replace
   the stale positive test.
 - Run focused documentation/Climb tests plus static/scope/diff checks and obtain
