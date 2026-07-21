@@ -2427,10 +2427,22 @@ hypotheses:
   expected_lift: +1 complete bounded reproduction matrix
   cost_h: 3.0
   ranking: 0.7
-  status: pending
+  status: confirmed
   created_at: '2026-07-20T13:30:37+08:00'
   verification_command: uv run python -m unittest -v tests.test_af340_reproduction_verifier
-  results: []
+  results:
+  - session: 2026-07-20-af-340-reproduction-runtime-parity
+    cycle: 107
+    run: 20260722-033945-dci-climb-af340h004
+    local: 4
+    local_per_task:
+      bounded_original_pi: 1
+      bounded_asterion_pi: 1
+      bounded_claude_minimax: 1
+      retained_body_free_evidence: 1
+    online: null
+    verdict: confirmed 4/4
+    decision_reason: deterministic local package acceptance
 - id: AF-340-H-005
   work_package_id: AF-340
   description: After explicit invocation authorization, prove matched original/Asterion
@@ -2442,7 +2454,8 @@ hypotheses:
   ranking: 0.6
   status: superseded
   superseded_by: D-053
-  superseded_reason: Strict paper reproduction is optional future evidence outside AF-340 closure.
+  superseded_reason: Strict paper reproduction is optional future evidence outside
+    AF-340 closure.
   created_at: '2026-07-20T13:30:37+08:00'
   verification_command: explicit authorization plus tools/verify_af340_reproduction.py
     full and terminal repository gates

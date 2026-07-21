@@ -1,19 +1,18 @@
 # Research Tree — DCI climb
 
-> Deterministic summary generated from tracked state (105 runs).
+> Deterministic summary generated from tracked state (106 runs).
 > Do not edit directly; run `python3 tools/climb/regen-tree.py`.
 
 ## In-flight / session state
 
 - Phase: implementation
-- Last cycle: 106
-- Next hypothesis: AF-340-H-004
+- Last cycle: 107
+- Next hypothesis: None
 - In flight: none
-- Next action: Inspect the retained Pi r14 plus Claude MiniMax r6 reports for complete DCI core-capability coverage under AF-340-H-004.
+- Next action: Trigger Knowledge Layer.
 
 ## Active hypotheses
 
-- **AF-340-H-004** (pending, rank 0.70): Prove retained Pi r14 plus Claude MiniMax r6 reports cover the complete DCI core-capability matrix without full execution.
 
 ## Run ladder
 
@@ -124,6 +123,7 @@
 | 20260720-134103-dci-climb-af340h001 | AF-340-H-001 | 4 | confirmed 4/4 |
 | 20260720-135450-dci-climb-af340h002 | AF-340-H-002 | 4 | confirmed 4/4 |
 | 20260720-140347-dci-climb-af340h003 | AF-340-H-003 | 4 | confirmed 4/4 |
+| 20260722-033945-dci-climb-af340h004 | AF-340-H-004 | 4 | confirmed 4/4 |
 
 ## Negative cache
 
