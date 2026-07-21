@@ -180,9 +180,11 @@ def local_operation_plan(repo_root: Path) -> tuple[Operation, ...]:
     )
 
 
-def _original_runner(profile: str | None) -> tuple[str, ...]:
+def _original_runner(
+    profile: str | None, python_executable: str | None = None
+) -> tuple[str, ...]:
     command = [
-        sys.executable,
+        sys.executable if python_executable is None else python_executable,
         "src/dci/benchmark/pi_rpc_runner.py",
         "--runtime",
         "pi",
@@ -300,6 +302,8 @@ def bounded_operation_plan(
     variant: str,
     provider: str | None,
     model: str | None,
+    *,
+    python_executable: str | None = None,
 ) -> tuple[Operation, ...]:
     del repo_root
     if variant == "claude-subscription":
@@ -339,9 +343,21 @@ def bounded_operation_plan(
     if variant != "pi" or provider is not None or model is not None:
         raise ValueError("Pi bounded identity is invalid")
     operations: list[Operation] = [
-        Operation("original:quick-start", "agent", _original_runner(None)),
-        Operation("original:context-level3", "agent", _original_runner("level3")),
-        Operation("original:context-level4", "agent", _original_runner("level4")),
+        Operation(
+            "original:quick-start",
+            "agent",
+            _original_runner(None, python_executable),
+        ),
+        Operation(
+            "original:context-level3",
+            "agent",
+            _original_runner("level3", python_executable),
+        ),
+        Operation(
+            "original:context-level4",
+            "agent",
+            _original_runner("level4", python_executable),
+        ),
     ]
     for product, prefix in (("original", "scripts"), ("asterion", "asterion/scripts")):
         for relative, leading, judged in _LAUNCHERS:
@@ -380,6 +396,44 @@ def bounded_operation_plan(
         )
     )
     return tuple(operations)
+
+
+def _retained_operation_plan_candidates(
+    root: Path,
+    variant: str,
+    provider: str | None,
+    model: str | None,
+) -> tuple[tuple[Operation, ...], ...]:
+    current_plan = bounded_operation_plan(root, variant, provider, model)
+    if variant != "pi":
+        return (current_plan,)
+    current_python = Path(sys.executable)
+    if current_python.parent.name != "bin":
+        return (current_plan,)
+    try:
+        sibling_aliases = tuple(
+            candidate
+            for candidate in sorted(current_python.parent.iterdir())
+            if candidate != current_python
+            and re.fullmatch(r"python(?:3(?:\.\d+)?)?", candidate.name)
+            and candidate.is_file()
+            and candidate.samefile(current_python)
+        )
+    except OSError:
+        sibling_aliases = ()
+    return (
+        current_plan,
+        *(
+            bounded_operation_plan(
+                root,
+                variant,
+                provider,
+                model,
+                python_executable=str(candidate),
+            )
+            for candidate in sibling_aliases
+        ),
+    )
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -2649,7 +2703,7 @@ def _validate_report(
     variant = report["variant"]
     if variant not in {"pi", "claude-subscription", "claude-minimax"}:
         raise ValueError("AF-340 retained report variant is invalid")
-    expected_plan = bounded_operation_plan(
+    candidate_plans = _retained_operation_plan_candidates(
         root,
         variant,
         "minimax" if variant == "claude-minimax" else None,
@@ -2660,12 +2714,14 @@ def _validate_report(
     )
     resource_manifest = report["resource_manifest"]
     resource_manifest_sha256 = _canonical_sha256(expected_resource_manifest)
-    if (
-        resource_manifest != expected_resource_manifest
-        or report["plan_sha256"]
-        != _plan_sha256(expected_plan, resource_manifest_sha256)
-    ):
+    matching_plans = tuple(
+        plan
+        for plan in candidate_plans
+        if report["plan_sha256"] == _plan_sha256(plan, resource_manifest_sha256)
+    )
+    if resource_manifest != expected_resource_manifest or len(matching_plans) != 1:
         raise ValueError("AF-340 retained operation plan drifted")
+    expected_plan = matching_plans[0]
     unsigned = dict(report)
     signature = unsigned.pop("report_sha256")
     if signature != _canonical_sha256(unsigned):

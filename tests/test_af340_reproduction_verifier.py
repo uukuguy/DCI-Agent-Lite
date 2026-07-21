@@ -4,6 +4,7 @@ import importlib.util
 import io
 import json
 import os
+import shutil
 import stat
 import subprocess
 import tempfile
@@ -2437,6 +2438,100 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
                 module.verify_af340_reproduction_main(args, repo_root=ROOT),
                 2,
             )
+
+    def test_inspect_accepts_same_file_python_alias_and_rejects_distinct_executable(
+        self,
+    ) -> None:
+        module = load_verifier()
+        current_python = Path(module.sys.executable)
+        conventional_names = (
+            "python",
+            "python3",
+            f"python{module.sys.version_info.major}.{module.sys.version_info.minor}",
+        )
+        sibling_aliases = tuple(
+            current_python.parent / name
+            for name in conventional_names
+            if current_python.parent / name != current_python
+            and (current_python.parent / name).is_file()
+            and (current_python.parent / name).samefile(current_python)
+        )
+        self.assertTrue(sibling_aliases, "test requires a conventional sibling Python alias")
+        sibling_alias = sibling_aliases[0]
+
+        def plan_with_python(executable: Path):
+            return tuple(
+                module.Operation(
+                    operation.operation_id,
+                    operation.kind,
+                    tuple(
+                        str(executable) if argument == module.sys.executable else argument
+                        for argument in operation.command
+                    ),
+                )
+                for operation in module.bounded_operation_plan(ROOT, "pi", None, None)
+            )
+
+        with tempfile.TemporaryDirectory(dir=ROOT) as temporary:
+            root = Path(temporary)
+            resource_root = root / "resources"
+            minimax_report, _ = self._retained_report_fixture(
+                module,
+                root / "claude-minimax",
+                "claude-minimax",
+                provider="minimax",
+                model="MiniMax-M3",
+                resource_root=resource_root,
+            )
+            alias_report, _ = self._retained_report_fixture(
+                module,
+                root / "pi-alias",
+                "pi",
+                plan=plan_with_python(sibling_alias),
+                resource_root=resource_root,
+            )
+            alias_args = [
+                "inspect",
+                "--resource-root",
+                str(resource_root),
+                "--report",
+                str(alias_report),
+                "--report",
+                str(minimax_report),
+            ]
+            self.assertEqual(
+                module.verify_af340_reproduction_main(
+                    alias_args, repo_root=ROOT, raise_errors=True
+                ),
+                0,
+            )
+
+            distinct_python = root / "different-bin" / "python"
+            distinct_python.parent.mkdir()
+            shutil.copy2(current_python, distinct_python)
+            self.assertFalse(distinct_python.samefile(current_python))
+            distinct_report, _ = self._retained_report_fixture(
+                module,
+                root / "pi-distinct",
+                "pi",
+                plan=plan_with_python(distinct_python),
+                resource_root=resource_root,
+            )
+            distinct_args = [
+                "inspect",
+                "--resource-root",
+                str(resource_root),
+                "--report",
+                str(distinct_report),
+                "--report",
+                str(minimax_report),
+            ]
+            with self.assertRaisesRegex(
+                ValueError, "AF-340 retained operation plan drifted"
+            ):
+                module.verify_af340_reproduction_main(
+                    distinct_args, repo_root=ROOT, raise_errors=True
+                )
 
     def test_inspect_accepts_subscription_as_optional_third_report(self) -> None:
         module = load_verifier()
