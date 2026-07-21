@@ -1114,3 +1114,4 @@
 - 04:38 D-055 reopened AF-340 for governed full-boundary and public-contract repair. [57994bf]
 - 04:53 D-055 full 门禁在凭据/输出/授权前绑定 active successor ID 与 worklist authority；59 项 verifier 通过。 [c5ad921]
 - 05:00 Task 7 复审拒绝宽松 worklist 解析：冲突 authority 与非包 H2/fence marker 可能误授权；D-055 改由唯一严格 canonical parser 提供字段投影。
+- 05:02 D-055 centralized strict worklist parsing to prevent ambiguous full authority. [22424c4]
