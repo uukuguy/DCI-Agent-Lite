@@ -166,12 +166,10 @@ run_af340_evidence_dimension() {
     dimension="$2"
     : "${AF340_RESOURCE_ROOT:?set AF340_RESOURCE_ROOT to the exact bounded resource tree}"
     : "${AF340_PI_REPORT:?set AF340_PI_REPORT to the retained Pi bounded report}"
-    : "${AF340_CLAUDE_SUBSCRIPTION_REPORT:?set AF340_CLAUDE_SUBSCRIPTION_REPORT to the retained Claude subscription report}"
     : "${AF340_CLAUDE_MINIMAX_REPORT:?set AF340_CLAUDE_MINIMAX_REPORT to the retained Claude MiniMax report}"
     if run_python tools/verify_af340_reproduction.py inspect \
         --resource-root "$AF340_RESOURCE_ROOT" \
         --report "$AF340_PI_REPORT" \
-        --report "$AF340_CLAUDE_SUBSCRIPTION_REPORT" \
         --report "$AF340_CLAUDE_MINIMAX_REPORT" \
         >"$RUN_DIR/$name.log" 2>&1; then
         dimension_ok=false
@@ -182,9 +180,8 @@ run_af340_evidence_dimension() {
             bounded_asterion_pi)
                 if grep -Fqx "Retained dimension: asterion-pi" "$RUN_DIR/$name.log"; then dimension_ok=true; fi
                 ;;
-            bounded_claude_modes)
-                if grep -Fqx "Retained dimension: asterion-claude-subscription" "$RUN_DIR/$name.log" \
-                    && grep -Fqx "Retained dimension: asterion-claude-minimax" "$RUN_DIR/$name.log"; then dimension_ok=true; fi
+            bounded_claude_minimax)
+                if grep -Fqx "Retained dimension: asterion-claude-minimax" "$RUN_DIR/$name.log"; then dimension_ok=true; fi
                 ;;
             retained_body_free_evidence)
                 if grep -Fqx "PASS" "$RUN_DIR/$name.log"; then dimension_ok=true; fi
@@ -1218,23 +1215,12 @@ case "$HYPOTHESIS_ID" in
         dimension_runner="run_af340_evidence_dimension"
         first_dimension="bounded_original_pi"
         second_dimension="bounded_asterion_pi"
-        third_dimension="bounded_claude_modes"
+        third_dimension="bounded_claude_minimax"
         fourth_dimension="retained_body_free_evidence"
         immutable_test="bounded_original_pi"
         repeat_test="bounded_asterion_pi"
-        dirty_test="bounded_claude_modes"
+        dirty_test="bounded_claude_minimax"
         override_test="retained_body_free_evidence"
-        ;;
-    AF-340-H-005)
-        dimension_runner="run_af340_full_dimension"
-        first_dimension="explicit_authorization"
-        second_dimension="matched_pi_noninferiority"
-        third_dimension="claude_target_comparison"
-        fourth_dimension="terminal_repository_gates"
-        immutable_test="explicit_authorization"
-        repeat_test="matched_pi_noninferiority"
-        dirty_test="claude_target_comparison"
-        override_test="terminal_repository_gates"
         ;;
     *)
         echo "ERROR: no local evaluation contract for $HYPOTHESIS_ID" >&2

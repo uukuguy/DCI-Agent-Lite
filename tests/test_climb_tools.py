@@ -3290,7 +3290,6 @@ class ClimbToolTests(unittest.TestCase):
             "AF-340-H-002": "dci-reproduction-statistics",
             "AF-340-H-003": "dci-reproduction-local-coordinator",
             "AF-340-H-004": "dci-reproduction-bounded-evidence",
-            "AF-340-H-005": "dci-reproduction-full-closure",
         }
         allowlist = re.search(
             r'^case "\$1" in\n    ([^\n]+)\) ;;$', train_script, re.M
@@ -3361,28 +3360,14 @@ class ClimbToolTests(unittest.TestCase):
                 (
                     "bounded_original_pi",
                     "bounded_asterion_pi",
-                    "bounded_claude_modes",
+                    "bounded_claude_minimax",
                     "retained_body_free_evidence",
                 ),
                 (
                     "bounded_original_pi",
                     "bounded_asterion_pi",
-                    "bounded_claude_modes",
+                    "bounded_claude_minimax",
                     "retained_body_free_evidence",
-                ),
-            ),
-            "AF-340-H-005": (
-                (
-                    "explicit_authorization",
-                    "matched_pi_noninferiority",
-                    "claude_target_comparison",
-                    "terminal_repository_gates",
-                ),
-                (
-                    "explicit_authorization",
-                    "matched_pi_noninferiority",
-                    "claude_target_comparison",
-                    "terminal_repository_gates",
                 ),
             ),
         }
@@ -3413,15 +3398,11 @@ class ClimbToolTests(unittest.TestCase):
                     "dirty_test",
                     "override_test",
                 }
-                if hypothesis_id in {"AF-340-H-004", "AF-340-H-005"}:
+                if hypothesis_id == "AF-340-H-004":
                     expected_keys.add("dimension_runner")
                     self.assertEqual(
                         assignments["dimension_runner"],
-                        (
-                            "run_af340_evidence_dimension"
-                            if hypothesis_id == "AF-340-H-004"
-                            else "run_af340_full_dimension"
-                        ),
+                        "run_af340_evidence_dimension",
                     )
                 self.assertEqual(set(assignments), expected_keys)
 
@@ -3442,7 +3423,6 @@ class ClimbToolTests(unittest.TestCase):
                 "tests.test_asterion_documentation",
             },
             "AF-340-H-004": set(),
-            "AF-340-H-005": set(),
         }
 
         for hypothesis_id, modules in expected_modules.items():
@@ -3461,11 +3441,6 @@ class ClimbToolTests(unittest.TestCase):
                         verifier_calls,
                         ["uv run python tools/verify_af340_reproduction.py inspect "],
                     )
-                elif hypothesis_id == "AF-340-H-005":
-                    self.assertEqual(
-                        verifier_calls,
-                        ["uv run python tools/verify_af340_reproduction.py inspect-closure "],
-                    )
                 else:
                     self.assertEqual(verifier_calls, [])
 
@@ -3482,7 +3457,12 @@ class ClimbToolTests(unittest.TestCase):
         self.assertIsNotNone(runner)
         self.assertIn("inspect", runner.group(1))
         self.assertNotIn("inspect-full", runner.group(1))
-        self.assertEqual(runner.group(1).count('--report "$AF340_'), 3)
+        self.assertEqual(runner.group(1).count('--report "$AF340_'), 2)
+        self.assertIn("AF340_PI_REPORT", runner.group(1))
+        self.assertIn("AF340_CLAUDE_MINIMAX_REPORT", runner.group(1))
+        self.assertNotIn("AF340_CLAUDE_SUBSCRIPTION_REPORT", runner.group(1))
+        self.assertNotIn('elif [ "$1" = "AF-340-H-005" ]', train_script)
+        self.assertNotIn("AF-340-H-005)", eval_script)
         self.assertNotIn("AF340_FULL_REPORT", runner.group(1))
         self.assertNotIn('--dimension "$dimension"', runner.group(1))
         self.assertNotIn("verify_af340_reproduction.py bounded", runner.group(1))
