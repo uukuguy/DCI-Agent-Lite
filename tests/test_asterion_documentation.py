@@ -16,23 +16,77 @@ def read(relative: str) -> str:
 
 class AsterionDocumentationTests(unittest.TestCase):
     def test_af340_functional_closure_uses_pi_and_minimax(self) -> None:
-        complete_reference = (
-            PROJECT / "docs/guides/asterion-dci-complete-reference.md"
-        ).read_text(encoding="utf-8")
-        validation_guide = (
-            PROJECT / "docs/verification/asterion-dci-validation-guide.md"
-        ).read_text(encoding="utf-8")
-        for document in (complete_reference, validation_guide):
+        documents = (
+            read("README.md"),
+            read("asterion/docs/guides/asterion-dci-complete-reference.md"),
+            read("asterion/docs/verification/asterion-dci-validation-guide.md"),
+        )
+        for document in documents:
             self.assertIn("Pi r14", document)
             self.assertIn("Claude MiniMax r6", document)
             self.assertIn("subscription", document)
             self.assertIn("optional", document)
+            self.assertIn("optional third", document)
             self.assertIn("strict paper reproduction", document)
             self.assertIn("new active work package", document)
+            self.assertIn("superseded by D-053", document)
+            self.assertIn("no current execution route", document)
             inspect_block = document.split(
                 "verify_af340_reproduction.py inspect ", 1
             )[1].split("```", 1)[0]
             self.assertEqual(inspect_block.count("--report"), 2)
+            self.assertIn("af340-bounded-pi", inspect_block)
+            self.assertIn("af340-bounded-claude-minimax", inspect_block)
+            self.assertNotIn("claude-subscription", inspect_block)
+
+    def test_af340_root_h004_uses_only_required_retained_report_variables(
+        self,
+    ) -> None:
+        readme = read("README.md")
+        h004_contract = readme.split(
+            "The AF-340 H004 train/evaluation hooks require", 1
+        )[1].split("\n\n", 1)[0]
+
+        self.assertIn("AF340_RESOURCE_ROOT", h004_contract)
+        self.assertIn("AF340_PI_REPORT", h004_contract)
+        self.assertIn("AF340_CLAUDE_MINIMAX_REPORT", h004_contract)
+        self.assertNotIn("AF340_CLAUDE_SUBSCRIPTION_REPORT", h004_contract)
+
+    def test_af340_actual_full_examples_name_d055_governance(self) -> None:
+        documents = (
+            read("README.md"),
+            read("asterion/docs/guides/asterion-dci-complete-reference.md"),
+            read("asterion/docs/verification/asterion-dci-validation-guide.md"),
+        )
+        for document in documents:
+            fenced = tuple(
+                re.finditer(r"```bash\n(?P<body>.*?)```", document, re.DOTALL)
+            )
+            actual_full = tuple(
+                match
+                for match in fenced
+                if "verify_af340_reproduction.py full" in match.group("body")
+                and "--authorize-full" in match.group("body")
+            )
+            dry_runs = tuple(
+                match
+                for match in fenced
+                if "verify_af340_reproduction.py full" in match.group("body")
+                and "--dry-run" in match.group("body")
+            )
+
+            self.assertTrue(actual_full)
+            self.assertTrue(dry_runs)
+            for match in actual_full:
+                self.assertIn("--work-package-id AF-XYZ", match.group("body"))
+                nearby_contract = document[
+                    max(0, match.start() - 900) : match.start()
+                ]
+                self.assertIn(
+                    "Full execution authority: AF-340", nearby_contract
+                )
+            for match in dry_runs:
+                self.assertNotIn("--work-package-id", match.group("body"))
 
     def test_af340_reproduction_commands_are_documented(self) -> None:
         documents = (

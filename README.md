@@ -686,15 +686,19 @@ bash asterion/scripts/bright/run_bio.sh --limit 1
 
 The unmodified source and Asterion commands now fail closed before provider
 construction: invoking a launcher is not full execution authorization, and
-`--limit 1` is not a full result. Full execution is delegated only through the
-explicit AF-340 verifier with an invocation-level authorization, profile,
-fresh output root, and budget:
+`--limit 1` is not a full result. The verifier retains a dormant full-execution
+interface, but actual execution is unavailable until a new non-AF-340 active
+work package supplies explicit invocation authority and a finite budget. The
+package's canonical flat worklist entry must contain exactly one
+`Full execution authority: AF-340` field; substitute that package ID for the
+placeholder only after it exists:
 
 ```bash
 uv run python tools/verify_af340_reproduction.py full \
   --profile current-default/pi \
   --output-root outputs/verification/af340-full \
   --estimated-budget-usd 0 \
+  --work-package-id AF-XYZ \
   --authorize-full
 ```
 
@@ -717,26 +721,24 @@ The coordinator continues to execute code from the current checkout while using
 this root for the Quick Start wiki corpus and the exact launcher sample inputs.
 Pi checks all 11 launcher dataset/corpus pairs; the Claude variants require only
 the wiki corpus. Retained plans and reports bind the exact selected-resource
-content manifest. Run Pi, Claude Code subscription, and explicit MiniMax as separate retained
-variants:
+content manifest. AF-340 functional closure requires retained Pi r14 and Claude
+MiniMax r6 reports. Generate those two required bounded variants separately:
 
 ```bash
 DCI_RESOURCE_ROOT=/absolute/path/to/main/DCI-Agent-Lite
 uv run python tools/verify_af340_reproduction.py bounded --variant pi \
   --env-file .env --resource-root "$DCI_RESOURCE_ROOT" \
   --output-root outputs/verification/af340-bounded-pi
-uv run python tools/verify_af340_reproduction.py bounded --variant claude-subscription \
-  --env-file .env --resource-root "$DCI_RESOURCE_ROOT" \
-  --output-root outputs/verification/af340-bounded-claude-subscription
 uv run python tools/verify_af340_reproduction.py bounded --variant claude-minimax \
   --provider minimax --model MiniMax-M3 --env-file .env \
   --resource-root "$DCI_RESOURCE_ROOT" \
   --output-root outputs/verification/af340-bounded-claude-minimax
 ```
 
-Inspect the three retained 0600 reports without contacting a provider; the
-inspection passes only when original Pi, Asterion Pi, Claude subscription, and
-Claude MiniMax form the exact four-dimensional evidence set. Inspection
+Inspect the two retained 0600 reports without contacting a provider. Pi r14
+covers original Pi and Asterion Pi, while Claude MiniMax r6 covers the Asterion
+Claude path; together they form exactly the required `original-pi`,
+`asterion-pi`, and `asterion-claude-minimax` evidence set. Inspection
 rebuilds the exact selected dataset/corpus content manifest from the external
 resource root and rehashes the retained native request, terminal state/event,
 and Judge files. Report JSON and self-authored hashes alone cannot satisfy this
@@ -746,13 +748,31 @@ gate, and same-path resource mutation invalidates the evidence:
 uv run python tools/verify_af340_reproduction.py inspect \
   --resource-root "$DCI_RESOURCE_ROOT" \
   --report outputs/verification/af340-bounded-pi/af340-bounded-report.json \
-  --report outputs/verification/af340-bounded-claude-subscription/af340-bounded-report.json \
   --report outputs/verification/af340-bounded-claude-minimax/af340-bounded-report.json
 ```
 
 The AF-340 H004 train/evaluation hooks require
-`AF340_RESOURCE_ROOT="$DCI_RESOURCE_ROOT"` alongside the three retained-report
-variables, so the hooks pass the same external anchor to `inspect`.
+`AF340_RESOURCE_ROOT="$DCI_RESOURCE_ROOT"`, `AF340_PI_REPORT`, and
+`AF340_CLAUDE_MINIMAX_REPORT` only; no subscription-report variable is
+required.
+
+#### Optional subscription evidence
+
+A validated Claude subscription report is supplementary only. It can be
+generated separately and appended as an optional third `--report`; subscription
+availability does not block AF-340 closure:
+
+```bash
+uv run python tools/verify_af340_reproduction.py bounded --variant claude-subscription \
+  --env-file .env --resource-root "$DCI_RESOURCE_ROOT" \
+  --output-root outputs/verification/af340-bounded-claude-subscription
+```
+
+#### Dormant optional strict paper reproduction tooling
+
+Strict paper reproduction is optional and outside AF-340. The commands below
+remain available for provider-free planning and historical inspection, but
+actual full execution requires a new active work package under D-055.
 
 Print the immutable profile digest, selected-query counts, operation maxima, and
 budget before requesting authority:
@@ -764,13 +784,15 @@ uv run python tools/verify_af340_reproduction.py full --profile current-default/
 ```
 
 Actual full execution is a separate cost boundary and is never inferred from
-`.env`, cache state, local checks, or bounded evidence. After reviewing the dry
-plan and explicitly authorizing its named profile and budget, use:
+`.env`, cache state, local checks, or bounded evidence. There is no current
+authorized package. A future non-AF-340 active package must name its ID on the
+command and contain exactly one `Full execution authority: AF-340` field in its
+canonical flat worklist entry before this example can be used:
 
 ```bash
 uv run python tools/verify_af340_reproduction.py full --profile current-default/pi \
   --output-root outputs/verification/af340-full-pi \
-  --estimated-budget-usd 0 --authorize-full
+  --estimated-budget-usd 0 --work-package-id AF-XYZ --authorize-full
 ```
 
 The coordinator writes one strict Task 7 manifest in each product/scope private
@@ -796,10 +818,10 @@ uv run python tools/verify_af340_reproduction.py inspect-full \
   --report outputs/verification/af340-full-pi/af340-full-report.json
 ```
 
-H005 closure is stricter than inspecting one execution report. After producing
-an accepted Pi full report and an accepted `paper-reference/claude-code` report,
-run the terminal gates from a clean repository and inspect all three independent
-artifacts together:
+The historical H005 route is superseded by D-053 and has no current execution route.
+Its dormant terminal and closure inspectors are preserved for a future
+separately governed package; historically they consumed accepted Pi and
+`paper-reference/claude-code` full reports plus a clean terminal-gate report:
 
 ```bash
 uv run python tools/verify_af340_reproduction.py terminal \
@@ -814,10 +836,11 @@ The paper Claude comparison binds the exact versioned target row and its digest.
 It retains candidate-only query samples and uses a one-sample 95% bootstrap; it
 never manufactures original-product pairs. Numeric targets apply only to the 13
 paper main-result scopes, while the three analysis/appendix/ablation scopes are
-explicitly not applicable. H005 also recomputes the paper's macro QA and IR rows
-from their six dataset reports. A rejected scope or aggregate assessment cannot
-close H005. The terminal report is rebound to the complete current Git status,
-so later tracked or untracked drift invalidates it.
+explicitly not applicable. The historical H005 inspector also recomputes the
+paper's macro QA and IR rows from their six dataset reports. A rejected scope or
+aggregate assessment remains invalid evidence. The terminal report is rebound
+to the complete current Git status, so later tracked or untracked drift
+invalidates it.
 
 To re-run one retained comparison explicitly, use the Task 7 ready command:
 

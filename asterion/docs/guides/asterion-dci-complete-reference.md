@@ -370,8 +370,9 @@ bash asterion/scripts/bright/run_bio.sh --limit 1
 
 不带 `--limit` 的 source/Asterion 命令会在构造 provider 之前 fail closed；
 launcher invocation 不等于 full execution authorization，`--limit 1` 也不能被称为
-完整结果。完整执行只能由 Task 8 的显式 verifier 授权：`uv run python
-tools/verify_af340_reproduction.py full ... --authorize-full`。
+完整结果。`uv run python tools/verify_af340_reproduction.py full ...
+--authorize-full` 只是保留的 dormant 接口；只有新的非 AF-340 active work package
+取得 D-055 authority 后才可执行。
 
 ### AF-340 reproduction coordinator
 
@@ -427,7 +428,8 @@ variables and forward that external anchor to `inspect`.
 
 A validated Claude subscription report is optional supplementary evidence. It
 may be generated separately and appended to the primary inspection command as
-a third `--report`; subscription availability does not block AF-340 closure:
+an optional third `--report`; subscription availability does not block AF-340
+closure:
 
 ```bash
 uv run python tools/verify_af340_reproduction.py bounded --variant claude-subscription \
@@ -438,8 +440,9 @@ uv run python tools/verify_af340_reproduction.py bounded --variant claude-subscr
 #### Dormant optional strict paper reproduction tooling
 
 The following full/paper commands are dormant optional tooling. They cannot
-close AF-340 and may execute only after a new active work package and explicit
-budget authorization.
+close AF-340. Actual execution is unavailable until a new active work package
+other than AF-340 exists with explicit invocation authorization and a finite
+budget.
 
 Print the immutable profile digest, selected-query counts, operation maxima, and
 budget before requesting authority:
@@ -451,13 +454,15 @@ uv run python tools/verify_af340_reproduction.py full --profile current-default/
 ```
 
 Actual full execution is a separate cost boundary and is never inferred from
-`.env`, cache state, local checks, or bounded evidence. After reviewing the dry
-plan and explicitly authorizing its named profile and budget, use:
+`.env`, cache state, local checks, or bounded evidence. A future package's
+canonical flat worklist entry must contain exactly one
+`Full execution authority: AF-340` field, and the same package ID must replace
+the placeholder below; no such package or current execution route exists:
 
 ```bash
 uv run python tools/verify_af340_reproduction.py full --profile current-default/pi \
   --output-root outputs/verification/af340-full-pi \
-  --estimated-budget-usd 0 --authorize-full
+  --estimated-budget-usd 0 --work-package-id AF-XYZ --authorize-full
 ```
 
 The coordinator writes one strict Task 7 manifest in each product/scope private
@@ -477,7 +482,8 @@ uv run python tools/verify_af340_reproduction.py inspect-full \
   --report outputs/verification/af340-full-pi/af340-full-report.json
 ```
 
-The historical superseded H005 route cannot close AF-340. It required an
+The historical H005 route is superseded by D-053, cannot close AF-340, and has no current execution route.
+Its dormant inspectors historically required an
 accepted Pi full report, an accepted `paper-reference/claude-code`
 numeric-target report, and a terminal-gate report generated from a clean
 repository:

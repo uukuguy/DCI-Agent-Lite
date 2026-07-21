@@ -368,8 +368,8 @@ Asterion launchers now fail closed before provider construction because a
 launcher invocation is not full execution authorization. `--limit 1` is
 bounded evidence, never a full result. Full execution delegates only through
 `uv run python tools/verify_af340_reproduction.py full ... --authorize-full`,
-with the explicit profile, fresh output root, and budget required by that
-verifier.
+but that dormant interface requires a new non-AF-340 active work package with
+D-055 authority before it can execute.
 
 ### AF-340 reproduction coordinator
 
@@ -425,7 +425,8 @@ variables and forward that external anchor to `inspect`.
 
 A validated Claude subscription report is optional supplementary evidence. It
 may be generated separately and appended to the primary inspection command as
-a third `--report`; subscription availability does not block AF-340 closure:
+an optional third `--report`; subscription availability does not block AF-340
+closure:
 
 ```bash
 uv run python tools/verify_af340_reproduction.py bounded --variant claude-subscription \
@@ -436,8 +437,9 @@ uv run python tools/verify_af340_reproduction.py bounded --variant claude-subscr
 #### Dormant optional strict paper reproduction tooling
 
 The following full/paper commands are dormant optional tooling. They cannot
-close AF-340 and may execute only after a new active work package and explicit
-budget authorization.
+close AF-340. Actual execution is unavailable until a new active work package
+other than AF-340 exists with explicit invocation authorization and a finite
+budget.
 
 Print the immutable profile digest, selected-query counts, operation maxima, and
 budget before requesting authority:
@@ -449,13 +451,15 @@ uv run python tools/verify_af340_reproduction.py full --profile current-default/
 ```
 
 Actual full execution is a separate cost boundary and is never inferred from
-`.env`, cache state, local checks, or bounded evidence. After reviewing the dry
-plan and explicitly authorizing its named profile and budget, use:
+`.env`, cache state, local checks, or bounded evidence. A future package's
+canonical flat worklist entry must contain exactly one
+`Full execution authority: AF-340` field, and the same package ID must replace
+the placeholder below; no such package or current execution route exists:
 
 ```bash
 uv run python tools/verify_af340_reproduction.py full --profile current-default/pi \
   --output-root outputs/verification/af340-full-pi \
-  --estimated-budget-usd 0 --authorize-full
+  --estimated-budget-usd 0 --work-package-id AF-XYZ --authorize-full
 ```
 
 The coordinator writes one strict Task 7 manifest in each product/scope private
@@ -478,9 +482,10 @@ uv run python tools/verify_af340_reproduction.py inspect-full \
   --report outputs/verification/af340-full-pi/af340-full-report.json
 ```
 
-The historical superseded H005 route cannot close AF-340. It required accepted
-Pi and `paper-reference/claude-code` full reports, terminal gates from a clean
-repository, and validation of the three independent artifacts together:
+The historical H005 route is superseded by D-053, cannot close AF-340, and has no current execution route.
+Its dormant inspectors historically required
+accepted Pi and `paper-reference/claude-code` full reports, terminal gates from
+a clean repository, and validation of the three independent artifacts together:
 
 ```bash
 uv run python tools/verify_af340_reproduction.py terminal \

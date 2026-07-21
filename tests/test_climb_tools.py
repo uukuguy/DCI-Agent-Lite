@@ -3316,8 +3316,9 @@ class ClimbToolTests(unittest.TestCase):
 
         self.assertNotIn("Four active governed hypotheses", target)
         self.assertIn("Four governed hypotheses", target)
-        self.assertIn("only AF-340-H-004 remains active", target)
-        self.assertIn("H-001 through H-003 are confirmed", target)
+        self.assertIn("H-001 through H-004 are confirmed", target)
+        self.assertIn("no AF-340 hypothesis remains active", target)
+        self.assertNotIn("only AF-340-H-004 remains active", target)
 
     def test_af340_eval_branches_have_exact_dimensions_and_selectors(self) -> None:
         eval_script = (REPO_ROOT / "tools/climb/eval-local.sh").read_text()
