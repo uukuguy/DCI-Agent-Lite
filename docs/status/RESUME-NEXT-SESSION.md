@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-22 03:00 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-22 03:18 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-340
 
@@ -12,6 +12,7 @@ Package: DCI capability-package usability closure
 - Task 2 changed runnable AF-340-H-004 Climb execution to two reports and removed AF-340-H-005 from Climb routing while preserving standalone full/paper verifier tooling.
 - Task 3 published the Pi+MiniMax operator contract, superseded H-005 under D-053, and left only H-004 active in generated Climb state.
 - Tasks 1-3 followed observed RED/GREEN and passed independent task review; Task 3's single wording finding was fixed and re-reviewed clean.
+- Task 4 first inspection stopped fail-closed on a literal Python-alias plan mismatch; D-054 now governs a strict same-venv/same-inode alias repair before retry.
 
 ## Where things stand
 
@@ -20,6 +21,8 @@ Package: DCI capability-package usability closure
 - Task 2: `275fcef` (`fix(climb): align AF-340 with capability closure`), 153 Climb tests, focused cross-contract verifier test, Bash syntax, diff, and scope checks passed.
 - Task 3: `f3619ae` plus fix `280a9b2`; 166 documentation/Climb tests passed, H-005 is traceable but absent from active trees, and only H-004 remains active.
 - Scope preflight reports AF-340 active and healthy. No provider request or full dataset ran.
+- Pi r14 resources, operation count, and native evidence are unchanged. The new inspector passes 3/3 when invoked with r14's original `.venv/bin/python3`; current `uv run python` differs only by a same-file alias.
+- Governance commit `33681d5` updates the design, WORKLIST acceptance, D-054, and Task 4 plan before security-boundary implementation.
 - Isolated setup uses ignored read-only links to root `pi/` and `data/`; nested TypeScript dependencies are installed locally.
 - SDD Tasks 1-3 are complete; Task 4 retained-evidence confirmation is next, with Tasks 5-6 pending.
 
@@ -31,8 +34,8 @@ Package: DCI capability-package usability closure
 
 ## Next actions
 
-1. Revalidate retained Pi r14 and MiniMax r6 reports against the absolute root resource tree, then run governed AF-340-H-004.
-2. Commit generated H-004 confirmation state and verify H-005 remains superseded with no next pending AF-340 hypothesis.
+1. TDD D-054: accept only conventional sibling Python aliases that resolve by `samefile()` to the current interpreter, while rejecting a distinct executable.
+2. Re-run public two-report inspection and governed AF-340-H-004 against the absolute root resource tree; commit confirmed state if 4/4.
 3. Run the complete DCI core-capability matrix, then close AF-340 only after managed closure preflight and final branch review.
 
 ## Ruled-out paths
@@ -42,6 +45,7 @@ Package: DCI capability-package usability closure
 - Do not treat MiniMax evidence as paper-model, published-score, statistical-parity, or full-result evidence.
 - Do not run H-005/full datasets without a new governed package and explicit finite-budget authorization.
 - Do not edit or commit external `pi/`, the retained-evidence worktree, or credentials.
+- Do not accept arbitrary interpreter paths or cross-environment equivalence; D-054 permits only conventional aliases in one `bin/` directory resolving to the identical inode.
 
 ## Ready commands
 

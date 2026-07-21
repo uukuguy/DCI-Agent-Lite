@@ -1099,3 +1099,4 @@
 - 02:58 修正 AF-340 session target，仅 H-004 active，并新增回归断言。 [280a9b2]
 - 03:00 Task 3 修复复审清零；文档、H-005 supersession 与 active tree 一致。
 - 03:07 Task 4 首次 inspect fail-closed：worktree 代码根导致 retained operation-plan drift；未运行 cycle/provider/full。
+- 03:18 D-054 锁定同 venv、samefile Python 别名规范化；任意不同解释器仍拒绝。 [33681d5]
