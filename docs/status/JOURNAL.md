@@ -1093,3 +1093,4 @@
 
 - 02:21 retained inspector 改为 Pi+MiniMax 三维必需、subscription 可选；55 项 verifier 通过。 [50b2010]
 - 02:24 Task 1 独立复审清零；TDD 时序由 RED 报告及协调器中途状态共同确认。
+- 02:37 AF-340 Climb 改为 Pi+MiniMax 双报告 H-004，移除 subscription/H-005 执行门槛。 [275fcef]
