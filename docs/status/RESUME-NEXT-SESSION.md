@@ -18,9 +18,9 @@ Package: README reproduction and runtime-result parity
 - Lifecycle: active; AF-340 remains `in_progress` because H-004 is incomplete.
 - Climb: next hypothesis `AF-340-H-004`; `in_flight: null`. The generated research tree and session state now name only the remaining subscription action.
 - Evaluators/background processes: none.
-- Branch: `main`; before the terminal handoff commit it was 72 commits ahead of `origin/main` and 0 behind. Nothing was pushed during this closeout.
+- Branch: `main`; durable handoff state is commit `60f7abb`. Its terminal journal commit leaves the branch 74 commits ahead of `origin/main` and 0 behind. Nothing was pushed during this closeout.
 - Preserved evidence worktree: `.worktrees/af-340-implementation`; do not remove it until H-004 evidence is relocated or closed.
-- External `pi/` checkout remains outside this repository's changes.
+- External `pi/` checkout is independently dirty in its package metadata/provider model lists plus untracked `.pi/agent/`; these pre-existing/user-owned changes were not touched or committed and remain outside the main repository boundary.
 
 ## Valid retained evidence
 
