@@ -1102,3 +1102,4 @@
 - 03:18 D-054 锁定同 venv、samefile Python 别名规范化；任意不同解释器仍拒绝。 [33681d5]
 - 03:29 D-054 修复仅为 Pi 枚举同一 `bin/`、同一 inode 的常规 Python 别名，并以签名计划哈希唯一选定完整计划；56 项 verifier 通过，独立复审清零。 [eaf1bb1]
 - 03:46 AF-340-H-004 confirmed 4/4; package acceptance recorded.
+- 03:48 H004 retained evidence confirmed 4/4 without provider/full execution, closing the bounded capability gate. [e2a5aa0]
