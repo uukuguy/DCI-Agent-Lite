@@ -521,3 +521,12 @@
 - Full-execution boundary: AF-340-H-005 is removed from AF-340 closure. Paper models, full datasets, published targets, statistical non-inferiority, and complete result reproduction may run only under a new active work package with explicit invocation authorization, exact profiles, fresh private roots, and a finite budget.
 - Rationale: framework usefulness depends on complete contracts, domain behavior, installation, runtime integration, safety, and verifiable execution. Tying closure to an unavailable account or expensive paper experiment would confuse backend availability and optional research evidence with product completeness.
 - Revalidation trigger: make strict paper reproduction a product gate only if the user explicitly changes the project objective and approves a new work package, acceptance contract, and budget authority.
+
+## D-054 — Normalize only same-file Python aliases in retained plan identity
+
+- Status: ✅ accepted design clarification
+- Decided: 2026-07-22
+- Decision: AF-340 retained bounded inspection may match a report against conventional `python`, `python3`, and versioned Python aliases located in the current interpreter's environment `bin/` directory only when `samefile()` proves every candidate resolves to the identical interpreter inode.
+- Evidence boundary: the validator selects one complete candidate plan whose plan SHA matches the signed report, then uses that exact plan for every operation/configuration hash check. A different executable, directory, argument, operation, resource manifest, artifact, signature, or permission remains fail-closed.
+- Rationale: Pi r14 recorded `.venv/bin/python3`, while the documented and Climb inspection path uses `uv run python` and exposes `.venv/bin/python`; both names resolve to the same interpreter file, but literal-path hashing alone made valid retained evidence unusable. Same-file alias matching preserves executable identity without accepting arbitrary command drift.
+- Revalidation trigger: any broader path normalization, interpreter upgrade, cross-environment reuse, or removal of per-operation command-template checks requires a new evidence schema and security review.

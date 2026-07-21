@@ -410,6 +410,8 @@ Journal the decision-aligned state migration and refresh the live checkpoint bec
 ### Task 4: Revalidate retained reports and confirm AF-340-H-004
 
 **Files:**
+- Modify before cycle: `tests/test_af340_reproduction_verifier.py`
+- Modify before cycle: `tools/verify_af340_reproduction.py`
 - Modify through `tools/climb/cycle.sh`: `docs/status/climb/hypotheses.yaml`, `docs/status/climb/runs.csv`, `docs/status/climb/session-state.json`, `docs/status/climb/research-tree.json`, `docs/status/climb/research-tree.md`, `docs/status/JOURNAL.md`
 - Create ignored run evidence: `runs/climb/<generated-run-id>/`
 
@@ -427,7 +429,33 @@ test -f .worktrees/af-340-implementation/outputs/verification/af340-bounded-clau
 
 Expected: scope `ok: true` and both `test -f` commands succeed.
 
-- [ ] **Step 2: Run public retained-evidence inspection directly**
+- [ ] **Step 2: TDD the strict same-file Python-alias repair**
+
+Add a focused test that builds valid Pi retained evidence with a conventional
+same-directory Python alias (`python3` when the current executable is
+`python`) resolving by `samefile()` to the same interpreter. Require public
+inspection under the current alias to accept that report. In the same test,
+re-sign an otherwise structurally valid report whose original operations use
+a different executable path and require rejection.
+
+Run the focused selector first and observe RED from retained operation-plan
+drift. Then minimally change retained validation so Pi plan candidates include
+only the current executable plus conventional sibling aliases in the same
+`bin/` directory that exist and pass `samefile()` against the current
+executable. Select the single complete candidate plan matching the signed
+`plan_sha256`, and use it for every existing per-operation/configuration hash
+check. Do not weaken resource, artifact, native-tree, signature, permission,
+duplicate, privacy, or body-free validation.
+
+Run the focused selector, the complete verifier suite, compilation, and Ruff
+GREEN, then commit:
+
+```bash
+git add tests/test_af340_reproduction_verifier.py tools/verify_af340_reproduction.py
+git commit -m "fix(dci): normalize retained Python aliases"
+```
+
+- [ ] **Step 3: Run public retained-evidence inspection directly**
 
 ```bash
 uv run python tools/verify_af340_reproduction.py inspect \
@@ -438,7 +466,7 @@ uv run python tools/verify_af340_reproduction.py inspect \
 
 Expected: `PASS`, `Required retained evidence dimensions: 3/3`, all three required dimension lines, zero new Agent/Judge operations, and `Full dataset ran: no`.
 
-- [ ] **Step 3: Run the governed H-004 Climb cycle**
+- [ ] **Step 4: Run the governed H-004 Climb cycle**
 
 ```bash
 AF340_RESOURCE_ROOT="$PWD" \
@@ -449,7 +477,7 @@ bash tools/climb/cycle.sh AF-340-H-004
 
 Expected: `AF-340-H-004 confirmed 4/4`, no provider request, H-005 remains superseded, and no next pending AF-340 hypothesis.
 
-- [ ] **Step 4: Verify generated state and commit it**
+- [ ] **Step 5: Verify generated state and commit it**
 
 ```bash
 python3 tools/climb/regen-tree.py

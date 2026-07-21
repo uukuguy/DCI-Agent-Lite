@@ -213,6 +213,15 @@ commands:
 - `full`: optionally runs complete approved benchmark scopes and cross-product
   result comparison under a future separately authorized work package.
 
+Retained bounded validation treats conventional `python`, `python3`, and
+versioned Python names inside one environment `bin/` directory as equivalent
+only when `samefile()` proves they resolve to the exact same interpreter inode.
+The inspector may select the one complete plan identity that matches such an
+alias; it must still reject a different interpreter, directory, operation,
+argument, resource manifest, artifact digest, signature, or permission mode.
+This normalization makes a retained report portable across `uv run python` and
+`uv run python3` without weakening executable identity.
+
 `.env` may provide every normal runtime and Judge value. It cannot by itself
 authorize a full dataset. Full execution requires an explicit invocation-level
 authorization, fresh output identity, declared experiment profile, and
