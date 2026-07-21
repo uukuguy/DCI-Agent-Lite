@@ -1,54 +1,51 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-21 23:01 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-22 02:38 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-340
 
-Package: README reproduction and DCI capability-package usability
+Package: DCI capability-package usability closure
 
 ## TL;DR
 
-- User-approved D-053 makes complete Asterion DCI capability-package usability the project objective; strict DCI paper reproduction is optional evidence.
-- AF-340-H-004 now requires retained Pi r14 plus Claude MiniMax r6, covering `original-pi`, `asterion-pi`, and `asterion-claude-minimax`. Claude subscription is supported but optional.
-- AF-340-H-005 no longer gates AF-340. Any future paper-model, full-dataset, published-score, or statistical comparison needs a new active work package and explicit finite-budget authorization.
+- Task 1 changed public retained inspection to require Pi r14 plus Claude MiniMax r6 across `original-pi`, `asterion-pi`, and `asterion-claude-minimax`; subscription evidence is optional.
+- Task 2 changed runnable AF-340-H-004 Climb execution to two reports and removed AF-340-H-005 from Climb routing while preserving standalone full/paper verifier tooling.
+- Both tasks followed observed RED/GREEN and passed independent task review with no Critical, Important, or Minor findings.
 
 ## Where things stand
 
-- Governance/design commit: `ecc5400` (`docs: redefine AF-340 around DCI capability usability`).
-- Implementation-plan commit: `8e99b57` (`docs: plan AF-340 capability usability closure`).
-- The framework north star, AF-340 canonical design, WORKLIST acceptance, D-053, and CURRENT-STATE are aligned.
-- The canonical implementation plan is `docs/superpowers/plans/2026-07-21-af-340-dci-capability-usability-closure.md`; its six tasks specify RED/GREEN verifier changes, Climb migration, operator docs, retained-evidence confirmation, core-capability terminal gates, and managed closure.
-- The approved DCI core-capability matrix covers research execution; L0-L4 context and conversation evidence; artifacts/resume/cancellation/deadlines; Judge/cache/QA/IR evaluation; benchmark profiles/launchers/reuse; analysis/figures/exports; source/application/wheel and Pi/Claude delivery; and configuration/privacy/body-free safety.
-- The implementation plan, public `inspect` verifier, and Climb H-004/H-005 state still encode the superseded three-report/full-closure rule. H-004 and AF-340 remain `in_progress` until those are changed and terminally revalidated.
-- Scope preflight passes for AF-340. All 12 focused documentation tests, design self-review, and `git diff --check` passed before the design commit.
-- Evaluators/background processes: none. No provider request or full dataset ran.
-- External `pi/` remains an independent checkout and was not edited or committed.
+- Work executes in `.worktrees/af-340-capability-closure` on `codex/af-340-capability-closure`; root main and retained-evidence worktree remain untouched.
+- Task 1: `50b2010` (`fix(dci): close bounded evidence with Pi and MiniMax`), 55 verifier tests plus compile/Ruff passed.
+- Task 2: `275fcef` (`fix(climb): align AF-340 with capability closure`), 153 Climb tests, focused cross-contract verifier test, Bash syntax, diff, and scope checks passed.
+- Scope preflight reports AF-340 active and healthy. No provider request or full dataset ran.
+- Isolated setup uses ignored read-only links to root `pi/` and `data/`; nested TypeScript dependencies are installed locally.
+- SDD Task 3 is next; Tasks 4-6 remain pending.
 
 ## Retained bounded evidence
 
-- Claude MiniMax r6: `.worktrees/af-340-implementation/outputs/verification/af340-bounded-claude-minimax-r6/af340-bounded-report.json`; dimension `asterion-claude-minimax`; 2 Agent/2 Judge; canonical SHA `efabac9a…c9039`.
-- Pi r14: `outputs/verification/af340-bounded-pi-r14/af340-bounded-report.json`; dimensions `original-pi`, `asterion-pi`; 30 Agent/16 Judge; canonical SHA `74ccd39a…eaa`; plan SHA `57225e9c…d11`.
-- Both reports previously passed fresh bottom-level validation. Public `inspect` still rejects them together only because its acceptance set has not yet been migrated.
+- Pi r14: `/Users/sujiangwen/sandbox/agentic-2026/DCI-Agent-Lite/outputs/verification/af340-bounded-pi-r14/af340-bounded-report.json`.
+- Claude MiniMax r6: `/Users/sujiangwen/sandbox/agentic-2026/DCI-Agent-Lite/.worktrees/af-340-implementation/outputs/verification/af340-bounded-claude-minimax-r6/af340-bounded-report.json`.
+- Task 4 must bind `--resource-root` to `/Users/sujiangwen/sandbox/agentic-2026/DCI-Agent-Lite`, not the isolated worktree, while committing generated Climb state on the closure branch.
 
 ## Next actions
 
-1. Select plan execution mode: subagent-driven task gates or inline execution in this session.
-2. Start Task 1 test-first: make `inspect` require Pi plus MiniMax while accepting compatible subscription evidence optionally.
-3. Migrate Climb state/evaluator and user-facing verification docs, then confirm H-004 using the two retained reports.
-4. Revalidate the complete local/static/product/privacy/governance matrix, then close AF-340 only if package closure preflight passes.
+1. Execute Task 3 test-first: publish Pi+MiniMax operator commands, optional subscription wording, and supersede H-005 in tracked Climb state.
+2. Revalidate retained reports and run governed AF-340-H-004 with absolute root evidence paths.
+3. Run the complete DCI core-capability matrix, then close AF-340 only after managed closure preflight and final branch review.
 
 ## Ruled-out paths
 
-- Do not wait for or require a Claude subscription account for AF-340 closure.
-- Do not remove subscription support; it remains an optional supported authentication mode.
-- Do not treat MiniMax functional evidence as paper-model, published-score, or full-result evidence.
-- Do not run former H-005 or any full dataset without a new governed package and explicit invocation/budget authority.
-- Do not modify or commit the external `pi/` checkout.
+- Do not require Claude subscription login for AF-340 closure.
+- Do not remove subscription support; it remains optional evidence.
+- Do not treat MiniMax evidence as paper-model, published-score, statistical-parity, or full-result evidence.
+- Do not run H-005/full datasets without a new governed package and explicit finite-budget authorization.
+- Do not edit or commit external `pi/`, the retained-evidence worktree, or credentials.
 
 ## Ready commands
 
 ```bash
+cd /Users/sujiangwen/sandbox/agentic-2026/DCI-Agent-Lite/.worktrees/af-340-capability-closure
 python3 tools/project_scope_check.py
-uv run python -m unittest -v tests.test_asterion_documentation
-git show --stat --oneline ecc5400
+cat .superpowers/sdd/progress.md
+git log --oneline -8
 ```
