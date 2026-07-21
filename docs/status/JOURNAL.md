@@ -1108,3 +1108,4 @@
 - 04:09 闭包预检要求 Climb phase 与 RESUME 同步退出 active；Task 6 补齐 lifecycle 写集并调整检查顺序，验收范围不变。
 - 04:12 Task 6 进一步纳入 RESUME 草稿与 Climb tree 再生成，保证结构闭包提交自身通过 completed-lifecycle scope。
 - 04:13 AF-340 闭包：focused289/root1617/Asterion134/TS11/Rust19，local 0/0/full no；完成治理。 [4d2defd]
+- 04:20 Corrected AF-340 branch wording and portable resume commands for truthful recovery. [d44423d]
