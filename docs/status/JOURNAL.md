@@ -1100,3 +1100,4 @@
 - 03:00 Task 3 修复复审清零；文档、H-005 supersession 与 active tree 一致。
 - 03:07 Task 4 首次 inspect fail-closed：worktree 代码根导致 retained operation-plan drift；未运行 cycle/provider/full。
 - 03:18 D-054 锁定同 venv、samefile Python 别名规范化；任意不同解释器仍拒绝。 [33681d5]
+- 03:29 D-054 修复仅为 Pi 枚举同一 `bin/`、同一 inode 的常规 Python 别名，并以签名计划哈希唯一选定完整计划；56 项 verifier 通过，独立复审清零。 [eaf1bb1]
