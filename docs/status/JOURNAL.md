@@ -1106,3 +1106,4 @@
 - 03:50 隔离 worktree 的跨 `.venv/bin` 检查按 D-054 正确拒绝；显式复用根 `.venv` 后公共 inspect 3/3 与 H004 4/4 通过，状态独立复审清零，未扩大别名边界。
 - 04:06 AF-340 核心能力终验通过：focused 289、root 1617、Asterion 134、TypeScript 11、Rust 19，local Agent/Judge 0、full no；静态门禁与独立复审清零。
 - 04:09 闭包预检要求 Climb phase 与 RESUME 同步退出 active；Task 6 补齐 lifecycle 写集并调整检查顺序，验收范围不变。
+- 04:12 Task 6 进一步纳入 RESUME 草稿与 Climb tree 再生成，保证结构闭包提交自身通过 completed-lifecycle scope。

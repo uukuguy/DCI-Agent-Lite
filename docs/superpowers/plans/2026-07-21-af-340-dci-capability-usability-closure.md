@@ -559,6 +559,8 @@ Expected: only planned verifier, tests, shell, documentation, and tracked state 
 - Modify: `docs/status/WORKLIST.md`
 - Modify: `docs/status/CURRENT-STATE.md`
 - Modify: `docs/status/climb/session-state.json`
+- Regenerate: `docs/status/climb/research-tree.json`
+- Regenerate: `docs/status/climb/research-tree.md`
 - Modify: `docs/status/JOURNAL.md`
 - Rewrite as active checkpoint: `docs/status/RESUME-NEXT-SESSION.md`
 
@@ -593,13 +595,16 @@ Set the AF-340 Climb session phase to `completed`. Before the completed-lifecycl
 scope check, also draft RESUME as a live checkpoint that no longer presents
 AF-340 as active; finalize its exact closure-commit hash in Step 4. This ordering
 is required because the scope checker evaluates the working-tree lifecycle state.
+Regenerate the Climb research-tree projections after changing the session phase.
 
 - [ ] **Step 3: Verify and commit structural closure**
 
 ```bash
 python3 tools/project_scope_check.py
 git diff --check
-git add docs/status/WORKLIST.md docs/status/CURRENT-STATE.md docs/status/climb/session-state.json
+git add docs/status/WORKLIST.md docs/status/CURRENT-STATE.md \
+  docs/status/RESUME-NEXT-SESSION.md docs/status/climb/session-state.json \
+  docs/status/climb/research-tree.json docs/status/climb/research-tree.md
 git commit -m "docs: close AF-340 capability usability"
 ```
 
