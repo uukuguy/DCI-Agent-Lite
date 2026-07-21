@@ -41,7 +41,8 @@ Currently running: no process.
 ## Ready commands
 
 ```bash
-cd /Users/sujiangwen/sandbox/agentic-2026/DCI-Agent-Lite/.worktrees/af-340-capability-closure
+git worktree list
+# Run the remaining commands from the codex/af-340-capability-closure worktree.
 git status --short --branch
 git log --oneline -8
 python3 tools/project_scope_check.py

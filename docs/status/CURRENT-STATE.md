@@ -3,7 +3,7 @@
 ## Project Snapshot
 
 - Project: Asterion capability-package framework under development in the DCI-Agent-Lite repository; Asterion DCI is the first complete usable capability package and reference application.
-- Current branch: `main`
+- Canonical integration branch: `main`
 - Theme-level focus: Asterion DCI is accepted as the complete usable capability-package reference product across documented, installed, Pi, and Claude Code MiniMax paths.
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
