@@ -1086,3 +1086,4 @@
 - 00:12 刷新 H004 唯一外部登录阻断与可恢复下一步。 [c70c426]
 - 22:07 handoff 修正 Climb 续点：Pi r14 已完成，H004 只余 Claude subscription 登录与第三份报告。
 - 22:09 AF-340 handoff 对齐 Climb 与 subscription 单一续点。 [60f7abb]
+- 22:53 AF-340 改以 DCI 核心能力包可用性闭包，订阅与论文复现转可选。 [ecc5400]
