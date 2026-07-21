@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-22 05:36 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-22 05:37 +0800. **Session remains active — not a final handoff.**
 
 Active work package: none
 
@@ -20,7 +20,7 @@ Currently running: no process.
 ## Repository state
 
 - Closure work is on `codex/af-340-capability-closure` in `.worktrees/af-340-capability-closure`; the branch has no configured upstream, and all branch-only commits remain local and unpushed.
-- The structural reclosure commit includes `WORKLIST`, `CURRENT-STATE`, and this live checkpoint. Its exact hash is recorded by the immediately following journal/checkpoint commit.
+- Structural reclosure commit `0446955` includes `WORKLIST`, `CURRENT-STATE`, and this live checkpoint; the immediately following journal/checkpoint commit records its terminal evidence.
 - External `pi/`, retained evidence, credentials, and ignored local verification logs remain outside the committed change set.
 
 ## Next concrete action
