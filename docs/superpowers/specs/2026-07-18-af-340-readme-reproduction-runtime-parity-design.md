@@ -223,9 +223,15 @@ This normalization makes a retained report portable across `uv run python` and
 `uv run python3` without weakening executable identity.
 
 `.env` may provide every normal runtime and Judge value. It cannot by itself
-authorize a full dataset. Full execution requires an explicit invocation-level
-authorization, fresh output identity, declared experiment profile, and
-estimated budget. Reuse is permitted only for exact compatible evidence.
+authorize a full dataset. A dry-run may print the immutable plan without active
+governance, but actual full execution requires all of: a project lifecycle of
+`active`; one active work package other than AF-340; a matching
+`--work-package-id`; an exact `Full execution authority: AF-340` field in that
+package's canonical worklist entry; explicit invocation-level authorization;
+a fresh output identity; a declared experiment profile; and an estimated
+finite budget. The governance check runs before credential checks, output-root
+creation, or capability authorization. Reuse is permitted only for exact
+compatible evidence.
 
 ## Versioned experiment profiles
 

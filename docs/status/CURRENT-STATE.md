@@ -4,11 +4,11 @@
 
 - Project: Asterion capability-package framework under development in the DCI-Agent-Lite repository; Asterion DCI is the first complete usable capability package and reference application.
 - Canonical integration branch: `main`
-- Theme-level focus: Asterion DCI is accepted as the complete usable capability-package reference product across documented, installed, Pi, and Claude Code MiniMax paths.
+- Theme-level focus: Asterion DCI capability usability is proven; AF-340 is reopened only for merge-review hardening of dormant full governance and stale public/recovery wording.
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `asterion/docs/architecture/agent-framework.md`
-- Active work package: none; the managed lifecycle is complete pending separately approved successor governance.
+- Active work package: AF-340 merge-review repair; no paper/full successor is selected or authorized.
 
 ## Current Architecture
 

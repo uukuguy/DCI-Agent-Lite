@@ -530,3 +530,13 @@
 - Evidence boundary: the validator selects one complete candidate plan whose plan SHA matches the signed report, then uses that exact plan for every operation/configuration hash check. A different executable, directory, argument, operation, resource manifest, artifact, signature, or permission remains fail-closed.
 - Rationale: Pi r14 recorded `.venv/bin/python3`, while the documented and Climb inspection path uses `uv run python` and exposes `.venv/bin/python`; both names resolve to the same interpreter file, but literal-path hashing alone made valid retained evidence unusable. Same-file alias matching preserves executable identity without accepting arbitrary command drift.
 - Revalidation trigger: any broader path normalization, interpreter upgrade, cross-environment reuse, or removal of per-operation command-template checks requires a new evidence schema and security review.
+
+## D-055 — Bind dormant full execution to explicit successor governance
+
+- Status: ✅ accepted security correction
+- Decided: 2026-07-22
+- Decision: AF-340's dormant `full` command may expose plan-only dry-runs in a completed lifecycle, but actual `--authorize-full` execution must name `--work-package-id` and fail closed unless the canonical scope audit reports one matching active package other than AF-340.
+- Authority boundary: the matching worklist entry must contain the exact structured field `Full execution authority: AF-340`. That package marker, a matching invocation ID, an active lifecycle, the existing exact profile, explicit CLI authorization, fresh private root, and finite budget are all necessary; none is sufficient alone.
+- Ordering boundary: governance validation occurs before credential checks, output-root creation, Task 6 capability authorization, provider construction, or any Agent/Judge operation. `dry-run`, retained inspection, and historical full-report inspection remain provider-free and do not require an active package.
+- Rationale: preserving dormant research tooling must not let a completed repository bypass D-053 merely by supplying `--authorize-full`. A structured ledger marker makes future authority reviewable and machine-checkable without selecting or creating a successor now.
+- Revalidation trigger: change the authority marker, permit AF-340 itself, accept multiple/implicit packages, or move governance after credential/filesystem effects only through a reviewed security migration and adversarial tests.

@@ -625,3 +625,47 @@ git status --short --branch
 ```
 
 Expected: completed-lifecycle scope is healthy, the checkpoint commit succeeds, and the main repository is clean. Do not push unless the user separately requests it.
+
+---
+
+### Task 7: Enforce successor governance on dormant full execution
+
+**Files:** `tools/verify_af340_reproduction.py`,
+`tests/test_af340_reproduction_verifier.py`
+
+- Add RED tests proving completed lifecycle, AF-340 itself, mismatched package
+  IDs, and a missing exact `Full execution authority: AF-340` field all reject
+  before credentials, output-root creation, authorization, or executor calls.
+- Keep `full --dry-run`, `inspect-full`, and `inspect-closure` available without
+  active governance.
+- Add `--work-package-id` for actual full execution. Validate the canonical
+  scope audit, one different active package, matching invocation ID, and the
+  exact structured worklist authority field before existing full preflight.
+- Run focused verifier tests, compile, Ruff, scope, and diff checks; commit the
+  independently reviewed repair.
+
+### Task 8: Align the root README and completed session target
+
+**Files:** `README.md`, `tests/test_asterion_documentation.py`,
+`docs/status/climb/session-target.md`, `tests/test_climb_tools.py`
+
+- RED: require the root README's primary inspect block to contain exactly Pi
+  and MiniMax reports, subscription to be optional, H-005 to be superseded,
+  and actual full commands to name future work-package governance.
+- Rewrite the public workflow without deleting dormant dry-run/full inspection
+  reference material. Mark actual full execution unavailable until a new
+  authorized package exists.
+- State H-001 through H-004 confirmed and no AF-340 hypothesis active; replace
+  the stale positive test.
+- Run focused documentation/Climb tests plus static/scope/diff checks and obtain
+  independent review.
+
+### Task 9: Reverify, reclose, and re-review AF-340
+
+- Re-run the affected focused suites, local verifier, root/Asterion product
+  suites, TypeScript/Rust/static/governance gates without provider/full work.
+- Set AF-340 and lifecycle complete again, restore CURRENT/RESUME/Climb
+  recovery truth, journal exact fresh counts and commits, and run completed
+  scope checks.
+- Request a fresh whole-branch review from the original base. Do not integrate
+  while any Critical or Important finding remains.

@@ -1109,3 +1109,5 @@
 - 04:12 Task 6 进一步纳入 RESUME 草稿与 Climb tree 再生成，保证结构闭包提交自身通过 completed-lifecycle scope。
 - 04:13 AF-340 闭包：focused289/root1617/Asterion134/TS11/Rust19，local 0/0/full no；完成治理。 [4d2defd]
 - 04:20 Corrected AF-340 branch wording and portable resume commands for truthful recovery. [d44423d]
+- 04:35 final branch review requested changes: dormant full lacked runtime governance, root README retained the old three-report/H005 workflow, and session target remained stale; AF-340 reopened only for governed repair.
+- 04:35 D-055 requires actual full execution to match a separately active work package with explicit `Full execution authority: AF-340` before credentials, filesystem effects, or provider work.

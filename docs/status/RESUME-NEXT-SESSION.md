@@ -1,10 +1,10 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-22 04:13 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-22 04:35 +0800. **Session remains active — not a final handoff.**
 
-Active work package: none
+Active work package: AF-340
 
-Package: none — project lifecycle complete
+Package: AF-340 — merge-review security and documentation repair
 
 Currently running: no process.
 
@@ -15,27 +15,30 @@ Currently running: no process.
 - Fresh terminal closure passes 289 focused, 1617 root Python, 134 Asterion, 11 TypeScript, and 19 Rust tests plus compileall, Ruff, Bash syntax, Rust fmt/Clippy, scope, and diff gates.
 - Local verification reports `PASS`, zero Agent/Judge operations, and no full dataset. The contract migration made no provider request and ran no full dataset.
 - Claude subscription evidence is optional and was not executed. AF-340-H-005 is superseded by D-053; no paper/full successor is selected.
+- Final whole-branch review found that dormant `full --authorize-full` did not yet enforce D-053 at runtime, the root README retained the old three-report/H-005 workflow, and session-target still called H-004 active. D-055 now governs the repair before code changes.
 
 ## Repository state
 
 - Closure work is on `codex/af-340-capability-closure` in `.worktrees/af-340-capability-closure`; there is no configured upstream and nothing has been pushed.
-- Structural closure commit `4d2defd` includes `WORKLIST`, `CURRENT-STATE`, this live checkpoint, and the completed Climb session/tree.
+- Structural closure commit `4d2defd` remains the accepted evidence boundary; AF-340 is temporarily reopened on the closure branch for the bounded review repair only.
 - External `pi/`, retained evidence, credentials, and ignored local execution logs remain outside the committed change set.
 
 ## Next concrete action
 
-1. Finish the independent whole-branch review and integrate the verified closure branch through the normal branch-completion workflow.
-2. Do not begin implementation until governance explicitly activates a new work package.
+1. Implement D-055 with TDD before any credential, output-root, or provider-capable full path.
+2. Migrate the root README to Pi+MiniMax required evidence and correct the completed session target/test.
+3. Re-run focused/full gates, independently re-review, then close AF-340 again before integration.
 
 ## Open questions
 
-- No implementation question is active. Strict paper-model, published-score, statistical, or full-dataset reproduction remains unselected future work.
+- No product-scope question is active. The repair must not authorize or run strict paper/full reproduction.
 
 ## Ruled-out paths
 
 - Do not require Claude subscription login to reopen or reinterpret AF-340 acceptance.
 - Do not treat MiniMax evidence as paper-model, published-score, statistical-parity, or full-result evidence.
 - Do not run H-005, a provider, or a full dataset without a new active package, exact invocation authority, and finite budget.
+- Do not treat the temporarily reopened AF-340 package as the new successor required by D-053/D-055.
 - Do not edit or commit external `pi/`, retained-evidence worktrees, private artifacts, or credentials.
 
 ## Ready commands
