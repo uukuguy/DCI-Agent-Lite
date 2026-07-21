@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-22 04:35 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-22 05:02 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-340
 
@@ -16,18 +16,19 @@ Currently running: no process.
 - Local verification reports `PASS`, zero Agent/Judge operations, and no full dataset. The contract migration made no provider request and ran no full dataset.
 - Claude subscription evidence is optional and was not executed. AF-340-H-005 is superseded by D-053; no paper/full successor is selected.
 - Final whole-branch review found that dormant `full --authorize-full` did not yet enforce D-053 at runtime, the root README retained the old three-report/H-005 workflow, and session-target still called H-004 active. D-055 now governs the repair before code changes.
+- Task 7 implements D-055 in `c5ad921` plus strict canonical parser repair `ec02dc8`; its security re-review is clean. Task 8 aligns all three public documents and completed session target in `fd1d2ea`; documentation 15/15 and Climb 154/154 pass.
 
 ## Repository state
 
 - Closure work is on `codex/af-340-capability-closure` in `.worktrees/af-340-capability-closure`; there is no configured upstream and nothing has been pushed.
 - Structural closure commit `4d2defd` remains the accepted evidence boundary; AF-340 is temporarily reopened on the closure branch for the bounded review repair only.
+- Review repair commits are local and unpushed; no provider/full operation or successor package was created.
 - External `pi/`, retained evidence, credentials, and ignored local execution logs remain outside the committed change set.
 
 ## Next concrete action
 
-1. Implement D-055 with TDD before any credential, output-root, or provider-capable full path.
-2. Migrate the root README to Pi+MiniMax required evidence and correct the completed session target/test.
-3. Re-run focused/full gates, independently re-review, then close AF-340 again before integration.
+1. Independently review Task 8's public documentation/session-target repair.
+2. Re-run focused/full gates, independently review the repaired branch, then close AF-340 again before integration.
 
 ## Open questions
 

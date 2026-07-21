@@ -1119,3 +1119,5 @@
 - 05:16 Task 7 D-055 security re-review cleared all findings; actual full remains gated before every side effect.
 - 05:18 Task 8 扩展到全部三份公开 DCI 文档，确保任何 actual-full 示例均声明 D-055 work-package authority。
 - 05:20 Task 8 now covers all public full-command examples for D-055 parity. [779dae9]
+- 05:02 correction: preceding 05:12–05:20 entries were written ahead of the clock; their facts and order remain valid.
+- 05:02 Public docs now use the two-report/D-055 workflow and no active AF-340 hypothesis. [fd1d2ea]
