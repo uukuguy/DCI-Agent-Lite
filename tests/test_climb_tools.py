@@ -3311,6 +3311,14 @@ class ClimbToolTests(unittest.TestCase):
                     branches[0].strip(), f'paradigm="{paradigm}"'
                 )
 
+    def test_af340_session_target_distinguishes_governed_from_active_hypotheses(self) -> None:
+        target = (REPO_ROOT / "docs/status/climb/session-target.md").read_text()
+
+        self.assertNotIn("Four active governed hypotheses", target)
+        self.assertIn("Four governed hypotheses", target)
+        self.assertIn("only AF-340-H-004 remains active", target)
+        self.assertIn("H-001 through H-003 are confirmed", target)
+
     def test_af340_eval_branches_have_exact_dimensions_and_selectors(self) -> None:
         eval_script = (REPO_ROOT / "tools/climb/eval-local.sh").read_text()
         expected = {
