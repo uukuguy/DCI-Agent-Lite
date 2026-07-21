@@ -1121,4 +1121,5 @@
 - 05:20 Task 8 now covers all public full-command examples for D-055 parity. [779dae9]
 - 05:02 correction: preceding 05:12–05:20 entries were written ahead of the clock; their facts and order remain valid.
 - 05:02 Public docs now use the two-report/D-055 workflow and no active AF-340 hypothesis. [fd1d2ea]
+- 05:10 Task 8 section-level public-contract re-review cleared all findings after stale authority cleanup. [4e2a3e9]
 - 05:12 Task8 removed stale AF-340 full-authority claims so D-055 gates every public actual-full example. [4e2a3e9]
