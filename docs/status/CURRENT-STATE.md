@@ -8,7 +8,7 @@
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `asterion/docs/architecture/agent-framework.md`
-- Active work package: none; the managed lifecycle is complete pending separately approved successor governance.
+- Active work package: AF-340; reopened only to repair a post-merge lifecycle-sensitive scope assertion and rerun terminal integration closure. Product acceptance, D-053/D-055 authority, and provider/full-execution boundaries are unchanged.
 
 ## Current Architecture
 

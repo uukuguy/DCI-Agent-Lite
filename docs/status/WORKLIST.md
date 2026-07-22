@@ -2,7 +2,7 @@
 
 > Canonical work-package ledger. An `active` lifecycle requires exactly one `in_progress` package; a `complete` lifecycle permits none and forbids autonomous dispatch.
 
-> Project lifecycle: complete
+> Project lifecycle: active
 
 ## AF-000 — Framework control plane
 
@@ -363,7 +363,7 @@
 
 ## AF-340 — README reproduction and runtime-result parity
 
-- Status: completed
+- Status: in_progress
 - Parent objective: Prove Asterion DCI is a complete usable capability package and thereby validate the Asterion capability-package framework
 - Scope: implement one layered `.env`/environment/CLI/application configuration contract with runtime-aware agent defaults and an independent DeepSeek Judge default; make the original README Quick Start, Context Management Strategies, and Benchmark DCI-Agent-Lite paths executable; then prove the independent Asterion package's core research, context, artifact/resume, evaluation, benchmark, analysis/export, installed-wheel, Pi, and Claude Code abilities with bounded retained evidence. Strict paper-model, published-score, and full-dataset reproduction are optional future evidence outside AF-340 closure.
 - Dependencies: AF-330
@@ -372,6 +372,7 @@
 - Plan: `docs/superpowers/plans/2026-07-21-af-340-dci-capability-usability-closure.md`
 - Closure evidence: AF-340-H-001 through H-004 are confirmed 4/4. Pi r14 plus Claude MiniMax r6 independently revalidate exactly `original-pi`, `asterion-pi`, and `asterion-claude-minimax`: r14 completed all thirty bounded agent paths with 16 Judge operations, while r6 completed 2 Agent and 2 Judge operations; neither ran a full dataset. Claude subscription remains supported as optional evidence and was not executed for closure; AF-340-H-005 is superseded by D-053. Fresh terminal reclosure passes 314 focused tests, 1628 root Python tests, 134 Asterion tests, 11 TypeScript tests, and 19 Rust tests, plus local verification with zero Agent/Judge operations and no full dataset, compileall, Ruff, Bash syntax, Rust fmt/Clippy, scope, sensitive-path, process, and diff gates. The reclosure made no provider request and ran no full dataset. Strict paper-model, published-score, statistical, or full-dataset reproduction requires a new active work package, explicit invocation authorization, and finite budget; no successor is selected.
 - Completed review repair: D-055 now gates actual full execution before credentials, filesystem effects, authorization, or provider construction through the strict canonical worklist parser and one separately active successor package with exact authority. The root README and both public Asterion guides use the accepted Pi-plus-MiniMax retained workflow, require D-055 governance for every actual-full example, and leave no AF-340 hypothesis active. Independent security and section-level reviews cleared all findings; the repair authorized no provider/full execution and created no successor.
+- Reopened integration repair: post-merge verification exposed one lifecycle-sensitive regression test that still expected a completed AF-340 hypothesis to pass dispatch preflight. This repair aligns that assertion with the existing fail-closed scope contract, reruns terminal closure, and does not change product acceptance or authorize provider/full execution.
 
 ## AF-095 — Asterion framework identity and extraction
 

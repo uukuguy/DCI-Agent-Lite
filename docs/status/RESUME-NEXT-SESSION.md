@@ -1,10 +1,10 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-22 05:37 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-22 23:40 +0800. **Session remains active — not a final handoff.**
 
-Active work package: none
+Active work package: AF-340
 
-Package: none — project lifecycle complete
+Package: AF-340 — post-merge lifecycle-test repair
 
 Currently running: no process.
 
@@ -16,18 +16,19 @@ Currently running: no process.
 - Fresh terminal reclosure passes 314 focused, 1628 root Python, 134 Asterion, 11 TypeScript, and 19 Rust tests plus compileall, Ruff, Bash syntax, Rust fmt/Clippy, scope, sensitive-path, process, and diff gates.
 - Local verification reports `PASS`, zero Agent/Judge operations, and no full dataset. Reclosure made no provider request and ran no full dataset.
 - Claude subscription evidence is optional and was not executed. AF-340-H-005 is superseded by D-053; no paper/full successor is selected or authorized.
+- The closure branch was fast-forwarded into local `main`. Merged-result verification found that one test still expected `--climb-hypothesis AF-340-H-001` to pass after the lifecycle became complete; the production scope checker correctly rejects that dispatch with no active package.
 
 ## Repository state
 
-- Closure work is on `codex/af-340-capability-closure` in `.worktrees/af-340-capability-closure`; the branch has no configured upstream, and all branch-only commits remain local and unpushed.
-- Structural reclosure commit `0446955` includes `WORKLIST`, `CURRENT-STATE`, and this live checkpoint; the immediately following journal/checkpoint commit records its terminal evidence.
+- Local `main` was fast-forwarded to closure head `3ee8457`; it remains local and unpushed. The merged worktree and feature branch are intentionally retained until merged-result verification passes.
+- AF-340 is temporarily reopened only for the lifecycle-sensitive test repair and final integration verification.
 - External `pi/`, retained evidence, credentials, and ignored local verification logs remain outside the committed change set.
 
 ## Next concrete action
 
-1. Request a fresh whole-branch review from base `a04c218`; do not integrate while any Critical or Important finding remains.
-2. If that review is clean, integrate the verified closure branch through the normal branch-completion workflow.
-3. Do not begin implementation until governance explicitly activates a new work package.
+1. Update the AF-340 scope-preflight regression to require completed-lifecycle dispatch rejection while preserving plain scope success.
+2. Rerun the focused, root, Asterion, TypeScript, Rust, local-verifier, and static integration gates without provider/full execution.
+3. Reclose AF-340, then remove the merged worktree and feature branch only after every gate is green.
 
 ## Open questions
 
@@ -44,9 +45,9 @@ Currently running: no process.
 ## Ready commands
 
 ```bash
-# Run from the codex/af-340-capability-closure worktree.
+# Run from local main.
 git status --short --branch
-git log --oneline -8
+uv run python -m unittest -v tests.test_climb_tools.ClimbToolTests.test_af340_h001_shell_syntax_and_scope_preflight_pass
 python3 tools/project_scope_check.py
-git diff --check a04c218..HEAD
+git diff --check
 ```

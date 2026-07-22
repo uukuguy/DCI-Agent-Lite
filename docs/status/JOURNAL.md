@@ -1125,3 +1125,4 @@
 - 05:12 Task8 removed stale AF-340 full-authority claims so D-055 gates every public actual-full example. [4e2a3e9]
 - 05:37 AF-340 reclosure passes focused314/root1628/Asterion134/TS11/Rust19; D-055/public repair complete, provider0/full no. [0446955]
 - 05:42 Task 9 managed reclosure state review cleared all findings; final branch review is next.
+- 23:40 local `main` fast-forwarded to `3ee8457`; merged-result verification exposed a completed-lifecycle test that incorrectly expected AF-340 hypothesis dispatch to remain authorized. Plain scope passes and the AF-210-H-004 closure independently passes 4/4; AF-340 reopened only for the fail-closed assertion repair and terminal revalidation, with provider/full execution still unauthorized.
