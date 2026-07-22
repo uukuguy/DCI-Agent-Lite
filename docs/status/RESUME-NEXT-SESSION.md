@@ -1,10 +1,10 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-22 23:40 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-23 00:19 +0800. **Session remains active — not a final handoff.**
 
-Active work package: AF-340
+Active work package: none
 
-Package: AF-340 — post-merge lifecycle-test repair
+Package: none — project lifecycle complete
 
 Currently running: no process.
 
@@ -13,22 +13,22 @@ Currently running: no process.
 - AF-340 accepts Asterion DCI as the complete usable capability-package reference product and validates the Asterion capability-package framework at this boundary.
 - AF-340-H-001 through H-004 are confirmed 4/4. Pi r14 and Claude MiniMax r6 independently cover exactly `original-pi`, `asterion-pi`, and `asterion-claude-minimax`.
 - D-055 gates every actual-full execution behind a different active successor package, exact canonical worklist authority, explicit invocation authorization, and finite budget before credentials, filesystem effects, or provider construction.
-- Fresh terminal reclosure passes 314 focused, 1628 root Python, 134 Asterion, 11 TypeScript, and 19 Rust tests plus compileall, Ruff, Bash syntax, Rust fmt/Clippy, scope, sensitive-path, process, and diff gates.
+- Post-merge terminal reclosure passes 315 focused, 1629 root Python, 134 Asterion, 11 TypeScript, and 19 Rust tests plus compileall, Ruff, Bash syntax, Rust fmt/Clippy, scope, process, and diff gates.
 - Local verification reports `PASS`, zero Agent/Judge operations, and no full dataset. Reclosure made no provider request and ran no full dataset.
 - Claude subscription evidence is optional and was not executed. AF-340-H-005 is superseded by D-053; no paper/full successor is selected or authorized.
-- The closure branch was fast-forwarded into local `main`. Merged-result verification found that one test still expected `--climb-hypothesis AF-340-H-001` to pass after the lifecycle became complete; the production scope checker correctly rejects that dispatch with no active package.
+- The closure branch was fast-forwarded into local `main`. Merged-result verification corrected the stale completed-lifecycle assertion and isolated CLI tests that materialized `.env` into the shared test process; AF-210-H-004 now remains 4/4 in focused and full discovery.
 
 ## Repository state
 
-- Local `main` was fast-forwarded to closure head `3ee8457`; it remains local and unpushed. The merged worktree and feature branch are intentionally retained until merged-result verification passes.
-- AF-340 is temporarily reopened only for the lifecycle-sensitive test repair and final integration verification.
+- Local `main` contains the fast-forwarded closure plus integration-repair commits `842e6bb` and `b161b8d`; it remains local and unpushed.
+- The merged worktree and feature branch may now be removed after the completed-state scope check and final state commit pass.
 - External `pi/`, retained evidence, credentials, and ignored local verification logs remain outside the committed change set.
 
 ## Next concrete action
 
-1. Update the AF-340 scope-preflight regression to require completed-lifecycle dispatch rejection while preserving plain scope success.
-2. Rerun the focused, root, Asterion, TypeScript, Rust, local-verifier, and static integration gates without provider/full execution.
-3. Reclose AF-340, then remove the merged worktree and feature branch only after every gate is green.
+1. Commit the completed integration state and verify completed-lifecycle scope.
+2. Remove the merged `.worktrees/af-340-capability-closure` worktree and delete `codex/af-340-capability-closure`.
+3. Do not begin implementation until governance explicitly activates a new work package.
 
 ## Open questions
 
@@ -46,8 +46,7 @@ Currently running: no process.
 
 ```bash
 # Run from local main.
-git status --short --branch
-uv run python -m unittest -v tests.test_climb_tools.ClimbToolTests.test_af340_h001_shell_syntax_and_scope_preflight_pass
 python3 tools/project_scope_check.py
+git status --short --branch
 git diff --check
 ```

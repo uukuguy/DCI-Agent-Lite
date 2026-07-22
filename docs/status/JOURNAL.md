@@ -1133,3 +1133,6 @@
 - 00:01 lifecycle assertion and product-parity environment isolation fixed; focused closure passes 315 tests with AF-210 4/4.
 - 00:02 生命周期测试与 dotenv 隔离修复，消除聚焦套件顺序依赖。 [842e6bb]
 - 00:17 四个 CLI 测试模块恢复环境快照；root1629/Asterion134/TS11/Rust19/local0/0/full-no 与静态门禁通过。
+- 00:18 四个 CLI 测试模块恢复环境，根级闭包不再受顺序污染。 [b161b8d]
+- 00:19 AF-340 post-merge reclosure passes focused315/root1629/Asterion134/TS11/Rust19, local0/0/full-no; lifecycle returned to complete.
+- 00:20 Climb closure failure diagnostics capped at 80 lines for actionable output. [c99bcd7]
