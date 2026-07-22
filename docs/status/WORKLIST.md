@@ -2,7 +2,7 @@
 
 > Canonical work-package ledger. An `active` lifecycle requires exactly one `in_progress` package; a `complete` lifecycle permits none and forbids autonomous dispatch.
 
-> Project lifecycle: complete
+> Project lifecycle: active
 
 ## AF-000 — Framework control plane
 
@@ -383,3 +383,13 @@
 - Acceptance: Asterion owns the sole generic implementation; DCI depends on it as a capability/application; both verified DCI examples and all cross-language gates remain compatible.
 - Design: `docs/superpowers/specs/2026-07-13-asterion-framework-extraction-design.md`
 - Plan: `docs/superpowers/plans/2026-07-13-asterion-framework-extraction.md`
+
+## AF-350 — Asterion standalone promotion readiness
+
+- Status: in_progress
+- Parent objective: Promote Asterion into an independently buildable and verifiable GitHub-root project
+- Scope: make `asterion/` a complete promotion-ready repository root with standalone assets, package-owned provider-free acceptance, complete Makefile and CI entry points, project-root launchers, external-resource boundaries, and a temporary-copy promotion gate while preserving mixed-root integration parity.
+- Dependencies: AF-340
+- Acceptance: copying only the contents of `asterion/` into an empty directory supports frozen Python setup, project tests, compile/Ruff, wheel and isolated CLI verification, documentation checks, TypeScript tests, Rust test/fmt/Clippy, complete Make targets, and promotion smoke without parent source dependencies, provider requests, full datasets, secrets, external Pi mutation, publication, or remote push; the mixed-root integration verifier and governance audit remain valid.
+- Design: `docs/superpowers/specs/2026-07-23-af-350-asterion-standalone-promotion-readiness-design.md`
+- Plan: design-gated target `docs/superpowers/plans/2026-07-23-af-350-asterion-standalone-promotion-readiness.md` after written-spec review

@@ -541,3 +541,15 @@
 - Ordering boundary: governance validation occurs before credential checks, output-root creation, Task 6 capability authorization, provider construction, or any Agent/Judge operation. `dry-run`, retained inspection, and historical full-report inspection remain provider-free and do not require an active package.
 - Rationale: preserving dormant research tooling must not let a completed repository bypass D-053 merely by supplying `--authorize-full`. A structured ledger marker makes future authority reviewable and machine-checkable without selecting or creating a successor now.
 - Revalidation trigger: change the authority marker, permit AF-340 itself, accept multiple/implicit packages, or move governance after credential/filesystem effects only through a reviewed security migration and adversarial tests.
+
+## D-056 — Separate standalone Asterion acceptance from mixed-repository parity
+
+- Status: ✅ accepted design decision
+- Decided: 2026-07-23
+- Decision: `asterion/` is the promotion-ready project root. Its installed `asterion verify --provider dci-agent-lite --level acceptance` contract is package-owned and provider-free, validates only the immutable Asterion wheel/product closure, and must run without the parent DCI-Agent-Lite checkout or a dynamically discovered verifier.
+- Integration boundary: the existing original DCI/Asterion product rows, 538 delegated selectors, launcher comparison, and retained bounded evidence remain a mixed-repository integration gate. They are not copied into the standalone product or relabeled as live standalone verification.
+- Repository boundary: the subtree owns its README, MIT license, ignore rules, safe environment template, Makefile, lockfile, provider-free CI, immutable Pi revision hint, documentation, launchers, tests, schemas, TypeScript packages, Rust package, and promotion smoke. Pi, corpora, datasets, credentials, outputs, private evidence, governance state, and `src/dci` remain external or mixed-root assets.
+- Command boundary: the standalone Makefile exposes project lifecycle, framework, DCI, cross-language, and promotion targets while keeping provider-backed and dormant/full commands explicit. It cannot derive execution authority from configuration or cached evidence.
+- Compatibility boundary: Python/wheel/CLI/provider/application/runtime/schema identities remain stable. AF-350 changes verification ownership and repository-relative paths, not runtime protocol or DCI research behavior.
+- Security boundary: installed acceptance executes packaged code only; promotion and CI gates are provider-free, reject parent/absolute/secret dependencies, and preserve D-053/D-055 full-execution governance.
+- Revalidation trigger: revisit before pluginizing DCI, renaming language packages, changing public identities, adding network CI, embedding external resources, publishing a release, or replacing mixed-root parity evidence.

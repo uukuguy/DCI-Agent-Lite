@@ -4,11 +4,11 @@
 
 - Project: Asterion capability-package framework under development in the DCI-Agent-Lite repository; Asterion DCI is the first complete usable capability package and reference application.
 - Canonical integration branch: `main`
-- Theme-level focus: Asterion DCI is accepted as the complete usable capability-package reference product across documented, installed, Pi, and Claude Code MiniMax paths.
+- Theme-level focus: Asterion standalone promotion readiness with package-owned acceptance and no mixed-root runtime dependency.
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `asterion/docs/architecture/agent-framework.md`
-- Active work package: none; AF-340 post-merge integration repair is complete and the managed lifecycle is closed pending separately approved successor governance.
+- Active work package: AF-350 — Asterion standalone promotion readiness.
 
 ## Current Architecture
 
@@ -21,6 +21,7 @@
 - Language roles: Python owns research/evaluation/orchestration, TypeScript owns Node/service integration, and Rust is reserved for controlled execution infrastructure.
 - Governance: `docs/status/WORKLIST.md` is the sole active package ledger. A scope audit must pass before manager dispatch or climb execution.
 - Project root: `asterion/` is the sole complete Asterion subtree and sole buildable Python project, containing `src/asterion`, auxiliary packages, schemas, examples, scripts, docs, and project-local tests. The mixed root retains original `src/dci`, original/cross-product examples and tests, parity/acceptance evidence, shared workspace configuration/tooling, and governance, with no second Asterion product tree.
+- Standalone delivery contract: AF-350 promotes `asterion/` to a complete repository root; installed acceptance becomes package-owned while original DCI/Asterion 538-selector parity remains a mixed-repository integration gate.
 - Maintenance history: Pi/Judge reliability H-001 through H-019 is completed and remains available as reference-maintenance evidence; it is not an active roadmap stream.
 - Complete DCI result: `src/dci` remains an independent source-only comparison baseline. AF-180 through AF-250 completed shared `.env` forwarding, complete operator controls, batch/export semantics, Asterion examples, installed Pi application, and bounded provider-backed acceptance. Asterion shares normal `DCI_*` configuration with the baseline while keeping Asterion-owned output paths; neither product imports or launches the other.
 - AF-220 acceptance: its four Climb hypotheses are confirmed 4/4. Using only process-local shared configuration and main-repository external resources, both model-free prerequisites, both real Pi examples, the project-entrypoint installed application, and the one-row Pi-plus-Judge benchmark passed. Native state/evaluation schemas and the application's single body-free JSON projection were verified; this closes AF-220 only.
@@ -68,6 +69,7 @@
 
 ## Open Problems (theme-level)
 
+- The Asterion subtree still lacks standalone repository assets, package-owned installed acceptance, promotion-safe launchers, and a parent-independent CI/verification gate.
 - Optional full-dataset validation and score reproduction remain unselected future work requiring a new work package, separately reviewed invocation, exact profiles, fresh private roots, and explicit budget authorization.
 
 ## Key Files
@@ -89,6 +91,7 @@
 
 ### Implementation entry points
 
+- `docs/superpowers/specs/2026-07-23-af-350-asterion-standalone-promotion-readiness-design.md` — approved standalone root, acceptance separation, command, security, and promotion contract.
 - `docs/superpowers/specs/2026-07-17-af-320-paper-benchmark-metric-parity-design.md` — approved AF-320 paper identities, formulas, evidence, execution gate, and acceptance contract.
 - `docs/superpowers/plans/2026-07-17-af-320-paper-benchmark-metric-parity.md` — reviewed AF-320 TDD task map and hypothesis binding points.
 - `docs/superpowers/specs/2026-07-17-af-330-complete-application-dual-runtime-design.md` — approved complete application and restricted dual-runtime contract.
