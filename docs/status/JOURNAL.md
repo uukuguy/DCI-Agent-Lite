@@ -1138,3 +1138,4 @@
 - 00:20 Climb closure failure diagnostics capped at 80 lines for actionable output. [c99bcd7]
 - 00:21 AF-340 integration repair closed with completed lifecycle and refreshed recovery state. [39ffefd]
 - 00:21 merged AF-340 closure worktree and feature branch removed; pre-existing implementation worktree preserved.
+- 00:22 cleanup checkpoint records the removed closure branch and worktree. [c09f662]
