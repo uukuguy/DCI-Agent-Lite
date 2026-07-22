@@ -2703,7 +2703,8 @@ class ClimbToolTests(unittest.TestCase):
                             if score == 0:
                                 log_path = run_dir / f"{dimension}.log"
                                 if log_path.is_file():
-                                    diagnostic.append(log_path.read_text())
+                                    log_lines = log_path.read_text().splitlines()
+                                    diagnostic.append("\n".join(log_lines[-80:]))
                     self.fail("\n".join(diagnostic))
                 evaluation = json.loads((run_dir / "local-eval.json").read_text())
                 self.assertEqual(evaluation["hypothesis_id"], hypothesis_id)
