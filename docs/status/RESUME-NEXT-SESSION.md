@@ -21,14 +21,14 @@ Currently running: no process.
 ## Repository state
 
 - Local `main` contains the fast-forwarded closure plus integration-repair commits `842e6bb` and `b161b8d`; it remains local and unpushed.
-- The merged worktree and feature branch may now be removed after the completed-state scope check and final state commit pass.
+- The merged `.worktrees/af-340-capability-closure` worktree and `codex/af-340-capability-closure` branch were removed after completed-state verification. The pre-existing `af-340-implementation` worktree remains outside this cleanup.
 - External `pi/`, retained evidence, credentials, and ignored local verification logs remain outside the committed change set.
 
 ## Next concrete action
 
-1. Commit the completed integration state and verify completed-lifecycle scope.
-2. Remove the merged `.worktrees/af-340-capability-closure` worktree and delete `codex/af-340-capability-closure`.
-3. Do not begin implementation until governance explicitly activates a new work package.
+1. Do not begin implementation until governance explicitly activates a new work package.
+2. Keep strict paper/full execution unselected unless a successor package receives exact D-055 authority and finite budget.
+3. Push local `main` only when explicitly requested; all integration commits remain local.
 
 ## Open questions
 
