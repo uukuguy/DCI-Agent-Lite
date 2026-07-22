@@ -281,6 +281,7 @@ class AsterionDciProductParityTests(unittest.TestCase):
         if resume:
             argv[1:1] = ["--resume", str(output)]
         with (
+            mock.patch.dict(os.environ, os.environ.copy(), clear=True),
             mock.patch.object(sys, "argv", argv),
             mock.patch.object(source_runner, "PiRpcClient", client),
             mock.patch.object(
@@ -325,6 +326,15 @@ class AsterionDciProductParityTests(unittest.TestCase):
                 ).status
             except DciRunError:
                 return "failed"
+
+    def test_source_fixture_does_not_leak_materialized_dotenv(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory, mock.patch.dict(
+            os.environ, {"AF250_ENV_SENTINEL": "retained"}, clear=True
+        ):
+            output = Path(temporary_directory) / "source"
+            self.assertEqual(self._run_source_fixture(output, _SourceFixturePiClient), 0)
+            self.assertEqual(set(os.environ), {"AF250_ENV_SENTINEL"})
+            self.assertEqual(os.environ["AF250_ENV_SENTINEL"], "retained")
 
     def _write_source_batch_evidence(
         self, root: Path, *, mode: str, rows: int, verify_reuse: bool = True
@@ -555,7 +565,9 @@ class AsterionDciProductParityTests(unittest.TestCase):
             launch.assert_not_called()
 
     def test_source_main_persists_and_rejects_prompt_contract_identity(self) -> None:
-        with tempfile.TemporaryDirectory() as temporary_directory:
+        with tempfile.TemporaryDirectory() as temporary_directory, mock.patch.dict(
+            os.environ, os.environ.copy(), clear=True
+        ):
             root = Path(temporary_directory)
             dataset = root / "dataset.jsonl"
             dataset.write_text(

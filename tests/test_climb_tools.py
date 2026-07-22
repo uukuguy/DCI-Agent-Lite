@@ -2693,7 +2693,18 @@ class ClimbToolTests(unittest.TestCase):
                     capture_output=True,
                 )
 
-                self.assertEqual(result.returncode, 0, result.stderr)
+                if result.returncode != 0:
+                    diagnostic = [result.stderr, result.stdout]
+                    evaluation_path = run_dir / "local-eval.json"
+                    if evaluation_path.is_file():
+                        diagnostic.append(evaluation_path.read_text())
+                        failed_evaluation = json.loads(evaluation_path.read_text())
+                        for dimension, score in failed_evaluation["per_task"].items():
+                            if score == 0:
+                                log_path = run_dir / f"{dimension}.log"
+                                if log_path.is_file():
+                                    diagnostic.append(log_path.read_text())
+                    self.fail("\n".join(diagnostic))
                 evaluation = json.loads((run_dir / "local-eval.json").read_text())
                 self.assertEqual(evaluation["hypothesis_id"], hypothesis_id)
                 self.assertEqual(evaluation["total"], 4)
@@ -3522,12 +3533,7 @@ class ClimbToolTests(unittest.TestCase):
             capture_output=True,
         )
         scope = subprocess.run(
-            [
-                "python3",
-                "tools/project_scope_check.py",
-                "--climb-hypothesis",
-                "AF-340-H-001",
-            ],
+            ["python3", "tools/project_scope_check.py"],
             cwd=REPO_ROOT,
             text=True,
             capture_output=True,
@@ -3535,6 +3541,66 @@ class ClimbToolTests(unittest.TestCase):
 
         self.assertEqual(syntax.returncode, 0, syntax.stderr)
         self.assertEqual(scope.returncode, 0, scope.stderr)
+        self.assertTrue(json.loads(scope.stdout)["ok"])
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            status_dir = root / "docs/status"
+            climb_dir = status_dir / "climb"
+            architecture_dir = root / "asterion/docs/architecture"
+            climb_dir.mkdir(parents=True)
+            architecture_dir.mkdir(parents=True)
+
+            worklist = (REPO_ROOT / "docs/status/WORKLIST.md").read_text()
+            worklist = worklist.replace(
+                "> Project lifecycle: active", "> Project lifecycle: complete", 1
+            )
+            worklist = worklist.replace(
+                "## AF-340 — README reproduction and runtime-result parity\n\n"
+                "- Status: in_progress",
+                "## AF-340 — README reproduction and runtime-result parity\n\n"
+                "- Status: completed",
+                1,
+            )
+            (status_dir / "WORKLIST.md").write_text(worklist)
+            (status_dir / "CURRENT-STATE.md").write_text(
+                "Framework north star: "
+                "`asterion/docs/architecture/agent-framework.md`\n"
+            )
+            (status_dir / "RESUME-NEXT-SESSION.md").write_text(
+                "Active work package: none\n"
+            )
+            (climb_dir / "session-state.json").write_text(
+                json.dumps({"phase": "completed"})
+            )
+            (climb_dir / "hypotheses.yaml").write_text(
+                "hypotheses:\n"
+                "- id: AF-340-H-001\n"
+                "  work_package_id: AF-340\n"
+            )
+            (architecture_dir / "agent-framework.md").write_text("# Framework\n")
+
+            completed_dispatch = subprocess.run(
+                [
+                    "python3",
+                    "tools/project_scope_check.py",
+                    "--root",
+                    str(root),
+                    "--climb-hypothesis",
+                    "AF-340-H-001",
+                ],
+                cwd=REPO_ROOT,
+                text=True,
+                capture_output=True,
+            )
+
+        self.assertEqual(completed_dispatch.returncode, 1, completed_dispatch.stderr)
+        completed_payload = json.loads(completed_dispatch.stdout)
+        self.assertFalse(completed_payload["ok"])
+        self.assertIn(
+            "climb hypothesis AF-340-H-001 cannot dispatch without an active package",
+            completed_payload["errors"],
+        )
 
     def test_af310_h005_provider_binding_is_digest_bound_and_body_free(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
