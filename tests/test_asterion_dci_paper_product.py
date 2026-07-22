@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import unittest
 import tempfile
 from dataclasses import replace
@@ -9,6 +10,20 @@ from pathlib import Path
 from unittest import mock
 
 from asterion.dci.cli import main
+
+
+_MODULE_ENVIRONMENT: dict[str, str] | None = None
+
+
+def setUpModule() -> None:
+    global _MODULE_ENVIRONMENT
+    _MODULE_ENVIRONMENT = os.environ.copy()
+
+
+def tearDownModule() -> None:
+    assert _MODULE_ENVIRONMENT is not None
+    os.environ.clear()
+    os.environ.update(_MODULE_ENVIRONMENT)
 
 
 class PaperBenchmarkCliTests(unittest.TestCase):

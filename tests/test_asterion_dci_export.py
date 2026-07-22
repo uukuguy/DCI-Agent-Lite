@@ -41,6 +41,18 @@ from asterion.dci.export import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
+_MODULE_ENVIRONMENT: dict[str, str] | None = None
+
+
+def setUpModule() -> None:
+    global _MODULE_ENVIRONMENT
+    _MODULE_ENVIRONMENT = os.environ.copy()
+
+
+def tearDownModule() -> None:
+    assert _MODULE_ENVIRONMENT is not None
+    os.environ.clear()
+    os.environ.update(_MODULE_ENVIRONMENT)
 
 
 def _encrypt(value: str) -> str:
