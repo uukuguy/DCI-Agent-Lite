@@ -1145,3 +1145,4 @@
 - 06:18 AF-350 与 D-056 固化 standalone promotion、验收分层和安全边界。 [3e8be41]
 - 08:07 AF-350 拆为八个 TDD 任务，确保 standalone promotion 每步可执行验证。 [df0b901]
 - 08:08 恢复边界指向已提交计划，便于下一会话从 Task 1 继续。 [987792e]
+- 08:31 standalone 根骨架与完整 Make 命令面落地，建立可复现构建入口。 [09b47e8]
