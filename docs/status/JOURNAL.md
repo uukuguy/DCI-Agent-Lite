@@ -1143,3 +1143,4 @@
 - 02:14 AF-340 final handoff records clean completed lifecycle and successor governance boundary. [54dc00f]
 - 05:09 standalone 尚未落地：子树缺仓库骨架且 launchers 依赖 mixed root；验证指南闭包测试计数滞后。
 - 06:18 AF-350 与 D-056 固化 standalone promotion、验收分层和安全边界。 [3e8be41]
+- 08:07 AF-350 拆为八个 TDD 任务，确保 standalone promotion 每步可执行验证。 [df0b901]
