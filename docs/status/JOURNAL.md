@@ -1148,3 +1148,4 @@
 - 08:31 standalone 根骨架与完整 Make 命令面落地，建立可复现构建入口。 [09b47e8]
 - 08:33 结构快照记录根骨架完成，恢复点推进到 package-owned acceptance。 [4e717b6]
 - 09:02 package-owned acceptance 实现 source/wheel 同构验证，同时保留 mixed 538-selector 门禁。 [945261b]
+- 09:04 结构状态记录 acceptance 所有权切换，恢复点推进至 standalone launchers。 [b06e60f]

@@ -194,7 +194,7 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
                 self.assertNotIn("uv run python", text)
                 if relative in PRIMARY_LAUNCHERS:
                     self.assertIn(
-                        'uv run --project "$REPO_ROOT/asterion" asterion-dci benchmark',
+                        'uv run --project "$PROJECT_ROOT" asterion-dci benchmark',
                         text,
                     )
                     self.assertNotIn("command=(asterion-dci", text)
@@ -280,6 +280,7 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
                         | {
                             "PATH": f"{bin_dir}:{os.environ['PATH']}",
                             "DCI_PROVIDER": "exported",
+                            "ASTERION_DCI_RESOURCE_ROOT": str(root),
                             "ASTERION_DCI_BATCH_LIMIT": "9",
                             "CAPTURE_ARGS": str(capture_args),
                             "CAPTURE_PROVIDER": str(capture_provider),
@@ -409,7 +410,10 @@ class AsterionDciBatchLauncherTests(unittest.TestCase):
                 encoding="utf-8",
             )
             fake.chmod(0o755)
-            env = os.environ | {"PATH": f"{bin_dir}:{os.environ['PATH']}"}
+            env = os.environ | {
+                "PATH": f"{bin_dir}:{os.environ['PATH']}",
+                "ASTERION_DCI_RESOURCE_ROOT": str(root),
+            }
 
             unset_log = root / "unset.log"
             result = subprocess.run(
