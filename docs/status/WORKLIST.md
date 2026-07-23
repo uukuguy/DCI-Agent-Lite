@@ -392,4 +392,4 @@
 - Dependencies: AF-340
 - Acceptance: copying only the contents of `asterion/` into an empty directory supports frozen Python setup, project tests, compile/Ruff, wheel and isolated CLI verification, documentation checks, TypeScript tests, Rust test/fmt/Clippy, complete Make targets, and promotion smoke without parent source dependencies, provider requests, full datasets, secrets, external Pi mutation, publication, or remote push; the mixed-root integration verifier and governance audit remain valid.
 - Design: `docs/superpowers/specs/2026-07-23-af-350-asterion-standalone-promotion-readiness-design.md`
-- Plan: design-gated target `docs/superpowers/plans/2026-07-23-af-350-asterion-standalone-promotion-readiness.md` after written-spec review
+- Plan: `docs/superpowers/plans/2026-07-23-af-350-asterion-standalone-promotion-readiness.md`

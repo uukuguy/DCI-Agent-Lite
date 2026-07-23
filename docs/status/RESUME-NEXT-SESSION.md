@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-23 06:14 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-23 08:03 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-350
 
@@ -12,24 +12,25 @@ Currently running: no process.
 
 - The user approved the complete AF-350 design for making `asterion/` promotion-ready as a GitHub repository root without creating or publishing a separate repository.
 - D-056 separates package-owned, provider-free standalone acceptance from the mixed-repository 538-selector original DCI/Asterion integration gate.
-- AF-350 is design-gated: no implementation starts until the written spec is committed and the user reviews it.
+- The written design is approved. The implementation plan now defines eight TDD tasks; implementation has not started.
 
 ## Where things stand
 
 - Local `main` remains unpushed and ahead of `origin/main`; the prior AF-340 lifecycle is complete.
+- Governance commit `3e8be41` records AF-350, D-056, the approved written design, and the active recovery boundary.
 - The only new package is AF-350. It does not authorize a provider request, full dataset, paper reproduction, publication, remote push, or external `pi/` mutation.
 - The approved design target is `docs/superpowers/specs/2026-07-23-af-350-asterion-standalone-promotion-readiness-design.md`.
 - No evaluator, verifier, test, Rust, Node, or promotion process is running.
 
 ## Next steps
 
-1. Ask the user to review the committed AF-350 written spec.
-2. After approval, use `writing-plans` to create `docs/superpowers/plans/2026-07-23-af-350-asterion-standalone-promotion-readiness.md`.
-3. Implement through TDD only after the plan is reviewed and execution begins.
+1. Review `docs/superpowers/plans/2026-07-23-af-350-asterion-standalone-promotion-readiness.md`.
+2. Execute Task 1 through TDD after the user selects inline or explicitly authorizes sub-agent execution.
+3. Keep every AF-350 gate provider-free and preserve the mixed-root integration verifier as a separate claim.
 
 ## Open questions
 
-- No design question remains. The pending gate is review of the written spec.
+- No design question remains. The pending gate is implementation-plan review and execution-mode selection.
 - Creating a separate Git repository, remote, release, or package publication remains outside AF-350.
 
 ## Ruled-out paths

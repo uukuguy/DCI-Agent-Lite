@@ -1142,3 +1142,4 @@
 - 02:13 final handoff boundary: main clean/unpushed, lifecycle complete, no live process; external `pi/` dirt and retained implementation worktree explicitly excluded.
 - 02:14 AF-340 final handoff records clean completed lifecycle and successor governance boundary. [54dc00f]
 - 05:09 standalone 尚未落地：子树缺仓库骨架且 launchers 依赖 mixed root；验证指南闭包测试计数滞后。
+- 06:18 AF-350 与 D-056 固化 standalone promotion、验收分层和安全边界。 [3e8be41]
