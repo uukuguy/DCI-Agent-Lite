@@ -36,6 +36,11 @@ class AsterionProjectBoundaryTests(unittest.TestCase):
         self.assertTrue((PROJECT / "schemas/agent-runtime/v1/event.schema.json").is_file())
         self.assertTrue((SOURCE / "dci/resources/batch-profiles.json").is_file())
 
+    def test_project_metadata_does_not_require_a_parent_workspace(self) -> None:
+        text = (PROJECT / "pyproject.toml").read_text(encoding="utf-8")
+        self.assertNotIn("../", text)
+        self.assertNotRegex(text, r"(?m)^\s*members\s*=")
+
 
 if __name__ == "__main__":
     unittest.main()
