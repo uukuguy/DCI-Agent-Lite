@@ -1147,3 +1147,4 @@
 - 08:08 恢复边界指向已提交计划，便于下一会话从 Task 1 继续。 [987792e]
 - 08:31 standalone 根骨架与完整 Make 命令面落地，建立可复现构建入口。 [09b47e8]
 - 08:33 结构快照记录根骨架完成，恢复点推进到 package-owned acceptance。 [4e717b6]
+- 09:02 package-owned acceptance 实现 source/wheel 同构验证，同时保留 mixed 538-selector 门禁。 [945261b]
