@@ -25,15 +25,15 @@ target/
 packages/rust/**/target/
 
 # External dependencies and generated data
-pi/
-pi-mono/
-corpus/
-corpora/
-data/
-datasets/
-outputs/
-runs/
-logs/
+/pi/
+/pi-mono/
+/corpus/
+/corpora/
+/data/
+/datasets/
+/outputs/
+/runs/
+/logs/
 
 # Editors and operating systems
 .DS_Store
@@ -44,4 +44,3 @@ logs/
 # Promotion/build scratch
 .promotion-*/
 tmp/
-

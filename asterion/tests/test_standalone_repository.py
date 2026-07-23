@@ -81,6 +81,23 @@ class StandaloneRepositoryTests(unittest.TestCase):
         self.assertNotIn("../", text)
         self.assertNotIn("pi-mono", text)
 
+    def test_external_data_ignore_rules_do_not_hide_packaged_resources(self) -> None:
+        text = (PROJECT / ".gitignore").read_text(encoding="utf-8").splitlines()
+        for name in (
+            "pi",
+            "pi-mono",
+            "corpus",
+            "corpora",
+            "data",
+            "datasets",
+            "outputs",
+            "runs",
+            "logs",
+        ):
+            with self.subTest(name=name):
+                self.assertIn(f"/{name}/", text)
+                self.assertNotIn(f"{name}/", text)
+
     def test_makefile_exposes_complete_explicit_command_surface(self) -> None:
         text = self._makefile_text()
         phony = {

@@ -6,6 +6,7 @@ import os
 import tempfile
 import unittest
 from collections.abc import AsyncIterator
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -23,6 +24,7 @@ from asterion.applications.product import (
 )
 from asterion.dci.application_executor import EnvironmentDciRunExecutor
 from asterion.dci.config import ConfigLayers
+from asterion.dci.verification import create_dci_product
 from asterion.dci.pi_rpc import PiRpcClient
 from asterion.dci.run import DciRunRequest, DciRunResult
 from asterion.runtime.factory import RuntimeFactoryBinding, RuntimeFactoryRegistry
@@ -464,6 +466,102 @@ class AsterionCliTests(unittest.TestCase):
         self.assertIn("Overall: PASS", stdout.getvalue())
         self.assertIn("Provider-backed operations: 0", stdout.getvalue())
         self.assertIn("Full dataset ran: no", stdout.getvalue())
+
+    def _standalone_dci_provider(self, root: Path) -> InstalledApplicationProvider:
+        value = create_dci_provider()
+        return replace(
+            value,
+            product=create_dci_product(repo_root=root),
+        )
+
+    def test_dci_acceptance_cli_reports_installed_package_closure(self) -> None:
+        entry = FakeEntryPoint(
+            name="dci-agent-lite",
+            factory=lambda: self._standalone_dci_provider(
+                Path(__file__).resolve().parents[1]
+            ),
+        )
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+
+        code = main(
+            [
+                "verify",
+                "--provider",
+                "dci-agent-lite",
+                "--level",
+                "acceptance",
+                "--json",
+            ],
+            entry_points=(entry,),
+            stdout=stdout,
+            stderr=stderr,
+        )
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(code, 0, stderr.getvalue())
+        self.assertEqual(payload["status"], "PASS")
+        self.assertEqual(payload["provider_backed_operation_count"], 0)
+        self.assertFalse(payload["full_dataset_ran"])
+        self.assertEqual(
+            [item["check_id"] for item in payload["checks"]],
+            [
+                "application-assemblies",
+                "application-providers",
+                "capability-manifests",
+                "context-profiles",
+                "paper-benchmarks",
+                "paper-scopes",
+                "provider-requests",
+            ],
+        )
+
+    def test_dci_acceptance_cli_is_independent_of_current_directory(self) -> None:
+        project = Path(__file__).resolve().parents[1]
+        entry = FakeEntryPoint(
+            name="dci-agent-lite",
+            factory=lambda: self._standalone_dci_provider(project),
+        )
+        baseline = io.StringIO()
+        self.assertEqual(
+            main(
+                [
+                    "verify",
+                    "--provider",
+                    "dci-agent-lite",
+                    "--level",
+                    "acceptance",
+                    "--json",
+                ],
+                entry_points=(entry,),
+                stdout=baseline,
+                stderr=io.StringIO(),
+            ),
+            0,
+        )
+        with tempfile.TemporaryDirectory() as temp_dir:
+            previous = Path.cwd()
+            try:
+                os.chdir(temp_dir)
+                isolated = io.StringIO()
+                code = main(
+                    [
+                        "verify",
+                        "--provider",
+                        "dci-agent-lite",
+                        "--level",
+                        "acceptance",
+                        "--json",
+                    ],
+                    entry_points=(entry,),
+                    stdout=isolated,
+                    stderr=io.StringIO(),
+                )
+            finally:
+                os.chdir(previous)
+
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(isolated.getvalue()), json.loads(baseline.getvalue()))
 
     def test_list_reports_metadata_without_loading_provider(self) -> None:
         entry = FakeEntryPoint(name="example-app", factory=lambda: None)

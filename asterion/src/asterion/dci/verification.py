@@ -11,7 +11,6 @@ import re
 import secrets
 import stat
 import subprocess
-import importlib.util
 import sys
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -1034,40 +1033,151 @@ class LocalDciVerificationBackend:
         return result.get("is_correct") is True
 
 
-def _run_product_acceptance(root: Path, acceptance_root: Path | None = None) -> object:
-    runner = _load_product_acceptance_runner(root)
-    return runner(root, acceptance_root=acceptance_root)
+def _acceptance_check(
+    check_id: str,
+    summary: str,
+    *,
+    actual: int,
+    expected: int,
+) -> VerificationCheckResult:
+    passed = actual == expected
+    return VerificationCheckResult(
+        check_id=check_id,
+        summary=summary if passed else f"{summary} is incomplete",
+        status="PASS" if passed else "FAIL",
+        counts=(("actual", actual), ("expected", expected)),
+    )
 
 
-def _load_product_acceptance_runner(root: Path) -> Callable[..., object]:
-    """Load the exact source-checkout verifier without relying on ``sys.path``."""
+def _installed_acceptance_checks() -> tuple[VerificationCheckResult, ...]:
+    """Validate the exact installed provider and packaged-resource closure."""
 
-    path = Path(root).resolve() / "tools/verify_asterion_dci_product.py"
-    if not path.is_file() or path.is_symlink():
-        raise ImportError("product acceptance verifier is unavailable")
-    module_name = "_asterion_dci_product_acceptance"
-    spec = importlib.util.spec_from_file_location(module_name, path)
-    if spec is None or spec.loader is None:
-        raise ImportError("product acceptance verifier is unavailable")
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    try:
-        spec.loader.exec_module(module)
-        runner = getattr(module, "verify_product_acceptance")
-    except Exception:
-        sys.modules.pop(module_name, None)
-        raise ImportError("product acceptance verifier is unavailable") from None
-    if not callable(runner):
-        raise ImportError("product acceptance verifier is unavailable")
-    return runner
+    from asterion.applications.controlled_code import (
+        create_provider as create_controlled_provider,
+    )
+    from asterion.applications.dci_agent_lite import (
+        create_provider as create_dci_provider,
+    )
+    from asterion.applications.provider import validate_installed_provider
+    from asterion.packages.catalog import discover_packages
+
+    providers = (
+        validate_installed_provider(
+            create_controlled_provider(), selected_id="controlled-code"
+        ),
+        validate_installed_provider(
+            create_dci_provider(), selected_id="dci-agent-lite"
+        ),
+    )
+    applications = tuple(
+        application
+        for provider in providers
+        for application in provider.applications
+    )
+    bound_assemblies = tuple(
+        path
+        for application in applications
+        for path in application.assembly_paths
+    )
+    if (
+        tuple(provider.provider_id for provider in providers)
+        != ("controlled-code", "dci-agent-lite")
+        or tuple(application.application_id for application in applications)
+        != (
+            "code.quality",
+            "dci.research-capability",
+            "dci.complete-application",
+        )
+        or len(bound_assemblies) != 5
+    ):
+        raise RuntimeError("installed application closure is invalid")
+
+    catalog_roots = tuple(
+        sorted(
+            {
+                root
+                for application in applications
+                for root in application.catalog_roots
+            }
+        )
+    )
+    manifests = discover_packages(catalog_roots).entries
+    package_root = Path(str(resources.files("asterion"))).resolve()
+    packaged_assemblies = tuple(
+        sorted((package_root / "applications").glob("*/assemblies/*.json"))
+    )
+
+    profiles = context_profile_names()
+    if profiles != ("level0", "level1", "level2", "level3", "level4"):
+        raise RuntimeError("context profile closure is invalid")
+
+    datasets = paper_benchmark_ids()
+    scopes = paper_experiment_scope_ids()
+    for dataset_id in datasets:
+        resolve_paper_benchmark(dataset_id)
+    for scope_id in scopes:
+        resolve_paper_experiment_scope(scope_id)
+    if (
+        _SHA256.fullmatch(paper_benchmark_inventory_sha256()) is None
+        or _SHA256.fullmatch(paper_experiment_scopes_sha256()) is None
+    ):
+        raise RuntimeError("paper identity closure is invalid")
+
+    return tuple(
+        sorted(
+            (
+                _acceptance_check(
+                    "application-assemblies",
+                    "Application assembly closure is valid",
+                    actual=len(packaged_assemblies),
+                    expected=6,
+                ),
+                _acceptance_check(
+                    "application-providers",
+                    "Installed provider closure is valid",
+                    actual=len(providers),
+                    expected=2,
+                ),
+                _acceptance_check(
+                    "capability-manifests",
+                    "Capability manifest closure is valid",
+                    actual=len(manifests),
+                    expected=11,
+                ),
+                _acceptance_check(
+                    "context-profiles",
+                    "Context profile closure is valid",
+                    actual=len(profiles),
+                    expected=5,
+                ),
+                _acceptance_check(
+                    "paper-benchmarks",
+                    "Paper benchmark identity closure is valid",
+                    actual=len(datasets),
+                    expected=13,
+                ),
+                _acceptance_check(
+                    "paper-scopes",
+                    "Paper scope identity closure is valid",
+                    actual=len(scopes),
+                    expected=16,
+                ),
+                _acceptance_check(
+                    "provider-requests",
+                    "Installed acceptance made no provider requests",
+                    actual=0,
+                    expected=0,
+                ),
+            ),
+            key=lambda check: check.check_id,
+        )
+    )
 
 
 @dataclass(frozen=True)
 class DciProductVerifier:
     repo_root: Path
     backend: DciVerificationBackend
-    acceptance_runner: Callable[[Path, Path | None], object] = _run_product_acceptance
-    acceptance_source_root: Path | None = None
 
     def __call__(self, request: VerificationRequest) -> VerificationResult:
         if request.level == "preflight":
@@ -1096,59 +1206,18 @@ class DciProductVerifier:
         )
 
     def acceptance(self, acceptance_root: Path | None) -> VerificationResult:
-        """Run source-checkout product acceptance without provider requests."""
+        """Run installed package acceptance without provider requests."""
 
+        del acceptance_root
         try:
-            if self.acceptance_source_root is None:
-                raise ImportError("product acceptance verifier is unavailable")
-            summary = self.acceptance_runner(
-                self.acceptance_source_root, acceptance_root
-            )
-            values = (
-                ("batch-extras", summary.batch_extras),
-                ("bounded-acceptance", summary.bounded_acceptance),
-                ("delegated-inventory", summary.delegated_inventory),
-                ("launcher-pairs", summary.launcher_pairs),
-                ("product-rows", summary.product_rows),
-            )
-            checks = tuple(
+            checks = _installed_acceptance_checks()
+        except (OSError, RuntimeError, TypeError, ValueError):
+            checks = (
                 VerificationCheckResult(
-                    check_id=check_id,
-                    summary=(
-                        "Accepted product evidence is complete"
-                        if actual == expected
-                        else "Accepted product evidence is incomplete"
-                    ),
-                    status="PASS" if actual == expected else "FAIL",
-                    counts=(("actual", actual), ("expected", expected)),
-                )
-                for check_id, (actual, expected) in values
-            ) + (
-                VerificationCheckResult(
-                    check_id="provider-requests",
-                    summary="Product acceptance made no provider requests",
-                    status=(
-                        "PASS"
-                        if summary.provider_backed_executed == 0
-                        else "FAIL"
-                    ),
-                    counts=(("actual", summary.provider_backed_executed),),
+                    check_id="installed-closure",
+                    summary="Installed package closure is invalid",
+                    status="FAIL",
                 ),
-            )
-        except (AttributeError, ImportError, OSError, RuntimeError, TypeError, ValueError):
-            return VerificationResult(
-                product_id=DCI_PRODUCT_DESCRIPTION.product_id,
-                level="acceptance",
-                status="NOT RUN",
-                checks=(
-                    VerificationCheckResult(
-                        check_id="source-checkout",
-                        summary="Product acceptance requires the DCI source checkout",
-                        status="NOT RUN",
-                    ),
-                ),
-                provider_backed_operation_count=0,
-                full_dataset_ran=False,
             )
         return VerificationResult(
             product_id=DCI_PRODUCT_DESCRIPTION.product_id,
@@ -1340,43 +1409,14 @@ def create_dci_product(
     """Build the installed DCI product contract without performing verification."""
 
     root = Path.cwd().resolve() if repo_root is None else Path(repo_root).resolve()
-    acceptance_source_root = (
-        Path(repo_root).resolve()
-        if repo_root is not None
-        else _trusted_source_checkout_root()
-    )
     verifier = DciProductVerifier(
         repo_root=root,
         backend=LocalDciVerificationBackend() if backend is None else backend,
-        acceptance_source_root=acceptance_source_root,
     )
     return InstalledCapabilityProduct(
         description=DCI_PRODUCT_DESCRIPTION,
         verifier=verifier,
     )
-
-
-def _trusted_source_checkout_root() -> Path | None:
-    """Return only the checkout that physically contains this verifier module."""
-
-    module = Path(__file__).resolve()
-    relative_module = Path(
-        "asterion/src/asterion/dci/verification.py"
-    )
-    for candidate in module.parents:
-        if (candidate / relative_module).resolve() != module:
-            continue
-        verifier = candidate / "tools/verify_asterion_dci_product.py"
-        acceptance = candidate / "assets/dci/product-acceptance.json"
-        if (
-            verifier.is_file()
-            and not verifier.is_symlink()
-            and acceptance.is_file()
-            and not acceptance.is_symlink()
-        ):
-            return candidate
-    return None
-
 
 def _provider_key_name(provider: str | None) -> str | None:
     if provider is None or re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", provider) is None:
