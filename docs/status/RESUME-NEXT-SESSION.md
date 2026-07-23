@@ -1,55 +1,56 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-23 09:33 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-23 10:04 +0800. **AF-350 is complete; this is a recovery checkpoint, not authorization for new work.**
 
-Active work package: AF-350
+Active work package: none
 
-Package: AF-350 — Asterion standalone promotion readiness
+Project lifecycle: complete
 
 Currently running: no process.
 
 ## TL;DR
 
-- Tasks 1–6 are complete: repository skeleton, package-owned acceptance, 14 standalone launchers, root-contained documentation, and clean-copy CI/promotion are GREEN.
-- Standalone tests pass 162/162; the full promotion copy passes all 17 Python/build/install/docs/Node/Rust commands with provider operations 0 and no full dataset.
-- Continue inline with Task 7: add root Make delegation and rerun the mixed 538-selector integration boundary.
+- AF-350 is complete. The contents of `asterion/` are ready to become a GitHub repository root without copying parent source, governance, datasets, credentials, retained private evidence, or external Pi state.
+- Final provider-free closure passes 163 standalone and 1622 root Python tests, the 17-command clean-copy gate, 16 Markdown/32 local-link checks, 11+11 TypeScript tests, 19 Rust tests plus fmt/Clippy, and the full mixed integration matrix.
+- No provider request, Judge request, full dataset, external `pi/` mutation, remote creation, publication, release, or push occurred.
 
-## Where things stand
+## Committed state
 
-- `09b47e8` adds standalone root assets, complete Make targets, package metadata, and reproducible locks.
-- `945261b` makes installed acceptance package-owned and source/wheel equivalent while preserving mixed-root parity.
-- `ef03e3c` makes all 14 launchers resolve project/external-resource roots without parent traversal.
-- `cace918` replaces parent-workspace operational docs with standalone commands and adds the deterministic docs checker.
-- `73ce79c` adds clean-copy quick/full promotion checks and provider-free GitHub Actions; the full 17-command gate passes.
-- Mixed 538-selector and 12-launcher-pair counts are explicitly historical mixed-repository integration evidence, not standalone live acceptance.
-- AF-350 authorizes no provider request, full dataset, paper reproduction, publication, remote push, release, or external `pi/` mutation.
-- No evaluator, verifier, test, Rust, Node, or promotion process is running.
+- `b9b759b` closes final review findings: standalone launcher/root contracts, paper command documentation, lifecycle-sensitive fixtures, the Node `fast-uri` 3.1.4 security lock update, and exact quick-promotion command coverage.
+- Earlier AF-350 commits add the standalone repository skeleton, package-owned acceptance, project-root launchers, complete documentation, clean-copy promotion/CI, and root Make delegation.
+- Branch `main` was 148 commits ahead of `origin/main` before the final state checkpoint; nothing was pushed.
+- No process remains active. The working tree should be clean after the closure checkpoint commit.
 
-## Next steps
+## Verified closure
 
-1. Execute Task 7 RED/GREEN for explicit root Make delegation into `asterion/`.
-2. Rerun mixed product/inventory/launcher verification and governance scope checks.
-3. Begin Task 8 only after both standalone and mixed-root boundaries stay GREEN.
+- `make promotion-check` from `asterion/`: PASS, 17 commands, provider operations 0, full dataset no.
+- Standalone Python: 163/163; docs: 16 files and 32 links; npm audit: 0 vulnerabilities; TypeScript: 11+11; Rust: 19 plus fmt/Clippy.
+- Root Python: 1622/1622.
+- `make asterion-integration-acceptance`: 8/8 product rows, 538/538 selectors, 12/12 launcher pairs, 6/6 extras, 7/7 retained, provider-backed executed 0.
+- Local structured review: no unresolved Critical or Important finding.
+
+## Next concrete action
+
+Do not implement automatically. If the operator wants actual migration, remote creation, publication, or release, first add and approve a new work package in `docs/status/WORKLIST.md`, set the lifecycle to `active`, update `CURRENT-STATE.md` and this baton to the same package, then rerun `python3 tools/project_scope_check.py`.
 
 ## Open questions
 
-- No design question remains. Execution mode is inline; mixed-root delegation is the next boundary.
-- Creating a remote, publishing, or running provider-backed validation remains outside AF-350.
+- Which GitHub owner/repository and visibility should receive the promoted project?
+- Should promotion preserve history through subtree filtering or begin from a clean initial commit?
+- What release/version and publishing policy, if any, should be authorized?
 
 ## Ruled-out paths
 
-- Do not copy original `src/dci`, parent governance, retained private evidence, corpora, datasets, credentials, or external Pi into `asterion/`.
-- Do not reconstruct the mixed-root verifier inside standalone acceptance or promotion checks.
-- Do not weaken missing/escaping documentation links into warnings.
-- Do not run providers, a Judge, or a full dataset during AF-350 promotion readiness.
+- Do not copy original `src/dci`, parent governance, corpora, datasets, credentials, retained private evidence, or external Pi into the standalone repository.
+- Do not move the mixed-root parity verifier into standalone acceptance; it remains parent-repository integration evidence.
+- Do not infer authorization to create a remote, publish packages, run providers/Judge, execute a full dataset, or mutate external `pi/`.
 
 ## Ready commands
 
 ```bash
-python3 tools/project_scope_check.py
 git status --short --branch
-sed -n '860,980p' docs/superpowers/plans/2026-07-23-af-350-asterion-standalone-promotion-readiness.md
-make -n asterion-promotion-check
-uv run python tools/verify_asterion_dci_product.py
-git diff --check
+git log --oneline -5
+python3 tools/project_scope_check.py
+make -C asterion promotion-check
+make asterion-integration-acceptance
 ```

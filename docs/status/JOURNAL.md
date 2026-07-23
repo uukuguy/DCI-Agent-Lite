@@ -1156,3 +1156,5 @@
 - 09:33 clean-copy promotion 与 provider-free CI 通过完整复制根验证。 [73ce79c]
 - 09:34 结构快照记录 promotion gate，恢复点推进至 mixed-root delegation。 [ed294fb]
 - 09:38 根 Make 委派消除双重命令定义，同时保留 mixed integration 入口。 [3f0ab7c]
+- 09:56 修复迁移回归契约、文档入口与 Node 高危依赖。 [b9b759b]
+- 10:04 AF-350 最终 standalone、根回归、mixed integration 与治理门禁全绿。

@@ -2,7 +2,7 @@
 
 > Canonical work-package ledger. An `active` lifecycle requires exactly one `in_progress` package; a `complete` lifecycle permits none and forbids autonomous dispatch.
 
-> Project lifecycle: active
+> Project lifecycle: complete
 
 ## AF-000 — Framework control plane
 
@@ -386,10 +386,11 @@
 
 ## AF-350 — Asterion standalone promotion readiness
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Promote Asterion into an independently buildable and verifiable GitHub-root project
 - Scope: make `asterion/` a complete promotion-ready repository root with standalone assets, package-owned provider-free acceptance, complete Makefile and CI entry points, project-root launchers, external-resource boundaries, and a temporary-copy promotion gate while preserving mixed-root integration parity.
 - Dependencies: AF-340
 - Acceptance: copying only the contents of `asterion/` into an empty directory supports frozen Python setup, project tests, compile/Ruff, wheel and isolated CLI verification, documentation checks, TypeScript tests, Rust test/fmt/Clippy, complete Make targets, and promotion smoke without parent source dependencies, provider requests, full datasets, secrets, external Pi mutation, publication, or remote push; the mixed-root integration verifier and governance audit remain valid.
 - Design: `docs/superpowers/specs/2026-07-23-af-350-asterion-standalone-promotion-readiness-design.md`
 - Plan: `docs/superpowers/plans/2026-07-23-af-350-asterion-standalone-promotion-readiness.md`
+- Closure evidence: `asterion/` is a complete promotion-ready repository root with package-owned acceptance, standalone Make/CI/docs/launchers/locks, and clean-copy verification. Final closure passes 163 standalone and 1622 root Python tests, 16 Markdown/32 local-link checks, 11+11 TypeScript tests, 19 Rust tests plus fmt/Clippy, 17 clean-copy promotion commands, and mixed integration at 8/8 product rows, 538/538 selectors, 12/12 launcher pairs, 6/6 extras, and 7/7 retained cases. Provider operations remain zero; no full dataset, external Pi mutation, publication, release, remote creation, or push occurred. Local closure review has no unresolved Critical or Important finding.
