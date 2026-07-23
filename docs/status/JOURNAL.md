@@ -1158,3 +1158,4 @@
 - 09:38 根 Make 委派消除双重命令定义，同时保留 mixed integration 入口。 [3f0ab7c]
 - 09:56 修复迁移回归契约、文档入口与 Node 高危依赖。 [b9b759b]
 - 10:04 AF-350 最终 standalone、根回归、mixed integration 与治理门禁全绿。
+- 10:07 AF-350 闭包为 complete lifecycle，冻结独立迁移准备边界。 [5164cb5]

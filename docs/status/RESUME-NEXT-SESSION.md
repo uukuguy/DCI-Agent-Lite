@@ -17,8 +17,9 @@ Currently running: no process.
 ## Committed state
 
 - `b9b759b` closes final review findings: standalone launcher/root contracts, paper command documentation, lifecycle-sensitive fixtures, the Node `fast-uri` 3.1.4 security lock update, and exact quick-promotion command coverage.
+- `5164cb5` closes AF-350, sets the project lifecycle to complete, and records the final verified promotion boundary.
 - Earlier AF-350 commits add the standalone repository skeleton, package-owned acceptance, project-root launchers, complete documentation, clean-copy promotion/CI, and root Make delegation.
-- Branch `main` was 148 commits ahead of `origin/main` before the final state checkpoint; nothing was pushed.
+- Branch `main` remains locally ahead of `origin/main`; nothing was pushed.
 - No process remains active. The working tree should be clean after the closure checkpoint commit.
 
 ## Verified closure
