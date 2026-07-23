@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-23 09:31 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-23 09:33 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-350
 
@@ -10,9 +10,9 @@ Currently running: no process.
 
 ## TL;DR
 
-- Tasks 1–5 are complete: repository skeleton, package-owned acceptance, 14 standalone launchers, and root-contained documentation are GREEN.
-- Standalone tests pass 157/157; 16 Markdown files and 32 links pass both in place and after copying.
-- Continue inline with Task 6: implement the clean-copy promotion verifier and provider-free GitHub Actions workflow.
+- Tasks 1–6 are complete: repository skeleton, package-owned acceptance, 14 standalone launchers, root-contained documentation, and clean-copy CI/promotion are GREEN.
+- Standalone tests pass 162/162; the full promotion copy passes all 17 Python/build/install/docs/Node/Rust commands with provider operations 0 and no full dataset.
+- Continue inline with Task 7: add root Make delegation and rerun the mixed 538-selector integration boundary.
 
 ## Where things stand
 
@@ -20,19 +20,20 @@ Currently running: no process.
 - `945261b` makes installed acceptance package-owned and source/wheel equivalent while preserving mixed-root parity.
 - `ef03e3c` makes all 14 launchers resolve project/external-resource roots without parent traversal.
 - `cace918` replaces parent-workspace operational docs with standalone commands and adds the deterministic docs checker.
+- `73ce79c` adds clean-copy quick/full promotion checks and provider-free GitHub Actions; the full 17-command gate passes.
 - Mixed 538-selector and 12-launcher-pair counts are explicitly historical mixed-repository integration evidence, not standalone live acceptance.
 - AF-350 authorizes no provider request, full dataset, paper reproduction, publication, remote push, release, or external `pi/` mutation.
 - No evaluator, verifier, test, Rust, Node, or promotion process is running.
 
 ## Next steps
 
-1. Execute Task 6 RED/GREEN for `tools/check_promotion.py` and `.github/workflows/ci.yml`.
-2. Make quick/full clean-copy modes deterministic and provider-free.
-3. Route `make promotion-check` and CI through the same full verifier.
+1. Execute Task 7 RED/GREEN for explicit root Make delegation into `asterion/`.
+2. Rerun mixed product/inventory/launcher verification and governance scope checks.
+3. Begin Task 8 only after both standalone and mixed-root boundaries stay GREEN.
 
 ## Open questions
 
-- No design question remains. Execution mode is inline; promotion automation is the next boundary.
+- No design question remains. Execution mode is inline; mixed-root delegation is the next boundary.
 - Creating a remote, publishing, or running provider-backed validation remains outside AF-350.
 
 ## Ruled-out paths
@@ -47,7 +48,8 @@ Currently running: no process.
 ```bash
 python3 tools/project_scope_check.py
 git status --short --branch
-sed -n '740,860p' docs/superpowers/plans/2026-07-23-af-350-asterion-standalone-promotion-readiness.md
-(cd asterion && uv run python -m unittest -v tests.test_check_promotion)
+sed -n '860,980p' docs/superpowers/plans/2026-07-23-af-350-asterion-standalone-promotion-readiness.md
+make -n asterion-promotion-check
+uv run python tools/verify_asterion_dci_product.py
 git diff --check
 ```

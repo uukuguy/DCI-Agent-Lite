@@ -1153,3 +1153,4 @@
 - 09:06 结构快照记录启动器收敛，恢复点推进至 standalone docs。 [3642a2f]
 - 09:30 16 份独立文档与 32 个本地链接闭包，混合计数降为历史证据。 [cace918]
 - 09:32 结构快照记录 standalone docs 闭包，恢复点推进至 promotion gate。 [b81c8e2]
+- 09:33 clean-copy promotion 与 provider-free CI 通过完整复制根验证。 [73ce79c]
