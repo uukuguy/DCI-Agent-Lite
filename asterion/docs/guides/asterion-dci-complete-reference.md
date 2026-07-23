@@ -114,6 +114,14 @@ Judge 请求身份绑定最终回答证据、model、API 类型、endpoint、pro
 
 Judge 失败不得把 Agent 结果标记为评测成功；取消和 deadline 会终止并等待正在运行的请求。
 
+论文实验契约可在不调用 provider 的情况下检查：
+
+```bash
+uv run asterion-dci paper describe
+```
+
+该命令描述实验矩阵、ablation、授权边界与预期产物；它不运行论文实验，也不声称复现完整数据集分数。
+
 ## Benchmark DCI-Agent-Lite
 
 [`benchmark.py`](../../src/asterion/dci/benchmark.py) 负责有限数据集切片、并发运行、精确 reuse、Judge 缓存、QA/IR 汇总与中断恢复：

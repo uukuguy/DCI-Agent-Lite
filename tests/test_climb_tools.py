@@ -3556,13 +3556,7 @@ class ClimbToolTests(unittest.TestCase):
             worklist = worklist.replace(
                 "> Project lifecycle: active", "> Project lifecycle: complete", 1
             )
-            worklist = worklist.replace(
-                "## AF-340 — README reproduction and runtime-result parity\n\n"
-                "- Status: in_progress",
-                "## AF-340 — README reproduction and runtime-result parity\n\n"
-                "- Status: completed",
-                1,
-            )
+            worklist = worklist.replace("- Status: in_progress", "- Status: completed")
             (status_dir / "WORKLIST.md").write_text(worklist)
             (status_dir / "CURRENT-STATE.md").write_text(
                 "Framework north star: "

@@ -257,6 +257,36 @@ class PromotionCheckTests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, command_text)
 
+    def test_quick_plan_uses_valid_discovery_commands(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            source = make_source(Path(temporary_directory))
+            commands: list[tuple[str, ...]] = []
+
+            def runner(
+                command: tuple[str, ...], cwd: Path
+            ) -> subprocess.CompletedProcess[str]:
+                commands.append(command)
+                return completed(command, acceptance_stdout(command))
+
+            run_promotion(source_root=source, quick=True, runner=runner)
+
+        self.assertIn(("uv", "run", "asterion", "list"), commands)
+        self.assertIn(
+            (
+                "uv",
+                "run",
+                "asterion",
+                "describe",
+                "--provider",
+                "dci-agent-lite",
+                "--json",
+            ),
+            commands,
+        )
+        self.assertFalse(
+            any(command[3:5] == ("describe", "describe") for command in commands)
+        )
+
     def test_acceptance_json_must_be_provider_free_and_not_full_dataset(self) -> None:
         bad_payloads = (
             {"status": "FAIL", "provider_backed_operation_count": 0, "full_dataset_ran": False},

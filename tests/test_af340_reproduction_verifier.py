@@ -790,10 +790,14 @@ class Af340ReproductionVerifierTests(unittest.TestCase):
             body = (ROOT / "asterion/scripts" / relative).read_text(encoding="utf-8")
             with self.subTest(relative=relative):
                 self.assertIn(
-                    'RESOURCE_ROOT=${ASTERION_DCI_RESOURCE_ROOT:-$REPO_ROOT}', body
+                    'PROJECT_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)', body
+                )
+                self.assertIn(
+                    'RESOURCE_ROOT=${ASTERION_DCI_RESOURCE_ROOT:-$PROJECT_ROOT}', body
                 )
                 self.assertIn('dataset="$RESOURCE_ROOT/', body)
                 self.assertIn('corpus="$RESOURCE_ROOT/', body)
+                self.assertIn('uv run --project "$PROJECT_ROOT"', body)
 
     def test_resource_manifest_identity_is_bound_into_rendered_plan_digest(self) -> None:
         module = load_verifier()

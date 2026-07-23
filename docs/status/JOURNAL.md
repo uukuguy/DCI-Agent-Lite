@@ -1155,3 +1155,4 @@
 - 09:32 结构快照记录 standalone docs 闭包，恢复点推进至 promotion gate。 [b81c8e2]
 - 09:33 clean-copy promotion 与 provider-free CI 通过完整复制根验证。 [73ce79c]
 - 09:34 结构快照记录 promotion gate，恢复点推进至 mixed-root delegation。 [ed294fb]
+- 09:38 根 Make 委派消除双重命令定义，同时保留 mixed integration 入口。 [3f0ab7c]
