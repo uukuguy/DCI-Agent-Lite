@@ -81,10 +81,9 @@ still requires the applicable runtime and executor policy checks.
 
 ## Verification
 
-Run these checks from the parent mixed-repository root:
+Run these checks from the standalone repository root:
 
 ```bash
-uv run python -m unittest tests.test_package_composition -v
-make test-typescript-host
-python3 tools/project_scope_check.py
+uv run python -m unittest -v tests.test_package_execution
+make test-typescript
 ```

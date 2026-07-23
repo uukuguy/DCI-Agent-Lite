@@ -2,48 +2,93 @@
 
 ## Product objective
 
-Build Asterion as a multi-runtime, multi-language agent-application framework. DCI is its first complete capability-package reference product: an independently owned, fully usable DCI implementation composes through Asterion contracts into an AI application, while the existing source-only DCI product remains a separate comparison baseline. Framework success is established by complete capability-package behavior, installability, runtime portability, safety, and verifiable bounded execution; strict reproduction of the DCI paper is optional follow-on evidence rather than a framework-completion prerequisite.
+Asterion is a multi-runtime, multi-language framework for composing complete
+agent applications from versioned capability packages. DCI is the first
+complete reference product: it owns research, durable artifacts, evaluation,
+benchmarking, analysis, and export inside the Asterion distribution.
+
+Framework completion means the capability package is installable, executable
+through public contracts, portable across supported runtimes, safe at trust
+boundaries, and verifiable without hidden source-tree dependencies. Strict
+paper reproduction is optional evidence, not a framework prerequisite.
 
 ## Layers
 
-1. **Versioned Agent Runtime Protocol** — run/session lifecycle, capability manifests, normalized events, artifacts, cancellation, deadlines, and conformance fixtures.
-2. **Runtime adapters** — Pi first; then one independent runtime; Pydantic AI, LangGraph, Claude Code, and Hermes-agent as their supported integration contracts permit.
-3. **Capability packages** — complete domain implementations (first DCI research), tool and policy, workflow, memory and observability, and evaluation. A package owns its domain workflow internally and exposes portable contracts to the framework.
-4. **Language hosts** — Python for research, evaluation, and orchestration; TypeScript for Node and service integration; Rust for controlled execution infrastructure.
-5. **Application execution** — exact package implementations execute through explicit application-provider bindings in the single Asterion product distribution; future external providers use the same selected-only contract.
+1. **Runtime Protocol** — versioned lifecycle, capabilities, events, artifacts,
+   cancellation, deadlines, and conformance fixtures.
+2. **Runtime adapters** — translate one native runtime into the protocol. Pi and
+   Claude Code are independent adapters; native traces need not be identical.
+3. **Capability package** — owns a complete domain behavior and exposes closed
+   manifests, events, artifacts, policies, and implementation bindings.
+4. **Application and assembly** — select exact packages, runtimes, services, and
+   executable bindings without implicit version or provider policy.
+5. **Provider** — publishes installed applications and constructs only the
+   provider selected by exact identity.
+6. **Language hosts** — Python owns research and orchestration, TypeScript owns
+   Node/service integration, and Rust owns controlled execution infrastructure.
+7. **Host service** — injects operator-authorized facilities such as controlled
+   execution without leaking them into portable package contracts.
+
+## Dependency direction
+
+Generic framework modules do not import product implementations. Applications
+depend on capability contracts and exact bindings; providers expose installed
+applications; runtime adapters depend on the public Runtime Protocol. Product
+CLIs may depend on their own package, but the generic `asterion` CLI stays
+domain-neutral and loads only the selected provider.
+
+The original DCI implementation used by the parent development workspace is an
+external comparison baseline, not a runtime dependency, compatibility module,
+or distribution input.
 
 ## Delivery strategy
 
-- Define and test the runtime protocol before building additional adapters.
-- Keep the existing Pi JSONL RPC boundary as the first reference adapter.
-- Use the full Asterion DCI package as the first proof that a complete domain implementation can compose through capability contracts into an AI application, while retaining a separate legacy DCI baseline for parity checks.
-- Verify DCI's core research, context, artifact/resume, evaluation, benchmark, analysis/export, and installed-application abilities across the capability-package boundary; do not substitute command reachability for domain completeness.
-- Prefer available, explicitly compatible runtime backends for functional acceptance. A Claude Code MiniMax Coding Plan run may establish the Claude adapter and capability-package path without requiring a local Claude subscription account; subscription authentication remains supported but optional.
-- Keep paper-model, published-score, and full-dataset reproduction in a separately authorized evidence layer. Absence of that optional evidence must not block an otherwise complete and bounded-verified capability package or framework.
-- Expose installed runtime factories by exact identity; constructing a factory is not provider authorization or a provider invocation.
-- Add enterprise policy, audit, artifact, and observability boundaries through the shared protocol rather than adapter-private behavior.
-- Keep Asterion's generic core domain-neutral; package-local CLIs and implementation details must not enter generic framework selection or execution paths.
+- Define and test protocol and package boundaries before adding adapters.
+- Keep native provider translation inside the selected runtime adapter.
+- Prove framework usability with complete capability behavior, not command
+  reachability alone.
+- Keep credentials, corpora, datasets, external Pi, and generated evidence out
+  of the package and repository contract.
+- Treat package-owned provider-free acceptance as the standalone closure gate.
+- Keep cross-product selector parity as historical mixed-repository integration
+  evidence rather than a standalone runtime dependency.
 
 ## Layered runtime configuration
 
-- `.env`, exported environment, CLI fields, and application request fields are layers of one public configuration contract. Explicit invocation values override exported process values; exported values override repository `.env`; both override defaults owned by the selected runtime or Judge role.
-- Runtime selection resolves before `DCI_PROVIDER` and `DCI_MODEL`. Those shared field names are interpreted and validated by the selected adapter; they do not imply that every provider is portable across runtimes.
-- Pi owns the broader provider surface and defaults to `openai-codex` with `gpt-5.6-luna`. Claude Code owns its subscription-login default plus explicit compatible provider translations such as MiniMax Coding Plan. Unsupported runtime/provider pairs fail before provider construction.
-- `DCI_EVAL_JUDGE_*` is an independent evaluation role whose default is the DeepSeek V4 Flash OpenAI-compatible Chat Completions contract. Agent and Judge credentials, requests, evidence, and cache identities remain separate.
-- Original DCI and Asterion implement the contract independently and emit the same body-free effective-configuration schema for parity. Full-dataset execution requires explicit invocation-level authorization; normal `.env` values never authorize cost by themselves.
+Explicit CLI/application values override exported environment values; exported
+values override repository `.env`; runtime-owned and Judge-owned defaults are
+last. Runtime selection occurs before provider/model validation. Agent and Judge
+credentials, requests, evidence, and cache identities remain separate.
+
+`DCI_PI_DIR` locates external Pi. `ASTERION_DCI_RESOURCE_ROOT` locates external
+datasets and corpora for launchers. Neither setting authorizes provider work or
+a full dataset.
+
+## Verification model
+
+Provider-free acceptance validates installed providers, applications,
+assemblies, manifests, context profiles, benchmark identities, and paper scopes:
+
+```bash
+uv run asterion verify --provider dci-agent-lite --level acceptance
+make check
+```
+
+`preflight` validates external readiness; `basic` and `complete` may perform
+bounded provider-backed work. Full datasets and paper-score reproduction require
+separate governance and budget authorization.
 
 ## Non-goals
 
-- Do not claim identical native semantics or reasoning traces across runtimes.
-- Do not rewrite the Pi integration before protocol conformance requires it.
-- Do not make Pi/Judge maintenance the roadmap without a parent work package.
-- Do not build every listed adapter or a production multi-tenant control plane in the first framework release.
-- Do not make the mixed-repository original DCI baseline [`src/dci`](../../../src/dci/) an Asterion runtime dependency or compatibility layer.
+- Identical reasoning traces across runtimes.
+- Vendoring or modifying external Pi.
+- Shipping datasets, corpora, credentials, or private evidence.
+- Treating a host service as a general sandbox guarantee.
+- Building every possible adapter or a multi-tenant control plane in the first
+  release.
 
-## Governance
+## Governance after promotion
 
-The mixed-repository dependency [`docs/status/WORKLIST.md`](../../../docs/status/WORKLIST.md) is the sole active work-package ledger. Work may begin only under its active package; the mixed-root `tools/project_scope_check.py` enforces the repository markers before manager or climb dispatch.
-
-## Design baseline
-
-- Mixed-repository dependency: [framework governance design](../../../docs/superpowers/specs/2026-07-12-agent-framework-governance-design.md).
+This repository intentionally contains no parent-workspace planning ledger.
+Maintainers should use their GitHub issues, roadmap, and release process while
+preserving the public protocol, security, and cost boundaries documented here.

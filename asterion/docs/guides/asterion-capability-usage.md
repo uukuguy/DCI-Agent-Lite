@@ -1,145 +1,72 @@
 # Asterion 能力包使用指南（以 DCI 为例）
 
-这份指南只回答三个实际问题：Asterion 的 DCI 能做什么、需要配置什么、怎样用一条统一命令验证它。无需阅读 Python 源码，也无需手动寻找能力包里的脚本。
-
-需要逐项了解 Context Management、Judge、benchmark、指标、导出及其证据状态时，阅读 [Asterion DCI 完整产品参考](asterion-dci-complete-reference.md)。
+这份指南回答三个问题：DCI 能做什么、零费用怎样验证安装完整性、何时需要外部 Pi/数据/凭据。详细产品语义见 [Asterion DCI 完整产品参考](asterion-dci-complete-reference.md)，逐项验收见[完整功能验证指南](../verification/asterion-dci-validation-guide.md)。
 
 ## 五分钟开始
 
-以下命令都在仓库根目录执行。Asterion 与原始 DCI 共用根目录的 `.env`；如果现有 `.env` 已经能运行原始 DCI 两个示例，通常无需另建配置。
+以下命令都从 standalone 仓库根执行：
 
 ```bash
-uv sync
-
-# 先看 DCI 能做什么；不调用模型
+uv sync --frozen
+uv run asterion list
 uv run asterion describe --provider dci-agent-lite
-
-# 检查 .env、Pi、Node 和两个示例语料；不调用模型
-uv run asterion verify \
-  --provider dci-agent-lite \
-  --level preflight \
-  --env-file .env \
-  --corpus-root "$PWD/corpus"
-
-# 完整验证；会进行两次有界 Pi 运行和一次 Judge 评测操作
-uv run asterion verify \
-  --provider dci-agent-lite \
-  --level complete \
-  --env-file .env \
-  --corpus-root "$PWD/corpus" \
-  --output-root "$PWD/outputs/asterion-verification"
+uv run asterion verify --provider dci-agent-lite --level acceptance
 ```
 
-若只想确认迁移代码和安装边界完整、不想调用模型，将最后一条命令的 `complete` 改为 `acceptance`，并可省略 `.env`、语料和输出目录参数。
+这四条命令不调用 Agent/Judge，不运行数据集。`acceptance` 检查 wheel/source 中实际安装的 provider、application、assembly、capability manifests、context profiles、benchmark identities 和 paper scopes。
 
-在源码仓库中，也可以直接使用对应的 Make 入口：
+开发者还可以运行：
 
 ```bash
-make asterion-describe
-make asterion-verify-preflight
-make asterion-verify-basic
-make asterion-verify-acceptance
-make asterion-verify-complete
+make test
+make lint
+make docs-check
+make check
 ```
 
-`preflight` 和 `acceptance` 不调用模型；`basic` 和 `complete` 会运行两个有界 Pi 操作和一个 Judge 操作。Make 缺省使用根目录 `.env`、`$PWD/corpus` 和 `$PWD/outputs/asterion-verification`。路径不同时可在命令后覆盖变量，例如：
+## 最少需要哪些配置
 
-```bash
-make asterion-verify-preflight ASTERION_CORPUS_ROOT=/path/to/corpus
-```
-
-完整 `uv run asterion` 命令是安装后也可使用的标准入口；Make 目标只是源码仓库内的快捷入口。
-
-## 最少需要哪些环境变量
-
-如果还没有 `.env`，先执行：
+模型外 discovery/acceptance 不需要 `.env`。需要 Pi、Judge 或 benchmark 时，先复制无秘密模板：
 
 ```bash
 cp .env.template .env
 ```
 
-然后在 `.env` 中确认下面几类值。以下只是一个“Anthropic 负责 Pi、OpenAI 负责 Judge”的示例；尖括号内容必须替换，不能原样使用。
+主要边界：
 
-```dotenv
-# Pi 研究模型
-DCI_PROVIDER=anthropic
-DCI_MODEL=<YOUR_PI_MODEL>
-ANTHROPIC_API_KEY=<YOUR_PROVIDER_API_KEY>
+- `DCI_PI_DIR`：外部 Pi checkout，默认 `./pi`，不属于 Asterion 仓库。
+- `ASTERION_DCI_RESOURCE_ROOT`：启动器使用的外部 datasets/corpora 根。
+- `DCI_RUNTIME`、`DCI_PROVIDER`、`DCI_MODEL`：Agent runtime 与原生 provider 选择。
+- `DCI_EVAL_JUDGE_*`：独立 Judge 角色的 endpoint、API、model、密钥变量名和 request shape。
+- `.env` 和已导出环境只提供配置，不会自动授权模型请求或完整数据集。
 
-# 外部 Pi checkout；缺省也是 ./pi
-DCI_PI_DIR=./pi
+凭据只保存在 `.env`、已导出环境或 Pi 自己的受管认证中。Asterion 不在描述、错误、公开证据或 body-free application 结果中输出密钥值。
 
-# Judge：basic 和 complete 的第二个案例会使用它
-DCI_EVAL_JUDGE_BASE_URL=https://api.openai.com/v1
-DCI_EVAL_JUDGE_API=responses
-DCI_EVAL_JUDGE_MODEL=<YOUR_JUDGE_MODEL>
-DCI_EVAL_JUDGE_API_KEY_ENV=OPENAI_API_KEY
-OPENAI_API_KEY=<YOUR_JUDGE_API_KEY>
-```
-
-如果 `DCI_PROVIDER=openai`，Pi 使用 `OPENAI_API_KEY`；如果是 `anthropic`，使用 `ANTHROPIC_API_KEY`。通过 Pi 登录保存到 `.pi/agent/auth.json` 的认证也可直接共用，例如 `openai-codex`，无需另造 `OPENAI_CODEX_API_KEY`。Judge 的密钥变量由 `DCI_EVAL_JUDGE_API_KEY_ENV` 指定。Asterion 只检查认证是否存在，不会在输出中显示密钥值。
-
-Pi 和 Claude Code 是两个可选的 agent runtime，但共享同一组 agent 配置。比如使用 MiniMax 国际站：
-
-```dotenv
-DCI_PROVIDER=minimax
-DCI_MODEL=MiniMax-M2.7
-MINIMAX_API_KEY=<YOUR_MINIMAX_KEY>
-```
-
-国内站只需改成 `DCI_PROVIDER=minimax-cn` 和 `MINIMAX_CN_API_KEY=<YOUR_MINIMAX_CN_KEY>`。选择 Claude Code runtime 时，Asterion 会在其私有子进程环境中完成接口翻译，不需要再设置 `ANTHROPIC_*`。不支持的 provider/runtime 组合会在启动 agent 前失败。Judge 仍独立使用 `DCI_EVAL_JUDGE_*`，不会复用或覆盖 agent 配置。
-
-还需要：
-
-- Node.js 20 或更高版本；
-- `DCI_PI_DIR/packages/coding-agent` 和 `DCI_PI_DIR/.pi/agent` 存在；
-- 语料根目录下存在 `wiki_corpus/` 和 `bc_plus_docs/`。
-
-不必设置一长串 `ASTERION_DCI_*` 变量。统一验证命令优先使用 `--corpus-root` 和 `--output-root`；普通 `asterion-dci` 运行仍可使用根目录 `.env` 中的共享 `DCI_*` 设置。
-
-## 查看能力：describe
+## 查看能力：`list` 与 `describe`
 
 ```bash
+uv run asterion list
 uv run asterion describe --provider dci-agent-lite
-```
-
-该命令列出能力名称、用途、可运行命令、所需配置和四种验证级别。它不会读取密钥值，也不会发出模型请求。机器或脚本需要结构化结果时加 `--json`：
-
-```bash
 uv run asterion describe --provider dci-agent-lite --json
 ```
 
-## 只检查准备情况：--level preflight
+`list` 是纯元数据发现，不加载 provider。`describe` 只加载被精确选择的 provider，列出 application、assembly、命令、配置、验证级别与费用边界。
+
+## 四种验证级别
+
+### `preflight`：只检查外部准备
 
 ```bash
 uv run asterion verify \
   --provider dci-agent-lite \
   --level preflight \
   --env-file .env \
-  --corpus-root "$PWD/corpus"
+  --corpus-root "$ASTERION_DCI_RESOURCE_ROOT/corpus"
 ```
 
-它检查 `.env`、provider/model、provider 密钥是否存在、Judge 配置、Pi 目录、Node 版本和两个示例语料。它不会运行 Pi 或 Judge，失败时只报告缺少哪一类条件。
+检查 `.env`、Pi/Node、corpus 和 Judge 配置；Agent/Judge 操作均为 0。成功只表示 ready，不表示已执行。
 
-## 验证两个基础示例：--level basic
-
-```bash
-uv run asterion verify \
-  --provider dci-agent-lite \
-  --level basic \
-  --env-file .env \
-  --corpus-root "$PWD/corpus" \
-  --output-root "$PWD/outputs/asterion-verification"
-```
-
-这条命令替代手动执行两个 Asterion 示例脚本，固定运行：
-
-1. `wiki_corpus`：回答伦敦大火起源街道的问题，`max_turns=6`、`thinking=high`；一次 Pi 运行。
-2. `bc_plus_docs`：回答 Bonang Matheba 访谈问题，`max_turns=6`、`thinking=high`；一次 Pi 生成，再由 Judge 对照 `Adaku` 评测。
-
-命令固定调度两次 Pi 运行操作和一次 Judge 评测操作，每个 Pi 案例都有六轮限制。Pi 在一轮中可能搜索、读取文件并继续下一轮，所以终端显示的 `3` 是“provider-backed operations”，不是底层 provider API 请求数。它不运行批量数据集，任何一步失败都会停止后续操作。
-
-## 不调用模型验证完整迁移：--level acceptance
+### `acceptance`：已安装产品闭包
 
 ```bash
 uv run asterion verify \
@@ -147,90 +74,90 @@ uv run asterion verify \
   --level acceptance
 ```
 
-它验证已经迁移的完整产品面：8 个产品功能组、538 项批处理/指标/导出检查、12 对原始与 Asterion 启动脚本、6 项额外语义检查、7 项有界验收记录，以及安装 wheel 后的应用边界。它会运行本地测试和构建隔离 wheel，因此可能需要几十秒，但模型请求数始终为 0，也不会运行完整数据集。
+该级别为 package-owned，在源码和 isolated wheel 中都可运行。它忽略邻接源码树，不依赖父工作区 verifier，provider-backed operations 固定为 0。
 
-## 一条命令全部验证：--level complete
+### `basic`：有界 Agent/Judge 案例
+
+```bash
+uv run asterion verify \
+  --provider dci-agent-lite \
+  --level basic \
+  --env-file .env \
+  --corpus-root "$ASTERION_DCI_RESOURCE_ROOT/corpus" \
+  --output-root "$PWD/outputs/asterion-verification"
+```
+
+运行前确认 `describe` 报告的有界操作数。每个 Agent 案例有有限轮数，一次 Agent 操作可能包含多次底层 API 请求。它不运行完整数据集。
+
+### `complete`：有界路径加安装闭包
 
 ```bash
 uv run asterion verify \
   --provider dci-agent-lite \
   --level complete \
   --env-file .env \
-  --corpus-root "$PWD/corpus" \
+  --corpus-root "$ASTERION_DCI_RESOURCE_ROOT/corpus" \
   --output-root "$PWD/outputs/asterion-verification"
 ```
 
-执行顺序固定为 `preflight → basic → acceptance`。前一步失败就停止。全部通过时，provider-backed operations 固定为 3 次（两次有界 Pi 运行、一次 Judge 评测），不会启动完整数据集。
+顺序为 `preflight → basic → acceptance`，前一步失败就停止。它仍必须报告 `Full dataset ran: no`。
 
-## 原始 DCI 功能与 Asterion 命令
+对应 Make 入口：
 
-| 原始 DCI 功能 | Asterion 中怎样使用 | 怎样验证 |
+```bash
+make asterion-verify-preflight
+make asterion-verify-basic
+make asterion-verify-acceptance
+make asterion-verify-complete
+```
+
+## DCI 产品命令
+
+```bash
+uv run asterion-dci system-prompt --help
+uv run asterion-dci run --help
+uv run asterion-dci terminal --help
+uv run asterion-dci resume --help
+uv run asterion-dci evaluate --help
+uv run asterion-dci benchmark --help
+uv run asterion-dci export --help
+uv run asterion-dci ablation --help
+uv run asterion-dci paper --help
+```
+
+| 功能 | 主入口 | 验证重点 |
 |---|---|---|
-| 本地语料研究 | `asterion-dci run --cwd ...` | `verify --level basic` 的第一个案例 |
-| 运行上下文与 Judge | `asterion-dci run --max-turns ... --thinking-level ... --eval-answer ...` | `verify --level basic` 的第二个案例 |
-| 交互终端 | `asterion-dci terminal --cwd ...` | `asterion describe` 查看入口；TTY 中直接运行 |
-| 中断后继续 | `asterion-dci resume --output-dir ...` | `verify --level acceptance` 覆盖恢复语义 |
-| 对已保存结果评测 | `asterion-dci evaluate --output-dir ... --gold-answer ...` | `basic` 的 Judge 案例和 `acceptance` 的缓存检查 |
-| QA、IR、BC+、BRIGHT 批处理 | `asterion-dci benchmark --profile ... --limit 1` | `acceptance` 验证 538 项完整清单；不会启动全量数据集 |
-| 结果导出 | `asterion-dci export bcplus|bright|bcplus-qa ...` | `acceptance` 验证导出语义 |
-| 安装后的 Pi 应用 | `asterion run --provider dci-agent-lite --application dci.research-capability@1.0.0 --runtime pi.reference ...` | `acceptance` 在仓库外构建并验证 wheel |
-| 整体迁移完整性 | 无需拼接内部测试命令 | `asterion verify --provider dci-agent-lite --level complete` |
+| 本地语料研究 | `asterion-dci run` | 有限 turns、受控 cwd、可恢复产物 |
+| 交互终端 | `asterion-dci terminal` | TTY-only、退出码传递、不伪造 RPC 产物 |
+| 中断恢复 | `asterion-dci resume` | failed/incomplete、identity 兼容、单写者 |
+| Judge 评测 | `asterion-dci evaluate` | 精确 request/cache identity、body-free 结果 |
+| QA/IR/BC+/BRIGHT/BEIR | `asterion-dci benchmark --profile ... --limit 1` | 有限 rows、并发、reuse、汇总 |
+| 导出与分析 | `asterion-dci export ...` | 临时文件安全、authoritative reanalysis |
+| 通用安装应用 | `asterion run --provider dci-agent-lite ...` | 精确 application/runtime 选择与 body-free projection |
 
-日常研究、终端、恢复、评测、批处理和导出使用 `asterion-dci`；“能力包有什么”和“迁移是否完整”统一使用通用的 `asterion describe/verify`。
+## 费用与完整数据集边界
 
-## 预期输出
+| 级别/命令 | Agent | Judge | 完整数据集 |
+|---|---:|---:|---|
+| `list` / `describe` / `acceptance` | 0 | 0 | 否 |
+| `preflight` | 0 | 0 | 否 |
+| `basic` | 有界，执行前显示 | 有界，执行前显示 | 否 |
+| `complete` | 有界，执行前显示 | 有界，执行前显示 | 否 |
+| benchmark full/paper score | 需独立授权 | 需独立授权 | 可能，默认禁止 |
 
-`preflight` 成功时末尾类似：
+零费用验证只用 `acceptance`、`make check` 或 `make promotion-check`。`.env`、缓存或历史报告不能隐式授权新请求。
 
-```text
-Overall: PASS
-Provider-backed operations: 0
-Full dataset ran: no
-```
+## 产物与隐私
 
-`complete` 成功时末尾必须是：
+`basic`、`complete`和直接产品运行在操作者选择的私有输出根下创建产物。其中可包含 `state.json`、`events.jsonl`、完整/处理后 conversation、final 文本和 protocol 记录。
 
-```text
-Overall: PASS
-Provider-backed operations: 3
-Full dataset ran: no
-```
-
-需要 JSON 时在任意 `verify` 命令末尾加 `--json`。命令退出码：`0` 表示整体通过，`1` 表示验证执行后未全部通过，`2` 表示命令、provider 或输入本身无效。
-
-## 费用和请求次数
-
-| 级别 | Pi 运行操作 | 每个 Pi 案例轮数上限 | Judge 操作 | 完整数据集 |
-|---|---:|---:|---:|---|
-| `preflight` | 0 | 0 | 0 | 否 |
-| `basic` | 2 | 6 | 1 | 否 |
-| `acceptance` | 0 | 0 | 0 | 否 |
-| `complete` | 2 | 6 | 1 | 否 |
-
-实际 provider API 请求数取决于 Pi 在六轮限制内的工具调用和推理过程，不能把一次 Pi 运行误算成一次 API 请求。若只接受零费用验证，使用 `preflight` 或 `acceptance`。
-
-真正的 benchmark 全量运行必须由用户单独执行；这四个验证级别都不会偷偷启动它。
-
-## 产物在哪里
-
-`basic` 和 `complete` 在 `--output-root` 下创建一个随机命名的 `verify-*` 私有目录，每个案例各有独立子目录。里面是正常的 Asterion DCI 原生运行产物，例如 `state.json`、`events.jsonl`、`conversation_full.json`、`final.txt` 和 `protocol/`。
-
-终端显示或 JSON 返回的 `artifact_refs` 只是相对角色引用，不包含回答正文、对话、provider 响应、密钥或本机绝对路径。
+公开输出的 `artifact_refs` 只是安全角色引用，不包含回答正文、对话、provider 响应、密钥或本机绝对路径。
 
 ## 常见问题
 
-`environment` 失败：确认 `.env` 存在，或用 `--env-file` 指向正确文件。
-
-`configuration` 失败：确认 `DCI_PROVIDER`、`DCI_MODEL` 以及对应 provider 密钥已设置。密钥名由 provider 决定。
-
-`judge` 失败：确认 `DCI_EVAL_JUDGE_MODEL`、`DCI_EVAL_JUDGE_API_KEY_ENV`，以及后者指向的密钥变量都存在。
-
-Judge 配置存在但请求仍失败：运行 `make check-judge-config`。如果显示 `judge_api_key_shadowed_by_environment: true`，说明当前 shell 中的密钥覆盖了 `.env`；确认该值正确，或用 `env -u 密钥变量名` 运行验证，让 `.env` 中的值生效。
-
-`pi` 失败：确认 `DCI_PI_DIR` 是 Pi checkout，且其中存在 `packages/coding-agent/package.json` 和 `.pi/agent/`。
-
-`corpora` 失败：`--corpus-root` 指向的是两个语料目录的父目录，不是 `wiki_corpus` 本身。
-
-`acceptance` 显示 `NOT RUN`：该级别需要 DCI-Agent-Lite 源码仓库中的验收清单和工具；安装 wheel 后仍可使用 `describe` 与 `preflight`，但完整源码迁移验收应在仓库根目录执行。
-
-需要复核每个测试选择器、产物结构、原始 DCI 对照和私有验收证据时，再阅读[完整功能验证指南](../verification/asterion-dci-validation-guide.md)。
+- `environment/configuration` 失败：检查 `.env` 或 `--env-file`；不要在日志中打印密钥。
+- `pi` 失败：检查 `DCI_PI_DIR` 和 `pi-revision.txt`；不要修改或 vendoring 外部 checkout 来绕过 preflight。
+- `corpora/dataset` 失败：设置 `ASTERION_DCI_RESOURCE_ROOT`，不要把完整资源放进 wheel。
+- Judge 重跑：任何 request-shaping 配置变化都应使精确缓存失效。
+- `acceptance` 失败：它是安装包闭包错误，不要指向父工作区或改为 `NOT RUN`。
+- 需要 original/Asterion selector 对照时，该证据属于 historical **mixed-repository only** 集成，不是 standalone live acceptance。

@@ -1150,3 +1150,4 @@
 - 09:02 package-owned acceptance 实现 source/wheel 同构验证，同时保留 mixed 538-selector 门禁。 [945261b]
 - 09:04 结构状态记录 acceptance 所有权切换，恢复点推进至 standalone launchers。 [b06e60f]
 - 08:44 14 个启动器改为独立项目根与显式外部资源根。 [ef03e3c]
+- 09:06 结构快照记录启动器收敛，恢复点推进至 standalone docs。 [3642a2f]

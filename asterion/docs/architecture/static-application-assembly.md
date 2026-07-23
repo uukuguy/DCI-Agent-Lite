@@ -47,10 +47,9 @@ not participate in static application planning.
 
 ## Verification
 
-Run these checks from the parent mixed-repository root:
+Run these checks from the standalone repository root:
 
 ```bash
-uv run python -m unittest tests.test_application_assembly -v
-npm --prefix asterion/packages/typescript/asterion-runtime test
-python3 tools/project_scope_check.py
+uv run python -m unittest -v tests.test_application_selection
+make test-typescript
 ```

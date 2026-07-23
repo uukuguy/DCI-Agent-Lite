@@ -8,7 +8,7 @@ package catalogs and composition, static assembly, and host-service contracts.
 
 **Asterion must not import the DCI baseline.** Its first-party DCI capability and
 application are modular Asterion namespaces. The mixed-repository dependency
-[`src/dci`](../../../src/dci/) is a frozen, source-only
+The parent workspace's `src/dci` is a frozen, source-only
 comparison baseline with its own framework implementation.
 
 ```text
@@ -66,11 +66,10 @@ silent aliases.
 
 ## Verification
 
-Run these checks from the parent mixed-repository root:
+Run these checks from the standalone repository root:
 
 ```bash
-uv run python -m unittest tests.test_asterion_structure -v
-uv run python -m unittest discover -v
-npm --prefix asterion/packages/typescript/asterion-runtime test
-make test-rust-executor check-rust-executor
+make test
+make test-typescript
+make check-rust
 ```

@@ -52,7 +52,7 @@ live in the one `asterion` wheel. `asterion.dci.run.DciRunResult` is converted
 only by `asterion.dci.bridge.project_dci_run`, which exposes native artifact
 references without answer, question, command, or stderr bodies. The generic
 Asterion CLI remains DCI-neutral; `asterion-dci` owns its product-specific
-arguments. Neither it nor Asterion imports or modifies the mixed-repository original DCI baseline [`src/dci/benchmark/`](../../../src/dci/benchmark/).
+arguments. Neither it nor Asterion imports or modifies the parent workspace's original DCI baseline under `src/dci/benchmark/`.
 
 The package-local `asterion-dci resume --output-dir RUN_DIR` command restores
 only the immutable request recorded in native `state.json`; it rejects

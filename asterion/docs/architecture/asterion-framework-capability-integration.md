@@ -12,10 +12,10 @@
 
 ## 当前仓库与权威目录
 
-当前 Python 发行物是 `asterion/pyproject.toml` 定义的 `asterion` wheel。wheel 打包 `src/asterion`，因此下面这些目录才是运行时权威实现：
+当前 Python 发行物是根 `pyproject.toml` 定义的 `asterion` wheel。wheel 打包 `src/asterion`，因此下面这些目录才是运行时权威实现：
 
 ```text
-asterion/
+standalone-repository-root/
 ├── pyproject.toml
 └── src/asterion/
     ├── runtime/                 # 运行时中立协议、host client、factory
@@ -34,7 +34,7 @@ asterion/
 - `src/asterion/capabilities/` 是能力实现与 manifest 的权威 Python 路径。
 - `src/asterion/applications/` 是 installed provider 和 assembly 的权威 Python 路径。
 
-混合仓库根已不再保留旧的 `applications/` 或 `capabilities/` 产品目录；Asterion 项目内的 `src/asterion/applications/` 与 `src/asterion/capabilities/` 是唯一权威实现。mixed-repository dependency [`src/dci`](../../../src/dci/) 仅是原始 DCI 对照基线，不是可独立安装的 Asterion 产品。
+父工作区已不再保留旧的 `applications/` 或 `capabilities/` 产品目录；Asterion 项目内的 `src/asterion/applications/` 与 `src/asterion/capabilities/` 是唯一权威实现。父工作区的 `src/dci` 仅是原始 DCI 对照基线，不是 standalone Asterion 产品或运行依赖。
 
 ## 依赖方向
 
@@ -159,20 +159,20 @@ host_services={"executor.controlled": executor}
 
 ```bash
 # 框架：发现、描述、验证或运行 installed application
-asterion list
-asterion list --provider dci-agent-lite
-asterion describe --provider dci-agent-lite
-asterion verify --provider dci-agent-lite --level provider-free
-asterion run --provider dci-agent-lite \
-  --application dci.research-capability \
+uv run asterion list
+uv run asterion list --provider dci-agent-lite
+uv run asterion describe --provider dci-agent-lite
+uv run asterion verify --provider dci-agent-lite --level acceptance
+uv run asterion run --provider dci-agent-lite \
+  --application dci.research-capability@1.0.0 \
   --runtime pi.reference \
   --run-id example-001 \
   --input "基于本地语料回答问题"
 
 # DCI 产品：单次研究、恢复、评测、benchmark 与导出
-asterion-dci --help
-asterion-dci run --help
-asterion-dci benchmark --help
+uv run asterion-dci --help
+uv run asterion-dci run --help
+uv run asterion-dci benchmark --help
 ```
 
 `asterion run` 适合验证框架装配和通用能力执行。`asterion-dci` 暴露 DCI 完整产品功能；两者不是互相替代的命令。DCI 的命令、配置和验证层级见[完整产品参考](../guides/asterion-dci-complete-reference.md)。
@@ -241,8 +241,8 @@ asterion-dci benchmark --help
    显式运行：
 
    ```bash
-   asterion run --provider example-suite \
-     --application example.research-app \
+   uv run asterion run --provider example-suite \
+     --application example.research-app@1.0.0 \
      --runtime pi.reference --run-id smoke-001 --input "test"
    ```
 
@@ -272,8 +272,8 @@ asterion-dci benchmark --help
 
 ```bash
 uv run python -m unittest discover -v
-uv run ruff check asterion/src tests
-uv build asterion
+uv run ruff check src tests
+uv build .
 # 然后在临时虚拟环境安装 dist/*.whl，执行 isolated wheel smoke。
 ```
 

@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import re
 import shlex
+import shutil
 import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -15,6 +17,7 @@ REQUIRED_ASSETS = (
     "Makefile",
     "README.md",
     "pi-revision.txt",
+    "tools/check_docs.py",
     "uv.lock",
 )
 LIFECYCLE_TARGETS = (
@@ -80,6 +83,7 @@ class StandaloneRepositoryTests(unittest.TestCase):
         self.assertNotRegex(text, r"(?m)^[A-Z0-9_]*(?:KEY|TOKEN|SECRET)=.+$")
         self.assertNotIn("../", text)
         self.assertNotIn("pi-mono", text)
+        self.assertIn("ASTERION_DCI_RESOURCE_ROOT=", text)
 
     def test_external_data_ignore_rules_do_not_hide_packaged_resources(self) -> None:
         text = (PROJECT / ".gitignore").read_text(encoding="utf-8").splitlines()
@@ -235,6 +239,130 @@ class StandaloneRepositoryTests(unittest.TestCase):
         ):
             with self.subTest(command=command):
                 self.assertIn(command, text)
+
+    def test_readme_is_a_complete_standalone_landing_page(self) -> None:
+        text = (PROJECT / "README.md").read_text(encoding="utf-8")
+        for heading in (
+            "## Installation",
+            "## Discovery and installed acceptance",
+            "## External Pi and resources",
+            "## Cost boundaries",
+            "## Development",
+            "## Promotion",
+            "## Mixed-repository integration parity",
+        ):
+            with self.subTest(heading=heading):
+                self.assertIn(heading, text)
+        for command in (
+            "uv sync --frozen",
+            "uv run asterion list",
+            "uv run asterion describe --provider dci-agent-lite",
+            "uv run asterion verify --provider dci-agent-lite --level acceptance",
+            "make check",
+            "make promotion-check",
+        ):
+            with self.subTest(command=command):
+                self.assertIn(command, text)
+        for setting in (
+            "DCI_PI_DIR",
+            "ASTERION_DCI_RESOURCE_ROOT",
+            ".env",
+            "corpora",
+            "datasets",
+            "Judge",
+        ):
+            with self.subTest(setting=setting):
+                self.assertIn(setting, text)
+
+    def test_docs_reject_mixed_root_commands_paths_and_current_counts(self) -> None:
+        documents = (PROJECT / "README.md", *sorted((PROJECT / "docs").rglob("*.md")))
+        forbidden = (
+            "uv run --project asterion",
+            "../../../docs/superpowers/",
+            "/Users/sujiangwen/",
+            "90 tests",
+            "1230 tests",
+            "Run these checks from the parent mixed-repository root",
+            "python3 tools/project_scope_check.py",
+            "python3 ../tools/project_scope_check.py",
+            "npm --prefix asterion/",
+            "uv run ruff check asterion/",
+            "uv build asterion",
+            "make -C ..",
+        )
+        for document in documents:
+            text = document.read_text(encoding="utf-8")
+            with self.subTest(document=document.relative_to(PROJECT)):
+                for value in forbidden:
+                    self.assertNotIn(value, text)
+                for line in text.splitlines():
+                    if "tools/verify_asterion_dci_product.py" in line:
+                        self.assertIn("mixed-repository only", line)
+                    if re.search(r"\b(?:533/533|538/538)\b", line):
+                        self.assertRegex(line, r"historical|历史|mixed-repository")
+
+    def test_docs_checker_passes_the_current_standalone_tree(self) -> None:
+        completed = subprocess.run(
+            ["uv", "run", "python", "tools/check_docs.py"],
+            cwd=PROJECT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertRegex(
+            completed.stdout.strip(),
+            r"^checked \d+ markdown files, \d+ local links$",
+        )
+
+    def test_docs_checker_handles_links_and_rejects_unsafe_targets(self) -> None:
+        checker = PROJECT / "tools/check_docs.py"
+        self.assertTrue(checker.is_file(), "standalone docs checker is missing")
+        if not checker.is_file():
+            return
+
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            sandbox = Path(temporary_directory)
+            root = sandbox / "project"
+            (root / "tools").mkdir(parents=True)
+            shutil.copy2(checker, root / "tools/check_docs.py")
+            (root / "docs").mkdir()
+            (root / "docs/My Guide.md").write_text(
+                "# Guide\n\n## Section\n", encoding="utf-8"
+            )
+            (root / "README.md").write_text(
+                "# Root\n\n[guide](docs/My%20Guide.md#section) "
+                "[anchor](#root) [web](https://example.invalid)\n",
+                encoding="utf-8",
+            )
+
+            def run() -> subprocess.CompletedProcess[str]:
+                return subprocess.run(
+                    ["python3", "tools/check_docs.py"],
+                    cwd=root,
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                )
+
+            valid = run()
+            self.assertEqual(valid.returncode, 0, valid.stderr)
+            self.assertEqual(valid.stdout.strip(), "checked 2 markdown files, 1 local links")
+
+            outside = sandbox / "outside.md"
+            outside.write_text("# Outside\n", encoding="utf-8")
+            unsafe_targets = (
+                "docs/missing.md",
+                "../outside.md",
+                "%2E%2E/outside.md",
+                str(outside),
+            )
+            for target in unsafe_targets:
+                with self.subTest(target=target):
+                    (root / "README.md").write_text(
+                        f"# Root\n\n[unsafe]({target})\n", encoding="utf-8"
+                    )
+                    self.assertNotEqual(run().returncode, 0)
 
 
 if __name__ == "__main__":
