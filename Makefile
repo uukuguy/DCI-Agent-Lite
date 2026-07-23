@@ -3,7 +3,7 @@ ASTERION_ENV_FILE ?= .env
 ASTERION_CORPUS_ROOT ?= $(CURDIR)/corpus
 ASTERION_VERIFY_OUTPUT_ROOT ?= $(CURDIR)/outputs/asterion-verification
 
-.PHONY: example runtime-example asterion-example asterion-runtime-example asterion-describe asterion-verify-preflight asterion-verify-basic asterion-verify-acceptance asterion-verify-complete check-pi-rpc check-judge check-judge-config test-typescript-host test-rust-executor check-rust-executor codex-example deepseek-example
+.PHONY: example runtime-example asterion-example asterion-runtime-example asterion-describe asterion-verify-preflight asterion-verify-basic asterion-verify-acceptance asterion-verify-complete asterion-integration-acceptance check-pi-rpc check-judge check-judge-config test-typescript-host test-rust-executor check-rust-executor codex-example deepseek-example
 
 example:
 	bash scripts/examples/dci_basic_example.sh
@@ -18,24 +18,30 @@ asterion-runtime-example:
 	bash scripts/examples/asterion_dci_runtime_context_example.sh
 
 asterion-describe:
-	uv run asterion describe --provider "$(ASTERION_PROVIDER)"
+	$(MAKE) -C asterion asterion-describe \
+		ASTERION_PROVIDER="$(ASTERION_PROVIDER)" ASTERION_ARGS=""
 
 asterion-verify-preflight:
-	uv run asterion verify --provider "$(ASTERION_PROVIDER)" --level preflight \
-		--env-file "$(ASTERION_ENV_FILE)" --corpus-root "$(ASTERION_CORPUS_ROOT)"
+	$(MAKE) -C asterion asterion-verify-preflight \
+		ASTERION_PROVIDER="$(ASTERION_PROVIDER)" \
+		ASTERION_ARGS='--env-file "$(ASTERION_ENV_FILE)" --corpus-root "$(ASTERION_CORPUS_ROOT)"'
 
 asterion-verify-basic:
-	uv run asterion verify --provider "$(ASTERION_PROVIDER)" --level basic \
-		--env-file "$(ASTERION_ENV_FILE)" --corpus-root "$(ASTERION_CORPUS_ROOT)" \
-		--output-root "$(ASTERION_VERIFY_OUTPUT_ROOT)"
+	$(MAKE) -C asterion asterion-verify-basic \
+		ASTERION_PROVIDER="$(ASTERION_PROVIDER)" \
+		ASTERION_ARGS='--env-file "$(ASTERION_ENV_FILE)" --corpus-root "$(ASTERION_CORPUS_ROOT)" --output-root "$(ASTERION_VERIFY_OUTPUT_ROOT)"'
 
 asterion-verify-acceptance:
-	uv run asterion verify --provider "$(ASTERION_PROVIDER)" --level acceptance
+	$(MAKE) -C asterion asterion-verify-acceptance \
+		ASTERION_PROVIDER="$(ASTERION_PROVIDER)" ASTERION_ARGS=""
 
 asterion-verify-complete:
-	uv run asterion verify --provider "$(ASTERION_PROVIDER)" --level complete \
-		--env-file "$(ASTERION_ENV_FILE)" --corpus-root "$(ASTERION_CORPUS_ROOT)" \
-		--output-root "$(ASTERION_VERIFY_OUTPUT_ROOT)"
+	$(MAKE) -C asterion asterion-verify-complete \
+		ASTERION_PROVIDER="$(ASTERION_PROVIDER)" \
+		ASTERION_ARGS='--env-file "$(ASTERION_ENV_FILE)" --corpus-root "$(ASTERION_CORPUS_ROOT)" --output-root "$(ASTERION_VERIFY_OUTPUT_ROOT)"'
+
+asterion-integration-acceptance:
+	uv run python tools/verify_asterion_dci_product.py
 
 check-pi-rpc:
 	uv run python scripts/check_pi_rpc.py

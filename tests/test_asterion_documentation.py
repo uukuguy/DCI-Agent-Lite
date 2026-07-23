@@ -168,6 +168,11 @@ class AsterionDocumentationTests(unittest.TestCase):
         ):
             self.assertIn(retained, project_root)
 
+    def test_root_readme_names_the_mixed_repository_acceptance_target(self) -> None:
+        root_readme = read("README.md")
+        self.assertIn("make asterion-integration-acceptance", root_readme)
+        self.assertIn("mixed-repository integration", root_readme)
+
 
 if __name__ == "__main__":
     unittest.main()

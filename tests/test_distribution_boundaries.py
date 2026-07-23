@@ -48,14 +48,14 @@ class SourceDistributionBoundaryTests(unittest.TestCase):
             "3 consecutive summary failures",
             "live model context",
             "post-run conversation processing",
-            "Asterion-owned Pi extension",
+            "runtime_context_control` extension",
             "original Pi session",
             "Implemented",
             "Model-free verified",
             "Bounded provider verified",
             "Experiment reproduced",
             "AF-340",
-            "tools/verify_dci_context_acceptance.py",
+            "tools/verify_original_readme.py",
             "--provider-backed",
             "Provider operations: 0",
             "Full dataset ran: no",
@@ -74,25 +74,25 @@ class SourceDistributionBoundaryTests(unittest.TestCase):
         text = guide_path.read_text()
         ordered = (
             "## 五分钟开始",
-            "## 最少需要哪些环境变量",
-            "## 查看能力：describe",
-            "## 只检查准备情况：--level preflight",
-            "## 验证两个基础示例：--level basic",
-            "## 不调用模型验证完整迁移：--level acceptance",
-            "## 一条命令全部验证：--level complete",
-            "## 原始 DCI 功能与 Asterion 命令",
-            "## 预期输出",
-            "## 费用和请求次数",
-            "## 产物在哪里",
+            "## 最少需要哪些配置",
+            "## 查看能力：`list` 与 `describe`",
+            "## 四种验证级别",
+            "### `preflight`：只检查外部准备",
+            "### `acceptance`：已安装产品闭包",
+            "### `basic`：有界 Agent/Judge 案例",
+            "### `complete`：有界路径加安装闭包",
+            "## DCI 产品命令",
+            "## 费用与完整数据集边界",
+            "## 产物与隐私",
             "## 常见问题",
-            "../verification/asterion-dci-validation-guide.md",
         )
         positions = [text.find(value) for value in ordered]
         self.assertTrue(all(position >= 0 for position in positions), positions)
         self.assertEqual(positions, sorted(positions))
         for required in (
             "asterion describe --provider dci-agent-lite",
-            "make asterion-describe",
+            "make test",
+            "make promotion-check",
             "make asterion-verify-preflight",
             "make asterion-verify-basic",
             "make asterion-verify-acceptance",
@@ -104,11 +104,10 @@ class SourceDistributionBoundaryTests(unittest.TestCase):
             "DCI_PROVIDER",
             "DCI_MODEL",
             "DCI_PI_DIR",
-            "ANTHROPIC_API_KEY=<YOUR_PROVIDER_API_KEY>",
-            "DCI_EVAL_JUDGE_API_KEY_ENV=OPENAI_API_KEY",
-            "OPENAI_API_KEY=<YOUR_JUDGE_API_KEY>",
-            "Provider-backed operations: 3",
+            "ASTERION_DCI_RESOURCE_ROOT",
+            "DCI_EVAL_JUDGE_*",
             "Full dataset ran: no",
+            "../verification/asterion-dci-validation-guide.md",
         ):
             self.assertIn(required, text)
         self.assertNotRegex(
@@ -125,37 +124,35 @@ class SourceDistributionBoundaryTests(unittest.TestCase):
         for required in (
             "make asterion-describe",
             "make asterion-verify-acceptance",
+            "make asterion-integration-acceptance",
             "preflight` 和 `acceptance` 不调用模型",
             "basic` 和 `complete` 会运行两个有界 Pi 操作和一个 Judge 操作",
         ):
             self.assertIn(required, readme)
 
-    def test_complete_dci_validation_guide_covers_both_products_and_all_tiers(
+    def test_complete_dci_validation_guide_covers_standalone_and_integration_boundaries(
         self,
     ) -> None:
         guide_path = ASTERION_PROJECT / "docs/verification/asterion-dci-validation-guide.md"
         self.assertTrue(guide_path.is_file())
         text = guide_path.read_text()
         for required in (
-            "scripts/examples/dci_basic_example.sh",
-            "scripts/examples/dci_runtime_context_example.sh",
-            "scripts/examples/asterion_dci_basic_example.sh",
-            "scripts/examples/asterion_dci_runtime_context_example.sh",
+            "uv run asterion list",
+            "make asterion-verify-acceptance",
+            "make test",
+            "make check",
             "asterion-dci resume",
             "asterion-dci terminal",
             "asterion-dci evaluate",
             "asterion-dci benchmark",
             "verify_asterion_dci_product.py",
-            "--acceptance-root",
             "538/538",
-            "7/7",
             "provider-free",
             "bounded provider-backed",
-            "full-dataset",
-            'source "$DCI_ENV_FILE"',
-            ': "${ASTERION_DCI_CORPUS_ROOT:',
-            "project-entrypoint Pi-default application",
-            "isolated-wheel proof is performed by",
+            "Full-dataset execution",
+            "ASTERION_DCI_RESOURCE_ROOT",
+            "isolated wheel",
+            "mixed-repository only",
         ):
             self.assertIn(required, text)
 
@@ -166,18 +163,11 @@ class SourceDistributionBoundaryTests(unittest.TestCase):
         self.assertNotIn("wheel-installed generic application", text)
 
         for launcher in (
-            "scripts/bcplus_eval/run_L3.sh",
             "scripts/bcplus_eval/run_bcplus_eval_openai.sh",
             "scripts/bright/run_bio.sh",
-            "scripts/bright/run_earth_science.sh",
-            "scripts/bright/run_economics.sh",
-            "scripts/bright/run_robotics.sh",
-            "scripts/qa/run_2wikimultihopqa_dev_sample50.sh",
-            "scripts/qa/run_bamboogle_test_sample50.sh",
             "scripts/qa/run_hotpotqa_dev_sample50.sh",
-            "scripts/qa/run_musique_dev_sample50.sh",
-            "scripts/qa/run_nq_test_sample50.sh",
-            "scripts/qa/run_triviaqa_test_sample50.sh",
+            "scripts/beir/benchmark_arguana.sh",
+            "tests.test_standalone_launchers",
         ):
             self.assertIn(launcher, text)
 
@@ -193,37 +183,38 @@ class SourceDistributionBoundaryTests(unittest.TestCase):
         text = (
             ASTERION_PROJECT / "docs/verification/asterion-dci-validation-guide.md"
         ).read_text()
-        self.assertIn(
-            "run mixed-repository verification commands from the parent "
-            "mixed-repository root",
-            text,
-        )
-        self.assertIn("uv run --project asterion asterion-dci --help", text)
-        self.assertIn(
-            "uv run --project asterion asterion list --provider dci-agent-lite",
-            text,
-        )
-        self.assertIn('DCI_ENV_FILE="${DCI_ENV_FILE:-.env}"', text)
-        self.assertIn("launchers resolve the mixed-repository root", text)
+        for required in (
+            "promoted standalone repository",
+            "uv sync --frozen",
+            "Copy `.env.template` to `.env`",
+            "ASTERION_DCI_RESOURCE_ROOT",
+            "All fourteen launchers compute their own project root",
+            "mixed-repository only",
+            "intentionally absent here",
+        ):
+            self.assertIn(required, text)
+        self.assertNotIn("uv run --project asterion", text)
+        self.assertNotIn('DCI_ENV_FILE="${DCI_ENV_FILE:-.env}"', text)
 
-    def test_validation_guide_runs_both_python_discovery_roots(self) -> None:
+    def test_validation_guide_uses_standalone_and_promotion_gates(self) -> None:
         text = (
             ASTERION_PROJECT / "docs/verification/asterion-dci-validation-guide.md"
         ).read_text()
-        tier_five = text.split(
-            "## 10. Tier 5 — full repository closure gates", 1
-        )[1].split("## 11.", 1)[0]
-        self.assertIn(
-            "(cd asterion && uv run python -m unittest discover -s tests -v)",
-            tier_five,
-        )
-        self.assertIn(
-            "uv run --project asterion python -m unittest discover -s tests -v",
-            tier_five,
-        )
-        self.assertIn("90 project-local", tier_five)
-        self.assertIn("1230 root", tier_five)
-        self.assertNotIn("discover -s ../tests", tier_five)
+        repository_gates = text.split(
+            "### 3. Verify repository and distribution gates", 1
+        )[1].split("### 4.", 1)[0]
+        for command in (
+            "make test",
+            "make lint",
+            "make docs-check",
+            "make build",
+            "make check",
+        ):
+            self.assertIn(command, repository_gates)
+        self.assertIn("temporary-copy promotion gate", text)
+        self.assertNotIn("discover -s ../tests", text)
+        self.assertNotIn("90 project-local", text)
+        self.assertNotIn("1230 root", text)
 
     def test_asterion_core_has_an_independent_project_and_source_root(self) -> None:
         self.assertTrue((ASTERION_PROJECT / "pyproject.toml").is_file())
@@ -273,10 +264,8 @@ class SourceDistributionBoundaryTests(unittest.TestCase):
 
     def test_claude_runtime_uses_shared_provider_configuration(self) -> None:
         environment = (ROOT / ".env.template").read_text()
+        standalone_environment = (ASTERION_PROJECT / ".env.template").read_text()
         readme = (ROOT / "README.md").read_text()
-        guide = (
-            ASTERION_PROJECT / "docs/guides/asterion-capability-usage.md"
-        ).read_text()
 
         for required in (
             "DCI_PROVIDER=minimax",
@@ -287,7 +276,14 @@ class SourceDistributionBoundaryTests(unittest.TestCase):
             self.assertIn(required, environment)
         self.assertNotIn("ANTHROPIC_AUTH_TOKEN=your_gateway_token_here", environment)
         self.assertIn("Claude Code adapter derives", readme)
-        self.assertIn("不需要再设置 `ANTHROPIC_*`", guide)
+        for required in (
+            "DCI_PROVIDER=",
+            "DCI_MODEL=",
+            "# ANTHROPIC_API_KEY=",
+            "# MINIMAX_API_KEY=",
+            "# MINIMAX_CN_API_KEY=",
+        ):
+            self.assertIn(required, standalone_environment)
 
     def test_durable_dci_documentation_names_resume_and_protected_artifacts(self) -> None:
         readme = (ROOT / "README.md").read_text()

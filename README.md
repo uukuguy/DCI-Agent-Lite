@@ -96,10 +96,12 @@ Run the local, provider-free product matrix verifier to reproduce the complete
 checked-in acceptance boundary:
 
 ```bash
-uv run python tools/verify_asterion_dci_product.py
+make asterion-integration-acceptance
 ```
 
-It executes the eight checked-in local/model-free product rows, resolves and
+This explicitly mixed-repository integration target runs
+`uv run python tools/verify_asterion_dci_product.py`. It executes the eight
+checked-in local/model-free product rows, resolves and
 executes all 538 delegated batch selectors, verifies the twelve source/Asterion
 launcher pairs, proves the installed wheel/application boundary with a local
 fixture, and validates the digest-bound seven-case bounded-real record. It
