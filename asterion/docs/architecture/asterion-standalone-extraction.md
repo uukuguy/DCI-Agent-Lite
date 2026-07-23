@@ -91,7 +91,7 @@ standalone-repository-root/
 | `.env.template` | `.env.template` | 只保留说明和值为空的配置 | 不含 secret |
 | 顶层 `applications/` | 初期不复制 | wheel 已有权威 provider/assembly | 无运行引用后删除歧义 |
 | 顶层 `capabilities/` | 初期不复制 | wheel 已有权威 capability | 不制造空产品目录 |
-| mixed-repository 原 DCI `../src/dci` | 不复制 | 保留在混合仓库作为迁移基线 | Asterion 禁止 import |
+| mixed-repository 原 DCI `src/dci` | 不复制 | 仅保留在父工作区作为迁移基线 | Asterion 禁止 import |
 
 ## Phase 1：冻结边界与基线
 

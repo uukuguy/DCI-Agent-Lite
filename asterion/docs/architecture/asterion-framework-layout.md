@@ -13,7 +13,7 @@ comparison baseline with its own framework implementation.
 
 ```text
 src/asterion/                         sole product distribution
-../src/dci/                           mixed-repository, unpackaged benchmark baseline
+parent workspace src/dci/             mixed-repository, unpackaged benchmark baseline
 src/asterion/capabilities/dci_research/  bundled DCI capability and manifests
 src/asterion/applications/dci_agent_lite/ bundled provider and assemblies
 src/asterion/capabilities/controlled_code/ controlled-code declarative packages

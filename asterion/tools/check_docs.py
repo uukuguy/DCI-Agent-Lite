@@ -9,9 +9,9 @@ from urllib.parse import unquote, urlsplit
 LINK_PATTERN = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
 COUNT_PATTERN = re.compile(r"\b(?:533/533|538/538)\b")
 FORBIDDEN_LITERALS = (
-    "uv run --project asterion",
+    "uv run --project " + "asterion",
     "../../../docs/superpowers/",
-    "/Users/sujiangwen/",
+    "/Users/" + "sujiangwen/",
     "90 tests",
     "1230 tests",
     "Run these checks from the parent mixed-repository root",

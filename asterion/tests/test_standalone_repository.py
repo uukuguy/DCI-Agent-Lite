@@ -12,12 +12,14 @@ from pathlib import Path
 PROJECT = Path(__file__).resolve().parents[1]
 REQUIRED_ASSETS = (
     ".env.template",
+    ".github/workflows/ci.yml",
     ".gitignore",
     "LICENSE",
     "Makefile",
     "README.md",
     "pi-revision.txt",
     "tools/check_docs.py",
+    "tools/check_promotion.py",
     "uv.lock",
 )
 LIFECYCLE_TARGETS = (
@@ -240,6 +242,28 @@ class StandaloneRepositoryTests(unittest.TestCase):
             with self.subTest(command=command):
                 self.assertIn(command, text)
 
+    def test_ci_runs_only_the_full_provider_free_promotion_gate(self) -> None:
+        path = PROJECT / ".github/workflows/ci.yml"
+        self.assertTrue(path.is_file(), "standalone CI workflow is missing")
+        text = path.read_text(encoding="utf-8") if path.is_file() else ""
+        self.assertIn("pull_request:", text)
+        self.assertIn("push:", text)
+        self.assertIn("contents: read", text)
+        self.assertIn("python-version: '3.10'", text)
+        self.assertIn("node-version: '20'", text)
+        self.assertIn("toolchain: stable", text)
+        self.assertIn("make promotion-check", text)
+        for forbidden in (
+            "API_KEY",
+            "provider-backed",
+            "verify-basic",
+            "verify-complete",
+            "--quick",
+            "publish",
+        ):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, text)
+
     def test_readme_is_a_complete_standalone_landing_page(self) -> None:
         text = (PROJECT / "README.md").read_text(encoding="utf-8")
         for heading in (
@@ -277,9 +301,9 @@ class StandaloneRepositoryTests(unittest.TestCase):
     def test_docs_reject_mixed_root_commands_paths_and_current_counts(self) -> None:
         documents = (PROJECT / "README.md", *sorted((PROJECT / "docs").rglob("*.md")))
         forbidden = (
-            "uv run --project asterion",
+            "uv run --project " + "asterion",
             "../../../docs/superpowers/",
-            "/Users/sujiangwen/",
+            "/Users/" + "sujiangwen/",
             "90 tests",
             "1230 tests",
             "Run these checks from the parent mixed-repository root",
