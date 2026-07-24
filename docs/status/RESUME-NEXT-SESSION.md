@@ -2,21 +2,22 @@
 
 > Updated: 2026-07-24 10:45 +0800. **Session remains active — not a final handoff.**
 
-Active work package: none
+Active work package: AF-360
 
-Project lifecycle: complete
+Project lifecycle: active
 
 Currently running: no process.
 
 ## TL;DR
 
-- AF-360 standalone first-run readiness and its post-merge configuration-parity repair are complete.
+- AF-360 is reopened for one reproduced pinned-Pi build failure.
 - A fresh standalone checkout now has explicit pinned-Pi, authentication, basic/benchmark resource, configuration, doctor, and first-run workflows.
 - AF-360 implementation is integrated into `main` by `90cf244`; the final Judge credential-name description repair is `7c1672b`.
 
 ## Where things stand
 
-- `.env.template`, `JudgeConfig`, and `asterion describe` now all use `DEEPSEEK_API_KEY`.
+- Real `make setup-pi` at `8479bd84…` fails because the Pi AI `build` script regenerates catalogs from moving APIs before TypeScript compilation.
+- Direct AI `tsgo` compilation of the locked checked-in catalogs, followed by agent/coding-agent builds, succeeds and produces Pi `0.80.6`.
 - `make setup-pi` provisions the exact full commit in `pi-revision.txt`; `make check-pi` is read-only. A global `pi` executable is intentionally not authoritative.
 - `DCI_PI_AGENT_DIR=~/.pi/agent` selects separately managed authentication. Setup never reads, copies, creates, or prints credentials.
 - `make setup-resources-basic` creates the wiki and BC+ onboarding layouts; benchmark setup/check reports every packaged and launcher resource, including unavailable/manual sources.
@@ -26,8 +27,8 @@ Currently running: no process.
 
 ## Next concrete action
 
-1. Keep the completed lifecycle closed until the user selects a new governed package.
-2. For standalone use, promote the contents of `asterion/` to a GitHub repository root and follow its README setup sequence.
+1. Add a failing setup contract proving dependency install and AI compilation cannot refresh generated catalogs.
+2. Change setup to deterministic install plus compile-only AI, verify against fixtures and the real checkout, then reclose AF-360.
 
 ## Open questions
 
