@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 import os
 import subprocess
+import sys
 import tempfile
+import types
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -179,8 +181,10 @@ class BasicResourceSetupTests(unittest.TestCase):
             del kwargs
             os.symlink(outside, staging / "wiki")
 
+        fake_huggingface_hub = types.ModuleType("huggingface_hub")
+        fake_huggingface_hub.snapshot_download = fake_download
         with (
-            patch("huggingface_hub.snapshot_download", fake_download),
+            patch.dict(sys.modules, {"huggingface_hub": fake_huggingface_hub}),
             self.assertRaisesRegex(ResourceSetupError, "symlink"),
         ):
             _network_source(BASIC_RESOURCES[1], staging)
