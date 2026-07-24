@@ -141,6 +141,10 @@ class FirstRunPreflightTests(unittest.TestCase):
         self.assertEqual(requirements["DCI_MODEL"].default, "gpt-5.6-luna")
         self.assertEqual(requirements["DCI_PI_DIR"].default, "./pi")
         self.assertEqual(requirements["DCI_PI_AGENT_DIR"].default, "~/.pi/agent")
+        self.assertEqual(
+            requirements["DCI_EVAL_JUDGE_API_KEY_ENV"].default,
+            "DEEPSEEK_API_KEY",
+        )
         with patch.dict(os.environ, {}, clear=True):
             paths = resolve_dci_paths(PROJECT)
         self.assertEqual(paths.pi.agent_dir, Path("~/.pi/agent").expanduser())

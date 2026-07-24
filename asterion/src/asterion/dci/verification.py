@@ -48,6 +48,7 @@ from asterion.dci.config import (
 from asterion.dci.evaluation import evaluate_run_directory
 from asterion.dci.artifacts import DciConversationFeatures
 from asterion.dci.judge import (
+    DEFAULT_JUDGE_API_KEY_ENV,
     DEFAULT_JUDGE_MODEL,
     JudgeConfig,
     build_judge_request,
@@ -209,7 +210,7 @@ DCI_PRODUCT_DESCRIPTION = CapabilityProductDescription(
             "Name of the environment variable holding the Judge credential",
             ("basic", "complete", "preflight"),
             False,
-            "OPENAI_API_KEY",
+            DEFAULT_JUDGE_API_KEY_ENV,
             "Set this name and then set the named secret variable in .env",
         ),
         ConfigurationRequirement(
