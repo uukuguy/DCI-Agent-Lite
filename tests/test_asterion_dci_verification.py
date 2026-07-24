@@ -264,15 +264,19 @@ class FixtureBackend:
 
 
 def prepare_root(root: Path) -> Path:
-    (root / "pi/packages/coding-agent").mkdir(parents=True)
+    (root / "pi/packages/coding-agent/dist").mkdir(parents=True)
     (root / "pi/.pi/agent").mkdir(parents=True)
     (root / "pi/packages/coding-agent/package.json").write_text("{}")
+    (root / "pi/packages/coding-agent/dist/cli.js").write_text("// fixture\n")
     (root / "corpus/wiki_corpus").mkdir(parents=True)
     (root / "corpus/bc_plus_docs").mkdir(parents=True)
+    (root / "corpus/wiki_corpus/fixture.txt").write_text("fixture\n")
+    (root / "corpus/bc_plus_docs/fixture.txt").write_text("fixture\n")
     env_file = root / ".env"
     env_file.write_text(
         "DCI_PROVIDER=openai\n"
         "DCI_MODEL=fixture-model\n"
+        "DCI_PI_AGENT_DIR=./pi/.pi/agent\n"
         "OPENAI_API_KEY=SECRET-PROVIDER-VALUE\n"
         "DCI_EVAL_JUDGE_MODEL=fixture-judge\n"
         "DCI_EVAL_JUDGE_API_KEY_ENV=JUDGE_KEY\n"
@@ -338,6 +342,7 @@ class DciDescriptionAndPreflightTests(unittest.TestCase):
             env_file.write_text(
                 "DCI_PROVIDER=openai-codex\n"
                 "DCI_MODEL=fixture-model\n"
+                "DCI_PI_AGENT_DIR=./pi/.pi/agent\n"
                 "DCI_EVAL_JUDGE_MODEL=fixture-judge\n"
                 "DCI_EVAL_JUDGE_API_KEY_ENV=JUDGE_KEY\n"
                 "JUDGE_KEY=SECRET-JUDGE-VALUE\n"
@@ -430,8 +435,9 @@ class DciBasicVerificationTests(unittest.TestCase):
         failed = {check.check_id for check in result.checks if check.status == "FAIL"}
         self.assertIn("environment", failed)
         self.assertIn("node", failed)
-        self.assertIn("pi", failed)
-        self.assertIn("corpora", failed)
+        self.assertIn("pi-checkout", failed)
+        self.assertIn("built-pi-cli", failed)
+        self.assertIn("resources-basic", failed)
         self.assertEqual(backend.calls, [])
 
 

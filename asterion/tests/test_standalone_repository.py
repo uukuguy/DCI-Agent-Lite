@@ -18,8 +18,10 @@ REQUIRED_ASSETS = (
     "Makefile",
     "README.md",
     "pi-revision.txt",
+    "scripts/setup_pi.sh",
     "tools/check_docs.py",
     "tools/check_promotion.py",
+    "tools/setup_resources.py",
     "uv.lock",
 )
 LIFECYCLE_TARGETS = (
@@ -31,6 +33,15 @@ LIFECYCLE_TARGETS = (
     "docs-check",
     "check",
     "promotion-check",
+    "first-run-check",
+    "setup",
+    "setup-pi",
+    "check-pi",
+    "setup-resources-basic",
+    "check-resources-basic",
+    "setup-resources-benchmark",
+    "check-resources-benchmark",
+    "doctor",
 )
 FRAMEWORK_TARGETS = (
     "asterion-list",
@@ -86,6 +97,27 @@ class StandaloneRepositoryTests(unittest.TestCase):
         self.assertNotIn("../", text)
         self.assertNotIn("pi-mono", text)
         self.assertIn("ASTERION_DCI_RESOURCE_ROOT=", text)
+        self.assertIn("DCI_PROVIDER=openai-codex", text)
+        self.assertIn("DCI_MODEL=gpt-5.6-luna", text)
+        self.assertIn("DCI_PI_AGENT_DIR=~/.pi/agent", text)
+        self.assertIn("ASTERION_DCI_RESOURCE_ROOT=.", text)
+        for default in (
+            "DCI_EVAL_JUDGE_BASE_URL=https://api.deepseek.com/v1",
+            "DCI_EVAL_JUDGE_API=chat-completions",
+            "DCI_EVAL_JUDGE_MODEL=deepseek-v4-flash",
+            "DCI_EVAL_JUDGE_API_KEY_ENV=DEEPSEEK_API_KEY",
+            "DCI_EVAL_JUDGE_TIMEOUT_SECONDS=120",
+            "DCI_EVAL_JUDGE_THINKING=disabled",
+            "DCI_EVAL_JUDGE_JSON_MODE=true",
+            "DCI_EVAL_JUDGE_STRICT_JSON_SCHEMA=false",
+            "DCI_EVAL_JUDGE_RESPONSES_STORE=false",
+            "DCI_EVAL_JUDGE_MAX_OUTPUT_TOKENS=1024",
+            "DCI_EVAL_JUDGE_INPUT_PRICE_PER_1M=0",
+            "DCI_EVAL_JUDGE_CACHED_INPUT_PRICE_PER_1M=0",
+            "DCI_EVAL_JUDGE_OUTPUT_PRICE_PER_1M=0",
+        ):
+            with self.subTest(default=default):
+                self.assertIn(default, text)
 
     def test_external_data_ignore_rules_do_not_hide_packaged_resources(self) -> None:
         text = (PROJECT / ".gitignore").read_text(encoding="utf-8").splitlines()
@@ -136,6 +168,8 @@ class StandaloneRepositoryTests(unittest.TestCase):
         self.assertIn(
             "full execution requires separate authorization", completed.stdout
         )
+        self.assertIn("network/disk; Agent operations 0; Judge operations 0", completed.stdout)
+        self.assertIn("doctor", completed.stdout)
 
     def test_framework_targets_render_exact_commands(self) -> None:
         expected = {
@@ -242,6 +276,119 @@ class StandaloneRepositoryTests(unittest.TestCase):
             with self.subTest(command=command):
                 self.assertIn(command, text)
 
+    def test_pi_setup_targets_render_exact_commands(self) -> None:
+        self.assertEqual(
+            dry_run("setup-pi"), ("bash", "scripts/setup_pi.sh")
+        )
+        self.assertEqual(
+            dry_run("check-pi"), ("bash", "scripts/setup_pi.sh", "--check")
+        )
+
+    def test_basic_resource_targets_render_exact_commands(self) -> None:
+        self.assertEqual(
+            dry_run("setup-resources-basic"),
+            (
+                "uv",
+                "run",
+                "--extra",
+                "setup",
+                "python",
+                "tools/setup_resources.py",
+                "--profile",
+                "basic",
+            ),
+        )
+        self.assertEqual(
+            dry_run("check-resources-basic"),
+            (
+                "uv",
+                "run",
+                "python",
+                "tools/setup_resources.py",
+                "--profile",
+                "basic",
+                "--check",
+            ),
+        )
+
+    def test_benchmark_resource_targets_render_exact_commands(self) -> None:
+        self.assertEqual(
+            dry_run("setup-resources-benchmark"),
+            (
+                "uv",
+                "run",
+                "--extra",
+                "setup",
+                "python",
+                "tools/setup_resources.py",
+                "--profile",
+                "benchmark",
+            ),
+        )
+        self.assertEqual(
+            dry_run("check-resources-benchmark"),
+            (
+                "uv",
+                "run",
+                "python",
+                "tools/setup_resources.py",
+                "--profile",
+                "benchmark",
+                "--check",
+            ),
+        )
+
+    def test_doctor_renders_provider_free_preflight(self) -> None:
+        self.assertEqual(
+            dry_run("doctor"),
+            (
+                "uv",
+                "run",
+                "asterion",
+                "verify",
+                "--provider",
+                "dci-agent-lite",
+                "--level",
+                "preflight",
+            ),
+        )
+
+    def test_first_run_check_uses_only_local_fixture_modules(self) -> None:
+        self.assertEqual(
+            dry_run("first-run-check"),
+            (
+                "uv",
+                "run",
+                "python",
+                "-m",
+                "unittest",
+                "-v",
+                "tests.test_setup_pi",
+                "tests.test_resource_setup",
+                "tests.test_asterion_dci_verification",
+            ),
+        )
+
+    def test_setup_composes_sync_pi_and_basic_resources(self) -> None:
+        self.assertEqual(
+            dry_run("setup"),
+            (
+                "uv",
+                "sync",
+                "--frozen",
+                "bash",
+                "scripts/setup_pi.sh",
+                "uv",
+                "run",
+                "--extra",
+                "setup",
+                "python",
+                "tools/setup_resources.py",
+                "--profile",
+                "basic",
+            ),
+        )
+
     def test_ci_runs_only_the_full_provider_free_promotion_gate(self) -> None:
         path = PROJECT / ".github/workflows/ci.yml"
         self.assertTrue(path.is_file(), "standalone CI workflow is missing")
@@ -253,6 +400,7 @@ class StandaloneRepositoryTests(unittest.TestCase):
         self.assertIn("node-version: '20'", text)
         self.assertIn("toolchain: stable", text)
         self.assertIn("make promotion-check", text)
+        self.assertIn("make first-run-check", text)
         for forbidden in (
             "API_KEY",
             "provider-backed",
@@ -279,6 +427,10 @@ class StandaloneRepositoryTests(unittest.TestCase):
                 self.assertIn(heading, text)
         for command in (
             "uv sync --frozen",
+            "make setup-pi",
+            "make setup-resources-basic",
+            "cp .env.template .env",
+            "make doctor",
             "uv run asterion list",
             "uv run asterion describe --provider dci-agent-lite",
             "uv run asterion verify --provider dci-agent-lite --level acceptance",
@@ -287,6 +439,15 @@ class StandaloneRepositoryTests(unittest.TestCase):
         ):
             with self.subTest(command=command):
                 self.assertIn(command, text)
+        for statement in (
+            "global `pi`",
+            "DCI_PI_AGENT_DIR",
+            "setup-resources-benchmark",
+            "zero Agent",
+            "zero Judge",
+        ):
+            with self.subTest(statement=statement):
+                self.assertIn(statement, text)
         for setting in (
             "DCI_PI_DIR",
             "ASTERION_DCI_RESOURCE_ROOT",

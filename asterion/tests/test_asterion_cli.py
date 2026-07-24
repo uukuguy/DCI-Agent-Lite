@@ -195,6 +195,27 @@ class AsterionCliTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             resolve_public_runtime_id("unsupported")
 
+    def test_dci_describe_json_reports_effective_first_run_defaults(self) -> None:
+        entry = FakeEntryPoint(name="dci-agent-lite", factory=create_dci_provider)
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+
+        code = main(
+            ["describe", "--provider", "dci-agent-lite", "--json"],
+            entry_points=(entry,),
+            stdout=stdout,
+            stderr=stderr,
+        )
+
+        self.assertEqual(code, 0, stderr.getvalue())
+        configuration = {
+            item["name"]: item for item in json.loads(stdout.getvalue())["configuration"]
+        }
+        self.assertEqual(configuration["DCI_PROVIDER"]["default"], "openai-codex")
+        self.assertEqual(configuration["DCI_MODEL"]["default"], "gpt-5.6-luna")
+        self.assertEqual(configuration["DCI_PI_DIR"]["default"], "./pi")
+        self.assertEqual(configuration["DCI_PI_AGENT_DIR"]["default"], "~/.pi/agent")
+
     def test_run_materializes_dotenv_once_without_overriding_exported_values(
         self,
     ) -> None:

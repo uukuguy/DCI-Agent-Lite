@@ -29,16 +29,30 @@ uv run asterion describe --provider dci-agent-lite
 
 ```dotenv
 DCI_PI_DIR=./pi
-ASTERION_DCI_RESOURCE_ROOT=/absolute/path/to/resources
+DCI_PI_AGENT_DIR=~/.pi/agent
+ASTERION_DCI_RESOURCE_ROOT=.
 DCI_RUNTIME=pi
-DCI_PROVIDER=
-DCI_MODEL=
+DCI_PROVIDER=openai-codex
+DCI_MODEL=gpt-5.6-luna
 DCI_TOOLS=read,bash
 DCI_EVAL_JUDGE_MODEL=
 DCI_EVAL_JUDGE_API_KEY_ENV=
 ```
 
 Pi、corpora、datasets、凭据和运行输出都不进入 wheel/Git。Agent 与 Judge 是独立角色，各自绑定 provider、model、request shape、凭据和 cache identity。实现见 [`config.py`](../../src/asterion/dci/config.py) 和 [`pi_rpc.py`](../../src/asterion/dci/pi_rpc.py)。
+
+新 checkout 的准备路径是：
+
+```bash
+make setup-pi
+make setup-resources-basic
+cp .env.template .env
+make doctor
+```
+
+全局安装的 `pi` 只可用于管理其自己的登录，不能替代锁定源码 checkout。
+`DCI_PI_AGENT_DIR` 将用户认证与 `DCI_PI_DIR` 的可执行来源分离。benchmark
+资源使用 `make setup-resources-benchmark`；无法取得的资源会精确失败，不会替换。
 
 ## 单次研究、终端与系统提示词
 

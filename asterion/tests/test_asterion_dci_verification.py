@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shutil
 import tempfile
 import unittest
@@ -14,6 +15,8 @@ from asterion.applications.dci_agent_lite import create_provider as create_dci_p
 from asterion.applications.product import VerificationRequest
 from asterion.applications.provider import validate_installed_provider
 from asterion.dci.verification import DciProductVerifier
+from asterion.dci.verification import create_dci_product
+from asterion.dci.config import resolve_dci_paths
 
 
 PROJECT = Path(__file__).resolve().parents[1]
@@ -40,6 +43,23 @@ class ExplodingBackend:
     def evaluate_case(self, *args, **kwargs):
         del args, kwargs
         raise AssertionError("acceptance called the backend")
+
+
+class PreflightBackend:
+    def __init__(self, node_major: int | None = 20) -> None:
+        self.node_major = node_major
+        self.calls: list[object] = []
+
+    def node_major_version(self) -> int | None:
+        return self.node_major
+
+    def run_research_case(self, *args, **kwargs):
+        self.calls.append((args, kwargs))
+        raise AssertionError("preflight called the Agent")
+
+    def evaluate_case(self, *args, **kwargs):
+        self.calls.append((args, kwargs))
+        raise AssertionError("preflight called the Judge")
 
 
 def acceptance_request(*, acceptance_root: Path | None = None) -> VerificationRequest:
@@ -108,6 +128,157 @@ class InstalledAcceptanceTests(unittest.TestCase):
                 "provider-requests": {"actual": 0, "expected": 0},
             },
         )
+
+
+class FirstRunPreflightTests(unittest.TestCase):
+    def test_description_exposes_effective_runtime_and_path_defaults(self) -> None:
+        requirements = {
+            requirement.name: requirement
+            for requirement in create_dci_product(repo_root=PROJECT).description.configuration
+        }
+
+        self.assertEqual(requirements["DCI_PROVIDER"].default, "openai-codex")
+        self.assertEqual(requirements["DCI_MODEL"].default, "gpt-5.6-luna")
+        self.assertEqual(requirements["DCI_PI_DIR"].default, "./pi")
+        self.assertEqual(requirements["DCI_PI_AGENT_DIR"].default, "~/.pi/agent")
+        with patch.dict(os.environ, {}, clear=True):
+            paths = resolve_dci_paths(PROJECT)
+        self.assertEqual(paths.pi.agent_dir, Path("~/.pi/agent").expanduser())
+
+    def test_missing_first_run_prerequisites_have_stable_repairs(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            backend = PreflightBackend(node_major=19)
+            verifier = DciProductVerifier(repo_root=root, backend=backend)
+            with patch.dict(
+                os.environ,
+                {"DCI_PI_AGENT_DIR": "./missing-agent"},
+                clear=True,
+            ):
+                result = verifier.preflight(
+                    env_file=root / ".env", corpus_root=root / "corpus"
+                )
+
+        self.assertEqual(result.status, "FAIL")
+        self.assertEqual(result.provider_backed_operation_count, 0)
+        self.assertFalse(result.full_dataset_ran)
+        self.assertEqual(backend.calls, [])
+        self.assertEqual(
+            tuple(check.check_id for check in result.checks),
+            (
+                "agent-authentication",
+                "agent-selection",
+                "built-pi-cli",
+                "environment",
+                "judge",
+                "node",
+                "pi-checkout",
+                "resources-basic",
+            ),
+        )
+        summaries = {check.check_id: check.summary for check in result.checks}
+        self.assertIn("DCI_PI_AGENT_DIR", summaries["agent-authentication"])
+        self.assertIn("make setup-pi", summaries["built-pi-cli"])
+        self.assertIn("cp .env.template .env", summaries["environment"])
+        self.assertIn("make setup-resources-basic", summaries["resources-basic"])
+        self.assertNotIn(temp_dir, repr(result))
+
+    def test_complete_fixture_passes_without_agent_or_judge_work(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            package = root / "pi/packages/coding-agent"
+            (package / "dist").mkdir(parents=True)
+            (package / "package.json").write_text("{}")
+            (package / "dist/cli.js").write_text("// fixture\n")
+            for corpus in ("wiki_corpus", "bc_plus_docs"):
+                directory = root / "corpus" / corpus
+                directory.mkdir(parents=True)
+                (directory / "fixture.txt").write_text("fixture\n")
+            agent = root / "user-agent"
+            agent.mkdir()
+            (agent / "auth.json").write_text("{}")
+            env_file = root / ".env"
+            env_file.write_text(
+                "DCI_PROVIDER=openai-codex\n"
+                "DCI_MODEL=gpt-5.6-luna\n"
+                "DCI_PI_AGENT_DIR=./user-agent\n"
+                "DCI_EVAL_JUDGE_MODEL=fixture-judge\n"
+                "DCI_EVAL_JUDGE_API_KEY_ENV=JUDGE_KEY\n"
+                "JUDGE_KEY=SECRET-JUDGE\n"
+            )
+            backend = PreflightBackend()
+            verifier = DciProductVerifier(repo_root=root, backend=backend)
+            with patch.dict(os.environ, {}, clear=True):
+                result = verifier.preflight(
+                    env_file=env_file, corpus_root=root / "corpus"
+                )
+
+        self.assertEqual(result.status, "PASS")
+        self.assertEqual(result.provider_backed_operation_count, 0)
+        self.assertFalse(result.full_dataset_ran)
+        self.assertEqual(backend.calls, [])
+        self.assertNotIn("SECRET-JUDGE", repr(result))
+
+    def test_symlinked_agent_directory_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            package = root / "pi/packages/coding-agent"
+            (package / "dist").mkdir(parents=True)
+            (package / "package.json").write_text("{}")
+            (package / "dist/cli.js").write_text("// fixture\n")
+            for corpus in ("wiki_corpus", "bc_plus_docs"):
+                directory = root / "corpus" / corpus
+                directory.mkdir(parents=True)
+                (directory / "fixture.txt").write_text("fixture\n")
+            real_agent = root / "real-agent"
+            real_agent.mkdir()
+            (real_agent / "auth.json").write_text("{}")
+            try:
+                os.symlink(real_agent, root / "linked-agent")
+            except OSError as error:
+                self.skipTest(f"symlinks unavailable: {error}")
+            env_file = root / ".env"
+            env_file.write_text(
+                "DCI_PI_AGENT_DIR=./linked-agent\n"
+                "DCI_EVAL_JUDGE_API_KEY_ENV=JUDGE_KEY\n"
+                "JUDGE_KEY=SECRET-JUDGE\n"
+            )
+            with patch.dict(os.environ, {}, clear=True):
+                result = DciProductVerifier(
+                    repo_root=root, backend=PreflightBackend()
+                ).preflight(env_file=env_file, corpus_root=root / "corpus")
+
+        checks = {check.check_id: check for check in result.checks}
+        self.assertEqual(result.status, "FAIL")
+        self.assertEqual(checks["agent-authentication"].status, "FAIL")
+        self.assertIn("DCI_PI_AGENT_DIR", checks["agent-authentication"].summary)
+
+    def test_invalid_judge_request_configuration_fails_preflight(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            env_file = root / ".env"
+            env_file.write_text(
+                "DCI_EVAL_JUDGE_BASE_URL=not-a-url\n"
+                "DCI_EVAL_JUDGE_MODEL=fixture-judge\n"
+                "DCI_EVAL_JUDGE_API_KEY_ENV=JUDGE_KEY\n"
+                "JUDGE_KEY=SECRET-JUDGE\n"
+            )
+            with patch.dict(
+                os.environ,
+                {"DCI_PI_AGENT_DIR": "./missing-agent"},
+                clear=True,
+            ):
+                result = DciProductVerifier(
+                    repo_root=root, backend=PreflightBackend()
+                ).preflight(env_file=env_file, corpus_root=root / "corpus")
+
+        checks = {check.check_id: check for check in result.checks}
+        self.assertEqual(checks["judge"].status, "FAIL")
+        self.assertIn("DCI_EVAL_JUDGE", checks["judge"].summary)
+        self.assertNotIn("SECRET-JUDGE", repr(result))
+
+
+class InstalledAcceptanceBoundaryTests(unittest.TestCase):
 
     def test_acceptance_ignores_source_evidence_path(self) -> None:
         verifier = DciProductVerifier(repo_root=PROJECT, backend=ExplodingBackend())

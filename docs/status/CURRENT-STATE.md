@@ -4,11 +4,11 @@
 
 - Project: Asterion capability-package framework under development in the DCI-Agent-Lite repository; Asterion DCI is the first complete usable capability package and reference application.
 - Canonical integration branch: `main`
-- Theme-level focus: Asterion standalone fresh-clone runtime and resource readiness.
+- Theme-level focus: Asterion standalone fresh-clone delivery is complete; no package is active.
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `asterion/docs/architecture/agent-framework.md`
-- Active work package: AF-360 — standalone first-run readiness.
+- Active work package: none; project lifecycle is complete.
 
 ## Current Architecture
 
@@ -19,11 +19,11 @@
 - Capability direction: Asterion DCI is the first complete reusable capability-package reference product. It owns the full original DCI workflow internally and exposes it through capability contracts/application assemblies; no embedding index is required.
 - Evidence priority: capability-package domain completeness, installability, runtime portability, safety, and bounded functional evidence define framework usability. Subscription-only and strict paper/full-result evidence remain optional and require separate authority.
 - Language roles: Python owns research/evaluation/orchestration, TypeScript owns Node/service integration, and Rust is reserved for controlled execution infrastructure.
-- Governance: `docs/status/WORKLIST.md` is the sole active package ledger. A scope audit must pass before manager dispatch or climb execution.
+- Governance: `docs/status/WORKLIST.md` is the sole package ledger. The lifecycle is complete; new implementation requires explicitly reopening one governed package and passing the scope audit.
 - Project root: `asterion/` is the sole complete Asterion subtree and sole buildable Python project, containing `src/asterion`, auxiliary packages, schemas, examples, scripts, docs, and project-local tests. The mixed root retains original `src/dci`, original/cross-product examples and tests, parity/acceptance evidence, shared workspace configuration/tooling, and governance, with no second Asterion product tree.
 - Standalone delivery contract: AF-350 promotes `asterion/` to a complete repository root; installed acceptance becomes package-owned while original DCI/Asterion 538-selector parity remains a mixed-repository integration gate.
 - AF-350 acceptance: `asterion/` owns its README, MIT license, safe environment template, root-anchored ignore rules, complete Make command surface, pinned Pi revision, standalone `uv.lock`, package metadata, and provider-free GitHub Actions workflow. Installed acceptance is package-owned and validates 2 providers, 6 packaged assemblies, 11 manifests, 5 context profiles, 13 benchmark identities, and 16 paper scopes from source or wheel with zero provider operations. All 14 launchers resolve their copied project root and optional external resource root without parent traversal. Sixteen standalone Markdown files and 32 local links pass root-containment and operational-command checks in place and after copying. The promotion verifier copies only project-owned inputs, rejects symlinks/nonportable references, isolates user Cargo configuration, and passes 17 frozen Python/build/install/docs/Node/Rust commands with provider operations 0 and no full dataset. Root Make delegates shared Asterion commands while retaining mixed integration. Final closure passes 163 standalone and 1622 root Python tests; mixed integration passes 8/8 product rows, 538/538 selectors, 12/12 launcher pairs, 6/6 extras, and 7/7 retained cases. Review found no unresolved Critical or Important issue. No provider, full dataset, external Pi mutation, publication, release, remote creation, or push occurred.
-- AF-360 direction: preserve the pinned external Pi source/provenance boundary while adding standalone setup/check commands for Pi and tiered resources, explicit user-managed Pi authentication selection, consistent runtime configuration discovery, actionable doctor/preflight failures, and clean-copy first-run verification with zero Agent/Judge operations.
+- AF-360 acceptance: standalone setup/check provisions the exact locked external Pi source and keeps its user-managed authentication separate; basic resource setup creates the required wiki and BC+ layouts, benchmark check accounts for every packaged and launcher path, and template/runtime/describe/doctor/preflight agree on provider, model, Pi, authentication, resource, and Judge defaults. Missing or invalid prerequisites fail with redacted repair actions. Closure passes 202 standalone tests, 117 mixed-root regressions, 16 Markdown/32-link checks, and 18 clean-copy Python/wheel/install/TypeScript/Rust promotion commands with zero provider operations and no full dataset.
 - Maintenance history: Pi/Judge reliability H-001 through H-019 is completed and remains available as reference-maintenance evidence; it is not an active roadmap stream.
 - Complete DCI result: `src/dci` remains an independent source-only comparison baseline. AF-180 through AF-250 completed shared `.env` forwarding, complete operator controls, batch/export semantics, Asterion examples, installed Pi application, and bounded provider-backed acceptance. Asterion shares normal `DCI_*` configuration with the baseline while keeping Asterion-owned output paths; neither product imports or launches the other.
 - AF-220 acceptance: its four Climb hypotheses are confirmed 4/4. Using only process-local shared configuration and main-repository external resources, both model-free prerequisites, both real Pi examples, the project-entrypoint installed application, and the one-row Pi-plus-Judge benchmark passed. Native state/evaluation schemas and the application's single body-free JSON projection were verified; this closes AF-220 only.
@@ -71,7 +71,6 @@
 
 ## Open Problems (theme-level)
 
-- Fresh-clone Asterion cannot yet provision its pinned Pi checkout or required resource layouts, and its template/describe/preflight configuration surfaces disagree.
 - Optional full-dataset validation and score reproduction remain unselected future work requiring a new work package, separately reviewed invocation, exact profiles, fresh private roots, and explicit budget authorization.
 
 ## Key Files

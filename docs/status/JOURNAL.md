@@ -1166,3 +1166,15 @@
 
 - 08:57 AF-360 首次运行设计与治理激活，锁定 Pi、资源与配置修复边界。 [649eb63]
 - 09:20 AF-360 实施计划拆为六个 TDD 切片，固定首次运行修复与终验路径。 [72faba3]
+- 09:30 standalone 新增锁定 Pi setup/check，26 项夹具与仓库测试通过。 [b363013]
+- 09:38 basic 资源 setup/check 落地，23 项测试及编译、Ruff、diff 门禁通过。 [ba804d1]
+- 09:45 benchmark 检查由包内清单驱动，31 项资源与 launcher 门禁通过。 [53cfd09]
+- 10:02 配置、describe、doctor、preflight 统一默认值；standalone193 与 mixed34 通过。 [1f49c34]
+- 10:10 clean-copy first-run 门禁通过 9 条命令，provider0、full-no。 [26f69d3]
+- 10:18 standalone 首次运行文档统一 setup/auth/resource 流程，16 文档与 32 链接通过。 [ed45cdd]
+- 10:31 强化 Pi 固定提交、资源防越界与 Judge 配置预检。 [0ee1497]
+- 10:36 隔离资源安全测试的可选依赖，确保 clean-copy promotion 可复现。 [728c4a3]
+- 10:40 恢复配置复制说明，保持 standalone 与 mixed-root 文档契约一致。 [aa4b490]
+- 10:45 AF-360 终验通过 standalone202、mixed117、promotion18，provider0、full-no。
+- 10:46 AF-360 闭包完成；项目 lifecycle 恢复 complete，无活动包。
+- 10:48 AF-360 治理闭包固化完成态与恢复点。 [fcbe1f6]

@@ -22,4 +22,5 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
+      - run: make first-run-check
       - run: make promotion-check

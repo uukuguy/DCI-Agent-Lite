@@ -220,6 +220,11 @@ dependencies = [
     { name = "python-dotenv" },
 ]
 
+[package.optional-dependencies]
+setup = [
+    { name = "huggingface-hub" },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "ruff" },
@@ -227,10 +232,12 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "huggingface-hub", marker = "extra == 'setup'", specifier = ">=0.30.0" },
     { name = "matplotlib", specifier = ">=3.8.0" },
     { name = "pyarrow", specifier = ">=18.0.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
 ]
+provides-extras = ["setup"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "ruff", specifier = ">=0.12.0" }]
