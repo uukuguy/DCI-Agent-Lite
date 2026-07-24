@@ -19,8 +19,8 @@ REQUIRED_ASSETS = (
     "Makefile",
     "README.md",
     "pi-revision.txt",
-    "scripts/examples/asterion_dci_basic_example.sh",
-    "scripts/examples/asterion_dci_runtime_context_example.sh",
+    "examples/asterion_dci_basic_example.sh",
+    "examples/asterion_dci_runtime_context_example.sh",
     "scripts/setup_pi.sh",
     "tools/check_docs.py",
     "tools/check_promotion.py",
@@ -93,6 +93,7 @@ class StandaloneRepositoryTests(unittest.TestCase):
     def test_required_repository_assets_exist(self) -> None:
         missing = [name for name in REQUIRED_ASSETS if not (PROJECT / name).is_file()]
         self.assertEqual(missing, [])
+        self.assertFalse((PROJECT / "scripts/examples").exists())
 
     def test_environment_template_has_no_credentials_or_parent_defaults(self) -> None:
         path = PROJECT / ".env.template"
@@ -254,13 +255,13 @@ class StandaloneRepositoryTests(unittest.TestCase):
     def test_example_targets_render_exact_commands(self) -> None:
         self.assertEqual(
             dry_run("example"),
-            ("bash", "scripts/examples/asterion_dci_basic_example.sh"),
+            ("bash", "examples/asterion_dci_basic_example.sh"),
         )
         self.assertEqual(
             dry_run("runtime-example"),
             (
                 "bash",
-                "scripts/examples/asterion_dci_runtime_context_example.sh",
+                "examples/asterion_dci_runtime_context_example.sh",
             ),
         )
 
@@ -292,8 +293,8 @@ class StandaloneRepositoryTests(unittest.TestCase):
             temporary = Path(temporary_directory)
             copied_project = temporary / "asterion"
             shutil.copytree(
-                PROJECT / "scripts/examples",
-                copied_project / "scripts/examples",
+                PROJECT / "examples",
+                copied_project / "examples",
             )
             corpus_root = temporary / "corpus"
             for corpus_name in ("wiki_corpus", "bc_plus_docs"):
@@ -321,7 +322,7 @@ class StandaloneRepositoryTests(unittest.TestCase):
             for index, (script_name, arguments, corpus_name, expected) in enumerate(
                 examples
             ):
-                script = copied_project / "scripts/examples" / script_name
+                script = copied_project / "examples" / script_name
                 with self.subTest(script=script.name):
                     cwd_log = temporary / f"{index}.cwd"
                     argv_log = temporary / f"{index}.argv"
@@ -353,7 +354,7 @@ class StandaloneRepositoryTests(unittest.TestCase):
 
                     source = script.read_text(encoding="utf-8")
                     self.assertIn(
-                        'PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"',
+                        'PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"',
                         source,
                     )
                     self.assertIn("uv run asterion-dci run", source)
@@ -579,12 +580,15 @@ class StandaloneRepositoryTests(unittest.TestCase):
         ):
             with self.subTest(setting=setting):
                 self.assertIn(setting, text)
+        self.assertIn("examples/", text)
+        self.assertNotIn("scripts/examples/", text)
 
     def test_examples_readme_links_to_end_to_end_shell_examples(self) -> None:
         text = (PROJECT / "examples/README.md").read_text(encoding="utf-8")
-        self.assertIn("scripts/examples/", text)
+        self.assertIn("examples/", text)
         self.assertIn("make example", text)
         self.assertIn("make runtime-example", text)
+        self.assertNotIn("scripts/examples/", text)
 
     def test_docs_reject_mixed_root_commands_paths_and_current_counts(self) -> None:
         documents = (PROJECT / "README.md", *sorted((PROJECT / "docs").rglob("*.md")))

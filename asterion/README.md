@@ -84,7 +84,7 @@ make runtime-example
 ```
 
 Both commands are provider-backed and may incur model usage. The scripts are
-available directly under `scripts/examples/`.
+available directly under `examples/`.
 
 ## Cost boundaries
 

@@ -8,7 +8,12 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from tools.check_promotion import PromotionError, _default_runner, run_promotion
+from tools.check_promotion import (
+    REQUIRED_ASSETS,
+    PromotionError,
+    _default_runner,
+    run_promotion,
+)
 
 
 REQUIRED_FIXTURE_ASSETS = (
@@ -20,8 +25,8 @@ REQUIRED_FIXTURE_ASSETS = (
     "README.md",
     "pi-revision.txt",
     "pyproject.toml",
-    "scripts/examples/asterion_dci_basic_example.sh",
-    "scripts/examples/asterion_dci_runtime_context_example.sh",
+    "examples/asterion_dci_basic_example.sh",
+    "examples/asterion_dci_runtime_context_example.sh",
     "scripts/setup_pi.sh",
     "tools/check_docs.py",
     "tools/check_promotion.py",
@@ -133,15 +138,16 @@ class PromotionCheckTests(unittest.TestCase):
                 self.assertTrue(
                     (
                         cwd
-                        / "scripts/examples/asterion_dci_basic_example.sh"
+                        / "examples/asterion_dci_basic_example.sh"
                     ).is_file()
                 )
                 self.assertTrue(
                     (
                         cwd
-                        / "scripts/examples/asterion_dci_runtime_context_example.sh"
+                        / "examples/asterion_dci_runtime_context_example.sh"
                     ).is_file()
                 )
+                self.assertFalse((cwd / "scripts/examples").exists())
                 for name in excluded:
                     self.assertFalse((cwd / name).exists(), name)
                 return completed(command, acceptance_stdout(command))
@@ -207,8 +213,8 @@ class PromotionCheckTests(unittest.TestCase):
             temporary = Path(temporary_directory)
             for index, relative in enumerate(
                 (
-                    "scripts/examples/asterion_dci_basic_example.sh",
-                    "scripts/examples/asterion_dci_runtime_context_example.sh",
+                    "examples/asterion_dci_basic_example.sh",
+                    "examples/asterion_dci_runtime_context_example.sh",
                 )
             ):
                 with self.subTest(relative=relative):
@@ -222,6 +228,23 @@ class PromotionCheckTests(unittest.TestCase):
                                 command, acceptance_stdout(command)
                             ),
                         )
+
+    def test_required_assets_use_one_examples_directory(self) -> None:
+        self.assertIn(
+            "examples/asterion_dci_basic_example.sh", REQUIRED_ASSETS
+        )
+        self.assertIn(
+            "examples/asterion_dci_runtime_context_example.sh",
+            REQUIRED_ASSETS,
+        )
+        self.assertNotIn(
+            "scripts/examples/asterion_dci_basic_example.sh",
+            REQUIRED_ASSETS,
+        )
+        self.assertNotIn(
+            "scripts/examples/asterion_dci_runtime_context_example.sh",
+            REQUIRED_ASSETS,
+        )
 
     def test_default_plan_runs_every_provider_free_gate_from_the_copy(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:

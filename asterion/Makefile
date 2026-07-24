@@ -77,10 +77,10 @@ doctor:
 	$(UV_BIN) run asterion verify --provider $(ASTERION_PROVIDER) --level preflight $(ASTERION_ARGS)
 
 example:
-	bash scripts/examples/asterion_dci_basic_example.sh
+	bash examples/asterion_dci_basic_example.sh
 
 runtime-example:
-	bash scripts/examples/asterion_dci_runtime_context_example.sh
+	bash examples/asterion_dci_runtime_context_example.sh
 
 asterion-list:
 	$(UV_BIN) run asterion list $(ASTERION_ARGS)
