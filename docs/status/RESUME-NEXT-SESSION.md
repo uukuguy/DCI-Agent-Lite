@@ -12,7 +12,7 @@ Currently running: no process.
 
 - AF-360 is the single active package for correcting standalone first-run readiness.
 - The approved design keeps a pinned external Pi source checkout, adds provider-free Pi/resource setup, exposes explicit user-managed Pi authentication, and aligns template/describe/preflight defaults.
-- No production implementation has started. The written design must be reviewed before the TDD implementation plan is created.
+- No production implementation has started. The written design is approved and the TDD implementation plan is ready for execution.
 
 ## Where things stand
 
@@ -31,9 +31,9 @@ Currently running: no process.
 
 ## Next steps
 
-1. Review `docs/superpowers/specs/2026-07-24-af-360-standalone-first-run-readiness-design.md`.
-2. After written-spec approval, create `docs/superpowers/plans/2026-07-24-af-360-standalone-first-run-readiness.md` with the `writing-plans` skill.
-3. Run `python3 tools/project_scope_check.py`, then execute the plan with test-first red/green slices.
+1. Run `python3 tools/project_scope_check.py`.
+2. Execute `docs/superpowers/plans/2026-07-24-af-360-standalone-first-run-readiness.md` inline with test-first red/green slices.
+3. Start with package-owned local-Git fixture tests for `asterion/scripts/setup_pi.sh`.
 
 ## Don't go down these paths again
 

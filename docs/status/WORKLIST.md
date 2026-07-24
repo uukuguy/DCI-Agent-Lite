@@ -403,4 +403,4 @@
 - Dependencies: AF-350
 - Acceptance: a clean promoted copy can use local-fixture setup to create and verify the locked external Pi checkout and basic resource layout; `.env.template`, runtime resolution, describe, doctor, and preflight agree on effective defaults; every missing prerequisite reports a safe repair action; all setup/verification and regression gates perform zero Agent/Judge operations and no full dataset.
 - Design: `docs/superpowers/specs/2026-07-24-af-360-standalone-first-run-readiness-design.md`
-- Plan: `docs/superpowers/plans/2026-07-24-af-360-standalone-first-run-readiness.md` (created after written-spec approval)
+- Plan: `docs/superpowers/plans/2026-07-24-af-360-standalone-first-run-readiness.md`
