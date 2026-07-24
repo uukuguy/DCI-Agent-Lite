@@ -443,6 +443,9 @@ class StandaloneRepositoryTests(unittest.TestCase):
             "global `pi`",
             "DCI_PI_AGENT_DIR",
             "setup-resources-benchmark",
+            "`npm ci`",
+            "checked-in model catalogs",
+            "dirty checkout",
             "zero Agent",
             "zero Judge",
         ):

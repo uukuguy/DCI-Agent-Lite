@@ -54,6 +54,13 @@ by `pi-revision.txt` at `DCI_PI_DIR` (default `./pi`). `DCI_PI_AGENT_DIR`
 (default `~/.pi/agent`) selects separately managed Pi authentication. Setup
 never reads, copies, creates, or prints authentication files.
 
+Pi dependency installation uses `npm ci`, and the AI package compiles the
+locked commit's checked-in model catalogs without refreshing them from moving
+model APIs. If an earlier failed setup left a dirty checkout without a built
+CLI, setup refuses to overwrite it: preserve or discard those changes
+explicitly, or select another clean `DCI_PI_DIR`, then run `make setup-pi`
+again.
+
 `ASTERION_DCI_RESOURCE_ROOT` is the parent of external `corpus/` and `data/`
 trees. `make setup-resources-basic` prepares only `corpus/wiki_corpus` and
 `corpus/bc_plus_docs`. `make setup-resources-benchmark` handles available

@@ -112,6 +112,19 @@ class PiSetupTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.git("rev-parse", "HEAD", cwd=self.pi_dir), self.commit_a)
 
+    def test_build_uses_lockfile_and_checked_in_ai_catalogs(self) -> None:
+        result = self.run_setup()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        commands = self.npm_log.read_text(encoding="utf-8").splitlines()
+        self.assertEqual(commands[0], f"{self.pi_dir}:ci")
+        self.assertIn(
+            f"{self.pi_dir / 'packages/ai'}:exec -- tsgo -p tsconfig.build.json",
+            commands,
+        )
+        self.assertNotIn(f"{self.pi_dir / 'packages/ai'}:run build", commands)
+        self.assertFalse(any("generate-models" in command for command in commands))
+
     def test_built_checkout_at_pin_is_idempotent(self) -> None:
         self.clone_at(self.commit_a)
 
@@ -141,6 +154,18 @@ class PiSetupTests(unittest.TestCase):
         self.assertIn("dirty", result.stderr.lower())
         self.assertEqual(self.git("rev-parse", "HEAD", cwd=self.pi_dir), before)
         self.assertEqual(marker.read_text(encoding="utf-8"), "keep me\n")
+        self.assertFalse(self.npm_log.exists())
+
+    def test_dirty_checkout_without_cli_is_rejected_before_build(self) -> None:
+        self.clone_at(self.commit_a)
+        cli = self.pi_dir / "packages/coding-agent/dist/cli.js"
+        cli.unlink()
+
+        result = self.run_setup()
+
+        self.assertEqual(result.returncode, 3)
+        self.assertIn("dirty", result.stderr.lower())
+        self.assertIn("another checkout", result.stderr)
         self.assertFalse(self.npm_log.exists())
 
     def test_revision_override_selects_exact_commit(self) -> None:

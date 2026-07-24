@@ -82,6 +82,7 @@ if [ -z "$desired_commit" ]; then
 fi
 
 current_commit="$(git -C "$PI_DIR" rev-parse --verify HEAD 2>/dev/null || true)"
+PI_CLI="$PI_DIR/packages/coding-agent/dist/cli.js"
 if [ "$CHECK_ONLY" -eq 1 ]; then
     if [ "$current_commit" != "$desired_commit" ]; then
         echo "ERROR: Pi HEAD $current_commit does not match requested commit $desired_commit." >&2
@@ -111,16 +112,20 @@ elif [ "$current_commit" != "$desired_commit" ]; then
     git -C "$PI_DIR" checkout --detach "$desired_commit"
     source_changed=1
 elif [ -n "$(git -C "$PI_DIR" status --porcelain)" ]; then
+    if [ ! -f "$PI_CLI" ]; then
+        echo "ERROR: Pi checkout is dirty and the built CLI is missing; refusing a non-reproducible build." >&2
+        echo "       Preserve or discard those changes, or set DCI_PI_DIR to another checkout." >&2
+        exit 3
+    fi
     echo "WARN: Pi is at the requested commit but contains local changes; leaving them untouched." >&2
 fi
 
-PI_CLI="$PI_DIR/packages/coding-agent/dist/cli.js"
 if [ "$source_changed" -eq 1 ] || [ ! -f "$PI_CLI" ]; then
-    echo "==> Installing Pi dependencies (npm install)..."
-    (cd "$PI_DIR" && npm install)
-    echo "==> Building Pi (coding-agent and dependencies only)..."
+    echo "==> Installing locked Pi dependencies (npm ci)..."
+    (cd "$PI_DIR" && npm ci)
+    echo "==> Building Pi from locked checked-in sources..."
     (cd "$PI_DIR/packages/tui" && npm run build)
-    (cd "$PI_DIR/packages/ai" && npm run build)
+    (cd "$PI_DIR/packages/ai" && npm exec -- tsgo -p tsconfig.build.json)
     (cd "$PI_DIR/packages/agent" && npm run build)
     (cd "$PI_DIR/packages/coding-agent" && npm run build)
 else
