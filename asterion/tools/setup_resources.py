@@ -77,6 +77,8 @@ def main() -> int:
         )
         for resource_id in result.missing:
             print(f"MISSING: {resource_id}")
+        for diagnostic in result.diagnostics:
+            print(f"REPAIR: {diagnostic}")
     return 0 if result.status == "PASS" else 4
 
 

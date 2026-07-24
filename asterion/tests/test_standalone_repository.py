@@ -35,6 +35,8 @@ LIFECYCLE_TARGETS = (
     "check-pi",
     "setup-resources-basic",
     "check-resources-basic",
+    "setup-resources-benchmark",
+    "check-resources-benchmark",
 )
 FRAMEWORK_TARGETS = (
     "asterion-list",
@@ -277,6 +279,33 @@ class StandaloneRepositoryTests(unittest.TestCase):
                 "tools/setup_resources.py",
                 "--profile",
                 "basic",
+                "--check",
+            ),
+        )
+
+    def test_benchmark_resource_targets_render_exact_commands(self) -> None:
+        self.assertEqual(
+            dry_run("setup-resources-benchmark"),
+            (
+                "uv",
+                "run",
+                "--extra",
+                "setup",
+                "python",
+                "tools/setup_resources.py",
+                "--profile",
+                "benchmark",
+            ),
+        )
+        self.assertEqual(
+            dry_run("check-resources-benchmark"),
+            (
+                "uv",
+                "run",
+                "python",
+                "tools/setup_resources.py",
+                "--profile",
+                "benchmark",
                 "--check",
             ),
         )

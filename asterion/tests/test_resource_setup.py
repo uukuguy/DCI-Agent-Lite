@@ -168,5 +168,100 @@ class BasicResourceSetupTests(unittest.TestCase):
         self.assertNotIn("fixture parquet", completed.stdout + completed.stderr)
 
 
+class BenchmarkResourceSetupTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+
+    def test_benchmark_profile_covers_packaged_dataset_and_corpus_inventory(self) -> None:
+        from importlib import resources
+
+        from asterion.dci.resource_setup import resource_specs
+
+        inventory = json.loads(
+            resources.files("asterion.dci")
+            .joinpath("resources/paper-benchmarks.json")
+            .read_text(encoding="utf-8")
+        )
+        expected = {
+            row[field]
+            for row in inventory["datasets"]
+            for field in ("dataset_path", "corpus_path")
+        }
+
+        self.assertEqual(
+            {spec.destination for spec in resource_specs("benchmark")},
+            expected,
+        )
+
+    def test_benchmark_check_reports_exact_paths_and_upstreams(self) -> None:
+        from asterion.dci.resource_setup import prepare_resources
+
+        result = prepare_resources(
+            profile="benchmark",
+            resource_root=self.root / "resources",
+            check_only=True,
+        )
+
+        self.assertEqual(result.status, "FAIL")
+        rendered = "\n".join(result.diagnostics)
+        self.assertIn("data/dci-bench/data/hotpotqa/test.jsonl", rendered)
+        self.assertIn("corpus/beir/arguana", rendered)
+        self.assertIn("DCI-Agent/dci-bench", rendered)
+        self.assertIn("manual/external", rendered)
+
+    def test_benchmark_local_fixture_can_materialize_one_inventory_path(self) -> None:
+        from asterion.dci.resource_setup import prepare_resources
+
+        source = self.root / "source"
+        fixture = source / "data/dci-bench/data/hotpotqa/test.jsonl"
+        fixture.parent.mkdir(parents=True)
+        fixture.write_text('{"id":"fixture"}\n')
+        resources_root = self.root / "resources"
+
+        result = prepare_resources(
+            profile="benchmark",
+            resource_root=resources_root,
+            source_root=source,
+        )
+
+        self.assertEqual(result.status, "FAIL")
+        self.assertTrue(
+            (
+                resources_root
+                / "data/dci-bench/data/hotpotqa/test.jsonl"
+            ).is_file()
+        )
+        self.assertIn(
+            "dataset.data/dci-bench/data/hotpotqa/test.jsonl",
+            result.prepared,
+        )
+
+    def test_benchmark_cli_check_lists_repairs_without_running_launchers(self) -> None:
+        completed = subprocess.run(
+            [
+                "uv",
+                "run",
+                "python",
+                "tools/setup_resources.py",
+                "--profile",
+                "benchmark",
+                "--resource-root",
+                str(self.root / "resources"),
+                "--check",
+            ],
+            cwd=PROJECT,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertEqual(completed.returncode, 4, completed.stderr)
+        self.assertIn("data/dci-bench", completed.stdout)
+        self.assertIn("corpus/beir", completed.stdout)
+        self.assertIn("Agent operations=0", completed.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

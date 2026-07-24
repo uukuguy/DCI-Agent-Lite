@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import os
+import json
 import shutil
 import tempfile
 from dataclasses import dataclass
+from importlib import resources
 from pathlib import Path, PurePosixPath
 
 from asterion.dci.export import export_bcplus
@@ -31,6 +33,7 @@ class ResourceSetupResult:
     prepared: tuple[str, ...]
     present: tuple[str, ...]
     missing: tuple[str, ...]
+    diagnostics: tuple[str, ...] = ()
 
 
 BASIC_RESOURCES = (
@@ -49,6 +52,74 @@ BASIC_RESOURCES = (
         conversion="copy",
     ),
 )
+
+
+def _benchmark_source(destination: str) -> tuple[str, str, str]:
+    if destination.startswith("data/dci-bench/"):
+        return (
+            "DCI-Agent/dci-bench",
+            destination.removeprefix("data/dci-bench/"),
+            "copy",
+        )
+    if destination == "data/bcplus_qa.jsonl":
+        return ("DCI-Agent/corpus", "browsecomp_plus", "manual")
+    if destination.startswith("corpus/bright_corpus/"):
+        subset = destination.rsplit("/", 1)[-1]
+        source_subset = {
+            "biology": "bright_biology",
+            "earth_science": "bright_earth_science",
+            "economics": "bright_economics",
+            "robotics": "bright_robotics",
+        }[subset]
+        return ("DCI-Agent/corpus", source_subset, "manual")
+    if destination.startswith("corpus/beir/") or destination.startswith(
+        "paper-full/"
+    ):
+        return ("manual/external", destination, "manual")
+    basic = {spec.destination: spec for spec in BASIC_RESOURCES}.get(destination)
+    if basic is not None:
+        return (basic.source_repo, basic.source_path, basic.conversion)
+    return ("manual/external", destination, "manual")
+
+
+def _benchmark_resources() -> tuple[ResourceSpec, ...]:
+    raw = resources.files("asterion.dci").joinpath(
+        "resources/paper-benchmarks.json"
+    )
+    inventory = json.loads(raw.read_text(encoding="utf-8"))
+    destinations = {
+        row[field]
+        for row in inventory["datasets"]
+        for field in ("dataset_path", "corpus_path")
+    }
+    specs = []
+    for destination in sorted(destinations):
+        source_repo, source_path, conversion = _benchmark_source(destination)
+        category = (
+            "dataset"
+            if destination.startswith(("data/", "paper-full/"))
+            else "corpus"
+        )
+        specs.append(
+            ResourceSpec(
+                resource_id=f"{category}.{destination}",
+                source_repo=source_repo,
+                source_path=source_path,
+                destination=destination,
+                conversion=conversion,
+            )
+        )
+    return tuple(specs)
+
+
+def resource_specs(profile: str) -> tuple[ResourceSpec, ...]:
+    """Return the immutable resource requirements for one profile."""
+
+    if profile == "basic":
+        return BASIC_RESOURCES
+    if profile == "benchmark":
+        return _benchmark_resources()
+    raise ResourceSetupError(f"unknown resource profile: {profile}")
 
 
 def _absolute_without_resolving(path: Path) -> Path:
@@ -76,16 +147,21 @@ def _destination(root: Path, relative: str) -> Path:
     return destination
 
 
-def _complete_directory(path: Path) -> bool:
-    if not path.is_dir():
-        return False
-    return any(item.is_file() for item in path.rglob("*"))
+def _complete_path(path: Path) -> bool:
+    if path.is_file():
+        return path.stat().st_size > 0
+    if path.is_dir():
+        return any(item.is_file() for item in path.rglob("*"))
+    return False
 
 
 def _local_source(source_root: Path, spec: ResourceSpec) -> Path:
     _reject_symlink(source_root, label="resource source root")
+    mirrored = source_root.joinpath(*PurePosixPath(spec.destination).parts)
+    if not mirrored.is_symlink() and (mirrored.is_file() or mirrored.is_dir()):
+        return mirrored
     source = source_root.joinpath(*PurePosixPath(spec.source_path).parts)
-    if source.is_symlink() or not source.is_dir():
+    if source.is_symlink() or not (source.is_file() or source.is_dir()):
         raise ResourceSetupError(
             f"{spec.resource_id} source {spec.source_path} is unavailable"
         )
@@ -104,7 +180,7 @@ def _network_source(spec: ResourceSpec, staging_root: Path) -> Path:
             repo_id=spec.source_repo,
             repo_type="dataset",
             local_dir=staging_root,
-            allow_patterns=[f"{spec.source_path}/**"],
+            allow_patterns=[spec.source_path, f"{spec.source_path}/**"],
         )
     except Exception as error:
         raise ResourceSetupError(
@@ -112,7 +188,7 @@ def _network_source(spec: ResourceSpec, staging_root: Path) -> Path:
             "authenticate with Hugging Face and retry"
         ) from error
     source = staging_root.joinpath(*PurePosixPath(spec.source_path).parts)
-    if not source.is_dir():
+    if not (source.is_file() or source.is_dir()):
         raise ResourceSetupError(
             f"{spec.resource_id} path {spec.source_path} is absent from "
             f"{spec.source_repo}"
@@ -122,20 +198,27 @@ def _network_source(spec: ResourceSpec, staging_root: Path) -> Path:
 
 def _materialize(spec: ResourceSpec, source: Path, destination: Path) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
-    staging = Path(
+    staging_root = Path(
         tempfile.mkdtemp(
-            prefix=f".asterion-{spec.resource_id.replace('.', '-')}-",
+            prefix=".asterion-resource-",
             dir=destination.parent,
         )
     )
     try:
-        if spec.conversion == "copy":
-            shutil.copytree(source, staging, dirs_exist_ok=True)
+        staged = staging_root
+        if source.is_file():
+            staged = staging_root / destination.name
+            shutil.copy2(source, staged)
+        elif spec.conversion == "copy":
+            shutil.copytree(source, staging_root, dirs_exist_ok=True)
         elif spec.conversion == "bcplus":
-            export_bcplus(source, staging)
-        else:  # pragma: no cover - immutable built-in manifest
-            raise ResourceSetupError("resource conversion is unsupported")
-        if not _complete_directory(staging):
+            export_bcplus(source, staging_root)
+        else:
+            raise ResourceSetupError(
+                f"{spec.resource_id} requires manual/external preparation at "
+                f"{spec.destination}"
+            )
+        if not _complete_path(staged):
             raise ResourceSetupError(
                 f"{spec.resource_id} produced no files for {spec.destination}"
             )
@@ -144,9 +227,21 @@ def _materialize(spec: ResourceSpec, source: Path, destination: Path) -> None:
                 f"{spec.resource_id} destination {spec.destination} is incomplete; "
                 "move it aside and retry"
             )
-        os.replace(staging, destination)
+        os.replace(staged, destination)
     finally:
-        shutil.rmtree(staging, ignore_errors=True)
+        shutil.rmtree(staging_root, ignore_errors=True)
+
+
+def _diagnostic(spec: ResourceSpec) -> str:
+    action = (
+        "provide this manual/external resource"
+        if spec.source_repo == "manual/external" or spec.conversion == "manual"
+        else "authenticate with Hugging Face and run setup-resources-benchmark"
+    )
+    return (
+        f"{spec.resource_id}: missing {spec.destination}; "
+        f"source {spec.source_repo}; {action}"
+    )
 
 
 def prepare_resources(
@@ -158,17 +253,16 @@ def prepare_resources(
 ) -> ResourceSetupResult:
     """Prepare or check one external resource profile."""
 
-    if profile != "basic":
-        raise ResourceSetupError(f"unknown resource profile: {profile}")
+    specs = resource_specs(profile)
     root = _absolute_without_resolving(resource_root)
     _reject_symlink(root, label="resource root")
     destinations = tuple(
-        (spec, _destination(root, spec.destination)) for spec in BASIC_RESOURCES
+        (spec, _destination(root, spec.destination)) for spec in specs
     )
     present = tuple(
         spec.resource_id
         for spec, destination in destinations
-        if _complete_directory(destination)
+        if _complete_path(destination)
     )
     missing_specs = tuple(
         (spec, destination)
@@ -183,27 +277,35 @@ def prepare_resources(
             prepared=(),
             present=present,
             missing=missing,
+            diagnostics=tuple(_diagnostic(spec) for spec, _ in missing_specs),
         )
 
     prepared: list[str] = []
+    unresolved: list[ResourceSpec] = []
     local_root = (
         None if source_root is None else _absolute_without_resolving(source_root)
     )
     for spec, destination in missing_specs:
-        with tempfile.TemporaryDirectory(
-            prefix=".asterion-resource-download-"
-        ) as temporary:
-            source = (
-                _local_source(local_root, spec)
-                if local_root is not None
-                else _network_source(spec, Path(temporary))
-            )
-            _materialize(spec, source, destination)
-        prepared.append(spec.resource_id)
+        try:
+            with tempfile.TemporaryDirectory(
+                prefix=".asterion-resource-download-"
+            ) as temporary:
+                source = (
+                    _local_source(local_root, spec)
+                    if local_root is not None
+                    else _network_source(spec, Path(temporary))
+                )
+                _materialize(spec, source, destination)
+            prepared.append(spec.resource_id)
+        except ResourceSetupError:
+            if profile == "basic":
+                raise
+            unresolved.append(spec)
     return ResourceSetupResult(
         profile=profile,
-        status="PASS",
+        status="PASS" if not unresolved else "FAIL",
         prepared=tuple(prepared),
         present=present,
-        missing=(),
+        missing=tuple(spec.resource_id for spec in unresolved),
+        diagnostics=tuple(_diagnostic(spec) for spec in unresolved),
     )
