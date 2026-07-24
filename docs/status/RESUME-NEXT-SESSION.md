@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-24 08:54 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-24 08:57 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-360
 
@@ -16,7 +16,7 @@ Currently running: no process.
 
 ## Where things stand
 
-- Branch: `main`; the main working tree contains only AF-360 design/governance changes plus ignored temporary planning files.
+- Branch: `main`; AF-360 design/governance is committed at `649eb63`, with only its journal/checkpoint synchronization pending.
 - Clean standalone preflight was reproduced with Node passing and environment, configuration, Pi, corpora, and Judge readiness failing.
 - Root cause is confirmed: AF-350 proved provider-free source/distribution promotion but did not ship external Pi/resource provisioning or one consistent public configuration contract.
 - No Agent, Judge, benchmark, full dataset, external Pi mutation, resource download, publication, remote creation, or push occurred.

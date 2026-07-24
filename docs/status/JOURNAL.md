@@ -1161,3 +1161,7 @@
 - 10:07 AF-350 闭包为 complete lifecycle，冻结独立迁移准备边界。 [5164cb5]
 - 12:50 AF-350 final handoff：主树干净未推送，lifecycle complete，无运行进程。 [eece78e]
 - 12:53 最终 handoff 固化完成态、外部 Pi 例外与下一治理动作。 [108b3f2]
+
+## 2026-07-24
+
+- 08:57 AF-360 首次运行设计与治理激活，锁定 Pi、资源与配置修复边界。 [649eb63]
