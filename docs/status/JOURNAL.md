@@ -1191,3 +1191,4 @@
 - 11:46 锁定本地 tsgo 与 Node22.19 门槛，消除 npm 回退和预检漂移。 [23f3b19]
 - 11:55 真实 production-env Pi 构建、standalone206、mixed94、promotion18 全绿。
 - 11:56 独立审查 Critical0、Important2 已修复；AF-360 再次闭包。
+- 12:01 AF-360 可复现 Pi 构建修复闭包，确保新会话恢复完整。 [083ce69]
