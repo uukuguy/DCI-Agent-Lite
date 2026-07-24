@@ -1,6 +1,6 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-24 09:20 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-24 09:45 +0800. **Session remains active — not a final handoff.**
 
 Active work package: AF-360
 
@@ -12,11 +12,13 @@ Currently running: no process.
 
 - AF-360 is the single active package for correcting standalone first-run readiness.
 - The approved design keeps a pinned external Pi source checkout, adds provider-free Pi/resource setup, exposes explicit user-managed Pi authentication, and aligns template/describe/preflight defaults.
-- No production implementation has started. The written design is approved and the TDD implementation plan is ready for execution.
+- Pi setup/check and basic/benchmark resource setup/check are implemented with local-fixture provider-free coverage.
 
 ## Where things stand
 
-- Branch: `main`; AF-360 design and implementation plan are committed through `72faba3`; production implementation has not started.
+- Isolated branch: `codex/af-360-first-run`; implementation commits are `b363013`, `ba804d1`, and `53cfd09`.
+- `scripts/setup_pi.sh` clones/checks the full locked revision, refuses dirty switches and symlinks, builds only when needed, and never reads/copies auth.
+- Basic resource setup creates `wiki_corpus` and `bc_plus_docs`; benchmark checks derive all paths from packaged `paper-benchmarks.json` and report unavailable upstreams explicitly.
 - Clean standalone preflight was reproduced with Node passing and environment, configuration, Pi, corpora, and Judge readiness failing.
 - Root cause is confirmed: AF-350 proved provider-free source/distribution promotion but did not ship external Pi/resource provisioning or one consistent public configuration contract.
 - No Agent, Judge, benchmark, full dataset, external Pi mutation, resource download, publication, remote creation, or push occurred.
@@ -32,8 +34,8 @@ Currently running: no process.
 ## Next steps
 
 1. Run `python3 tools/project_scope_check.py`.
-2. Execute `docs/superpowers/plans/2026-07-24-af-360-standalone-first-run-readiness.md` inline with test-first red/green slices.
-3. Start with package-owned local-Git fixture tests for `asterion/scripts/setup_pi.sh`.
+2. Continue Task 4 in `docs/superpowers/plans/2026-07-24-af-360-standalone-first-run-readiness.md`.
+3. Add failing tests for template/describe/preflight parity and the provider-free `doctor` target.
 
 ## Don't go down these paths again
 
