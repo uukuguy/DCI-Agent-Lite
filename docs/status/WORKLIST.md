@@ -2,7 +2,7 @@
 
 > Canonical work-package ledger. An `active` lifecycle requires exactly one `in_progress` package; a `complete` lifecycle permits none and forbids autonomous dispatch.
 
-> Project lifecycle: active
+> Project lifecycle: complete
 
 ## AF-000 — Framework control plane
 
@@ -397,11 +397,11 @@
 
 ## AF-360 — Standalone first-run readiness
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Make promoted Asterion operationally usable from a fresh clone
 - Scope: add provider-free pinned-Pi setup/check, explicit user-managed Pi authentication selection, tiered external-resource setup/check, consistent runtime configuration discovery, actionable doctor/preflight diagnostics, and clean-copy first-run verification without accepting a global Pi executable as authoritative.
 - Dependencies: AF-350
 - Acceptance: a clean promoted copy can use local-fixture setup to create and verify the locked external Pi checkout and basic resource layout; `.env.template`, runtime resolution, describe, doctor, and preflight agree on effective defaults; every missing prerequisite reports a safe repair action; all setup/verification and regression gates perform zero Agent/Judge operations and no full dataset.
 - Design: `docs/superpowers/specs/2026-07-24-af-360-standalone-first-run-readiness-design.md`
 - Plan: `docs/superpowers/plans/2026-07-24-af-360-standalone-first-run-readiness.md`
-- Closure evidence: reopened after real `make setup-pi` reproduced a non-reproducible Pi AI build: `npm run build` refreshes generated model catalogs from moving external APIs and can make the locked commit fail TypeScript compilation. The approved pinned-source setup contract remains unchanged; closure now requires install/build to preserve the locked tracked tree and compile its checked-in catalogs without model-catalog network generation.
+- Closure evidence: real `make setup-pi` reproduction proved Pi AI's normal build refreshed moving model catalogs and broke the locked commit with TS2322. The repaired setup requires Node 22.19.0+, uses `npm ci --include=dev`, invokes the lock-installed `tsgo` directly against checked-in catalogs, refuses dirty unbuilt checkouts, and leaves tracked Pi source clean. Fresh real builds pass normally and with `NODE_ENV=production`/`NPM_CONFIG_OMIT=dev`, producing Pi 0.80.6 and passing read-only verification. Final closure passes 206 standalone tests, 94 mixed-root runtime/documentation/scope regressions, 16 Markdown/32-link checks, and 18 clean-copy promotion commands. Independent review found no Critical issue and both Important findings were repaired. Provider operations remain zero and no full dataset, credential copy, publication, remote creation, or push occurred.

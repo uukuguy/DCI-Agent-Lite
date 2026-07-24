@@ -1186,3 +1186,8 @@
 - 11:05 AF-360 配置一致性修复后重新闭包，lifecycle complete。 [6915b9d]
 - 11:18 real setup-pi 复现移动模型清单导致锁定 Pi commit 编译失败。
 - 11:22 compile-only AI 使用签入清单成功构建 Pi 0.80.6，根因确认。
+- 11:25 AF-360 重开为锁定 Pi 可复现构建修复。 [fe5f6e4]
+- 11:33 setup-pi 改用 lockfile 安装与签入模型清单编译，拒绝 dirty 缺 CLI。 [bf1c770]
+- 11:46 锁定本地 tsgo 与 Node22.19 门槛，消除 npm 回退和预检漂移。 [23f3b19]
+- 11:55 真实 production-env Pi 构建、standalone206、mixed94、promotion18 全绿。
+- 11:56 独立审查 Critical0、Important2 已修复；AF-360 再次闭包。
