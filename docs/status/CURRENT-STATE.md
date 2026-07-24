@@ -72,7 +72,6 @@
 
 ## Open Problems (theme-level)
 
-- The standalone project must contain and verify the working Asterion basic and runtime-context examples without importing original DCI or changing mixed-root behavior.
 - Optional full-dataset validation and score reproduction remain unselected future work requiring a new work package, separately reviewed invocation, exact profiles, fresh private roots, and explicit budget authorization.
 
 ## Key Files
