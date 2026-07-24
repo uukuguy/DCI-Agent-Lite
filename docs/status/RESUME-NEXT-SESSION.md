@@ -1,19 +1,19 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-24 16:27 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-24 16:32 +0800. **Session remains active — not a final handoff.**
 
-Active work package: AF-360
+Active work package: none
 
-Project lifecycle: active
+Project lifecycle: complete
 
 Currently running: no process.
 
 ## TL;DR
 
 - The real `make setup-pi` failure is fixed and committed: locked Pi 0.80.6 builds reproducibly from checked-in catalogs with the lock-installed toolchain.
-- The standalone scripts work, but the user rejected the duplicate `asterion/examples/` and `asterion/scripts/examples/` layout.
+- The standalone project now has one canonical `asterion/examples/` directory; the redundant `asterion/scripts/examples/` hierarchy is removed.
 - The user reconfirmed that root `make example`, `runtime-example`, `asterion-example`, and `asterion-runtime-example` all run successfully. The earlier Pi failure was transient credential state, not an example implementation regression.
-- AF-360 is reopened only to consolidate both executable scripts into `asterion/examples/`; behavior and Make target names remain unchanged.
+- AF-360 is complete. Both executable scripts live beside the existing example surface, while behavior and Make target names remain unchanged.
 
 ## Where things stand
 
@@ -26,22 +26,21 @@ Currently running: no process.
 - The temporary 2026-07-24 Pi authentication failures were resolved outside the code path; all four root Make examples now execute normally.
 - Final correction evidence: 210 standalone tests, 125 relevant mixed-root regressions, 16 Markdown/32-link checks, and 9 quick clean-copy promotion commands passed; provider operations 0 and no full dataset.
 
-## Approved correction
+## Completed correction
 
-Implement:
+Implemented:
 
-1. Move both shell examples into the existing `asterion/examples/` directory.
-2. Update Make, tests, promotion, and documentation to use the canonical paths.
-3. Remove `asterion/scripts/examples/`.
-4. Keep behavior, authentication, resources, Pi, and mixed-root examples unchanged.
+1. Moved both shell examples into the existing `asterion/examples/` directory.
+2. Updated Make, tests, promotion, and documentation to use the canonical paths.
+3. Removed `asterion/scripts/examples/`.
+4. Kept behavior, authentication, resources, Pi, and mixed-root examples unchanged.
 
 The shared resolver and live-auth-probe redesign are rejected as unnecessary for this work package correction.
 
 ## Next steps
 
-1. Add failing path-consolidation tests.
-2. Move the scripts and rerun standalone/root promotion gates.
-3. Reclose AF-360 after the single-directory contract passes.
+1. Keep lifecycle complete until a new work package is explicitly selected.
+2. If publishing `asterion/` later, use a separately authorized publication package.
 
 ## Ruled-out paths
 
@@ -52,7 +51,7 @@ The shared resolver and live-auth-probe redesign are rejected as unnecessary for
 
 ## Open questions
 
-- No product-design question remains; the canonical location is `asterion/examples/`.
+- No product-design question remains; the canonical location is `asterion/examples/` and consolidation is complete.
 - No publication, remote creation/push, full dataset, or provider-backed operation is authorized.
 
 ## Ready-to-paste commands

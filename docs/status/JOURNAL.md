@@ -1208,3 +1208,5 @@
 - 16:18 AF-360 standalone 样例闭包，项目 lifecycle 恢复 complete。 [0512a27]
 - 16:27 correction: 用户否决双 examples 目录；AF-360 重开并统一到 `asterion/examples/`。
 - 16:27 AF-360 设计改为单一 `asterion/examples/`，防止独立项目入口分裂。 [6cf8747]
+- 16:32 两个可执行样例迁入 `asterion/examples/`，删除重复目录并保持 Make 行为。 [eb67c4b]
+- 16:32 目录合并终验通过 standalone211、root141、promotion9，provider0、full-no。
