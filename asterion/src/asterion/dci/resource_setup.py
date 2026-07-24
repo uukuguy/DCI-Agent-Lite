@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import json
+import re
 import shutil
 import tempfile
 from dataclasses import dataclass
@@ -92,6 +93,17 @@ def _benchmark_resources() -> tuple[ResourceSpec, ...]:
         for row in inventory["datasets"]
         for field in ("dataset_path", "corpus_path")
     }
+    project_root = Path(__file__).resolve().parents[3]
+    launcher_root = project_root / "scripts"
+    if launcher_root.is_dir():
+        destinations.update(
+            match
+            for launcher in launcher_root.rglob("*.sh")
+            for match in re.findall(
+                r'\$RESOURCE_ROOT/([^";]+)',
+                launcher.read_text(encoding="utf-8"),
+            )
+        )
     specs = []
     for destination in sorted(destinations):
         source_repo, source_path, conversion = _benchmark_source(destination)
@@ -148,23 +160,40 @@ def _destination(root: Path, relative: str) -> Path:
 
 
 def _complete_path(path: Path) -> bool:
+    if path.is_symlink():
+        return False
     if path.is_file():
         return path.stat().st_size > 0
     if path.is_dir():
-        return any(item.is_file() for item in path.rglob("*"))
+        found_file = False
+        for item in path.rglob("*"):
+            if item.is_symlink():
+                return False
+            if item.is_file():
+                found_file = True
+        return found_file
     return False
+
+
+def _reject_source_tree_symlinks(path: Path) -> None:
+    if path.is_symlink() or (
+        path.is_dir() and any(item.is_symlink() for item in path.rglob("*"))
+    ):
+        raise ResourceSetupError("resource source must not contain a symlink")
 
 
 def _local_source(source_root: Path, spec: ResourceSpec) -> Path:
     _reject_symlink(source_root, label="resource source root")
     mirrored = source_root.joinpath(*PurePosixPath(spec.destination).parts)
     if not mirrored.is_symlink() and (mirrored.is_file() or mirrored.is_dir()):
+        _reject_source_tree_symlinks(mirrored)
         return mirrored
     source = source_root.joinpath(*PurePosixPath(spec.source_path).parts)
     if source.is_symlink() or not (source.is_file() or source.is_dir()):
         raise ResourceSetupError(
             f"{spec.resource_id} source {spec.source_path} is unavailable"
         )
+    _reject_source_tree_symlinks(source)
     return source
 
 
@@ -193,6 +222,7 @@ def _network_source(spec: ResourceSpec, staging_root: Path) -> Path:
             f"{spec.resource_id} path {spec.source_path} is absent from "
             f"{spec.source_repo}"
         )
+    _reject_source_tree_symlinks(source)
     return source
 
 
@@ -286,6 +316,11 @@ def prepare_resources(
         None if source_root is None else _absolute_without_resolving(source_root)
     )
     for spec, destination in missing_specs:
+        if local_root is None and (
+            spec.source_repo == "manual/external" or spec.conversion == "manual"
+        ):
+            unresolved.append(spec)
+            continue
         try:
             with tempfile.TemporaryDirectory(
                 prefix=".asterion-resource-download-"

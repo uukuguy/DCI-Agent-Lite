@@ -101,6 +101,23 @@ class StandaloneRepositoryTests(unittest.TestCase):
         self.assertIn("DCI_MODEL=gpt-5.6-luna", text)
         self.assertIn("DCI_PI_AGENT_DIR=~/.pi/agent", text)
         self.assertIn("ASTERION_DCI_RESOURCE_ROOT=.", text)
+        for default in (
+            "DCI_EVAL_JUDGE_BASE_URL=https://api.deepseek.com/v1",
+            "DCI_EVAL_JUDGE_API=chat-completions",
+            "DCI_EVAL_JUDGE_MODEL=deepseek-v4-flash",
+            "DCI_EVAL_JUDGE_API_KEY_ENV=DEEPSEEK_API_KEY",
+            "DCI_EVAL_JUDGE_TIMEOUT_SECONDS=120",
+            "DCI_EVAL_JUDGE_THINKING=disabled",
+            "DCI_EVAL_JUDGE_JSON_MODE=true",
+            "DCI_EVAL_JUDGE_STRICT_JSON_SCHEMA=false",
+            "DCI_EVAL_JUDGE_RESPONSES_STORE=false",
+            "DCI_EVAL_JUDGE_MAX_OUTPUT_TOKENS=1024",
+            "DCI_EVAL_JUDGE_INPUT_PRICE_PER_1M=0",
+            "DCI_EVAL_JUDGE_CACHED_INPUT_PRICE_PER_1M=0",
+            "DCI_EVAL_JUDGE_OUTPUT_PRICE_PER_1M=0",
+        ):
+            with self.subTest(default=default):
+                self.assertIn(default, text)
 
     def test_external_data_ignore_rules_do_not_hide_packaged_resources(self) -> None:
         text = (PROJECT / ".gitignore").read_text(encoding="utf-8").splitlines()

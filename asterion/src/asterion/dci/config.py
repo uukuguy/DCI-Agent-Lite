@@ -415,4 +415,4 @@ def _configured_path_shared(
     path = Path(value).expanduser() if value else default
     if not path.is_absolute():
         path = root / path
-    return path.resolve()
+    return Path(os.path.normpath(path))

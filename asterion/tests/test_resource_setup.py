@@ -126,6 +126,31 @@ class BasicResourceSetupTests(unittest.TestCase):
             )
         self.assertEqual(tuple(outside.iterdir()), ())
 
+    def test_symlink_inside_local_source_is_rejected_without_copying_target(self) -> None:
+        from asterion.dci.resource_setup import ResourceSetupError, prepare_resources
+
+        outside = self.root / "outside-secret.txt"
+        outside.write_text("SECRET-OUTSIDE\n")
+        wiki_file = self.source / "wiki/wiki_dump.jsonl"
+        wiki_file.unlink()
+        try:
+            os.symlink(outside, wiki_file)
+        except OSError as error:
+            self.skipTest(f"symlinks unavailable: {error}")
+        bcplus = self.resources / "corpus/bc_plus_docs"
+        bcplus.mkdir(parents=True)
+        (bcplus / "ready.txt").write_text("ready\n")
+
+        with self.assertRaisesRegex(ResourceSetupError, "symlink"):
+            prepare_resources(
+                profile="basic",
+                resource_root=self.resources,
+                source_root=self.source,
+            )
+
+        copied = self.resources / "corpus/wiki_corpus/wiki_dump.jsonl"
+        self.assertFalse(copied.exists())
+
     def test_unknown_profile_fails_without_creating_root(self) -> None:
         from asterion.dci.resource_setup import ResourceSetupError, prepare_resources
 
@@ -136,6 +161,29 @@ class BasicResourceSetupTests(unittest.TestCase):
                 source_root=self.source,
             )
         self.assertFalse(self.resources.exists())
+
+    def test_network_source_symlink_is_rejected(self) -> None:
+        from asterion.dci.resource_setup import (
+            BASIC_RESOURCES,
+            ResourceSetupError,
+            _network_source,
+        )
+
+        outside = self.root / "outside"
+        outside.mkdir()
+        (outside / "secret.txt").write_text("SECRET\n")
+        staging = self.root / "staging"
+        staging.mkdir()
+
+        def fake_download(**kwargs):
+            del kwargs
+            os.symlink(outside, staging / "wiki")
+
+        with (
+            patch("huggingface_hub.snapshot_download", fake_download),
+            self.assertRaisesRegex(ResourceSetupError, "symlink"),
+        ):
+            _network_source(BASIC_RESOURCES[1], staging)
 
     def test_cli_check_is_body_free_and_reports_zero_operations(self) -> None:
         completed = subprocess.run(
@@ -190,9 +238,30 @@ class BenchmarkResourceSetupTests(unittest.TestCase):
             for field in ("dataset_path", "corpus_path")
         }
 
-        self.assertEqual(
-            {spec.destination for spec in resource_specs("benchmark")},
-            expected,
+        self.assertTrue(
+            expected.issubset(
+                {spec.destination for spec in resource_specs("benchmark")}
+            )
+        )
+
+    def test_benchmark_profile_also_covers_every_checked_in_launcher_path(self) -> None:
+        import re
+
+        from asterion.dci.resource_setup import resource_specs
+
+        launcher_paths = {
+            match
+            for launcher in (PROJECT / "scripts").rglob("*.sh")
+            for match in re.findall(
+                r'\$RESOURCE_ROOT/([^";]+)',
+                launcher.read_text(encoding="utf-8"),
+            )
+        }
+
+        self.assertTrue(
+            launcher_paths.issubset(
+                {spec.destination for spec in resource_specs("benchmark")}
+            )
         )
 
     def test_benchmark_check_reports_exact_paths_and_upstreams(self) -> None:
@@ -261,6 +330,26 @@ class BenchmarkResourceSetupTests(unittest.TestCase):
         self.assertIn("data/dci-bench", completed.stdout)
         self.assertIn("corpus/beir", completed.stdout)
         self.assertIn("Agent operations=0", completed.stdout)
+
+    def test_manual_benchmark_requirements_never_attempt_a_network_fetch(self) -> None:
+        from asterion.dci.resource_setup import (
+            ResourceSetupError,
+            prepare_resources,
+        )
+
+        def offline(spec, staging_root):
+            del staging_root
+            if spec.source_repo == "manual/external" or spec.conversion == "manual":
+                self.fail(f"manual resource attempted network: {spec.resource_id}")
+            raise ResourceSetupError("fixture offline")
+
+        with patch("asterion.dci.resource_setup._network_source", offline):
+            result = prepare_resources(
+                profile="benchmark",
+                resource_root=self.root / "resources",
+            )
+
+        self.assertEqual(result.status, "FAIL")
 
 
 if __name__ == "__main__":

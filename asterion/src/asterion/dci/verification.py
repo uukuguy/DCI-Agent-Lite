@@ -1370,20 +1370,10 @@ class DciProductVerifier:
             (provider_key and os.environ.get(provider_key, "").strip())
             or pi_managed_auth
         )
-        judge_key_name = (
-            os.environ.get("DCI_EVAL_JUDGE_API_KEY_ENV", "").strip()
-            or os.environ.get("ASTERION_DCI_JUDGE_API_KEY_ENV", "").strip()
-            or "OPENAI_API_KEY"
-        )
-        judge_ready = bool(
-            os.environ.get("DCI_EVAL_JUDGE_MODEL", "").strip()
-            or os.environ.get("ASTERION_DCI_JUDGE_MODEL", "").strip()
-            or DEFAULT_JUDGE_MODEL
-        ) and bool(
-            os.environ.get("DCI_EVAL_JUDGE_API_KEY", "").strip()
-            or os.environ.get("ASTERION_DCI_JUDGE_API_KEY", "").strip()
-            or os.environ.get(judge_key_name, "").strip()
-        )
+        try:
+            judge_ready = bool(JudgeConfig.from_env().api_key)
+        except (TypeError, ValueError):
+            judge_ready = False
         node_major = self.backend.node_major_version()
         pi_checkout_ready = (
             paths.pi.repo_dir.is_dir()

@@ -31,16 +31,16 @@ if [ -z "$PI_REVISION" ]; then
         exit 2
     fi
     PI_REVISION="$(tr -d '[:space:]' < "$PI_LOCK_FILE")"
-    case "$PI_REVISION" in
-        ""|*[!0-9a-fA-F]*)
-            echo "ERROR: $PI_LOCK_FILE must contain one full 40-character Git commit." >&2
-            exit 2
-            ;;
-    esac
-    if [ "${#PI_REVISION}" -ne 40 ]; then
-        echo "ERROR: $PI_LOCK_FILE must contain one full 40-character Git commit." >&2
+fi
+case "$PI_REVISION" in
+    ""|*[!0-9a-fA-F]*)
+        echo "ERROR: Pi revision must be one full 40-character Git commit." >&2
         exit 2
-    fi
+        ;;
+esac
+if [ "${#PI_REVISION}" -ne 40 ]; then
+    echo "ERROR: Pi revision must be one full 40-character Git commit." >&2
+    exit 2
 fi
 
 source_changed=0

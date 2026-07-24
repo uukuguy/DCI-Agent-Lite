@@ -219,6 +219,64 @@ class FirstRunPreflightTests(unittest.TestCase):
         self.assertEqual(backend.calls, [])
         self.assertNotIn("SECRET-JUDGE", repr(result))
 
+    def test_symlinked_agent_directory_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            package = root / "pi/packages/coding-agent"
+            (package / "dist").mkdir(parents=True)
+            (package / "package.json").write_text("{}")
+            (package / "dist/cli.js").write_text("// fixture\n")
+            for corpus in ("wiki_corpus", "bc_plus_docs"):
+                directory = root / "corpus" / corpus
+                directory.mkdir(parents=True)
+                (directory / "fixture.txt").write_text("fixture\n")
+            real_agent = root / "real-agent"
+            real_agent.mkdir()
+            (real_agent / "auth.json").write_text("{}")
+            try:
+                os.symlink(real_agent, root / "linked-agent")
+            except OSError as error:
+                self.skipTest(f"symlinks unavailable: {error}")
+            env_file = root / ".env"
+            env_file.write_text(
+                "DCI_PI_AGENT_DIR=./linked-agent\n"
+                "DCI_EVAL_JUDGE_API_KEY_ENV=JUDGE_KEY\n"
+                "JUDGE_KEY=SECRET-JUDGE\n"
+            )
+            with patch.dict(os.environ, {}, clear=True):
+                result = DciProductVerifier(
+                    repo_root=root, backend=PreflightBackend()
+                ).preflight(env_file=env_file, corpus_root=root / "corpus")
+
+        checks = {check.check_id: check for check in result.checks}
+        self.assertEqual(result.status, "FAIL")
+        self.assertEqual(checks["agent-authentication"].status, "FAIL")
+        self.assertIn("DCI_PI_AGENT_DIR", checks["agent-authentication"].summary)
+
+    def test_invalid_judge_request_configuration_fails_preflight(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            env_file = root / ".env"
+            env_file.write_text(
+                "DCI_EVAL_JUDGE_BASE_URL=not-a-url\n"
+                "DCI_EVAL_JUDGE_MODEL=fixture-judge\n"
+                "DCI_EVAL_JUDGE_API_KEY_ENV=JUDGE_KEY\n"
+                "JUDGE_KEY=SECRET-JUDGE\n"
+            )
+            with patch.dict(
+                os.environ,
+                {"DCI_PI_AGENT_DIR": "./missing-agent"},
+                clear=True,
+            ):
+                result = DciProductVerifier(
+                    repo_root=root, backend=PreflightBackend()
+                ).preflight(env_file=env_file, corpus_root=root / "corpus")
+
+        checks = {check.check_id: check for check in result.checks}
+        self.assertEqual(checks["judge"].status, "FAIL")
+        self.assertIn("DCI_EVAL_JUDGE", checks["judge"].summary)
+        self.assertNotIn("SECRET-JUDGE", repr(result))
+
 
 class InstalledAcceptanceBoundaryTests(unittest.TestCase):
 

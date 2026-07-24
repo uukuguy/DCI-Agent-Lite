@@ -149,6 +149,13 @@ class PiSetupTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.git("rev-parse", "HEAD", cwd=self.pi_dir), self.commit_b)
 
+    def test_revision_override_must_also_be_a_full_commit(self) -> None:
+        result = self.run_setup(revision="main")
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("40-character", result.stderr)
+        self.assertFalse(self.pi_dir.exists())
+
     def test_check_mode_rejects_mismatch_without_mutation(self) -> None:
         self.clone_at(self.commit_b)
         before = self.git("rev-parse", "HEAD", cwd=self.pi_dir)
