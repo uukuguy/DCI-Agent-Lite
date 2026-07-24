@@ -2,7 +2,7 @@
 
 > Canonical work-package ledger. An `active` lifecycle requires exactly one `in_progress` package; a `complete` lifecycle permits none and forbids autonomous dispatch.
 
-> Project lifecycle: complete
+> Project lifecycle: active
 
 ## AF-000 — Framework control plane
 
@@ -397,11 +397,11 @@
 
 ## AF-360 — Standalone first-run readiness
 
-- Status: completed
+- Status: in_progress
 - Parent objective: Make promoted Asterion operationally usable from a fresh clone
 - Scope: add provider-free pinned-Pi setup/check, explicit user-managed Pi authentication selection, tiered external-resource setup/check, consistent runtime configuration discovery, actionable doctor/preflight diagnostics, two standalone Asterion-native runnable examples, and clean-copy first-run verification without accepting a global Pi executable as authoritative.
 - Dependencies: AF-350
 - Acceptance: a clean promoted copy can use local-fixture setup to create and verify the locked external Pi checkout and basic resource layout; `.env.template`, runtime resolution, describe, doctor, and preflight agree on effective defaults; the copy contains the working Asterion basic and runtime-context examples with `make example` and `make runtime-example` entry points; every missing prerequisite reports a safe repair action; all setup/verification and regression gates perform zero Agent/Judge operations and no full dataset.
 - Design: `docs/superpowers/specs/2026-07-24-af-360-standalone-first-run-readiness-design.md`
 - Plan: `docs/superpowers/plans/2026-07-24-af-360-standalone-first-run-readiness.md`
-- Closure evidence: pinned-Pi reproducibility remains repaired: setup requires Node 22.19.0+, uses `npm ci --include=dev`, invokes the lock-installed `tsgo` directly against checked-in catalogs, refuses dirty unbuilt checkouts, and leaves tracked Pi source clean. The standalone tree now contains executable basic and runtime-context Asterion DCI scripts, exposes them through `make example` and `make runtime-example`, documents their provider-backed boundary, and requires them in clean-copy promotion. Final correction verification passes 210 standalone tests, 125 relevant mixed-root regressions, 16 Markdown/32-link checks, and a 9-command quick clean-copy promotion with zero provider operations and no full dataset. Fake-`uv` execution from a temporary copied project proves both scripts resolve the standalone root and construct the expected commands. The user separately reconfirmed that all four mixed-root Make examples execute normally.
+- Closure evidence: pinned-Pi reproducibility remains repaired and the standalone scripts work, but the user rejected the duplicated `asterion/examples/` plus `asterion/scripts/examples/` layout. AF-360 is reopened only to consolidate both executable scripts into the existing top-level `asterion/examples/` directory and remove the redundant hierarchy; behavior, Make target names, authentication, resources, Pi, and mixed-root examples remain unchanged.

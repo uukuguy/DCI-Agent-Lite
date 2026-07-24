@@ -1067,3 +1067,27 @@ Final evidence must name both commits, Git cleanliness, exact focused test
 counts, clean-copy promotion result, and confirm that no real Agent, Judge,
 benchmark, full dataset, external Pi edit, remote creation, publication, or
 push occurred.
+
+---
+
+## Reopened correction — Task 8: Consolidate the standalone example directory
+
+The user rejected the duplicate `asterion/examples/` and
+`asterion/scripts/examples/` layout. Keep one canonical example directory:
+`asterion/examples/`.
+
+1. Change standalone repository and promotion tests first to require
+   `examples/asterion_dci_basic_example.sh` and
+   `examples/asterion_dci_runtime_context_example.sh`, assert the Make recipes
+   use those paths, execute copied scripts from that location, and reject the
+   old `scripts/examples/` directory.
+2. Run the focused tests and observe RED because production files and Make
+   recipes still use `scripts/examples/`.
+3. Move the two executable scripts to `asterion/examples/`, update Make,
+   promotion assets, README text, and `examples/README.md`, then remove the
+   now-empty duplicate hierarchy.
+4. Restore `test_standalone_launchers.py` to its original 14-launcher
+   `scripts/*/*.sh` contract because standalone examples no longer live there.
+5. Run standalone tests, relevant mixed-root regressions, Bash syntax, Ruff,
+   docs, quick clean-copy promotion, scope, and diff checks without a provider
+   operation or full dataset.
