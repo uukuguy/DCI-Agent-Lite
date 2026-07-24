@@ -74,6 +74,18 @@ the selected Pi agent directory; never commit them. External `pi/`, `data/`,
 `corpus/`, generated outputs, and private evidence remain outside the
 distribution.
 
+## Runnable examples
+
+After configuring `.env` and installing the basic corpora, run:
+
+```bash
+make example
+make runtime-example
+```
+
+Both commands are provider-backed and may incur model usage. The scripts are
+available directly under `scripts/examples/`.
+
 ## Cost boundaries
 
 - `acceptance`, `list`, `describe`, `make test`, and `make check` are

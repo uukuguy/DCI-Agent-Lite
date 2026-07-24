@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 import shlex
 import shutil
@@ -18,6 +19,8 @@ REQUIRED_ASSETS = (
     "Makefile",
     "README.md",
     "pi-revision.txt",
+    "scripts/examples/asterion_dci_basic_example.sh",
+    "scripts/examples/asterion_dci_runtime_context_example.sh",
     "scripts/setup_pi.sh",
     "tools/check_docs.py",
     "tools/check_promotion.py",
@@ -42,6 +45,8 @@ LIFECYCLE_TARGETS = (
     "setup-resources-benchmark",
     "check-resources-benchmark",
     "doctor",
+    "example",
+    "runtime-example",
 )
 FRAMEWORK_TARGETS = (
     "asterion-list",
@@ -246,6 +251,115 @@ class StandaloneRepositoryTests(unittest.TestCase):
                     dry_run(target), ("uv", "run", "asterion-dci", command)
                 )
 
+    def test_example_targets_render_exact_commands(self) -> None:
+        self.assertEqual(
+            dry_run("example"),
+            ("bash", "scripts/examples/asterion_dci_basic_example.sh"),
+        )
+        self.assertEqual(
+            dry_run("runtime-example"),
+            (
+                "bash",
+                "scripts/examples/asterion_dci_runtime_context_example.sh",
+            ),
+        )
+
+    def test_examples_run_from_standalone_root_with_expected_arguments(self) -> None:
+        examples = (
+            (
+                "asterion_dci_basic_example.sh",
+                (),
+                "wiki_corpus",
+                ("--extra-arg=--thinking high",),
+            ),
+            (
+                "asterion_dci_runtime_context_example.sh",
+                ("medium",),
+                "bc_plus_docs",
+                (
+                    "--tools",
+                    "read,bash",
+                    "--max-turns",
+                    "6",
+                    "--thinking-level",
+                    "medium",
+                    "--eval-answer",
+                    "Adaku",
+                ),
+            ),
+        )
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary = Path(temporary_directory)
+            copied_project = temporary / "asterion"
+            shutil.copytree(
+                PROJECT / "scripts/examples",
+                copied_project / "scripts/examples",
+            )
+            corpus_root = temporary / "corpus"
+            for corpus_name in ("wiki_corpus", "bc_plus_docs"):
+                (corpus_root / corpus_name).mkdir(parents=True)
+            fake_bin = temporary / "bin"
+            fake_bin.mkdir()
+            fake_uv = fake_bin / "uv"
+            fake_uv.write_text(
+                "#!/bin/sh\n"
+                'printf "%s\\n" "$PWD" > "$UV_CWD_LOG"\n'
+                'printf "%s\\n" "$@" > "$UV_ARGV_LOG"\n',
+                encoding="utf-8",
+            )
+            fake_uv.chmod(0o755)
+            environment = os.environ.copy()
+            environment.update(
+                {
+                    "ASTERION_DCI_CORPUS_ROOT": str(corpus_root),
+                    "DCI_PROVIDER": "fixture-provider",
+                    "DCI_MODEL": "fixture-model",
+                    "PATH": f"{fake_bin}{os.pathsep}{environment['PATH']}",
+                }
+            )
+
+            for index, (script_name, arguments, corpus_name, expected) in enumerate(
+                examples
+            ):
+                script = copied_project / "scripts/examples" / script_name
+                with self.subTest(script=script.name):
+                    cwd_log = temporary / f"{index}.cwd"
+                    argv_log = temporary / f"{index}.argv"
+                    environment["UV_CWD_LOG"] = str(cwd_log)
+                    environment["UV_ARGV_LOG"] = str(argv_log)
+                    completed = subprocess.run(
+                        ["bash", str(script), *arguments],
+                        cwd=temporary,
+                        check=False,
+                        capture_output=True,
+                        text=True,
+                        env=environment,
+                    )
+                    self.assertEqual(completed.returncode, 0, completed.stderr)
+                    self.assertTrue(os.access(script, os.X_OK))
+                    self.assertEqual(
+                        Path(cwd_log.read_text(encoding="utf-8").strip()),
+                        copied_project,
+                    )
+                    argv = argv_log.read_text(encoding="utf-8").splitlines()
+                    self.assertEqual(argv[:3], ["run", "asterion-dci", "run"])
+                    self.assertIn("--cwd", argv)
+                    self.assertEqual(
+                        Path(argv[argv.index("--cwd") + 1]),
+                        corpus_root / corpus_name,
+                    )
+                    for value in expected:
+                        self.assertIn(value, argv)
+
+                    source = script.read_text(encoding="utf-8")
+                    self.assertIn(
+                        'PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"',
+                        source,
+                    )
+                    self.assertIn("uv run asterion-dci run", source)
+                    self.assertNotIn("python -m dci", source)
+                    self.assertNotIn("$PROJECT_ROOT/asterion", source)
+
     def test_make_passthrough_arguments_are_not_shell_evaluated(self) -> None:
         self.assertEqual(
             dry_run("asterion-run", "ASTERION_ARGS=--help"),
@@ -416,6 +530,7 @@ class StandaloneRepositoryTests(unittest.TestCase):
         text = (PROJECT / "README.md").read_text(encoding="utf-8")
         for heading in (
             "## Installation",
+            "## Runnable examples",
             "## Discovery and installed acceptance",
             "## External Pi and resources",
             "## Cost boundaries",
@@ -431,6 +546,8 @@ class StandaloneRepositoryTests(unittest.TestCase):
             "make setup-resources-basic",
             "cp .env.template .env",
             "make doctor",
+            "make example",
+            "make runtime-example",
             "uv run asterion list",
             "uv run asterion describe --provider dci-agent-lite",
             "uv run asterion verify --provider dci-agent-lite --level acceptance",
@@ -462,6 +579,12 @@ class StandaloneRepositoryTests(unittest.TestCase):
         ):
             with self.subTest(setting=setting):
                 self.assertIn(setting, text)
+
+    def test_examples_readme_links_to_end_to_end_shell_examples(self) -> None:
+        text = (PROJECT / "examples/README.md").read_text(encoding="utf-8")
+        self.assertIn("scripts/examples/", text)
+        self.assertIn("make example", text)
+        self.assertIn("make runtime-example", text)
 
     def test_docs_reject_mixed_root_commands_paths_and_current_counts(self) -> None:
         documents = (PROJECT / "README.md", *sorted((PROJECT / "docs").rglob("*.md")))

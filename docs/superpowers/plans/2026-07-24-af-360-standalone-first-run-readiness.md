@@ -752,6 +752,7 @@ external credential, publication, remote creation, or push occurred.
 - Create: `asterion/scripts/examples/asterion_dci_runtime_context_example.sh`
 - Modify: `asterion/Makefile`
 - Modify: `asterion/tests/test_standalone_repository.py`
+- Modify: `asterion/tests/test_standalone_launchers.py`
 - Modify: `asterion/tools/check_promotion.py`
 - Modify: `asterion/tests/test_check_promotion.py`
 - Modify: `asterion/README.md`
@@ -803,7 +804,12 @@ The fake `uv` must record its working directory and arguments. Assert that:
 - the runtime command uses `bc_plus_docs`, `--tools read,bash`,
   `--max-turns 6`, `--thinking-level medium` when invoked with `medium`, and
   `--eval-answer Adaku`;
-- neither script contains `../`, `python -m dci`, or a parent-project path.
+- both scripts derive the standalone root from their own `scripts/examples/`
+  location and neither contains `python -m dci` or a parent-project path.
+
+Keep `test_standalone_launchers.py`'s existing count and root-contract checks
+scoped to the 14 dataset launchers while letting its Bash syntax check cover
+all shell scripts, including the two new runnable examples.
 
 In `asterion/tests/test_check_promotion.py`, add the two scripts to
 `REQUIRED_FIXTURE_ASSETS` and assert that both exist inside the clean-copy
@@ -1024,7 +1030,10 @@ Run from the repository root:
 ```bash
 uv run python -m unittest -v \
   tests.test_asterion_dci_cli \
-  tests.test_asterion_standalone_integration \
+  tests.test_asterion_dci_verification \
+  tests.test_asterion_documentation \
+  tests.test_asterion_project_root \
+  tests.test_asterion_structure \
   tests.test_project_scope_check
 git diff --check
 ```

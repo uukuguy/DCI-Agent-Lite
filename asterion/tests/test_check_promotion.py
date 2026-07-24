@@ -20,6 +20,8 @@ REQUIRED_FIXTURE_ASSETS = (
     "README.md",
     "pi-revision.txt",
     "pyproject.toml",
+    "scripts/examples/asterion_dci_basic_example.sh",
+    "scripts/examples/asterion_dci_runtime_context_example.sh",
     "scripts/setup_pi.sh",
     "tools/check_docs.py",
     "tools/check_promotion.py",
@@ -128,6 +130,18 @@ class PromotionCheckTests(unittest.TestCase):
                 self.assertTrue(
                     (cwd / "src/product/resources/pi/manifest.json").is_file()
                 )
+                self.assertTrue(
+                    (
+                        cwd
+                        / "scripts/examples/asterion_dci_basic_example.sh"
+                    ).is_file()
+                )
+                self.assertTrue(
+                    (
+                        cwd
+                        / "scripts/examples/asterion_dci_runtime_context_example.sh"
+                    ).is_file()
+                )
                 for name in excluded:
                     self.assertFalse((cwd / name).exists(), name)
                 return completed(command, acceptance_stdout(command))
@@ -186,6 +200,27 @@ class PromotionCheckTests(unittest.TestCase):
                             source_root=source,
                             quick=True,
                             runner=lambda command, cwd: completed(command),
+                        )
+
+    def test_copy_audit_requires_runnable_examples(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            temporary = Path(temporary_directory)
+            for index, relative in enumerate(
+                (
+                    "scripts/examples/asterion_dci_basic_example.sh",
+                    "scripts/examples/asterion_dci_runtime_context_example.sh",
+                )
+            ):
+                with self.subTest(relative=relative):
+                    source = make_source(temporary / f"example-{index}")
+                    (source / relative).unlink()
+                    with self.assertRaises(PromotionError):
+                        run_promotion(
+                            source_root=source,
+                            quick=True,
+                            runner=lambda command, cwd: completed(
+                                command, acceptance_stdout(command)
+                            ),
                         )
 
     def test_default_plan_runs_every_provider_free_gate_from_the_copy(self) -> None:

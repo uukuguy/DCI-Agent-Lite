@@ -54,6 +54,8 @@ REQUIRED_ASSETS = (
     "README.md",
     "pi-revision.txt",
     "pyproject.toml",
+    "scripts/examples/asterion_dci_basic_example.sh",
+    "scripts/examples/asterion_dci_runtime_context_example.sh",
     "scripts/setup_pi.sh",
     "tools/check_docs.py",
     "tools/check_promotion.py",

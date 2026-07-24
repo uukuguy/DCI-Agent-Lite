@@ -9,7 +9,10 @@ from pathlib import Path
 
 
 PROJECT = Path(__file__).resolve().parents[1]
-SCRIPTS = tuple(sorted((PROJECT / "scripts").glob("*/*.sh")))
+SHELL_SCRIPTS = tuple(sorted((PROJECT / "scripts").glob("*/*.sh")))
+DATASET_LAUNCHERS = tuple(
+    script for script in SHELL_SCRIPTS if script.parent.name != "examples"
+)
 REPRESENTATIVE_SCRIPTS = (
     "qa/run_nq_test_sample50.sh",
     "bright/run_bio.sh",
@@ -20,8 +23,8 @@ REPRESENTATIVE_SCRIPTS = (
 
 class StandaloneLauncherTests(unittest.TestCase):
     def test_all_fourteen_launchers_use_the_standalone_root_contract(self) -> None:
-        self.assertEqual(len(SCRIPTS), 14)
-        for script in SCRIPTS:
+        self.assertEqual(len(DATASET_LAUNCHERS), 14)
+        for script in DATASET_LAUNCHERS:
             with self.subTest(script=script.relative_to(PROJECT)):
                 text = script.read_text(encoding="utf-8")
                 self.assertIn(
@@ -40,7 +43,7 @@ class StandaloneLauncherTests(unittest.TestCase):
                 self.assertNotIn("$PROJECT_ROOT/asterion", text)
 
     def test_every_launcher_has_valid_bash_syntax(self) -> None:
-        for script in SCRIPTS:
+        for script in SHELL_SCRIPTS:
             with self.subTest(script=script.relative_to(PROJECT)):
                 completed = subprocess.run(
                     ["bash", "-n", str(script)],
