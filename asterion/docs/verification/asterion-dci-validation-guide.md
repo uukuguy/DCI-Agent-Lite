@@ -40,7 +40,8 @@ DCI_EVAL_JUDGE_MODEL=
 DCI_EVAL_JUDGE_API_KEY_ENV=
 ```
 
-Prepare a fresh clone with:
+Copy `.env.template` to `.env` for operator-owned settings. Prepare a fresh
+clone with:
 
 ```bash
 make setup-pi
