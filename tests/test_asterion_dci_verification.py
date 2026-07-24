@@ -234,18 +234,18 @@ class DciContextAcceptanceVerifierTests(unittest.TestCase):
 class FixtureBackend:
     def __init__(
         self,
-        node_major: int | None = 20,
+        node_version: tuple[int, int, int] | None = (22, 19, 0),
         *,
         fail_case: str | None = None,
         verdict: bool = True,
     ) -> None:
-        self.node_major = node_major
+        self.node = node_version
         self.fail_case = fail_case
         self.verdict = verdict
         self.calls: list[object] = []
 
-    def node_major_version(self) -> int | None:
-        return self.node_major
+    def node_version(self) -> tuple[int, int, int] | None:
+        return self.node
 
     def run_research_case(self, paths, request, *, output_dir):
         self.calls.append(("run", request, output_dir))
@@ -425,7 +425,7 @@ class DciBasicVerificationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir).resolve()
             env_file = root / "missing.env"
-            backend = FixtureBackend(node_major=19)
+            backend = FixtureBackend(node_version=(22, 18, 0))
             verifier = DciProductVerifier(repo_root=root, backend=backend)
             with patch.dict(os.environ, {}, clear=True):
                 result = verifier.preflight(env_file=env_file, corpus_root=root / "corpus")

@@ -109,13 +109,13 @@ class PiRpcCommandTests(unittest.TestCase):
             )
         self.assertNotIn("SENTINEL", completed.stdout)
 
-    def test_node_resolution_accepts_path_node_20_before_nvm(self) -> None:
+    def test_node_resolution_accepts_supported_path_node_before_nvm(self) -> None:
         with (
             patch("asterion.dci.pi_rpc.shutil.which", return_value="/path/node"),
             patch(
                 "asterion.dci.pi_rpc.subprocess.run",
                 return_value=subprocess.CompletedProcess(
-                    ["/path/node", "--version"], 0, stdout="v20.19.1\n", stderr=""
+                    ["/path/node", "--version"], 0, stdout="v22.19.0\n", stderr=""
                 ),
             ) as run,
         ):
@@ -134,7 +134,7 @@ class PiRpcCommandTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_directory:
             nvm = Path(temporary_directory)
             old = nvm / "versions" / "node" / "v18.20.0" / "bin" / "node"
-            current = nvm / "versions" / "node" / "v22.3.0" / "bin" / "node"
+            current = nvm / "versions" / "node" / "v22.20.0" / "bin" / "node"
             old.parent.mkdir(parents=True)
             current.parent.mkdir(parents=True)
             old.touch()
@@ -155,7 +155,7 @@ class PiRpcCommandTests(unittest.TestCase):
                         subprocess.CompletedProcess(
                             [str(current), "--version"],
                             0,
-                            stdout="v22.3.0\n",
+                            stdout="v22.20.0\n",
                             stderr="",
                         ),
                     ),
@@ -172,6 +172,10 @@ class PiRpcCommandTests(unittest.TestCase):
             (
                 "/path/node",
                 subprocess.CompletedProcess([], 0, stdout="v19.9.0", stderr=""),
+            ),
+            (
+                "/path/node",
+                subprocess.CompletedProcess([], 0, stdout="v22.18.0", stderr=""),
             ),
             ("/path/node", OSError("sentinel-secret")),
             (

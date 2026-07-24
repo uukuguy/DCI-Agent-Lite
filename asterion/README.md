@@ -13,8 +13,9 @@ Install the locked development environment from the repository root:
 uv sync --frozen
 ```
 
-Python 3.10 or newer and `uv` are required. Node.js and Rust are needed only for
-their corresponding cross-language checks.
+Python 3.10 or newer and `uv` are required. Node.js 22.19.0 or newer plus npm
+are required for `make setup-pi`; Rust is needed only for its corresponding
+cross-language checks.
 
 ## Discovery and installed acceptance
 

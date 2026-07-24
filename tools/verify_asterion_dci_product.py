@@ -1032,7 +1032,7 @@ import json
 import sys
 
 if sys.argv[1:] == ["--version"]:
-    print("v20.0.0")
+    print("v22.19.0")
     raise SystemExit(0)
 for line in sys.stdin:
     request = json.loads(line)
