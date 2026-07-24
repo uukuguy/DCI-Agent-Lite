@@ -6,6 +6,7 @@ DCI_ARGS ?=
 .DEFAULT_GOAL := help
 
 .PHONY: help sync build test lint docs-check check promotion-check setup-pi check-pi
+.PHONY: setup-resources-basic check-resources-basic
 .PHONY: asterion-list asterion-describe asterion-verify-preflight
 .PHONY: asterion-verify-basic asterion-verify-acceptance asterion-verify-complete
 .PHONY: asterion-run
@@ -48,6 +49,12 @@ setup-pi:
 
 check-pi:
 	bash scripts/setup_pi.sh --check
+
+setup-resources-basic:
+	$(UV_BIN) run --extra setup python tools/setup_resources.py --profile basic
+
+check-resources-basic:
+	$(UV_BIN) run python tools/setup_resources.py --profile basic --check
 
 asterion-list:
 	$(UV_BIN) run asterion list $(ASTERION_ARGS)

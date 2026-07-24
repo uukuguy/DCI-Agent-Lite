@@ -33,6 +33,8 @@ LIFECYCLE_TARGETS = (
     "promotion-check",
     "setup-pi",
     "check-pi",
+    "setup-resources-basic",
+    "check-resources-basic",
 )
 FRAMEWORK_TARGETS = (
     "asterion-list",
@@ -250,6 +252,33 @@ class StandaloneRepositoryTests(unittest.TestCase):
         )
         self.assertEqual(
             dry_run("check-pi"), ("bash", "scripts/setup_pi.sh", "--check")
+        )
+
+    def test_basic_resource_targets_render_exact_commands(self) -> None:
+        self.assertEqual(
+            dry_run("setup-resources-basic"),
+            (
+                "uv",
+                "run",
+                "--extra",
+                "setup",
+                "python",
+                "tools/setup_resources.py",
+                "--profile",
+                "basic",
+            ),
+        )
+        self.assertEqual(
+            dry_run("check-resources-basic"),
+            (
+                "uv",
+                "run",
+                "python",
+                "tools/setup_resources.py",
+                "--profile",
+                "basic",
+                "--check",
+            ),
         )
 
     def test_ci_runs_only_the_full_provider_free_promotion_gate(self) -> None:
