@@ -728,3 +728,333 @@ git commit -m "docs: close AF-360 first-run readiness"
 Final completion evidence must name the final commit, Git cleanliness, exact
 test counts, clean-copy result, and the fact that no Agent, Judge, full dataset,
 external credential, publication, remote creation, or push occurred.
+
+---
+
+## Reopened correction — Task 7: Ship standalone runnable Asterion examples
+
+**Active package:** `AF-360`
+
+**Scope constraints:**
+
+- Add only the two Asterion-native examples already proven at repository root.
+- Do not change authentication, Pi setup, resource setup, corpus discovery,
+  provider defaults, the root Makefile, or root example scripts.
+- Do not add OpenAI-, Anthropic-, or vLLM-specific example variants.
+- Keep `pi/` untouched and perform no Agent, Judge, benchmark, or full-dataset
+  operation during implementation or verification.
+- Every new path and command must work from a clean copy of `asterion/` without
+  a parent repository.
+
+**Files:**
+
+- Create: `asterion/scripts/examples/asterion_dci_basic_example.sh`
+- Create: `asterion/scripts/examples/asterion_dci_runtime_context_example.sh`
+- Modify: `asterion/Makefile`
+- Modify: `asterion/tests/test_standalone_repository.py`
+- Modify: `asterion/tools/check_promotion.py`
+- Modify: `asterion/tests/test_check_promotion.py`
+- Modify: `asterion/README.md`
+- Modify: `asterion/examples/README.md`
+- Modify at closure: `docs/status/WORKLIST.md`
+- Modify at closure: `docs/status/CURRENT-STATE.md`
+- Modify at closure: `docs/status/INDEX.md`
+- Append at implementation and closure: `docs/status/JOURNAL.md`
+- Modify at closure: `docs/status/RESUME-NEXT-SESSION.md`
+
+### Step 1: Write failing standalone example contracts
+
+In `asterion/tests/test_standalone_repository.py`, add both scripts to
+`REQUIRED_ASSETS`, add `example` and `runtime-example` to
+`LIFECYCLE_TARGETS`, and assert the exact Make recipes:
+
+```python
+self.assertEqual(
+    dry_run("example"),
+    ("bash", "scripts/examples/asterion_dci_basic_example.sh"),
+)
+self.assertEqual(
+    dry_run("runtime-example"),
+    ("bash", "scripts/examples/asterion_dci_runtime_context_example.sh"),
+)
+```
+
+Add a behavior test that creates a temporary corpus root containing
+`wiki_corpus/` and `bc_plus_docs/`, puts a recording `uv` executable first on
+`PATH`, and runs both scripts with:
+
+```python
+environment.update(
+    {
+        "ASTERION_DCI_CORPUS_ROOT": str(corpus_root),
+        "DCI_PROVIDER": "fixture-provider",
+        "DCI_MODEL": "fixture-model",
+        "PATH": f"{fake_bin}{os.pathsep}{environment['PATH']}",
+    }
+)
+```
+
+The fake `uv` must record its working directory and arguments. Assert that:
+
+- both processes return zero without contacting a provider;
+- both working directories equal the standalone project root;
+- both commands begin with `run asterion-dci run`;
+- the basic command uses `wiki_corpus` and `--extra-arg=--thinking high`;
+- the runtime command uses `bc_plus_docs`, `--tools read,bash`,
+  `--max-turns 6`, `--thinking-level medium` when invoked with `medium`, and
+  `--eval-answer Adaku`;
+- neither script contains `../`, `python -m dci`, or a parent-project path.
+
+In `asterion/tests/test_check_promotion.py`, add the two scripts to
+`REQUIRED_FIXTURE_ASSETS` and assert that both exist inside the clean-copy
+runner root.
+
+Working directory: `asterion/`
+
+Run:
+
+```bash
+uv run python -m unittest -v \
+  tests.test_standalone_repository \
+  tests.test_check_promotion
+```
+
+Expected RED: the required scripts and Make targets do not exist.
+
+### Step 2: Add the two standalone scripts
+
+Create `asterion/scripts/examples/asterion_dci_basic_example.sh` with this
+complete content:
+
+```bash
+#!/usr/bin/env bash
+
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+if [ -f "$PROJECT_ROOT/.env" ]; then
+  set -a
+  source "$PROJECT_ROOT/.env"
+  set +a
+fi
+
+set -euo pipefail
+
+: "${DCI_PROVIDER:?Set DCI_PROVIDER in .env}"
+: "${DCI_MODEL:?Set DCI_MODEL in .env}"
+
+QUESTION="Answer the following question using only wiki_dump.jsonl in the current directory. Do not use web search. Use rg instead of grep for fast searching. Question: In which street did the Great Fire of London originate?"
+if [ -n "${ASTERION_DCI_CORPUS_ROOT:-}" ] && [ "${ASTERION_DCI_CORPUS_ROOT#/}" = "$ASTERION_DCI_CORPUS_ROOT" ]; then
+  printf 'ASTERION_DCI_CORPUS_ROOT must be an absolute path\n' >&2
+  exit 2
+fi
+CORPUS_ROOT="${ASTERION_DCI_CORPUS_ROOT:-$PROJECT_ROOT/corpus}"
+CORPUS_DIR="$CORPUS_ROOT/wiki_corpus"
+if [ ! -d "$CORPUS_DIR" ]; then
+  printf 'Asterion DCI corpus directory does not exist: %s\n' "$CORPUS_DIR" >&2
+  exit 2
+fi
+
+cd "$PROJECT_ROOT"
+uv run asterion-dci run \
+  --cwd "$CORPUS_DIR" \
+  --extra-arg="--thinking high" \
+  "$QUESTION"
+```
+
+Create `asterion/scripts/examples/asterion_dci_runtime_context_example.sh`
+with this complete content:
+
+```bash
+#!/usr/bin/env bash
+
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+if [ -f "$PROJECT_ROOT/.env" ]; then
+  set -a
+  source "$PROJECT_ROOT/.env"
+  set +a
+fi
+
+set -euo pipefail
+
+: "${DCI_PROVIDER:?Set DCI_PROVIDER in .env}"
+: "${DCI_MODEL:?Set DCI_MODEL in .env}"
+
+level="${1:-high}"
+QUESTION="Read the files in the current directory. Do not use web search. Use rg instead of grep when searching. Question: In the Bonang Matheba interview where the third-to-last question asks about the origin of the name given to her by radio listeners, what is the interviewer's first name? Answer with just the first name and one supporting file path."
+if [ -n "${ASTERION_DCI_CORPUS_ROOT:-}" ] && [ "${ASTERION_DCI_CORPUS_ROOT#/}" = "$ASTERION_DCI_CORPUS_ROOT" ]; then
+  printf 'ASTERION_DCI_CORPUS_ROOT must be an absolute path\n' >&2
+  exit 2
+fi
+CORPUS_ROOT="${ASTERION_DCI_CORPUS_ROOT:-$PROJECT_ROOT/corpus}"
+CORPUS_DIR="$CORPUS_ROOT/bc_plus_docs"
+if [ ! -d "$CORPUS_DIR" ]; then
+  printf 'Asterion DCI corpus directory does not exist: %s\n' "$CORPUS_DIR" >&2
+  exit 2
+fi
+
+cd "$PROJECT_ROOT"
+uv run asterion-dci run \
+  --cwd "$CORPUS_DIR" \
+  --tools read,bash \
+  --max-turns 6 \
+  --thinking-level "$level" \
+  --eval-answer "Adaku" \
+  "$QUESTION"
+```
+
+These are literal standalone adaptations of the working root examples: the
+only behavioral change is resolving `PROJECT_ROOT` from the script location
+inside the independently copyable project.
+
+### Step 3: Expose simple Make entrypoints
+
+In `asterion/Makefile`, add:
+
+```make
+.PHONY: example runtime-example
+```
+
+and:
+
+```make
+example:
+	bash scripts/examples/asterion_dci_basic_example.sh
+
+runtime-example:
+	bash scripts/examples/asterion_dci_runtime_context_example.sh
+```
+
+Add both names to the provider-backed help line. Do not change any existing
+target recipe.
+
+Working directory: `asterion/`
+
+Run:
+
+```bash
+bash -n scripts/examples/asterion_dci_basic_example.sh
+bash -n scripts/examples/asterion_dci_runtime_context_example.sh
+uv run python -m unittest -v tests.test_standalone_repository
+```
+
+Expected GREEN: exact Make rendering, path portability, and fake-`uv`
+invocation checks pass.
+
+### Step 4: Make clean-copy promotion require the examples
+
+Add these exact paths to `REQUIRED_ASSETS` in
+`asterion/tools/check_promotion.py` and `REQUIRED_FIXTURE_ASSETS` in
+`asterion/tests/test_check_promotion.py`:
+
+```python
+"scripts/examples/asterion_dci_basic_example.sh",
+"scripts/examples/asterion_dci_runtime_context_example.sh",
+```
+
+The promotion checker must continue copying the existing source tree normally;
+do not special-case or execute provider-backed scripts.
+
+Working directory: `asterion/`
+
+Run:
+
+```bash
+uv run python -m unittest -v tests.test_check_promotion
+uv run python tools/check_promotion.py --quick
+```
+
+Expected GREEN: a clean copied project contains both scripts and passes the
+existing provider-free quick gates.
+
+### Step 5: Document the runnable examples
+
+In `asterion/README.md`, add a concise “Runnable examples” section after the
+first-run setup instructions:
+
+```markdown
+## Runnable examples
+
+After configuring `.env` and installing the basic corpora, run:
+
+```bash
+make example
+make runtime-example
+```
+
+Both commands are provider-backed and may incur model usage. The scripts are
+available directly under `scripts/examples/`.
+```
+
+In `asterion/examples/README.md`, retain the existing Python composition
+examples and add a short pointer stating that end-to-end executable DCI
+examples live under `scripts/examples/` and are exposed as `make example` and
+`make runtime-example`.
+
+Working directory: `asterion/`
+
+Run:
+
+```bash
+uv run python tools/check_docs.py
+```
+
+### Step 6: Run the bounded verification matrix
+
+Run the scope check from the repository root:
+
+```bash
+python3 tools/project_scope_check.py
+```
+
+Run from `asterion/`:
+
+```bash
+uv run python -m unittest -v \
+  tests.test_standalone_repository \
+  tests.test_check_promotion
+uv run python -m compileall -q tests tools
+uv run ruff check tests tools
+bash -n scripts/examples/asterion_dci_basic_example.sh
+bash -n scripts/examples/asterion_dci_runtime_context_example.sh
+uv run python tools/check_docs.py
+uv run python tools/check_promotion.py --quick
+```
+
+Run from the repository root:
+
+```bash
+uv run python -m unittest -v \
+  tests.test_asterion_dci_cli \
+  tests.test_asterion_standalone_integration \
+  tests.test_project_scope_check
+git diff --check
+```
+
+Do not run the new examples against a real provider. The fake-`uv` behavior
+test proves standalone command construction without spending operations; the
+user's successful execution of the four existing root Make examples is the
+upstream behavioral evidence.
+
+### Step 7: Commit, journal, and close the reopened package
+
+1. Commit the implementation and documentation as one cohesive change:
+
+   ```bash
+   git commit -m "feat: add standalone Asterion examples"
+   ```
+
+2. Append the implementation commit and exact verified results to
+   `docs/status/JOURNAL.md`.
+3. Rerun `python3 tools/project_scope_check.py`.
+4. Close AF-360 only if all Task 7 acceptance checks pass.
+5. Refresh `WORKLIST.md`, `CURRENT-STATE.md`, `INDEX.md`, and
+   `RESUME-NEXT-SESSION.md` consistently.
+6. Commit the durable closure checkpoint:
+
+   ```bash
+   git commit -m "docs: close AF-360 standalone examples"
+   ```
+
+Final evidence must name both commits, Git cleanliness, exact focused test
+counts, clean-copy promotion result, and confirm that no real Agent, Judge,
+benchmark, full dataset, external Pi edit, remote creation, publication, or
+push occurred.
