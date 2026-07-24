@@ -1205,3 +1205,4 @@
 - 16:18 AF-360 新增 standalone 样例实施计划，锁定最小范围与 TDD 验证路径。 [9ac5cfe]
 - 16:18 standalone 新增两个可执行 Asterion 样例与 Make 入口，补齐独立项目体验。 [fa0b0c9]
 - 16:18 AF-360 终验通过 standalone210、root125、promotion9，provider0、full-no。
+- 16:18 AF-360 standalone 样例闭包，项目 lifecycle 恢复 complete。 [0512a27]
