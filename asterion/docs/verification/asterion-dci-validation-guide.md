@@ -32,16 +32,28 @@ datasets, and credentials are external:
 
 ```dotenv
 DCI_PI_DIR=./pi
-ASTERION_DCI_RESOURCE_ROOT=/absolute/path/to/resources
-DCI_PROVIDER=
-DCI_MODEL=
+DCI_PI_AGENT_DIR=~/.pi/agent
+ASTERION_DCI_RESOURCE_ROOT=.
+DCI_PROVIDER=openai-codex
+DCI_MODEL=gpt-5.6-luna
 DCI_EVAL_JUDGE_MODEL=
 DCI_EVAL_JUDGE_API_KEY_ENV=
 ```
 
-Copy `.env.template` to `.env` and fill values only for a provider-backed run.
-Never commit `.env`, credentials, external resources, or private outputs. Pi
-must match `pi-revision.txt`; it remains an independent checkout.
+Prepare a fresh clone with:
+
+```bash
+make setup-pi
+make setup-resources-basic
+cp .env.template .env
+make doctor
+```
+
+The setup commands may use network and disk, but make zero Agent/Judge
+operations and run no dataset. A global `pi` executable does not replace the
+checkout locked by `pi-revision.txt`; `DCI_PI_AGENT_DIR` points to separately
+managed authentication. Never commit `.env`, credentials, external resources,
+or private outputs.
 
 ## Standalone provider-free verification
 
@@ -171,6 +183,12 @@ uv run asterion run \
 All fourteen launchers compute their own project root. Data and corpus defaults
 come from `ASTERION_DCI_RESOURCE_ROOT`, falling back to the project root. Use an
 explicit small limit for a bounded probe:
+
+```bash
+make check-resources-benchmark
+# explicitly fetch/convert supported upstreams; unavailable resources remain failures
+make setup-resources-benchmark
+```
 
 ```bash
 ASTERION_DCI_RESOURCE_ROOT=/absolute/path/to/resources \

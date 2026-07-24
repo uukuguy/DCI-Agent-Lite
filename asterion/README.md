@@ -32,22 +32,46 @@ paper scopes. It does not contact an Agent or Judge and does not run a dataset.
 
 ## External Pi and resources
 
-Pi is an external checkout, never vendored into this repository. Its expected
-revision is recorded in `pi-revision.txt`; set `DCI_PI_DIR` when the checkout is
-not at `./pi`. Benchmark launchers resolve datasets and corpora from the project
-root by default, or from `ASTERION_DCI_RESOURCE_ROOT` when those resources live
-elsewhere.
+From a fresh clone, prepare the locked Pi source and the two corpora used by
+preflight/basic verification:
 
-Copy `.env.template` to `.env` only for provider-backed work. Keep Agent and
-Judge credentials in `.env` or exported environment variables; never commit
-them. External `pi/`, `datasets/`, `corpora/`, generated outputs, and private
-evidence remain outside the distribution.
+```bash
+uv sync --frozen
+make setup-pi
+make setup-resources-basic
+cp .env.template .env
+# authenticate Pi and the independent Judge using operator-owned credentials
+make doctor
+```
+
+`make setup` composes the first three provisioning commands. Setup may use
+Git, npm, Hugging Face, disk, and network, but it performs zero Agent operations
+and zero Judge operations and never runs a dataset.
+
+Pi is an external checkout, never vendored into this repository. A global `pi`
+executable is not the runtime authority: Asterion launches the checkout pinned
+by `pi-revision.txt` at `DCI_PI_DIR` (default `./pi`). `DCI_PI_AGENT_DIR`
+(default `~/.pi/agent`) selects separately managed Pi authentication. Setup
+never reads, copies, creates, or prints authentication files.
+
+`ASTERION_DCI_RESOURCE_ROOT` is the parent of external `corpus/` and `data/`
+trees. `make setup-resources-basic` prepares only `corpus/wiki_corpus` and
+`corpus/bc_plus_docs`. `make setup-resources-benchmark` handles available
+declared sources and reports every unavailable/gated launcher path with its
+expected upstream; it never substitutes another corpus. Use the corresponding
+`check-resources-*` targets for read-only checks.
+
+Keep Agent and Judge credentials in `.env`, exported environment variables, or
+the selected Pi agent directory; never commit them. External `pi/`, `data/`,
+`corpus/`, generated outputs, and private evidence remain outside the
+distribution.
 
 ## Cost boundaries
 
 - `acceptance`, `list`, `describe`, `make test`, and `make check` are
   provider-free.
-- `preflight` checks external readiness but does not call a provider.
+- setup, checks, `doctor`, and `preflight` are provider-free and report zero
+  Agent and zero Judge operations.
 - `basic` performs bounded Agent/Judge work when correctly configured.
 - `complete` includes the bounded provider-backed path plus acceptance.
 - Full datasets, paper-score reproduction, and publication require separate

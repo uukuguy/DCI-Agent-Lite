@@ -9,7 +9,7 @@ DCI_ARGS ?=
 .PHONY: setup-pi check-pi
 .PHONY: setup-resources-basic check-resources-basic
 .PHONY: setup-resources-benchmark check-resources-benchmark
-.PHONY: doctor
+.PHONY: setup doctor
 .PHONY: asterion-list asterion-describe asterion-verify-preflight
 .PHONY: asterion-verify-basic asterion-verify-acceptance asterion-verify-complete
 .PHONY: asterion-run
@@ -18,9 +18,11 @@ DCI_ARGS ?=
 .PHONY: test-typescript test-rust check-rust
 
 help:
+	@echo "provider-free setup (network/disk; Agent operations 0; Judge operations 0): setup setup-pi setup-resources-basic setup-resources-benchmark"
+	@echo "provider-free checks: check-pi check-resources-basic check-resources-benchmark doctor first-run-check"
 	@echo "provider-free lifecycle: sync build test lint docs-check check promotion-check"
-	@echo "provider-free framework: asterion-list asterion-describe asterion-verify-acceptance"
-	@echo "bounded provider-backed: asterion-verify-preflight asterion-verify-basic asterion-verify-complete asterion-run"
+	@echo "provider-free framework: asterion-list asterion-describe asterion-verify-preflight asterion-verify-acceptance"
+	@echo "bounded provider-backed: asterion-verify-basic asterion-verify-complete asterion-run"
 	@echo "DCI passthrough: dci-system-prompt dci-run dci-terminal dci-resume dci-evaluate dci-benchmark dci-export dci-ablation dci-paper"
 	@echo "Cross-language provider-free: test-typescript test-rust check-rust"
 	@echo "Cost boundary: full execution requires separate authorization"
@@ -49,6 +51,8 @@ promotion-check:
 
 first-run-check:
 	$(UV_BIN) run python -m unittest -v tests.test_setup_pi tests.test_resource_setup tests.test_asterion_dci_verification
+
+setup: sync setup-pi setup-resources-basic
 
 setup-pi:
 	bash scripts/setup_pi.sh

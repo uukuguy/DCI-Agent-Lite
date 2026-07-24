@@ -34,6 +34,7 @@ LIFECYCLE_TARGETS = (
     "check",
     "promotion-check",
     "first-run-check",
+    "setup",
     "setup-pi",
     "check-pi",
     "setup-resources-basic",
@@ -150,6 +151,8 @@ class StandaloneRepositoryTests(unittest.TestCase):
         self.assertIn(
             "full execution requires separate authorization", completed.stdout
         )
+        self.assertIn("network/disk; Agent operations 0; Judge operations 0", completed.stdout)
+        self.assertIn("doctor", completed.stdout)
 
     def test_framework_targets_render_exact_commands(self) -> None:
         expected = {
@@ -349,6 +352,26 @@ class StandaloneRepositoryTests(unittest.TestCase):
             ),
         )
 
+    def test_setup_composes_sync_pi_and_basic_resources(self) -> None:
+        self.assertEqual(
+            dry_run("setup"),
+            (
+                "uv",
+                "sync",
+                "--frozen",
+                "bash",
+                "scripts/setup_pi.sh",
+                "uv",
+                "run",
+                "--extra",
+                "setup",
+                "python",
+                "tools/setup_resources.py",
+                "--profile",
+                "basic",
+            ),
+        )
+
     def test_ci_runs_only_the_full_provider_free_promotion_gate(self) -> None:
         path = PROJECT / ".github/workflows/ci.yml"
         self.assertTrue(path.is_file(), "standalone CI workflow is missing")
@@ -387,6 +410,10 @@ class StandaloneRepositoryTests(unittest.TestCase):
                 self.assertIn(heading, text)
         for command in (
             "uv sync --frozen",
+            "make setup-pi",
+            "make setup-resources-basic",
+            "cp .env.template .env",
+            "make doctor",
             "uv run asterion list",
             "uv run asterion describe --provider dci-agent-lite",
             "uv run asterion verify --provider dci-agent-lite --level acceptance",
@@ -395,6 +422,15 @@ class StandaloneRepositoryTests(unittest.TestCase):
         ):
             with self.subTest(command=command):
                 self.assertIn(command, text)
+        for statement in (
+            "global `pi`",
+            "DCI_PI_AGENT_DIR",
+            "setup-resources-benchmark",
+            "zero Agent",
+            "zero Judge",
+        ):
+            with self.subTest(statement=statement):
+                self.assertIn(statement, text)
         for setting in (
             "DCI_PI_DIR",
             "ASTERION_DCI_RESOURCE_ROOT",

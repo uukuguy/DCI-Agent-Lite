@@ -29,18 +29,27 @@ make check
 模型外 discovery/acceptance 不需要 `.env`。需要 Pi、Judge 或 benchmark 时，先复制无秘密模板：
 
 ```bash
+make setup-pi
+make setup-resources-basic
 cp .env.template .env
+make doctor
 ```
 
 主要边界：
 
-- `DCI_PI_DIR`：外部 Pi checkout，默认 `./pi`，不属于 Asterion 仓库。
+- `DCI_PI_DIR`：由 `pi-revision.txt` 锁定的外部 Pi checkout，默认 `./pi`；全局 `pi` 命令不替代该源码运行时。
+- `DCI_PI_AGENT_DIR`：用户自己管理的 Pi agent/auth 目录，默认 `~/.pi/agent`；setup 不复制凭据。
 - `ASTERION_DCI_RESOURCE_ROOT`：启动器使用的外部 datasets/corpora 根。
-- `DCI_RUNTIME`、`DCI_PROVIDER`、`DCI_MODEL`：Agent runtime 与原生 provider 选择。
+- `DCI_RUNTIME`、`DCI_PROVIDER`、`DCI_MODEL`：缺省为 `pi`、`openai-codex`、`gpt-5.6-luna`。
 - `DCI_EVAL_JUDGE_*`：独立 Judge 角色的 endpoint、API、model、密钥变量名和 request shape。
 - `.env` 和已导出环境只提供配置，不会自动授权模型请求或完整数据集。
 
 凭据只保存在 `.env`、已导出环境或 Pi 自己的受管认证中。Asterion 不在描述、错误、公开证据或 body-free application 结果中输出密钥值。
+
+`make setup-resources-basic` 只准备 `wiki_corpus` 和 `bc_plus_docs`。
+`make setup-resources-benchmark` 另行检查/准备 launcher 清单；无法自动取得的
+BEIR 或 gated 资源会报告精确路径与来源，不会换成其他数据。所有 setup/check
+命令都是 0 Agent、0 Judge，且不执行数据集。
 
 ## 查看能力：`list` 与 `describe`
 
@@ -155,9 +164,10 @@ uv run asterion-dci paper --help
 
 ## 常见问题
 
-- `environment/configuration` 失败：检查 `.env` 或 `--env-file`；不要在日志中打印密钥。
-- `pi` 失败：检查 `DCI_PI_DIR` 和 `pi-revision.txt`；不要修改或 vendoring 外部 checkout 来绕过 preflight。
-- `corpora/dataset` 失败：设置 `ASTERION_DCI_RESOURCE_ROOT`，不要把完整资源放进 wheel。
+- `environment` 失败：执行 `cp .env.template .env`；不要在日志中打印密钥。
+- `pi-checkout/built-pi-cli` 失败：执行 `make setup-pi`；不要 vendoring 外部 checkout。
+- `agent-authentication` 失败：完成 Pi 登录并设置 `DCI_PI_AGENT_DIR`。
+- `resources-basic` 失败：执行 `make setup-resources-basic`；不要把资源放进 wheel。
 - Judge 重跑：任何 request-shaping 配置变化都应使精确缓存失效。
 - `acceptance` 失败：它是安装包闭包错误，不要指向父工作区或改为 `NOT RUN`。
 - 需要 original/Asterion selector 对照时，该证据属于 historical **mixed-repository only** 集成，不是 standalone live acceptance。
