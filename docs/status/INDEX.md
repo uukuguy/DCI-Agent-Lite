@@ -18,7 +18,7 @@ When adding a new file to `docs/status/`, **also add its row here** — otherwis
 | `RESUME-NEXT-SESSION.md` | 🟢 active | Session handoff baton. |
 | `CURRENT-STATE.md` | 🟢 active | Structural snapshot. |
 | `DECISIONS.md` | 🟢 active | Current architecture decisions, including D-057 standalone provisioning and source-pinned Pi ownership, with confidence labels and revalidation triggers. |
-| `WORKLIST.md` | 🟢 active | Sole multi-package ledger; lifecycle is active with AF-360 as the single package and an approved design plus executable TDD plan. |
+| `WORKLIST.md` | 🟢 active | Sole multi-package ledger; AF-360 is completed and the project lifecycle is complete with no active package. |
 | `climb/` | 🟢 active | `research-tree.md` is the climb resume summary; sibling YAML/JSON/CSV files are storage-layer state. |
 | `INDEX.md` (this file) | 🟢 active | Discovery hub. |
 

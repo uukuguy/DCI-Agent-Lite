@@ -1,53 +1,53 @@
 # Live Session Checkpoint
 
-> Updated: 2026-07-24 09:45 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-24 10:45 +0800. **Session remains active — not a final handoff.**
 
-Active work package: AF-360
+Active work package: none
 
-Project lifecycle: active
+Project lifecycle: complete
 
 Currently running: no process.
 
 ## TL;DR
 
-- AF-360 is the single active package for correcting standalone first-run readiness.
-- The approved design keeps a pinned external Pi source checkout, adds provider-free Pi/resource setup, exposes explicit user-managed Pi authentication, and aligns template/describe/preflight defaults.
-- Pi setup/check and basic/benchmark resource setup/check are implemented with local-fixture provider-free coverage.
+- AF-360 standalone first-run readiness is implemented, reviewed, verified, and closed.
+- A fresh standalone checkout now has explicit pinned-Pi, authentication, basic/benchmark resource, configuration, doctor, and first-run workflows.
+- The isolated `codex/af-360-first-run` branch is ready to merge into `main`.
 
 ## Where things stand
 
-- Isolated branch: `codex/af-360-first-run`; implementation commits are `b363013`, `ba804d1`, and `53cfd09`.
-- `scripts/setup_pi.sh` clones/checks the full locked revision, refuses dirty switches and symlinks, builds only when needed, and never reads/copies auth.
-- Basic resource setup creates `wiki_corpus` and `bc_plus_docs`; benchmark checks derive all paths from packaged `paper-benchmarks.json` and report unavailable upstreams explicitly.
-- Clean standalone preflight was reproduced with Node passing and environment, configuration, Pi, corpora, and Judge readiness failing.
-- Root cause is confirmed: AF-350 proved provider-free source/distribution promotion but did not ship external Pi/resource provisioning or one consistent public configuration contract.
-- No Agent, Judge, benchmark, full dataset, external Pi mutation, resource download, publication, remote creation, or push occurred.
+- Implementation commits run from `b363013` through `aa4b490`; governance closure is the next commit.
+- `make setup-pi` provisions the exact full commit in `pi-revision.txt`; `make check-pi` is read-only. A global `pi` executable is intentionally not authoritative.
+- `DCI_PI_AGENT_DIR=~/.pi/agent` selects separately managed authentication. Setup never reads, copies, creates, or prints credentials.
+- `make setup-resources-basic` creates the wiki and BC+ onboarding layouts; benchmark setup/check reports every packaged and launcher resource, including unavailable/manual sources.
+- `.env.template`, runtime resolution, `describe`, `doctor`, and preflight now agree on effective Pi/provider/model/resource/Judge defaults and safe repair actions.
+- Final verification passes 202 standalone tests, 117 mixed-root regressions, 16 Markdown files/32 links, and full clean-copy promotion with 18 commands.
+- All verification performed zero Agent/Judge operations and no full dataset. No external Pi checkout was mutated.
 
-## Current design boundary
+## Next concrete action
 
-- Pi execution remains source-pinned through `pi-revision.txt`; a global `pi` executable is not accepted as authoritative.
-- `DCI_PI_AGENT_DIR` explicitly selects user-managed authentication such as `~/.pi/agent`; setup never copies credentials.
-- `basic` resource setup owns `corpus/wiki_corpus` and `corpus/bc_plus_docs`; separately named benchmark setup/check accounts for launcher resources.
-- Setup may perform explicitly invoked Git/npm/resource network work but always performs zero Agent/Judge operations and no dataset execution.
-- `.env.template`, runtime resolution, product description, doctor, and preflight must expose one effective provider/model/path contract.
+1. Commit the AF-360 governance closure.
+2. Merge `codex/af-360-first-run` into `main`.
+3. Re-run `python3 tools/project_scope_check.py` and a focused post-merge smoke, then record the merge checkpoint.
 
-## Next steps
+## Open questions
 
-1. Run `python3 tools/project_scope_check.py`.
-2. Continue Task 4 in `docs/superpowers/plans/2026-07-24-af-360-standalone-first-run-readiness.md`.
-3. Add failing tests for template/describe/preflight parity and the provider-free `doctor` target.
+- None for AF-360.
+- Any publication, remote creation/push, global-Pi trust, vendored resources, or full-dataset reproduction requires separate user authority and governance.
 
-## Don't go down these paths again
+## Ruled-out paths
 
-- Do not treat a global `pi` executable as equivalent to the locked source checkout without a new provenance/runtime decision.
-- Do not copy Pi credentials, corpora, datasets, parent tools, original `src/dci`, or private evidence into the standalone project.
-- Do not call a pointer-only `.env.template` or README a provisioning workflow.
-- Do not let setup, cached resources, or preflight success authorize Agent/Judge or full-dataset execution.
+- Do not replace `DCI_PI_DIR` with an unpinned global executable.
+- Do not conflate `DCI_PI_DIR` source ownership with `DCI_PI_AGENT_DIR` authentication state.
+- Do not embed Pi, credentials, corpora, benchmark datasets, private evidence, or parent-only tools into the standalone project.
+- Do not treat setup or preflight success as Agent/Judge or full-execution authority.
+- `tests.test_asterion_standalone_integration` is not a real root module; the current mixed-root boundary lives in structure, project-root, documentation, distribution, configuration, verification, and scope modules.
 
 ## Ready-to-paste commands
 
 ```bash
 python3 tools/project_scope_check.py
-git diff --check
 git status --short --branch
+cd asterion
+uv run python tools/check_promotion.py --quick
 ```
