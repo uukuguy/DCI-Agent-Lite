@@ -1195,3 +1195,4 @@
 - 12:31 `.env` 探针确认 resource setup/launchers 不读取其中的 resource root。
 - 12:33 `uv run --project` 保留调用 cwd，外部启动会寻找错误 `.env`。
 - 12:35 AF-360 重开为资源 `.env` 一致性修复；实现待设计批准。
+- 12:37 AF-360 配置缺陷交接固化，确保恢复不依赖聊天。 [3122638]
