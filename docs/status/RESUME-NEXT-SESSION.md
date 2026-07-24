@@ -2,21 +2,21 @@
 
 > Updated: 2026-07-24 10:45 +0800. **Session remains active — not a final handoff.**
 
-Active work package: AF-360
+Active work package: none
 
-Project lifecycle: active
+Project lifecycle: complete
 
 Currently running: no process.
 
 ## TL;DR
 
-- AF-360 is reopened for one post-merge Judge credential-name parity repair.
+- AF-360 standalone first-run readiness and its post-merge configuration-parity repair are complete.
 - A fresh standalone checkout now has explicit pinned-Pi, authentication, basic/benchmark resource, configuration, doctor, and first-run workflows.
-- AF-360 implementation is integrated into `main` by merge commit `90cf244`; post-merge review found one remaining describe/template mismatch.
+- AF-360 implementation is integrated into `main` by `90cf244`; the final Judge credential-name description repair is `7c1672b`.
 
 ## Where things stand
 
-- `.env.template` and `JudgeConfig` use `DEEPSEEK_API_KEY`, but `asterion describe` still reports `OPENAI_API_KEY`.
+- `.env.template`, `JudgeConfig`, and `asterion describe` now all use `DEEPSEEK_API_KEY`.
 - `make setup-pi` provisions the exact full commit in `pi-revision.txt`; `make check-pi` is read-only. A global `pi` executable is intentionally not authoritative.
 - `DCI_PI_AGENT_DIR=~/.pi/agent` selects separately managed authentication. Setup never reads, copies, creates, or prints credentials.
 - `make setup-resources-basic` creates the wiki and BC+ onboarding layouts; benchmark setup/check reports every packaged and launcher resource, including unavailable/manual sources.
@@ -26,8 +26,8 @@ Currently running: no process.
 
 ## Next concrete action
 
-1. Add a failing description-parity assertion for the Judge API-key environment-name default.
-2. Reuse `DEFAULT_JUDGE_API_KEY_ENV` in the product description, rerun focused/full provider-free gates, and close AF-360 again.
+1. Keep the completed lifecycle closed until the user selects a new governed package.
+2. For standalone use, promote the contents of `asterion/` to a GitHub repository root and follow its README setup sequence.
 
 ## Open questions
 

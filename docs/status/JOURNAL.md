@@ -1180,3 +1180,6 @@
 - 10:48 AF-360 治理闭包固化完成态与恢复点。 [fcbe1f6]
 - 10:51 AF-360 合并回 main，standalone 首次运行修复进入集成分支。 [90cf244]
 - 10:55 post-merge describe 核验发现 Judge 凭据变量默认值仍漂移，AF-360 重开修复。
+- 10:57 AF-360 重开治理边界，限定为 Judge 凭据变量描述一致性。 [46bf7e4]
+- 10:59 describe 复用 JudgeConfig 凭据变量默认值，模板与运行时一致。 [7c1672b]
+- 11:03 post-repair standalone202、integration77、promotion9 全绿，provider0、full-no。

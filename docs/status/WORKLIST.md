@@ -2,7 +2,7 @@
 
 > Canonical work-package ledger. An `active` lifecycle requires exactly one `in_progress` package; a `complete` lifecycle permits none and forbids autonomous dispatch.
 
-> Project lifecycle: active
+> Project lifecycle: complete
 
 ## AF-000 — Framework control plane
 
@@ -397,11 +397,11 @@
 
 ## AF-360 — Standalone first-run readiness
 
-- Status: in_progress
+- Status: completed
 - Parent objective: Make promoted Asterion operationally usable from a fresh clone
 - Scope: add provider-free pinned-Pi setup/check, explicit user-managed Pi authentication selection, tiered external-resource setup/check, consistent runtime configuration discovery, actionable doctor/preflight diagnostics, and clean-copy first-run verification without accepting a global Pi executable as authoritative.
 - Dependencies: AF-350
 - Acceptance: a clean promoted copy can use local-fixture setup to create and verify the locked external Pi checkout and basic resource layout; `.env.template`, runtime resolution, describe, doctor, and preflight agree on effective defaults; every missing prerequisite reports a safe repair action; all setup/verification and regression gates perform zero Agent/Judge operations and no full dataset.
 - Design: `docs/superpowers/specs/2026-07-24-af-360-standalone-first-run-readiness-design.md`
 - Plan: `docs/superpowers/plans/2026-07-24-af-360-standalone-first-run-readiness.md`
-- Closure evidence: pending one post-merge configuration-parity repair: `.env.template` selects `DEEPSEEK_API_KEY` while `describe` still reports the superseded `OPENAI_API_KEY` Judge credential-name default. All other gates pass 202 standalone tests, 117 mixed-root regressions, 16 Markdown/32-link checks, and 18 clean-copy promotion commands with zero provider operations and no full dataset.
+- Closure evidence: standalone Asterion provisions and checks the exact `pi-revision.txt` checkout, keeps authentication under `DCI_PI_AGENT_DIR`, prepares basic corpora, inventories every benchmark launcher resource, and exposes aligned template/runtime/describe/doctor/preflight defaults with redacted repairs. Post-merge repair makes the described Judge credential-name default reuse `JudgeConfig` (`DEEPSEEK_API_KEY`). Final closure passes 202 standalone tests, 117 mixed-root regressions, 77 post-repair integration/scope tests, 16 Markdown/32-link checks, 18 full and 9 post-repair quick clean-copy promotion commands. Provider operations remain zero and no full dataset, external Pi mutation, credential copy, publication, remote creation, or push occurred.
