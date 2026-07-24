@@ -1212,3 +1212,4 @@
 - 16:32 目录合并终验通过 standalone211、root141、promotion9，provider0、full-no。
 - 16:32 AF-360 单目录样例闭包完成，项目 lifecycle 恢复 complete。 [34ef4c8]
 - 16:45 handoff: AF-360 完成，单一 examples 目录、干净主树与外部 Pi dirt 边界已固化。
+- 16:47 AF-360 最终 handoff 固化恢复顺序、验证证据与外部 Pi 例外。 [fa4f724]
