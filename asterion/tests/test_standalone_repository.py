@@ -31,6 +31,8 @@ LIFECYCLE_TARGETS = (
     "docs-check",
     "check",
     "promotion-check",
+    "setup-pi",
+    "check-pi",
 )
 FRAMEWORK_TARGETS = (
     "asterion-list",
@@ -241,6 +243,14 @@ class StandaloneRepositoryTests(unittest.TestCase):
         ):
             with self.subTest(command=command):
                 self.assertIn(command, text)
+
+    def test_pi_setup_targets_render_exact_commands(self) -> None:
+        self.assertEqual(
+            dry_run("setup-pi"), ("bash", "scripts/setup_pi.sh")
+        )
+        self.assertEqual(
+            dry_run("check-pi"), ("bash", "scripts/setup_pi.sh", "--check")
+        )
 
     def test_ci_runs_only_the_full_provider_free_promotion_gate(self) -> None:
         path = PROJECT / ".github/workflows/ci.yml"

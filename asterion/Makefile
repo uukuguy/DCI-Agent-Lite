@@ -5,7 +5,7 @@ DCI_ARGS ?=
 
 .DEFAULT_GOAL := help
 
-.PHONY: help sync build test lint docs-check check promotion-check
+.PHONY: help sync build test lint docs-check check promotion-check setup-pi check-pi
 .PHONY: asterion-list asterion-describe asterion-verify-preflight
 .PHONY: asterion-verify-basic asterion-verify-acceptance asterion-verify-complete
 .PHONY: asterion-run
@@ -42,6 +42,12 @@ check: test lint docs-check test-typescript check-rust build
 
 promotion-check:
 	$(UV_BIN) run python tools/check_promotion.py
+
+setup-pi:
+	bash scripts/setup_pi.sh
+
+check-pi:
+	bash scripts/setup_pi.sh --check
 
 asterion-list:
 	$(UV_BIN) run asterion list $(ASTERION_ARGS)
