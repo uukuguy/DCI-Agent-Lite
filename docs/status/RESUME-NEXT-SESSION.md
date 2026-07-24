@@ -1,53 +1,69 @@
-# Live Session Checkpoint
+# Next-Session Handoff
 
-> Updated: 2026-07-24 11:55 +0800. **Session remains active — not a final handoff.**
+> Updated: 2026-07-24 12:35 +0800 end of session.
 
-Active work package: none
+Active work package: AF-360
 
-Project lifecycle: complete
+Project lifecycle: active
 
 Currently running: no process.
 
 ## TL;DR
 
-- AF-360 and its reproduced pinned-Pi build repair are complete.
-- A fresh standalone checkout now has explicit pinned-Pi, authentication, basic/benchmark resource, configuration, doctor, and first-run workflows.
-- AF-360 implementation is integrated into `main` by `90cf244`; the final Judge credential-name description repair is `7c1672b`.
+- The real `make setup-pi` failure is fixed and committed: locked Pi 0.80.6 builds reproducibly from checked-in catalogs with the lock-installed toolchain.
+- Configuration probes then confirmed one remaining AF-360 defect: `.env` supplies `ASTERION_DCI_CORPUS_ROOT` to verification, but does not supply `ASTERION_DCI_RESOURCE_ROOT` to setup or shell launchers at the time they resolve paths.
+- No configuration implementation has begun. Resume by presenting the recorded minimal design for approval; only then write the design addendum/plan and implement through TDD.
 
 ## Where things stand
 
-- `make setup-pi` requires Node 22.19.0+, installs locked dev tools, and directly invokes the lock-installed `tsgo` against checked-in model catalogs.
-- Two fresh real builds, including production/dev-omit environment overrides, produce Pi `0.80.6`, keep tracked source clean, and pass `check-pi`.
-- `make setup-pi` provisions the exact full commit in `pi-revision.txt`; `make check-pi` is read-only. A global `pi` executable is intentionally not authoritative.
-- `DCI_PI_AGENT_DIR=~/.pi/agent` selects separately managed authentication. Setup never reads, copies, creates, or prints credentials.
-- `make setup-resources-basic` creates the wiki and BC+ onboarding layouts; benchmark setup/check reports every packaged and launcher resource, including unavailable/manual sources.
-- `.env.template`, runtime resolution, `describe`, `doctor`, and preflight now agree on effective Pi/provider/model/resource/Judge defaults and safe repair actions.
-- Final verification passes 202 standalone tests, 117 mixed-root regressions, 16 Markdown files/32 links, and full clean-copy promotion with 18 commands.
-- All verification performed zero Agent/Judge operations and no full dataset. No external Pi checkout was mutated.
+- `main` contains the Pi repair commits `bf1c770` and `23f3b19`, followed by AF-360 closure state `083ce69`; all are local and unpushed.
+- Real Pi verification is clean at locked revision `8479bd84743e8889f728acb21a62794102db0529`; the external checkout is detached and has no tracked changes.
+- Final Pi repair evidence: two fresh real Pi 0.80.6 builds, 206 standalone tests, 94 mixed-root regressions, 16 Markdown/32-link checks, and 18 full clean-copy promotion commands; provider operations 0 and no full dataset.
+- Current mixed-root `corpus/` is external and ignored, with populated `wiki_corpus` and `bc_plus_docs`; standalone Asterion can reuse it by an explicit exported absolute resource root.
+- The configuration probe showed `make setup-resources-basic --check` fails without an exported resource root and passes when `ASTERION_DCI_RESOURCE_ROOT` points at the mixed root.
+- A separate cwd probe proved `uv run --project /path/to/asterion` preserves the caller directory rather than changing into the project.
 
-## Next concrete action
+## Pending design decision
 
-1. Keep the completed lifecycle closed until the user selects a new governed package.
-2. Existing failed dirty checkouts must be explicitly preserved/cleaned or replaced before rerunning `make setup-pi`; setup never overwrites them.
+Recommended approach:
 
-## Open questions
+1. Add one safe Python resource-root resolver that loads the Asterion project `.env` without overriding inherited values.
+2. Make resource setup and all fourteen shell launchers use that resolver.
+3. Ensure launcher Python execution begins from the Asterion project root, while keeping explicit CLI/exported values above `.env` and project defaults.
+4. Never shell-source `.env`; it may contain credentials and is dotenv syntax, not trusted shell code.
 
-- None for AF-360.
-- Any publication, remote creation/push, global-Pi trust, vendored resources, or full-dataset reproduction requires separate user authority and governance.
+Alternatives rejected as defaults:
+
+- Requiring users to export `ASTERION_DCI_RESOURCE_ROOT` and removing the `.env` promise is simpler but contradicts the normal configuration surface.
+- Shell-sourcing `.env` is concise but unsafe and semantically incorrect for a credential-bearing dotenv file.
+
+## Next steps
+
+1. Ask the user to approve or revise the recommended design above.
+2. After approval, record the design addendum and implementation plan, then run `python3 tools/project_scope_check.py`.
+3. Add failing tests for setup `.env` loading, exported-value precedence, launcher execution from outside the project root, and all fourteen launchers using the shared resolver.
+4. Implement the smallest shared resolver and rerun standalone, launcher, documentation, promotion, and mixed-root configuration regressions before reclosing AF-360.
 
 ## Ruled-out paths
 
-- Do not replace `DCI_PI_DIR` with an unpinned global executable.
-- Do not conflate `DCI_PI_DIR` source ownership with `DCI_PI_AGENT_DIR` authentication state.
-- Do not embed Pi, credentials, corpora, benchmark datasets, private evidence, or parent-only tools into the standalone project.
-- Do not treat setup or preflight success as Agent/Judge or full-execution authority.
-- `tests.test_asterion_standalone_integration` is not a real root module; the current mixed-root boundary lives in structure, project-root, documentation, distribution, configuration, verification, and scope modules.
+- Do not claim `ASTERION_DCI_RESOURCE_ROOT` is effective merely because it appears in `.env.template`.
+- Do not rely on `uv run --project` to change cwd.
+- Do not shell-source `.env`.
+- Do not duplicate the existing mixed-root corpus unless an independent standalone checkout actually needs its own external resource tree.
+- Do not disturb the completed source-pinned Pi repair or accept a global Pi executable as runtime authority.
+
+## Open questions
+
+- User approval of the recommended shared Python resolver design is pending.
+- No publication, remote creation/push, full dataset, or provider-backed operation is authorized.
 
 ## Ready-to-paste commands
 
 ```bash
 python3 tools/project_scope_check.py
 git status --short --branch
-cd asterion
-uv run python tools/check_promotion.py --quick
+make -C asterion check-pi
+ASTERION_DCI_RESOURCE_ROOT="$PWD" \
+  uv run --project asterion python asterion/tools/setup_resources.py \
+  --profile basic --check --json
 ```

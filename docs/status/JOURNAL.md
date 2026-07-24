@@ -1192,3 +1192,6 @@
 - 11:55 真实 production-env Pi 构建、standalone206、mixed94、promotion18 全绿。
 - 11:56 独立审查 Critical0、Important2 已修复；AF-360 再次闭包。
 - 12:01 AF-360 可复现 Pi 构建修复闭包，确保新会话恢复完整。 [083ce69]
+- 12:31 `.env` 探针确认 resource setup/launchers 不读取其中的 resource root。
+- 12:33 `uv run --project` 保留调用 cwd，外部启动会寻找错误 `.env`。
+- 12:35 AF-360 重开为资源 `.env` 一致性修复；实现待设计批准。

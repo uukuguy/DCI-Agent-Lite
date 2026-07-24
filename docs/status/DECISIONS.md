@@ -565,3 +565,10 @@
 - Cost boundary: setup may perform explicitly invoked Git/npm/resource network and disk work, but it performs zero Agent operations, zero Judge operations, and no benchmark or full-dataset execution.
 - Compatibility boundary: public runtime/protocol/package identities and existing path overrides remain stable. Global-executable support, vendoring Pi/data, release publication, and full execution remain outside AF-360.
 - Revalidation trigger: revisit before accepting a global Pi executable, changing Pi provenance/authentication defaults, embedding resources, making network setup implicit, changing default provider/model identities, or publishing a release.
+
+### 2026-07-24 revalidation finding
+
+- The source-pinned Pi and cost boundaries remain valid, but the configuration boundary is not fully implemented.
+- `ASTERION_DCI_CORPUS_ROOT` in the project `.env` reaches Python verification. Resource setup and shell launchers instead read `ASTERION_DCI_RESOURCE_ROOT` from the inherited process before Python loads `.env`.
+- `uv run --project` selects a project without changing cwd. A launcher invoked outside the Asterion root can therefore resolve resources before `.env` is loaded and later make `asterion-dci` search the caller directory for `.env`.
+- Shell-sourcing `.env` is rejected because it would interpret a credential-bearing dotenv file as shell code. The recommended repair is one safe Python resolver shared by setup and launchers, with explicit/exported values overriding `.env` and project defaults; this design remains pending user approval.
