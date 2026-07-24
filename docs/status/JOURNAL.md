@@ -1199,3 +1199,4 @@
 - 15:05 AF-360 确认 standalone 缺运行样例，preflight 误判过期 OAuth 且根 Make 传错 `.env`。
 - 15:07 AF-360 样例与 Pi 认证根因诊断已固化。 [c9daf0c]
 - 15:50 用户批准 standalone 仅交付 basic 与 runtime-context 两个 Asterion 原生样例。
+- 15:54 用户批准 preflight 通过锁定 Pi 联网刷新并原子更新 OAuth 凭据。
