@@ -1202,3 +1202,4 @@
 - 15:54 用户批准 preflight 通过锁定 Pi 联网刷新并原子更新 OAuth 凭据。
 - 16:02 correction: 四个根 Make 样例已正常；用户撤回认证改造，仅补 standalone 两个 Asterion 样例。
 - 16:05 AF-360 设计与验收收缩为 standalone 两个 Asterion 样例。 [9663fab]
+- 16:18 AF-360 新增 standalone 样例实施计划，锁定最小范围与 TDD 验证路径。 [9ac5cfe]
