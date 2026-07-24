@@ -20,8 +20,10 @@ REQUIRED_FIXTURE_ASSETS = (
     "README.md",
     "pi-revision.txt",
     "pyproject.toml",
+    "scripts/setup_pi.sh",
     "tools/check_docs.py",
     "tools/check_promotion.py",
+    "tools/setup_resources.py",
     "uv.lock",
 )
 
@@ -208,6 +210,7 @@ class PromotionCheckTests(unittest.TestCase):
         rendered = tuple(" ".join(command) for command in commands)
         for expected in (
             "uv sync --frozen",
+            "uv run python -m unittest -v tests.test_setup_pi tests.test_resource_setup tests.test_asterion_dci_verification",
             "uv run python -m unittest discover -s tests -v",
             "uv run python -m compileall -q src tests tools",
             "uv run ruff check src tests tools",
@@ -271,6 +274,20 @@ class PromotionCheckTests(unittest.TestCase):
             run_promotion(source_root=source, quick=True, runner=runner)
 
         self.assertIn(("uv", "run", "asterion", "list"), commands)
+        self.assertIn(
+            (
+                "uv",
+                "run",
+                "python",
+                "-m",
+                "unittest",
+                "-v",
+                "tests.test_setup_pi",
+                "tests.test_resource_setup",
+                "tests.test_asterion_dci_verification",
+            ),
+            commands,
+        )
         self.assertIn(
             (
                 "uv",

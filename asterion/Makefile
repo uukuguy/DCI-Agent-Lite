@@ -5,7 +5,8 @@ DCI_ARGS ?=
 
 .DEFAULT_GOAL := help
 
-.PHONY: help sync build test lint docs-check check promotion-check setup-pi check-pi
+.PHONY: help sync build test lint docs-check check promotion-check first-run-check
+.PHONY: setup-pi check-pi
 .PHONY: setup-resources-basic check-resources-basic
 .PHONY: setup-resources-benchmark check-resources-benchmark
 .PHONY: doctor
@@ -45,6 +46,9 @@ check: test lint docs-check test-typescript check-rust build
 
 promotion-check:
 	$(UV_BIN) run python tools/check_promotion.py
+
+first-run-check:
+	$(UV_BIN) run python -m unittest -v tests.test_setup_pi tests.test_resource_setup tests.test_asterion_dci_verification
 
 setup-pi:
 	bash scripts/setup_pi.sh

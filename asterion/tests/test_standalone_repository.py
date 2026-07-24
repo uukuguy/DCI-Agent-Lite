@@ -18,8 +18,10 @@ REQUIRED_ASSETS = (
     "Makefile",
     "README.md",
     "pi-revision.txt",
+    "scripts/setup_pi.sh",
     "tools/check_docs.py",
     "tools/check_promotion.py",
+    "tools/setup_resources.py",
     "uv.lock",
 )
 LIFECYCLE_TARGETS = (
@@ -31,6 +33,7 @@ LIFECYCLE_TARGETS = (
     "docs-check",
     "check",
     "promotion-check",
+    "first-run-check",
     "setup-pi",
     "check-pi",
     "setup-resources-basic",
@@ -330,6 +333,22 @@ class StandaloneRepositoryTests(unittest.TestCase):
             ),
         )
 
+    def test_first_run_check_uses_only_local_fixture_modules(self) -> None:
+        self.assertEqual(
+            dry_run("first-run-check"),
+            (
+                "uv",
+                "run",
+                "python",
+                "-m",
+                "unittest",
+                "-v",
+                "tests.test_setup_pi",
+                "tests.test_resource_setup",
+                "tests.test_asterion_dci_verification",
+            ),
+        )
+
     def test_ci_runs_only_the_full_provider_free_promotion_gate(self) -> None:
         path = PROJECT / ".github/workflows/ci.yml"
         self.assertTrue(path.is_file(), "standalone CI workflow is missing")
@@ -341,6 +360,7 @@ class StandaloneRepositoryTests(unittest.TestCase):
         self.assertIn("node-version: '20'", text)
         self.assertIn("toolchain: stable", text)
         self.assertIn("make promotion-check", text)
+        self.assertIn("make first-run-check", text)
         for forbidden in (
             "API_KEY",
             "provider-backed",

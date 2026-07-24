@@ -54,8 +54,10 @@ REQUIRED_ASSETS = (
     "README.md",
     "pi-revision.txt",
     "pyproject.toml",
+    "scripts/setup_pi.sh",
     "tools/check_docs.py",
     "tools/check_promotion.py",
+    "tools/setup_resources.py",
     "uv.lock",
 )
 TEXT_SUFFIXES = frozenset(
@@ -228,6 +230,17 @@ def _run_quick(copy_root: Path, runner: Runner) -> int:
             "-m",
             "unittest",
             "-v",
+            "tests.test_setup_pi",
+            "tests.test_resource_setup",
+            "tests.test_asterion_dci_verification",
+        ),
+        (
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "unittest",
+            "-v",
             "tests.test_standalone_repository",
         ),
         ("uv", "run", "python", "-m", "compileall", "-q", "src", "tests", "tools"),
@@ -268,6 +281,17 @@ def _run_quick(copy_root: Path, runner: Runner) -> int:
 def _run_full(copy_root: Path, venv_root: Path, runner: Runner) -> int:
     initial_commands = (
         ("uv", "sync", "--frozen"),
+        (
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "unittest",
+            "-v",
+            "tests.test_setup_pi",
+            "tests.test_resource_setup",
+            "tests.test_asterion_dci_verification",
+        ),
         ("uv", "run", "python", "-m", "unittest", "discover", "-s", "tests", "-v"),
         ("uv", "run", "python", "-m", "compileall", "-q", "src", "tests", "tools"),
         ("uv", "run", "ruff", "check", "src", "tests", "tools"),
