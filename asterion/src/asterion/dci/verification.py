@@ -38,6 +38,9 @@ from asterion.applications.product import (
 from asterion.dci.config import (
     DciPaths,
     DciRuntimeOptions,
+    PI_DEFAULT_AGENT_DIR,
+    PI_DEFAULT_MODEL,
+    PI_DEFAULT_PROVIDER,
     load_asterion_dci_env,
     resolve_dci_paths,
     resolve_dci_runtime_options,
@@ -222,8 +225,16 @@ DCI_PRODUCT_DESCRIPTION = CapabilityProductDescription(
             "Pi model used for research",
             ("basic", "complete", "preflight"),
             False,
-            None,
-            "Set a model available from DCI_PROVIDER",
+            PI_DEFAULT_MODEL,
+            "Override only when selecting another model from DCI_PROVIDER",
+        ),
+        ConfigurationRequirement(
+            "DCI_PI_AGENT_DIR",
+            "User-managed Pi agent and authentication directory",
+            ("basic", "complete", "preflight"),
+            False,
+            PI_DEFAULT_AGENT_DIR,
+            "Authenticate with Pi, then select its agent directory; setup never copies credentials",
         ),
         ConfigurationRequirement(
             "DCI_PI_DIR",
@@ -231,15 +242,15 @@ DCI_PRODUCT_DESCRIPTION = CapabilityProductDescription(
             ("basic", "complete", "preflight"),
             False,
             "./pi",
-            "The checkout must contain packages/coding-agent and .pi/agent",
+            "Run make setup-pi to create and build the locked checkout",
         ),
         ConfigurationRequirement(
             "DCI_PROVIDER",
             "Pi model provider",
             ("basic", "complete", "preflight"),
             False,
-            None,
-            "For example openai or anthropic",
+            PI_DEFAULT_PROVIDER,
+            "Override only when intentionally selecting another Pi provider",
         ),
         ConfigurationRequirement(
             "PROVIDER_API_KEY",
@@ -1348,14 +1359,16 @@ class DciProductVerifier:
         environment_ready = loaded is not None and requested_env.is_file()
         provider_key = _provider_key_name(options.provider)
         pi_auth = paths.pi.agent_dir / "auth.json"
-        pi_managed_auth = pi_auth.is_file() and not pi_auth.is_symlink()
-        configuration_ready = bool(
-            options.provider
-            and options.model
-            and (
-                (provider_key and os.environ.get(provider_key, "").strip())
-                or pi_managed_auth
-            )
+        pi_managed_auth = (
+            paths.pi.agent_dir.is_dir()
+            and not paths.pi.agent_dir.is_symlink()
+            and pi_auth.is_file()
+            and not pi_auth.is_symlink()
+        )
+        agent_selection_ready = bool(options.provider and options.model)
+        agent_authentication_ready = bool(
+            (provider_key and os.environ.get(provider_key, "").strip())
+            or pi_managed_auth
         )
         judge_key_name = (
             os.environ.get("DCI_EVAL_JUDGE_API_KEY_ENV", "").strip()
@@ -1372,24 +1385,71 @@ class DciProductVerifier:
             or os.environ.get(judge_key_name, "").strip()
         )
         node_major = self.backend.node_major_version()
-        pi_ready = (
+        pi_checkout_ready = (
             paths.pi.repo_dir.is_dir()
+            and not paths.pi.repo_dir.is_symlink()
             and paths.pi.package_dir.is_dir()
             and (paths.pi.package_dir / "package.json").is_file()
-            and paths.pi.agent_dir.is_dir()
+        )
+        built_pi_cli_ready = (
+            pi_checkout_ready
+            and (paths.pi.package_dir / "dist" / "cli.js").is_file()
         )
         resolved_corpus = _corpus_root(self.repo_root, corpus_root)
-        corpora_ready = all(
+        resources_ready = all(
             (resolved_corpus / name).is_dir()
+            and any(item.is_file() for item in (resolved_corpus / name).rglob("*"))
             for name in ("wiki_corpus", "bc_plus_docs")
         )
         checks = (
-            _check("configuration", "Provider and model configuration is present", configuration_ready),
-            _check("corpora", "Both example corpora are available", corpora_ready),
-            _check("environment", "The selected environment file is available", environment_ready),
-            _check("judge", "Judge configuration and credential are present", judge_ready),
-            _check("node", "Node.js major version is at least 20", node_major is not None and node_major >= 20),
-            _check("pi", "The external Pi checkout is ready", pi_ready),
+            _readiness_check(
+                "agent-authentication",
+                "Pi Agent authentication is available",
+                "Authenticate with Pi and set DCI_PI_AGENT_DIR; setup never copies credentials",
+                agent_authentication_ready,
+            ),
+            _readiness_check(
+                "agent-selection",
+                f"Agent selection resolves to {options.provider} / {options.model}",
+                "Set DCI_PROVIDER and DCI_MODEL",
+                agent_selection_ready,
+            ),
+            _readiness_check(
+                "built-pi-cli",
+                "The locked Pi coding-agent CLI is built",
+                "Run make setup-pi to build the locked Pi CLI",
+                built_pi_cli_ready,
+            ),
+            _readiness_check(
+                "environment",
+                "The selected environment file is available",
+                "Run cp .env.template .env and add operator-owned authentication",
+                environment_ready,
+            ),
+            _readiness_check(
+                "judge",
+                "Judge selection and authentication are available",
+                "Set DCI_EVAL_JUDGE_MODEL, DCI_EVAL_JUDGE_API_KEY_ENV, and the named credential",
+                judge_ready,
+            ),
+            _readiness_check(
+                "node",
+                "Node.js major version is at least 20",
+                "Install Node.js 20 or newer",
+                node_major is not None and node_major >= 20,
+            ),
+            _readiness_check(
+                "pi-checkout",
+                "The locked external Pi checkout is available",
+                "Run make setup-pi to provision the locked Pi checkout",
+                pi_checkout_ready,
+            ),
+            _readiness_check(
+                "resources-basic",
+                "The basic wiki and BC+ corpora are available",
+                "Run make setup-resources-basic",
+                resources_ready,
+            ),
         )
         return VerificationResult(
             product_id=DCI_PRODUCT_DESCRIPTION.product_id,
@@ -1441,6 +1501,12 @@ def _check(check_id: str, summary: str, passed: bool) -> VerificationCheckResult
         summary=summary,
         status="PASS" if passed else "FAIL",
     )
+
+
+def _readiness_check(
+    check_id: str, pass_summary: str, repair_summary: str, passed: bool
+) -> VerificationCheckResult:
+    return _check(check_id, pass_summary if passed else repair_summary, passed)
 
 
 def _basic_request(

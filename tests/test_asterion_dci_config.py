@@ -312,7 +312,7 @@ class AsterionDciConfigTests(unittest.TestCase):
 
         self.assertEqual(paths.pi.repo_dir, root / "pi")
         self.assertEqual(paths.pi.package_dir, root / "pi/packages/coding-agent")
-        self.assertEqual(paths.pi.agent_dir, root / "pi/.pi/agent")
+        self.assertEqual(paths.pi.agent_dir, Path("~/.pi/agent").expanduser())
         self.assertEqual(paths.output_root, root / "outputs/asterion-dci-runs")
 
     def test_loads_the_new_product_env_without_overriding_process_values(self) -> None:

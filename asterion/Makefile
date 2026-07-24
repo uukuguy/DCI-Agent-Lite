@@ -8,6 +8,7 @@ DCI_ARGS ?=
 .PHONY: help sync build test lint docs-check check promotion-check setup-pi check-pi
 .PHONY: setup-resources-basic check-resources-basic
 .PHONY: setup-resources-benchmark check-resources-benchmark
+.PHONY: doctor
 .PHONY: asterion-list asterion-describe asterion-verify-preflight
 .PHONY: asterion-verify-basic asterion-verify-acceptance asterion-verify-complete
 .PHONY: asterion-run
@@ -62,6 +63,9 @@ setup-resources-benchmark:
 
 check-resources-benchmark:
 	$(UV_BIN) run python tools/setup_resources.py --profile benchmark --check
+
+doctor:
+	$(UV_BIN) run asterion verify --provider $(ASTERION_PROVIDER) --level preflight $(ASTERION_ARGS)
 
 asterion-list:
 	$(UV_BIN) run asterion list $(ASTERION_ARGS)

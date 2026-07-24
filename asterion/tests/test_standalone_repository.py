@@ -37,6 +37,7 @@ LIFECYCLE_TARGETS = (
     "check-resources-basic",
     "setup-resources-benchmark",
     "check-resources-benchmark",
+    "doctor",
 )
 FRAMEWORK_TARGETS = (
     "asterion-list",
@@ -92,6 +93,10 @@ class StandaloneRepositoryTests(unittest.TestCase):
         self.assertNotIn("../", text)
         self.assertNotIn("pi-mono", text)
         self.assertIn("ASTERION_DCI_RESOURCE_ROOT=", text)
+        self.assertIn("DCI_PROVIDER=openai-codex", text)
+        self.assertIn("DCI_MODEL=gpt-5.6-luna", text)
+        self.assertIn("DCI_PI_AGENT_DIR=~/.pi/agent", text)
+        self.assertIn("ASTERION_DCI_RESOURCE_ROOT=.", text)
 
     def test_external_data_ignore_rules_do_not_hide_packaged_resources(self) -> None:
         text = (PROJECT / ".gitignore").read_text(encoding="utf-8").splitlines()
@@ -307,6 +312,21 @@ class StandaloneRepositoryTests(unittest.TestCase):
                 "--profile",
                 "benchmark",
                 "--check",
+            ),
+        )
+
+    def test_doctor_renders_provider_free_preflight(self) -> None:
+        self.assertEqual(
+            dry_run("doctor"),
+            (
+                "uv",
+                "run",
+                "asterion",
+                "verify",
+                "--provider",
+                "dci-agent-lite",
+                "--level",
+                "preflight",
             ),
         )
 

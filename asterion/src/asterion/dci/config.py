@@ -16,6 +16,7 @@ ValueSource = Literal["invocation", "environment", "runtime-default"]
 
 PI_DEFAULT_PROVIDER = "openai-codex"
 PI_DEFAULT_MODEL = "gpt-5.6-luna"
+PI_DEFAULT_AGENT_DIR = "~/.pi/agent"
 PI_DEFAULT_TOOLS = "read,bash"
 PI_DEFAULT_MAX_TURNS = 100
 PI_DEFAULT_TIMEOUT_SECONDS = 3600.0
@@ -158,7 +159,7 @@ def resolve_dci_paths(
     agent_dir = _configured_path_shared(
         "DCI_PI_AGENT_DIR",
         "ASTERION_DCI_PI_AGENT_DIR",
-        pi_dir / ".pi" / "agent",
+        Path(PI_DEFAULT_AGENT_DIR).expanduser(),
         root=root,
         environment=configured_environment,
     )
