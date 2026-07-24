@@ -2,21 +2,21 @@
 
 > Updated: 2026-07-24 10:45 +0800. **Session remains active — not a final handoff.**
 
-Active work package: none
+Active work package: AF-360
 
-Project lifecycle: complete
+Project lifecycle: active
 
 Currently running: no process.
 
 ## TL;DR
 
-- AF-360 standalone first-run readiness is implemented, reviewed, verified, and closed.
+- AF-360 is reopened for one post-merge Judge credential-name parity repair.
 - A fresh standalone checkout now has explicit pinned-Pi, authentication, basic/benchmark resource, configuration, doctor, and first-run workflows.
-- The isolated `codex/af-360-first-run` branch is ready to merge into `main`.
+- AF-360 implementation is integrated into `main` by merge commit `90cf244`; post-merge review found one remaining describe/template mismatch.
 
 ## Where things stand
 
-- Implementation commits run from `b363013` through `aa4b490`; governance closure is the next commit.
+- `.env.template` and `JudgeConfig` use `DEEPSEEK_API_KEY`, but `asterion describe` still reports `OPENAI_API_KEY`.
 - `make setup-pi` provisions the exact full commit in `pi-revision.txt`; `make check-pi` is read-only. A global `pi` executable is intentionally not authoritative.
 - `DCI_PI_AGENT_DIR=~/.pi/agent` selects separately managed authentication. Setup never reads, copies, creates, or prints credentials.
 - `make setup-resources-basic` creates the wiki and BC+ onboarding layouts; benchmark setup/check reports every packaged and launcher resource, including unavailable/manual sources.
@@ -26,9 +26,8 @@ Currently running: no process.
 
 ## Next concrete action
 
-1. Commit the AF-360 governance closure.
-2. Merge `codex/af-360-first-run` into `main`.
-3. Re-run `python3 tools/project_scope_check.py` and a focused post-merge smoke, then record the merge checkpoint.
+1. Add a failing description-parity assertion for the Judge API-key environment-name default.
+2. Reuse `DEFAULT_JUDGE_API_KEY_ENV` in the product description, rerun focused/full provider-free gates, and close AF-360 again.
 
 ## Open questions
 

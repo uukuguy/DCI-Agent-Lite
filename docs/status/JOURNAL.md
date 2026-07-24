@@ -1178,3 +1178,5 @@
 - 10:45 AF-360 终验通过 standalone202、mixed117、promotion18，provider0、full-no。
 - 10:46 AF-360 闭包完成；项目 lifecycle 恢复 complete，无活动包。
 - 10:48 AF-360 治理闭包固化完成态与恢复点。 [fcbe1f6]
+- 10:51 AF-360 合并回 main，standalone 首次运行修复进入集成分支。 [90cf244]
+- 10:55 post-merge describe 核验发现 Judge 凭据变量默认值仍漂移，AF-360 重开修复。
