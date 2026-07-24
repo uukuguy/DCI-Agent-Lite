@@ -1198,3 +1198,4 @@
 - 12:37 AF-360 配置缺陷交接固化，确保恢复不依赖聊天。 [3122638]
 - 15:05 AF-360 确认 standalone 缺运行样例，preflight 误判过期 OAuth 且根 Make 传错 `.env`。
 - 15:07 AF-360 样例与 Pi 认证根因诊断已固化。 [c9daf0c]
+- 15:50 用户批准 standalone 仅交付 basic 与 runtime-context 两个 Asterion 原生样例。
