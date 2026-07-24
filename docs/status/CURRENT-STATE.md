@@ -4,11 +4,11 @@
 
 - Project: Asterion capability-package framework under development in the DCI-Agent-Lite repository; Asterion DCI is the first complete usable capability package and reference application.
 - Canonical integration branch: `main`
-- Theme-level focus: Asterion standalone promotion readiness completed; future promotion/publication requires new operator-selected governance.
+- Theme-level focus: Asterion standalone fresh-clone runtime and resource readiness.
 - Project route: managed
 - Canonical worklist: `docs/status/WORKLIST.md`
 - Framework north star: `asterion/docs/architecture/agent-framework.md`
-- Active work package: none — project lifecycle is complete after AF-350.
+- Active work package: AF-360 — standalone first-run readiness.
 
 ## Current Architecture
 
@@ -23,6 +23,7 @@
 - Project root: `asterion/` is the sole complete Asterion subtree and sole buildable Python project, containing `src/asterion`, auxiliary packages, schemas, examples, scripts, docs, and project-local tests. The mixed root retains original `src/dci`, original/cross-product examples and tests, parity/acceptance evidence, shared workspace configuration/tooling, and governance, with no second Asterion product tree.
 - Standalone delivery contract: AF-350 promotes `asterion/` to a complete repository root; installed acceptance becomes package-owned while original DCI/Asterion 538-selector parity remains a mixed-repository integration gate.
 - AF-350 acceptance: `asterion/` owns its README, MIT license, safe environment template, root-anchored ignore rules, complete Make command surface, pinned Pi revision, standalone `uv.lock`, package metadata, and provider-free GitHub Actions workflow. Installed acceptance is package-owned and validates 2 providers, 6 packaged assemblies, 11 manifests, 5 context profiles, 13 benchmark identities, and 16 paper scopes from source or wheel with zero provider operations. All 14 launchers resolve their copied project root and optional external resource root without parent traversal. Sixteen standalone Markdown files and 32 local links pass root-containment and operational-command checks in place and after copying. The promotion verifier copies only project-owned inputs, rejects symlinks/nonportable references, isolates user Cargo configuration, and passes 17 frozen Python/build/install/docs/Node/Rust commands with provider operations 0 and no full dataset. Root Make delegates shared Asterion commands while retaining mixed integration. Final closure passes 163 standalone and 1622 root Python tests; mixed integration passes 8/8 product rows, 538/538 selectors, 12/12 launcher pairs, 6/6 extras, and 7/7 retained cases. Review found no unresolved Critical or Important issue. No provider, full dataset, external Pi mutation, publication, release, remote creation, or push occurred.
+- AF-360 direction: preserve the pinned external Pi source/provenance boundary while adding standalone setup/check commands for Pi and tiered resources, explicit user-managed Pi authentication selection, consistent runtime configuration discovery, actionable doctor/preflight failures, and clean-copy first-run verification with zero Agent/Judge operations.
 - Maintenance history: Pi/Judge reliability H-001 through H-019 is completed and remains available as reference-maintenance evidence; it is not an active roadmap stream.
 - Complete DCI result: `src/dci` remains an independent source-only comparison baseline. AF-180 through AF-250 completed shared `.env` forwarding, complete operator controls, batch/export semantics, Asterion examples, installed Pi application, and bounded provider-backed acceptance. Asterion shares normal `DCI_*` configuration with the baseline while keeping Asterion-owned output paths; neither product imports or launches the other.
 - AF-220 acceptance: its four Climb hypotheses are confirmed 4/4. Using only process-local shared configuration and main-repository external resources, both model-free prerequisites, both real Pi examples, the project-entrypoint installed application, and the one-row Pi-plus-Judge benchmark passed. Native state/evaluation schemas and the application's single body-free JSON projection were verified; this closes AF-220 only.
@@ -70,7 +71,7 @@
 
 ## Open Problems (theme-level)
 
-- Actual repository migration, remote creation, publication, and release are intentionally unselected; any such work must reopen the lifecycle with a new governed package and explicit operator authority.
+- Fresh-clone Asterion cannot yet provision its pinned Pi checkout or required resource layouts, and its template/describe/preflight configuration surfaces disagree.
 - Optional full-dataset validation and score reproduction remain unselected future work requiring a new work package, separately reviewed invocation, exact profiles, fresh private roots, and explicit budget authorization.
 
 ## Key Files
@@ -93,6 +94,7 @@
 ### Implementation entry points
 
 - `docs/superpowers/specs/2026-07-23-af-350-asterion-standalone-promotion-readiness-design.md` — approved standalone root, acceptance separation, command, security, and promotion contract.
+- `docs/superpowers/specs/2026-07-24-af-360-standalone-first-run-readiness-design.md` — approved pinned-Pi setup, resource provisioning, configuration, diagnostics, and first-run acceptance contract.
 - `docs/superpowers/plans/2026-07-23-af-350-asterion-standalone-promotion-readiness.md` — approved eight-task TDD implementation and closure sequence.
 - `asterion/tools/check_docs.py` — standalone root-contained Markdown link and operational-reference gate.
 - `asterion/tools/check_promotion.py` — clean-copy quick/full promotion gate proving the subtree works as an independent repository root.

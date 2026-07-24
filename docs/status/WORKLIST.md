@@ -2,7 +2,7 @@
 
 > Canonical work-package ledger. An `active` lifecycle requires exactly one `in_progress` package; a `complete` lifecycle permits none and forbids autonomous dispatch.
 
-> Project lifecycle: complete
+> Project lifecycle: active
 
 ## AF-000 — Framework control plane
 
@@ -394,3 +394,13 @@
 - Design: `docs/superpowers/specs/2026-07-23-af-350-asterion-standalone-promotion-readiness-design.md`
 - Plan: `docs/superpowers/plans/2026-07-23-af-350-asterion-standalone-promotion-readiness.md`
 - Closure evidence: `asterion/` is a complete promotion-ready repository root with package-owned acceptance, standalone Make/CI/docs/launchers/locks, and clean-copy verification. Final closure passes 163 standalone and 1622 root Python tests, 16 Markdown/32 local-link checks, 11+11 TypeScript tests, 19 Rust tests plus fmt/Clippy, 17 clean-copy promotion commands, and mixed integration at 8/8 product rows, 538/538 selectors, 12/12 launcher pairs, 6/6 extras, and 7/7 retained cases. Provider operations remain zero; no full dataset, external Pi mutation, publication, release, remote creation, or push occurred. Local closure review has no unresolved Critical or Important finding.
+
+## AF-360 — Standalone first-run readiness
+
+- Status: in_progress
+- Parent objective: Make promoted Asterion operationally usable from a fresh clone
+- Scope: add provider-free pinned-Pi setup/check, explicit user-managed Pi authentication selection, tiered external-resource setup/check, consistent runtime configuration discovery, actionable doctor/preflight diagnostics, and clean-copy first-run verification without accepting a global Pi executable as authoritative.
+- Dependencies: AF-350
+- Acceptance: a clean promoted copy can use local-fixture setup to create and verify the locked external Pi checkout and basic resource layout; `.env.template`, runtime resolution, describe, doctor, and preflight agree on effective defaults; every missing prerequisite reports a safe repair action; all setup/verification and regression gates perform zero Agent/Judge operations and no full dataset.
+- Design: `docs/superpowers/specs/2026-07-24-af-360-standalone-first-run-readiness-design.md`
+- Plan: `docs/superpowers/plans/2026-07-24-af-360-standalone-first-run-readiness.md` (created after written-spec approval)

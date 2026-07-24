@@ -1,75 +1,51 @@
-# Next-Session Handoff
+# Live Session Checkpoint
 
-> Updated: 2026-07-23 12:50 +0800, end of session.
+> Updated: 2026-07-24 08:54 +0800. **Session remains active — not a final handoff.**
 
-Active work package: none
+Active work package: AF-360
 
-Project lifecycle: complete
+Project lifecycle: active
 
 Currently running: no process.
 
 ## TL;DR
 
-- AF-350 is complete and the project lifecycle is `complete`; there is no active work package or running process.
-- The contents of `asterion/` are promotion-ready as an independent GitHub repository root. Actual remote creation, history extraction, publication, release, provider use, or full-dataset execution was not authorized and did not occur.
-- The next session must begin with `project-state resume`. Any actual migration or release work first needs a newly approved work package and a passing scope audit.
+- AF-360 is the single active package for correcting standalone first-run readiness.
+- The approved design keeps a pinned external Pi source checkout, adds provider-free Pi/resource setup, exposes explicit user-managed Pi authentication, and aligns template/describe/preflight defaults.
+- No production implementation has started. The written design must be reviewed before the TDD implementation plan is created.
 
 ## Where things stand
 
-- Branch: `main`, locally ahead of `origin/main`; nothing was pushed.
-- Main repository working tree: clean at handoff.
-- Latest committed closure chain: `b9b759b` review remediation, `5164cb5` AF-350/lifecycle closure, `eece78e` closure-journal checkpoint, and `108b3f2` final handoff.
-- Temporary root planning files (`task_plan.md`, `findings.md`, `progress.md`) were removed during closeout.
-- No evaluator, promotion verifier, Python test, Node test, Rust command, provider, or Judge process remains active.
-- External `pi/` is an independent dirty checkout at `8479bd84`; `pi-mono` is a symlink to it. Its modified package/model files and untracked `.pi/agent/` were pre-existing/external and were deliberately not edited, staged, or committed.
+- Branch: `main`; the main working tree contains only AF-360 design/governance changes plus ignored temporary planning files.
+- Clean standalone preflight was reproduced with Node passing and environment, configuration, Pi, corpora, and Judge readiness failing.
+- Root cause is confirmed: AF-350 proved provider-free source/distribution promotion but did not ship external Pi/resource provisioning or one consistent public configuration contract.
+- No Agent, Judge, benchmark, full dataset, external Pi mutation, resource download, publication, remote creation, or push occurred.
 
-## What this session delivered
+## Current design boundary
 
-- Complete standalone repository surface under `asterion/`: README, MIT license, safe environment template, ignore rules, package metadata, lockfile, pinned Pi revision, GitHub Actions, and complete Make command entry points.
-- Package-owned provider-free acceptance that works from source and an installed wheel without loading the parent mixed-repository verifier.
-- Fourteen project-root launchers with an explicit external resource boundary through `ASTERION_DCI_RESOURCE_ROOT`.
-- Standalone framework/product documentation and validation guides with deterministic root-contained link checking.
-- Clean-copy quick/full promotion verification in `asterion/tools/check_promotion.py`; the full path builds and installs the wheel and validates Python, docs, TypeScript, and Rust without parent source.
-- Root Make delegation for shared Asterion commands while retaining `asterion-integration-acceptance` as the separately owned mixed-repository parity gate.
-- Final review remediation updated the paper command reference, lifecycle-sensitive fixtures, launcher assertions, and the Node `fast-uri` lock to 3.1.4.
-
-## Verified closure
-
-- `make -C asterion promotion-check`: PASS, 17 commands, provider operations 0, full dataset no.
-- Standalone Python: 163/163.
-- Root Python: 1622/1622.
-- Documentation: 16 Markdown files and 32 local links.
-- TypeScript: 11 runtime + 11 context-extension tests; npm audit reports 0 vulnerabilities.
-- Rust: 19 tests plus fmt and Clippy.
-- Mixed integration: 8/8 product rows, 538/538 delegated selectors, 12/12 launcher pairs, 6/6 extras, 7/7 retained cases, provider-backed executed 0.
-- `python3 tools/project_scope_check.py`: `ok=true`, `lifecycle=complete`, `active_package=null`.
-- Local structured review: no unresolved Critical or Important finding.
+- Pi execution remains source-pinned through `pi-revision.txt`; a global `pi` executable is not accepted as authoritative.
+- `DCI_PI_AGENT_DIR` explicitly selects user-managed authentication such as `~/.pi/agent`; setup never copies credentials.
+- `basic` resource setup owns `corpus/wiki_corpus` and `corpus/bc_plus_docs`; separately named benchmark setup/check accounts for launcher resources.
+- Setup may perform explicitly invoked Git/npm/resource network work but always performs zero Agent/Judge operations and no dataset execution.
+- `.env.template`, runtime resolution, product description, doctor, and preflight must expose one effective provider/model/path contract.
 
 ## Next steps
 
-1. Run `project-state resume` and confirm the completed lifecycle and clean main tree.
-2. If the user wants actual GitHub migration, decide repository owner/name/visibility, history strategy (subtree-filtered history or clean initial commit), and release policy.
-3. Record that decision in a new governed work package, set lifecycle to `active`, synchronize `CURRENT-STATE.md` and this baton, then run `python3 tools/project_scope_check.py` before implementation.
-
-## Open questions
-
-- Which GitHub owner, repository name, and visibility should receive Asterion?
-- Should promotion retain subtree history or start with a clean initial commit?
-- Is package publication/release in scope, and under which versioning policy?
+1. Review `docs/superpowers/specs/2026-07-24-af-360-standalone-first-run-readiness-design.md`.
+2. After written-spec approval, create `docs/superpowers/plans/2026-07-24-af-360-standalone-first-run-readiness.md` with the `writing-plans` skill.
+3. Run `python3 tools/project_scope_check.py`, then execute the plan with test-first red/green slices.
 
 ## Don't go down these paths again
 
-- Do not copy original `src/dci`, parent governance, corpora, datasets, credentials, retained private evidence, or external Pi state into the standalone repository.
-- Do not move or reconstruct the mixed-root parity verifier inside standalone acceptance.
-- Do not infer authority to create a remote, push, publish, run providers/Judge, execute full datasets, or mutate external `pi/`.
-- Do not reopen implementation while the lifecycle is `complete`; establish one explicit active package first.
+- Do not treat a global `pi` executable as equivalent to the locked source checkout without a new provenance/runtime decision.
+- Do not copy Pi credentials, corpora, datasets, parent tools, original `src/dci`, or private evidence into the standalone project.
+- Do not call a pointer-only `.env.template` or README a provisioning workflow.
+- Do not let setup, cached resources, or preflight success authorize Agent/Judge or full-dataset execution.
 
 ## Ready-to-paste commands
 
 ```bash
-git status --short --branch
-git log --oneline -5
 python3 tools/project_scope_check.py
-make -C asterion promotion-check
-make asterion-integration-acceptance
+git diff --check
+git status --short --branch
 ```

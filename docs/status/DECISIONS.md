@@ -553,3 +553,15 @@
 - Compatibility boundary: Python/wheel/CLI/provider/application/runtime/schema identities remain stable. AF-350 changes verification ownership and repository-relative paths, not runtime protocol or DCI research behavior.
 - Security boundary: installed acceptance executes packaged code only; promotion and CI gates are provider-free, reject parent/absolute/secret dependencies, and preserve D-053/D-055 full-execution governance.
 - Revalidation trigger: revisit before pluginizing DCI, renaming language packages, changing public identities, adding network CI, embedding external resources, publishing a release, or replacing mixed-root parity evidence.
+
+## D-057 — Keep Pi source-pinned and make external readiness provisionable
+
+- Status: ✅ accepted design decision
+- Decided: 2026-07-24
+- Decision: standalone Asterion continues to execute an exact external Pi source checkout rather than trusting a global `pi` executable, and now owns provider-free commands that provision or verify that checkout and the resource layouts required for bounded DCI onboarding.
+- Authentication boundary: executable source and authentication state remain separate. `DCI_PI_AGENT_DIR` may explicitly select user-managed Pi authentication such as `~/.pi/agent`; setup never copies, creates, prints, or persists credentials.
+- Resource boundary: `basic` setup owns the exact `wiki_corpus` and `bc_plus_docs` onboarding layout; separately named benchmark setup/check accounts for every launcher resource without silently substituting data or authorizing execution.
+- Configuration boundary: `.env.template`, runtime resolution, product description, doctor, and preflight expose the same effective Pi provider/model/path defaults and safe repair actions.
+- Cost boundary: setup may perform explicitly invoked Git/npm/resource network and disk work, but it performs zero Agent operations, zero Judge operations, and no benchmark or full-dataset execution.
+- Compatibility boundary: public runtime/protocol/package identities and existing path overrides remain stable. Global-executable support, vendoring Pi/data, release publication, and full execution remain outside AF-360.
+- Revalidation trigger: revisit before accepting a global Pi executable, changing Pi provenance/authentication defaults, embedding resources, making network setup implicit, changing default provider/model identities, or publishing a release.
