@@ -1200,3 +1200,4 @@
 - 15:07 AF-360 样例与 Pi 认证根因诊断已固化。 [c9daf0c]
 - 15:50 用户批准 standalone 仅交付 basic 与 runtime-context 两个 Asterion 原生样例。
 - 15:54 用户批准 preflight 通过锁定 Pi 联网刷新并原子更新 OAuth 凭据。
+- 16:02 correction: 四个根 Make 样例已正常；用户撤回认证改造，仅补 standalone 两个 Asterion 样例。

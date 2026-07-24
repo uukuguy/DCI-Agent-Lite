@@ -178,6 +178,24 @@ No production or setup code imports `src/dci`, executes parent repository
 tools, follows parent-relative paths, or assumes the mixed repository exists.
 A promoted copy remains the primary test boundary.
 
+### Standalone runnable examples
+
+The promoted `asterion/` repository includes the two Asterion-native runnable
+examples already proven in the mixed repository:
+
+- `scripts/examples/asterion_dci_basic_example.sh`;
+- `scripts/examples/asterion_dci_runtime_context_example.sh`.
+
+The standalone copies preserve the working provider/model, corpus, turn-limit,
+thinking, and evaluation behavior. Their only product-boundary adaptation is
+resolving the standalone Asterion repository root instead of the mixed
+repository root. The standalone Makefile exposes them as `example` and
+`runtime-example`.
+
+Original DCI and provider-specific comparison examples remain mixed-repository
+assets. This correction does not redesign authentication, preflight, resource
+resolution, or the four existing root Make example targets.
+
 ## Error and Safety Boundaries
 
 - Existing dirty Pi checkouts are never reset, cleaned, or switched.
@@ -238,6 +256,8 @@ AF-360 closes only when all of the following are true:
 
 - a clean promoted copy exposes the complete setup, check, doctor, and
   preflight command sequence without parent-repository dependencies;
+- the promoted copy contains the two Asterion-native shell examples and
+  exposes working `make example` and `make runtime-example` entry points;
 - local-fixture setup creates an exact pinned Pi checkout with the built CLI
   and an explicit external authentication-directory contract;
 - local-fixture basic resource setup creates both required corpus directories,
